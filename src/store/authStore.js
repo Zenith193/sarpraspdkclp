@@ -4,7 +4,7 @@ import { authApi } from '../api/index';
 
 const useAuthStore = create(
   persist(
-    (set, get) => ({
+    (set, _get) => ({
       user: null,
       isAuthenticated: false,
       loading: false,
@@ -33,7 +33,7 @@ const useAuthStore = create(
       },
 
       logout: async () => {
-        try { await authApi.logout(); } catch (e) { /* ignore */ }
+        try { await authApi.logout(); } catch (_e) { /* ignore */ }
         set({ user: null, isAuthenticated: false });
       },
 
@@ -51,7 +51,7 @@ const useAuthStore = create(
           }
           set({ user: null, isAuthenticated: false });
           return null;
-        } catch (e) {
+        } catch (_e) {
           set({ user: null, isAuthenticated: false });
           return null;
         }

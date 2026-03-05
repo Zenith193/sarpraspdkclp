@@ -15,13 +15,16 @@ const DashboardKorwil = () => {
     const wilayah = user?.wilayah || [];
     const jenjang = user?.jenjang || 'SD';
 
+    const { data: sarprasData } = useSarprasData();
+    const { data: proposalData } = useProposalData();
+
     const filteredSarpras = useMemo(() =>
         sarprasData.filter(s => wilayah.includes(s.kecamatan) && s.jenjang === jenjang)
-        , [wilayah, jenjang]);
+        , [sarprasData, wilayah, jenjang]);
 
     const filteredProposal = useMemo(() =>
         proposalData.filter(p => wilayah.includes(p.kecamatan) && p.jenjang === jenjang)
-        , [wilayah, jenjang]);
+        , [proposalData, wilayah, jenjang]);
 
     const sarprasStats = {
         total: filteredSarpras.length,

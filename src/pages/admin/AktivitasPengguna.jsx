@@ -9,6 +9,27 @@ import toast from 'react-hot-toast';
 
 const PER_PAGE_OPTIONS = [10, 15, 50, 100];
 
+// Helper: Generate realistic activity description for simulation
+const generateRealDescription = () => {
+    const users = [
+        { namaAkun: 'SDN 1 Cilacap', role: 'Sekolah' },
+        { namaAkun: 'SDN 2 Majenang', role: 'Sekolah' },
+        { namaAkun: 'SMPN 1 Sidareja', role: 'Sekolah' },
+        { namaAkun: 'Korwil Cilacap Selatan', role: 'Korwil' },
+        { namaAkun: 'Verifikator Dinas', role: 'Verifikator' },
+    ];
+    const activities = [
+        { aktivitas: 'Input Data Sarpras', keterangan: 'Menambahkan data ruang kelas baru' },
+        { aktivitas: 'Upload Proposal', keterangan: 'Mengunggah proposal rehabilitasi gedung' },
+        { aktivitas: 'Verifikasi Data', keterangan: 'Memverifikasi data sarpras sekolah' },
+        { aktivitas: 'Download Laporan', keterangan: 'Mengunduh laporan rekapitulasi sarpras' },
+        { aktivitas: 'Update Profil', keterangan: 'Memperbarui data profil sekolah' },
+        { aktivitas: 'Login', keterangan: 'Berhasil masuk ke sistem' },
+    ];
+    const user = users[Math.floor(Math.random() * users.length)];
+    const act = activities[Math.floor(Math.random() * activities.length)];
+    return { user, ...act };
+};
 
 const AktivitasPengguna = () => {
     const currentUser = useAuthStore((state) => state.user);
