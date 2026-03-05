@@ -11,11 +11,14 @@ const PROTOCOL_OPTIONS = [
 ];
 
 const FOLDER_CONFIG = [
-    { key: 'fotoSarpras', label: 'Foto Sarpras', icon: <Image size={16} />, desc: 'Penyimpanan foto dokumentasi kondisi sarpras' },
-    { key: 'dokumenBAST', label: 'Dokumen BAST', icon: <FileText size={16} />, desc: 'Surat & dokumen berita acara serah terima' },
-    { key: 'backupDB', label: 'Backup Database', icon: <Database size={16} />, desc: 'Cadangan database otomatis harian' },
-    { key: 'template', label: 'Template', icon: <Archive size={16} />, desc: 'Template surat, form, dan dokumen resmi' },
-    { key: 'formKerusakan', label: 'Form Kerusakan', icon: <ClipboardList size={16} />, desc: 'Upload form kerusakan dari sekolah' },
+    { key: 'fotoSarpras', label: 'Foto Sarpras', icon: <Image size={16} />, desc: 'Auto: /{Kecamatan}/{Sekolah}/sarpras/{MasaBangunan}/{Ruang}/' },
+    { key: 'dokumenBAST', label: 'Dokumen BAST', icon: <FileText size={16} />, desc: 'Auto: /{Kecamatan}/{Sekolah}/bast/' },
+    { key: 'proposal', label: 'Proposal', icon: <ClipboardList size={16} />, desc: 'Auto: /{Kecamatan}/{Sekolah}/proposal/{Tahun}/' },
+    { key: 'formKerusakan', label: 'Form Kerusakan', icon: <ClipboardList size={16} />, desc: 'Auto: /{Kecamatan}/{Sekolah}/kerusakan/' },
+    { key: 'prestasi', label: 'Sertifikat Prestasi', icon: <Archive size={16} />, desc: 'Auto: /{Kecamatan}/{Sekolah}/prestasi/' },
+    { key: 'kopSekolah', label: 'Kop Sekolah', icon: <FileText size={16} />, desc: 'Auto: /{Kecamatan}/{Sekolah}/kop-sekolah/' },
+    { key: 'template', label: 'Template', icon: <Archive size={16} />, desc: '/_sistem/template/' },
+    { key: 'backupDB', label: 'Backup Database', icon: <Database size={16} />, desc: '/_sistem/backup/' },
 ];
 
 const PengaturanNAS = () => {
@@ -327,6 +330,43 @@ const PengaturanNAS = () => {
                                 </div>
                             ))}
                         </div>
+                    </div>
+
+                    {/* Folder Structure Diagram */}
+                    <div className="table-container" style={{ padding: 20, marginTop: 16 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, paddingBottom: 10, borderBottom: '2px solid var(--bg-secondary)' }}>
+                            <FolderOpen size={16} style={{ color: '#f59e0b' }} />
+                            <h3 style={{ fontSize: '0.9rem', fontWeight: 600, margin: 0 }}>Skema Penyimpanan</h3>
+                        </div>
+                        <pre style={{
+                            fontFamily: 'monospace', fontSize: '0.75rem', lineHeight: 1.6,
+                            color: 'var(--text-secondary)', margin: 0, padding: 12,
+                            background: 'var(--bg-primary)', borderRadius: 8,
+                            border: '1px solid var(--border-color)', overflow: 'auto'
+                        }}>
+                            {`📁 uploads/
+├── 📁 {Kecamatan}/
+│   └── 📁 {NamaSekolah}_{NPSN}/
+│       ├── 📂 sarpras/
+│       │   └── 📂 {Masa_Bangunan}/
+│       │       └── 📂 {Nama_Ruang}/
+│       │           ├── 📸 foto1.jpg
+│       │           └── 📸 foto2.jpg
+│       ├── 📂 proposal/
+│       │   └── 📂 {Tahun}/
+│       │       └── 📄 proposal.pdf
+│       ├── 📂 bast/
+│       │   └── 📄 bast_doc.pdf
+│       ├── 📂 kerusakan/
+│       │   └── 📄 form_kerusakan.pdf
+│       ├── 📂 prestasi/
+│       │   └── 📄 sertifikat.pdf
+│       └── 📂 kop-sekolah/
+│           └── 📄 kop.docx
+└── 📁 _sistem/
+    ├── 📂 template/
+    └── 📂 backup/`}
+                        </pre>
                     </div>
 
                     {/* Security Notice */}
