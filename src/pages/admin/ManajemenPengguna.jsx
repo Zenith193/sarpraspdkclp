@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Search, Download, Edit, Trash2, Eye, Plus, X, UserX, KeyRound, Filter, Save, EyeOff, CheckCircle, XCircle, UserCheck, FileSpreadsheet, FileText, ChevronLeft, ChevronRight, Upload, FileDown } from 'lucide-react';
 import { useUsersData } from '../../data/dataProvider';
-import { JENIS_AKUN } from '../../utils/constants';
+import { JENIS_AKUN, KECAMATAN, JENJANG } from '../../utils/constants';
 import { exportToExcel, exportToPDF } from '../../utils/exportUtils';
 import toast from 'react-hot-toast';
 
@@ -74,7 +74,7 @@ const ManajemenPengguna = () => {
                 namaAkun: '', email: '', role: JENIS_AKUN[0],
                 alamat: '', password: '', aktif: true,
                 noRek: '', namaBank: '', rombel: 0, kepsek: '', nip: '',
-                kopSekolah: null
+                kopSekolah: null, jenjang: '', kecamatan: ''
             });
         } else {
             setFormData({ ...user });
@@ -301,6 +301,8 @@ const ManajemenPengguna = () => {
                                 <th>Nama Akun</th>
                                 <th>Role</th>
                                 <th>Email / NPSN</th>
+                                <th>Jenjang</th>
+                                <th>Kecamatan</th>
                                 <th>Status</th>
                                 <th style={{ width: 130 }}>Aksi</th>
                             </tr>
@@ -317,6 +319,8 @@ const ManajemenPengguna = () => {
                                     <td>
                                         <div>{u.email || u.npsn}</div>
                                     </td>
+                                    <td>{(u.role === 'Korwil' || u.role === 'Sekolah') ? (u.jenjang || '-') : '-'}</td>
+                                    <td>{(u.role === 'Korwil' || u.role === 'Sekolah') ? (u.kecamatan || '-') : '-'}</td>
                                     <td>
                                         {u.aktif ?
                                             <span className="badge badge-baik"><CheckCircle size={12} style={{ marginRight: 4 }} /> Aktif</span> :
@@ -338,7 +342,7 @@ const ManajemenPengguna = () => {
                             ))}
                             {pagedData.length === 0 && (
                                 <tr>
-                                    <td colSpan={6} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>
+                                    <td colSpan={8} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>
                                         Tidak ada data ditemukan
                                     </td>
                                 </tr>
@@ -390,6 +394,12 @@ const ManajemenPengguna = () => {
                                             <div className="form-group"><label className="form-label">Status</label><div>{formData.aktif ? 'Aktif' : 'Nonaktif'}</div></div>
                                         </div>
                                         <div className="form-group"><label className="form-label">Alamat</label><div>{formData.alamat || '-'}</div></div>
+                                        {(formData.role === 'Korwil' || formData.role === 'Sekolah') && (
+                                            <div className="form-row" style={{ marginTop: 8 }}>
+                                                <div className="form-group"><label className="form-label">Jenjang</label><div>{formData.jenjang || '-'}</div></div>
+                                                <div className="form-group"><label className="form-label">Kecamatan</label><div>{formData.kecamatan || '-'}</div></div>
+                                            </div>
+                                        )}
                                     </div>
 
                                     <div>
@@ -476,6 +486,26 @@ const ManajemenPengguna = () => {
                                         <label className="form-label">Alamat</label>
                                         <textarea className="form-input" rows={2} value={formData.alamat || ''} onChange={e => setFormData({ ...formData, alamat: e.target.value })}></textarea>
                                     </div>
+
+                                    {/* Jenjang & Kecamatan - for Korwil/Sekolah */}
+                                    {(formData.role === 'Korwil' || formData.role === 'Sekolah') && (
+                                        <div className="form-row">
+                                            <div className="form-group">
+                                                <label className="form-label">Jenjang</label>
+                                                <select className="form-select" value={formData.jenjang || ''} onChange={e => setFormData({ ...formData, jenjang: e.target.value })}>
+                                                    <option value="">-- Pilih Jenjang --</option>
+                                                    {JENJANG.map(j => <option key={j} value={j}>{j}</option>)}
+                                                </select>
+                                            </div>
+                                            <div className="form-group">
+                                                <label className="form-label">Kecamatan</label>
+                                                <select className="form-select" value={formData.kecamatan || ''} onChange={e => setFormData({ ...formData, kecamatan: e.target.value })}>
+                                                    <option value="">-- Pilih Kecamatan --</option>
+                                                    {KECAMATAN.map(k => <option key={k} value={k}>{k}</option>)}
+                                                </select>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     <div style={{ border: '1px dashed var(--border-color)', padding: '1rem', borderRadius: 'var(--radius-sm)', marginTop: '0.5rem' }}>
                                         <div className="form-row">
