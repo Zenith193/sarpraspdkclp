@@ -1,0 +1,60 @@
+import { db } from '../db/index.js';
+import { proposal, proposalFoto, sekolah } from '../db/schema/index.js';
+import { eq, ilike, and, sql } from 'drizzle-orm';
+
+export const proposalService = {
+    async list(filters: { status?: string; keranjang?: string; kecamatan?: string; jenjang?: string; sekolahId?: number; search?: string; page?: number; limit?: number }) {
+        const { status, keranjang, sekolahId, search, page = 1, limit = 50 } = filters;
+        const conditions = [];
+
+        if (sekolahId) conditions.push(eq(proposal.sekolahId, sekolahId));
+        if (status) conditions.push(eq(proposal.status, status));
+        if (keranjang) conditions.push(eq(proposal.keranjang, keranjang));
+        if (search) conditions.push(ilike(proposal.subKegiatan, `%${search}%`));
+
+        const where = conditions.length > 0 ? and(...conditions) : undefined;
+        const offset = (page - 1) * limit;
+
+        const [data, countResult] = await Promise.all([
+            db.select({ proposal, sekolahNama: sekolah.nama, sekolahNpsn: sekolah.npsn, sekolahKecamatan: sekolah.kecamatan, sekolahJenjang: sekolah.jenjang })
+                .from(proposal).leftJoin(sekolah, eq(proposal.sekolahId, sekolah.id)).where(where).limit(limit).offset(offset),
+            db.select({ count: sql<number>`count(*)` }).from(proposal).where(where),
+        ]);
+
+        return { data, total: Number(countResult[0]?.count || 0), page, limit };
+    },
+
+    async getById(id: number) {
+        const result = await db.select({ proposal, sekolahNama: sekolah.nama, sekolahNpsn: sekolah.npsn })
+            .from(proposal).leftJoin(sekolah, eq(proposal.sekolahId, sekolah.id)).where(eq(proposal.id, id));
+        if (!result[0]) return null;
+        const fotos = await db.select().from(proposalFoto).where(eq(proposalFoto.proposalId, id));
+        return { ...result[0], fotos };
+    },
+
+    async create(data: typeof proposal.$inferInsert, userId: string) {
+        const result = await db.insert(proposal).values({ ...data, createdBy: userId }).returning();
+        return result[0];
+    },
+
+    async update(id: number, data: Partial<typeof proposal.$inferInsert>) {
+        const result = await db.update(proposal).set({ ...data, updatedAt: new Date() }).where(eq(proposal.id, id)).returning();
+        return result[0];
+    },
+
+    async delete(id: number) {
+        await db.delete(proposal).where(eq(proposal.id, id));
+    },
+
+    async updateStatus(id: number, status: string, userId: string) {
+        return db.update(proposal).set({ status, verifiedBy: userId, updatedAt: new Date() }).where(eq(proposal.id, id)).returning();
+    },
+
+    async updateKeranjang(id: number, keranjang: string) {
+        return db.update(proposal).set({ keranjang, updatedAt: new Date() }).where(eq(proposal.id, id)).returning();
+    },
+
+    async updateRanking(id: number, ranking: number, bintang: number) {
+        return db.update(proposal).set({ ranking, bintang, updatedAt: new Date() }).where(eq(proposal.id, id)).returning();
+    },
+};

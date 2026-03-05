@@ -1,0 +1,103 @@
+/**
+ * Data Provider Hooks — replace mockData imports with API-backed data.
+ * Pages can import these hooks instead of static mock data.
+ *
+ * Usage:
+ *   // Before: import { mockSarpras, mockSekolah } from '../../data/mockData';
+ *   // After:  import { useSarprasData, useSekolahData } from '../../data/dataProvider';
+ *   //         const { data: sarprasData, loading, refetch } = useSarprasData();
+ */
+import { useState, useEffect, useCallback } from 'react';
+import {
+    sekolahApi, sarprasApi, proposalApi, proyeksiApi, matrikApi,
+    pencairanApi, bastApi, templateApi, riwayatBantuanApi, prestasiApi,
+    kerusakanApi, korwilApi, penggunaApi, aktivitasApi, dashboardApi, settingsApi
+} from '../api/index';
+
+// Generic data fetching hook
+function useDataFetch(fetchFn, defaultValue = [], deps = []) {
+    const [data, setData] = useState(defaultValue);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    const refetch = useCallback(async (...args) => {
+        setLoading(true);
+        try {
+            const result = await fetchFn(...args);
+            const resolved = result?.data ?? result ?? defaultValue;
+            setData(resolved);
+            setError(null);
+            return resolved;
+        } catch (err) {
+            setError(err.message);
+            return defaultValue;
+        } finally {
+            setLoading(false);
+        }
+    }, deps);
+
+    useEffect(() => { refetch(); }, [refetch]);
+
+    return { data, setData, loading, error, refetch };
+}
+
+// ===== SEKOLAH =====
+export function useSekolahData() {
+    return useDataFetch(() => sekolahApi.list({ limit: 999 }).then(r => r.data || r));
+}
+
+// ===== SARPRAS =====
+export function useSarprasData(params = {}) {
+    return useDataFetch(() => sarprasApi.list({ limit: 500, ...params }).then(r => r.data || r), [], [JSON.stringify(params)]);
+}
+
+// ===== PROPOSAL =====
+export function useProposalData(params = {}) {
+    return useDataFetch(() => proposalApi.list({ limit: 500, ...params }).then(r => r.data || r), [], [JSON.stringify(params)]);
+}
+
+// ===== AKTIVITAS =====
+export function useAktivitasData(params = {}) {
+    return useDataFetch(() => aktivitasApi.list({ limit: 200, ...params }).then(r => r.data || r), [], [JSON.stringify(params)]);
+}
+
+// ===== USERS =====
+export function useUsersData(params = {}) {
+    return useDataFetch(() => penggunaApi.list({ limit: 999, ...params }).then(r => r.data || r), [], [JSON.stringify(params)]);
+}
+
+// ===== RIWAYAT BANTUAN =====
+export function useRiwayatBantuanData(params = {}) {
+    return useDataFetch(() => riwayatBantuanApi.list({ limit: 500, ...params }).then(r => r.data || r), [], [JSON.stringify(params)]);
+}
+
+// ===== PRESTASI =====
+export function usePrestasiData(params = {}) {
+    return useDataFetch(() => prestasiApi.list({ limit: 500, ...params }).then(r => r.data || r), [], [JSON.stringify(params)]);
+}
+
+// ===== FORM KERUSAKAN =====
+export function useKerusakanData(params = {}) {
+    return useDataFetch(() => kerusakanApi.list({ limit: 500, ...params }).then(r => r.data || r), [], [JSON.stringify(params)]);
+}
+
+// ===== KORWIL =====
+export function useKorwilData() {
+    return useDataFetch(() => korwilApi.list());
+}
+
+// ===== PROYEKSI ANGGARAN =====
+export function useProyeksiData() {
+    return useDataFetch(() => proyeksiApi.listAnggaran());
+}
+
+// ===== DASHBOARD STATS =====
+export function useAdminDashboard() {
+    return useDataFetch(() => dashboardApi.admin(), null);
+}
+export function useKorwilDashboard(kecamatan) {
+    return useDataFetch(() => dashboardApi.korwil(kecamatan), null, [kecamatan]);
+}
+export function useSekolahDashboard() {
+    return useDataFetch(() => dashboardApi.sekolah(), null);
+}
