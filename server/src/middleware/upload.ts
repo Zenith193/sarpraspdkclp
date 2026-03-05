@@ -1,28 +1,51 @@
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import os from 'os';
 import {
     ensureDir, getSarprasFotoPath, getProposalPath,
     getBastPath, getKerusakanPath, getPrestasiPath,
     getKopSekolahPath, getTemplatePath,
     type SekolahInfo, type SarprasInfo
 } from '../utils/storagePaths';
+import { uploadToNas, isNasEnabled } from '../utils/nasClient';
+
+// ===================================================================
+// Upload strategy:
+//   1. Receive file to local temp dir (/tmp or ./uploads/_temp)
+//   2. If NAS enabled → upload to Synology NAS → delete local copy
+//   3. If NAS disabled → move to hierarchical local folder structure
+// ===================================================================
 
 const uploadDir = process.env.UPLOAD_DIR || './uploads';
+const tempDir = path.join(os.tmpdir(), 'spidol-uploads');
 
-// Ensure base upload dir exists
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+// Ensure directories exist
+[tempDir, uploadDir].forEach(dir => {
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+});
 
-// ===================================================================
-// LEGACY: flat-folder storage (fallback when no sekolah info provided)
-// ===================================================================
-const dirs = ['fotos', 'sertifikat', 'form-kerusakan', 'bast', 'proposal'];
-dirs.forEach(dir => {
+// Legacy flat folders (fallback)
+['fotos', 'sertifikat', 'form-kerusakan', 'bast', 'proposal'].forEach(dir => {
     const fullPath = path.join(uploadDir, dir);
     if (!fs.existsSync(fullPath)) fs.mkdirSync(fullPath, { recursive: true });
 });
 
-// Unique filename generator
+// ===================================================================
+// All uploads go to temp dir first, then NAS middleware handles routing
+// ===================================================================
+const tempStorage = multer.diskStorage({
+    destination: (_req, _file, cb) => {
+        ensureDir(tempDir);
+        cb(null, tempDir);
+    },
+    filename: (_req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        cb(null, uniqueSuffix + path.extname(file.originalname));
+    },
+});
+
+// Unique filename generator (for local-only mode)
 const uniqueFilename = (_req: any, file: Express.Multer.File, cb: any) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
     cb(null, uniqueSuffix + path.extname(file.originalname));
@@ -45,148 +68,144 @@ const pdfFilter = (_req: any, file: Express.Multer.File, cb: multer.FileFilterCa
 };
 
 // ===================================================================
-// HIERARCHICAL STORAGE (NAS schema)
-// Expects req.body or req.query to contain sekolah/sarpras info for path
+// NAS FORWARDING MIDDLEWARE
 // ===================================================================
 
 /**
- * Foto Sarpras — hierarchical: /Kecamatan/Sekolah/sarpras/MasaBangunan/NamaRuang/
- * Falls back to flat /fotos/ if sekolah info not available.
+ * Express middleware that forwards uploaded files to NAS after multer saves them to temp.
+ * Attaches `nasPath` to each file object for the route handler to use.
  */
-export const uploadFotos = multer({
-    storage: multer.diskStorage({
-        destination: (req, _file, cb) => {
-            const b = req.body || {};
-            // Try to build hierarchical path if sekolah info is available
-            if (b.kecamatan && b.namaSekolah && b.npsn && b.namaRuang) {
-                const sekolah: SekolahInfo = { kecamatan: b.kecamatan, nama: b.namaSekolah, npsn: b.npsn };
-                const sarpras: SarprasInfo = { masaBangunan: b.masaBangunan, namaRuang: b.namaRuang };
-                const dest = ensureDir(getSarprasFotoPath(sekolah, sarpras));
-                cb(null, dest);
-            } else {
-                // Fallback to flat
-                cb(null, path.join(uploadDir, 'fotos'));
+export function forwardToNas(
+    category: 'sarpras' | 'proposal' | 'bast' | 'kerusakan' | 'prestasi' | 'kop-sekolah' | 'template' | 'backup'
+) {
+    return async (req: any, _res: any, next: any) => {
+        if (!req.files && !req.file) return next();
+
+        const files: Express.Multer.File[] = req.file ? [req.file] : (req.files as Express.Multer.File[] || []);
+        const body = req.body || {};
+
+        // Build sekolah info from request body
+        const sekolah: SekolahInfo | undefined =
+            (body.kecamatan && body.namaSekolah && body.npsn)
+                ? { kecamatan: body.kecamatan, nama: body.namaSekolah, npsn: body.npsn }
+                : undefined;
+
+        const extra = {
+            masaBangunan: body.masaBangunan,
+            namaRuang: body.namaRuang,
+            tahun: body.tahun,
+        };
+
+        // Forward each file to NAS
+        for (const file of files) {
+            try {
+                const result = await uploadToNas(file.path, category, sekolah, extra);
+                // Attach storage info to file object
+                (file as any).storedAt = result.stored;
+                (file as any).nasPath = result.path;
+
+                if (result.stored === 'nas') {
+                    // File moved to NAS, update path to NAS path
+                    (file as any).finalPath = result.path;
+                } else {
+                    // NAS disabled or failed — move from temp to local hierarchical structure
+                    const localDest = getLocalDestination(category, body);
+                    const finalLocalPath = path.join(localDest, file.filename);
+                    fs.renameSync(file.path, finalLocalPath);
+                    (file as any).finalPath = finalLocalPath;
+                }
+            } catch (err) {
+                console.error('NAS forwarding error for', file.filename, err);
+                // Keep in temp as fallback
+                (file as any).storedAt = 'local';
+                (file as any).finalPath = file.path;
             }
-        },
-        filename: uniqueFilename,
-    }),
+        }
+
+        next();
+    };
+}
+
+/**
+ * Get local destination path when NAS is not available.
+ */
+function getLocalDestination(category: string, body: any): string {
+    const sekolah = (body.kecamatan && body.namaSekolah && body.npsn)
+        ? { kecamatan: body.kecamatan, nama: body.namaSekolah, npsn: body.npsn }
+        : null;
+
+    if (sekolah) {
+        switch (category) {
+            case 'sarpras':
+                return ensureDir(getSarprasFotoPath(sekolah, {
+                    masaBangunan: body.masaBangunan,
+                    namaRuang: body.namaRuang || 'unknown',
+                }));
+            case 'proposal':
+                return ensureDir(getProposalPath(sekolah, body.tahun));
+            case 'bast':
+                return ensureDir(getBastPath(sekolah));
+            case 'kerusakan':
+                return ensureDir(getKerusakanPath(sekolah));
+            case 'prestasi':
+                return ensureDir(getPrestasiPath(sekolah));
+            case 'kop-sekolah':
+                return ensureDir(getKopSekolahPath(sekolah));
+        }
+    }
+
+    // Fallback to flat folders
+    switch (category) {
+        case 'sarpras': return ensureDir(path.join(uploadDir, 'fotos'));
+        case 'proposal': return ensureDir(path.join(uploadDir, 'proposal'));
+        case 'bast': return ensureDir(path.join(uploadDir, 'bast'));
+        case 'kerusakan': return ensureDir(path.join(uploadDir, 'form-kerusakan'));
+        case 'prestasi': return ensureDir(path.join(uploadDir, 'sertifikat'));
+        case 'template': return ensureDir(getTemplatePath());
+        default: return ensureDir(path.join(uploadDir, 'lainnya'));
+    }
+}
+
+// ===================================================================
+// MULTER UPLOAD PRESETS (all save to temp first)
+// ===================================================================
+
+export const uploadFotos = multer({
+    storage: tempStorage,
     fileFilter: imageFilter,
     limits: { fileSize: 500 * 1024, files: 5 },
 });
 
-/**
- * Sertifikat Prestasi — /Kecamatan/Sekolah/prestasi/
- */
 export const uploadSertifikat = multer({
-    storage: multer.diskStorage({
-        destination: (req, _file, cb) => {
-            const b = req.body || {};
-            if (b.kecamatan && b.namaSekolah && b.npsn) {
-                const sekolah: SekolahInfo = { kecamatan: b.kecamatan, nama: b.namaSekolah, npsn: b.npsn };
-                const dest = ensureDir(getPrestasiPath(sekolah));
-                cb(null, dest);
-            } else {
-                cb(null, ensureDir(path.join(uploadDir, 'sertifikat')));
-            }
-        },
-        filename: uniqueFilename,
-    }),
+    storage: tempStorage,
     fileFilter: pdfFilter,
     limits: { fileSize: 5 * 1024 * 1024 },
 });
 
-/**
- * Form Kerusakan — /Kecamatan/Sekolah/kerusakan/
- */
 export const uploadFormKerusakan = multer({
-    storage: multer.diskStorage({
-        destination: (req, _file, cb) => {
-            const b = req.body || {};
-            if (b.kecamatan && b.namaSekolah && b.npsn) {
-                const sekolah: SekolahInfo = { kecamatan: b.kecamatan, nama: b.namaSekolah, npsn: b.npsn };
-                const dest = ensureDir(getKerusakanPath(sekolah));
-                cb(null, dest);
-            } else {
-                cb(null, ensureDir(path.join(uploadDir, 'form-kerusakan')));
-            }
-        },
-        filename: uniqueFilename,
-    }),
+    storage: tempStorage,
     fileFilter: pdfFilter,
     limits: { fileSize: 10 * 1024 * 1024 },
 });
 
-/**
- * Proposal — /Kecamatan/Sekolah/proposal/{Tahun}/
- */
 export const uploadProposal = multer({
-    storage: multer.diskStorage({
-        destination: (req, _file, cb) => {
-            const b = req.body || {};
-            if (b.kecamatan && b.namaSekolah && b.npsn) {
-                const sekolah: SekolahInfo = { kecamatan: b.kecamatan, nama: b.namaSekolah, npsn: b.npsn };
-                const dest = ensureDir(getProposalPath(sekolah, b.tahun));
-                cb(null, dest);
-            } else {
-                cb(null, ensureDir(path.join(uploadDir, 'proposal')));
-            }
-        },
-        filename: uniqueFilename,
-    }),
+    storage: tempStorage,
     fileFilter: pdfFilter,
     limits: { fileSize: 10 * 1024 * 1024 },
 });
 
-/**
- * BAST — /Kecamatan/Sekolah/bast/
- */
 export const uploadBast = multer({
-    storage: multer.diskStorage({
-        destination: (req, _file, cb) => {
-            const b = req.body || {};
-            if (b.kecamatan && b.namaSekolah && b.npsn) {
-                const sekolah: SekolahInfo = { kecamatan: b.kecamatan, nama: b.namaSekolah, npsn: b.npsn };
-                const dest = ensureDir(getBastPath(sekolah));
-                cb(null, dest);
-            } else {
-                cb(null, ensureDir(path.join(uploadDir, 'bast')));
-            }
-        },
-        filename: uniqueFilename,
-    }),
+    storage: tempStorage,
     fileFilter: pdfFilter,
     limits: { fileSize: 10 * 1024 * 1024 },
 });
 
-/**
- * Kop Sekolah — /Kecamatan/Sekolah/kop-sekolah/
- */
 export const uploadKopSekolah = multer({
-    storage: multer.diskStorage({
-        destination: (req, _file, cb) => {
-            const b = req.body || {};
-            if (b.kecamatan && b.namaSekolah && b.npsn) {
-                const sekolah: SekolahInfo = { kecamatan: b.kecamatan, nama: b.namaSekolah, npsn: b.npsn };
-                const dest = ensureDir(getKopSekolahPath(sekolah));
-                cb(null, dest);
-            } else {
-                cb(null, ensureDir(path.join(uploadDir, 'kop-sekolah')));
-            }
-        },
-        filename: uniqueFilename,
-    }),
+    storage: tempStorage,
     limits: { fileSize: 1 * 1024 * 1024 },
 });
 
-/**
- * Template (sistem) — /_sistem/template/
- */
 export const uploadTemplate = multer({
-    storage: multer.diskStorage({
-        destination: (_req, _file, cb) => {
-            cb(null, ensureDir(getTemplatePath()));
-        },
-        filename: uniqueFilename,
-    }),
+    storage: tempStorage,
     limits: { fileSize: 5 * 1024 * 1024 },
 });

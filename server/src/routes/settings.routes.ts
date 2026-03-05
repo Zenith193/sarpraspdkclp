@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { settingsService } from '../services/settings.service.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { testNasConnection, isNasEnabled } from '../utils/nasClient.js';
 
 const router = Router();
 
@@ -28,14 +29,19 @@ router.post('/countdown/reset', requireAuth, requireRole('admin'), async (_req, 
 
 // ===== NAS CONFIG =====
 router.get('/nas', requireAuth, requireRole('admin'), async (_req, res) => {
-    try { res.json(await settingsService.get('nas_config')); } catch (e: any) { res.status(500).json({ error: e.message }); }
+    try {
+        const config = await settingsService.get('nas_config');
+        res.json({ ...config, nasEnabled: isNasEnabled() });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.put('/nas', requireAuth, requireRole('admin'), async (req, res) => {
     try { res.json(await settingsService.set('nas_config', req.body)); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.post('/nas/test', requireAuth, requireRole('admin'), async (_req, res) => {
-    // Placeholder — actual NAS test logic depends on NAS type
-    try { res.json({ success: true, message: 'NAS connection test placeholder' }); } catch (e: any) { res.status(500).json({ error: e.message }); }
+    try {
+        const result = await testNasConnection();
+        res.json(result);
+    } catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 });
 router.post('/nas/reset', requireAuth, requireRole('admin'), async (_req, res) => {
     try { res.json(await settingsService.reset('nas_config')); } catch (e: any) { res.status(500).json({ error: e.message }); }
