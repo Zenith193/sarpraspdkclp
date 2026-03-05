@@ -68,7 +68,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          dockerfile: ./Dockerfile.frontend
+          file: ./Dockerfile.frontend
           push: false
           tags: sarpraspdkclp:latest
           cache-from: type=gha
@@ -78,7 +78,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: ./server
-          dockerfile: ./server/Dockerfile
+          file: ./server/Dockerfile
           push: false
           tags: spidol-server:latest
           cache-from: type=gha
