@@ -29,12 +29,18 @@ const PORT = process.env.PORT || 3000;
 // ===== MIDDLEWARE =====
 app.use(cors({
     origin: (origin, callback) => {
-        // Allow any localhost origin for development
-        if (!origin || /^https?:\/\/localhost(:\d+)?$/.test(origin)) {
-            callback(null, true);
-        } else {
-            callback(new Error('Not allowed by CORS'));
-        }
+        // Allow requests with no origin (mobile apps, curl, etc)
+        if (!origin) return callback(null, true);
+        // Allow any localhost for development
+        if (/^https?:\/\/localhost(:\d+)?$/.test(origin)) return callback(null, true);
+        // Allow configured production origin(s)
+        const allowed = process.env.CORS_ORIGIN || '';
+        if (allowed === '*') return callback(null, true);
+        const origins = allowed.split(',').map(o => o.trim());
+        if (origins.includes(origin)) return callback(null, true);
+        // Allow same IP-based origins
+        if (/^https?:\/\/\d+\.\d+\.\d+\.\d+(:\d+)?$/.test(origin)) return callback(null, true);
+        callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
 }));
