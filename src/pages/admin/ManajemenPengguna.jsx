@@ -27,6 +27,10 @@ const ManajemenPengguna = () => {
             namaBank: u.namaBank || '',
             rombel: u.rombel || 0,
             kopSekolah: u.kopSekolah || null,
+            jenjang: u.jenjang || '',
+            kecamatan: u.kecamatan || '',
+            npsn: u.npsn || '',
+            statusSekolah: u.statusSekolah || 'Negeri',
         })));
     }, [usersFromApi]);
     const [search, setSearch] = useState('');
