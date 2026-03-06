@@ -1,5 +1,5 @@
 import { db } from '../db/index.js';
-import { user } from '../db/schema/index.js';
+import { user, sekolah } from '../db/schema/index.js';
 import { eq, ilike, sql } from 'drizzle-orm';
 import { auth } from '../auth/index.js';
 
@@ -42,16 +42,61 @@ export const penggunaService = {
         await db.delete(user).where(eq(user.id, id));
     },
 
-    async batchCreate(users: Array<{ name: string; email: string; password: string; role?: string }>) {
+    async batchCreate(users: Array<{
+        name: string; email: string; password?: string; role?: string;
+        npsn?: string; jenjang?: string; kecamatan?: string; statusSekolah?: string;
+        alamat?: string; kepsek?: string; nip?: string; noRek?: string;
+        namaBank?: string; rombel?: number;
+    }>) {
         const results: Array<{ email: string; success: boolean; error?: string }> = [];
         for (const u of users) {
             try {
+                let sekolahId: number | undefined;
+
+                // Jika role adalah sekolah dan punya npsn, buat/update data sekolah dulu
+                if (u.role?.toLowerCase() === 'sekolah' && u.npsn) {
+                    const existingSekolah = await db.select().from(sekolah).where(eq(sekolah.npsn, u.npsn));
+                    if (existingSekolah.length > 0) {
+                        sekolahId = existingSekolah[0].id;
+                        await db.update(sekolah).set({
+                            nama: u.name,
+                            jenjang: u.jenjang || existingSekolah[0].jenjang,
+                            kecamatan: u.kecamatan || existingSekolah[0].kecamatan,
+                            status: u.statusSekolah || existingSekolah[0].status,
+                            alamat: u.alamat || existingSekolah[0].alamat,
+                            kepsek: u.kepsek || existingSekolah[0].kepsek,
+                            nip: u.nip || existingSekolah[0].nip,
+                            noRek: u.noRek || existingSekolah[0].noRek,
+                            namaBank: u.namaBank || existingSekolah[0].namaBank,
+                            rombel: u.rombel !== undefined ? u.rombel : existingSekolah[0].rombel,
+                            updatedAt: new Date()
+                        }).where(eq(sekolah.id, sekolahId));
+                    } else {
+                        const newSekolah = await db.insert(sekolah).values({
+                            nama: u.name,
+                            npsn: u.npsn,
+                            jenjang: u.jenjang || 'SD',
+                            kecamatan: u.kecamatan || 'Kroya',
+                            status: u.statusSekolah || 'Negeri',
+                            alamat: u.alamat,
+                            kepsek: u.kepsek,
+                            nip: u.nip,
+                            noRek: u.noRek,
+                            namaBank: u.namaBank,
+                            rombel: u.rombel || 0
+                        }).returning({ id: sekolah.id });
+                        sekolahId = newSekolah[0].id;
+                    }
+                }
+
                 await auth.api.signUpEmail({
                     body: {
                         name: u.name,
                         email: u.email,
                         password: u.password || '12345678',
                         role: u.role || 'Sekolah',
+                        sekolahId: sekolahId,
+                        aktif: true
                     },
                 });
                 results.push({ email: u.email, success: true });
