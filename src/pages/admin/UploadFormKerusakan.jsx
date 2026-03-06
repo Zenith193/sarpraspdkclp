@@ -6,6 +6,8 @@ import { exportToExcel, exportToCSV, exportToPDF } from '../../utils/exportUtils
 import SearchableSelect from '../../components/ui/SearchableSelect';
 import useAuthStore from '../../store/authStore';
 import toast from 'react-hot-toast';
+import { kerusakanApi } from '../../api/index';
+import { useApi } from '../../api/hooks';
 
 const UploadFormKerusakan = () => {
     // ===== AUTHORIZATION =====
@@ -14,15 +16,11 @@ const UploadFormKerusakan = () => {
     const isSekolah = user?.role === 'Sekolah';
     const { data: sekolahList } = useSekolahData();
 
-    // ===== STATE DATA =====
-    const [data, setData] = useState([
-        { id: 1, npsn: '20301001', namaSekolah: 'SDN 01 Kroya', masaBangunan: 'A', fileName: 'Form_Kerusakan_SDN01.pdf', fileUrl: '/dummy.pdf', status: 'Diverifikasi', verified: true },
-        { id: 2, npsn: '20301002', namaSekolah: 'SDN 02 Kroya', masaBangunan: 'B', fileName: 'Form_Revisi_SDN02.pdf', fileUrl: '#', status: 'Menunggu Verifikasi', verified: false },
-        { id: 3, npsn: '20301003', namaSekolah: 'SDN 03 Kroya', masaBangunan: 'A', fileName: null, fileUrl: null, status: 'Belum Upload', verified: false },
-        { id: 4, npsn: '20301004', namaSekolah: 'SDN 04 Kroya', masaBangunan: 'C', fileName: 'Form_SDN04.pdf', fileUrl: '#', status: 'Ditolak', verified: false },
-        { id: 5, npsn: '20301005', namaSekolah: 'SDN 05 Kroya', masaBangunan: 'A', fileName: 'Form_SDN05.pdf', fileUrl: '#', status: 'Diverifikasi', verified: true },
-        { id: 6, npsn: '20301006', namaSekolah: 'SDN 06 Kroya', masaBangunan: 'B', fileName: null, fileUrl: null, status: 'Belum Upload', verified: false },
-    ]);
+    // ===== STATE DATA (from API) =====
+    const { data: apiData, loading, refetch } = useApi(() => kerusakanApi.list(), []);
+    const [data, setData] = useState([]);
+
+    useEffect(() => { if (apiData?.data) setData(apiData.data); else if (Array.isArray(apiData)) setData(apiData); }, [apiData]);
 
     // ===== UI STATE =====
     const [activeTab, setActiveTab] = useState('data');
@@ -98,34 +96,23 @@ const UploadFormKerusakan = () => {
         }
     };
 
-    const handleSaveData = () => {
+    const handleSaveData = async () => {
         const sekolah = sekolahList.find(s => s.nama === formSekolah);
         if (!sekolah) { toast.error('Pilih sekolah'); return; }
-
-        const targetNPSN = isSekolah ? user.npsn : sekolah.npsn;
-        const targetNama = isSekolah ? user.namaAkun : sekolah.nama;
-
-        let fileName = null;
-        let fileUrl = null;
-        if (formFile) {
-            fileName = formFile.name;
-            fileUrl = URL.createObjectURL(formFile);
+        try {
+            const fd = new FormData();
+            fd.append('sekolahId', sekolah.id);
+            fd.append('npsn', isSekolah ? user.npsn : sekolah.npsn);
+            fd.append('namaSekolah', isSekolah ? user.namaAkun : sekolah.nama);
+            fd.append('masaBangunan', formMasa);
+            if (formFile) fd.append('file', formFile);
+            await kerusakanApi.create(fd);
+            toast.success('Data berhasil diajukan');
+            handleCloseModal();
+            refetch();
+        } catch (err) {
+            toast.error(err.message || 'Gagal menyimpan');
         }
-
-        const newItem = {
-            id: Date.now(),
-            npsn: targetNPSN,
-            namaSekolah: targetNama,
-            masaBangunan: formMasa,
-            fileName: fileName,
-            fileUrl: fileUrl,
-            status: 'Menunggu Verifikasi',
-            verified: false
-        };
-
-        setData(prev => [newItem, ...prev]);
-        toast.success('Data berhasil diajukan, menunggu verifikasi Admin');
-        handleCloseModal();
     };
 
     const handleDirectUpload = (e, item) => {
@@ -149,23 +136,26 @@ const UploadFormKerusakan = () => {
         }
     };
 
-    const executeDelete = () => {
+    const executeDelete = async () => {
         if (deleteTarget) {
-            if (isSekolah && deleteTarget.npsn !== user.npsn) {
-                toast.error("Tidak bisa menghapus data orang lain");
+            try {
+                await kerusakanApi.delete(deleteTarget.id);
+                toast.success('Data dihapus');
                 setDeleteTarget(null);
-                return;
+                refetch();
+            } catch (err) {
+                toast.error(err.message || 'Gagal menghapus');
             }
-            setData(prev => prev.filter(d => d.id !== deleteTarget.id));
-            toast.success('Data dihapus');
-            setDeleteTarget(null);
         }
     };
 
     // ===== VERIFICATION HANDLERS =====
-    const handleVerify = (id) => {
-        setData(prev => prev.map(d => d.id === id ? { ...d, status: 'Diverifikasi', verified: true } : d));
-        toast.success("Data diverifikasi");
+    const handleVerify = async (id) => {
+        try {
+            await kerusakanApi.verify(id);
+            toast.success("Data diverifikasi");
+            refetch();
+        } catch (err) { toast.error(err.message || 'Gagal verifikasi'); }
     };
 
     const openRejectModal = (item) => {
@@ -177,18 +167,20 @@ const UploadFormKerusakan = () => {
         setStatusModal({ isOpen: true, type: 'unverify', data: item });
     };
 
-    const executeStatusAction = () => {
+    const executeStatusAction = async () => {
         const { type, data: item } = statusModal;
-
-        if (type === 'reject') {
-            if (!rejectionReason.trim()) { toast.error("Alasan wajib diisi!"); return; }
-            setData(prev => prev.map(d => d.id === item.id ? { ...d, status: 'Ditolak', verified: false } : d));
-            toast.error("Data ditolak");
-        } else if (type === 'unverify') {
-            setData(prev => prev.map(d => d.id === item.id ? { ...d, status: 'Menunggu Verifikasi', verified: false } : d));
-            toast.success("Verifikasi dibatalkan");
-        }
-        setStatusModal({ isOpen: false, type: '', data: null });
+        try {
+            if (type === 'reject') {
+                if (!rejectionReason.trim()) { toast.error("Alasan wajib diisi!"); return; }
+                await kerusakanApi.reject(item.id, rejectionReason);
+                toast.error("Data ditolak");
+            } else if (type === 'unverify') {
+                await kerusakanApi.unverify(item.id);
+                toast.success("Verifikasi dibatalkan");
+            }
+            setStatusModal({ isOpen: false, type: '', data: null });
+            refetch();
+        } catch (err) { toast.error(err.message || 'Gagal'); }
     };
 
     const handleExport = (format) => {

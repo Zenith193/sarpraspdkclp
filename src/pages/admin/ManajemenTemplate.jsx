@@ -1,15 +1,8 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Plus, Search, Download, Edit, Trash2, Save, X, FileText, AlertTriangle, Code, Copy, CheckCheck, Info, ChevronLeft, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
-
-// Data Mocking Template
-const INITIAL_DATA = [
-    { id: 1, name: 'Template BAST Umum', type: 'BAST', lastUpdated: '2025-06-15T10:00:00' },
-    { id: 2, name: 'Checklist Verifikasi Renovasi', type: 'Checklist', lastUpdated: '2025-06-10T14:30:00' },
-    { id: 3, name: 'Template Surat Penawaran', type: 'Surat', lastUpdated: '2025-05-20T09:15:00' },
-    { id: 4, name: 'Template Kontrak Kerja', type: 'Kontrak', lastUpdated: '2025-05-18T08:00:00' },
-    { id: 5, name: 'Template Berita Acara', type: 'Berita Acara', lastUpdated: '2025-05-10T11:00:00' },
-];
+import { templateApi } from '../../api/index';
+import { useApi } from '../../api/hooks';
 
 // ===== DATA PANDUAN VARIABEL =====
 const GUIDE_DATA = {
@@ -30,9 +23,12 @@ const GUIDE_DATA = {
 };
 
 const ManajemenTemplate = () => {
-    const [templates, setTemplates] = useState(INITIAL_DATA);
+    const { data: apiData, loading, refetch } = useApi(() => templateApi.list(), []);
+    const [templates, setTemplates] = useState([]);
     const [search, setSearch] = useState('');
-    
+
+    useEffect(() => { if (apiData?.data) setTemplates(apiData.data); else if (Array.isArray(apiData)) setTemplates(apiData); }, [apiData]);
+
     // ===== STATE PAGINASI =====
     const [perPage, setPerPage] = useState(10);
     const [currentPage, setCurrentPage] = useState(1);
@@ -53,9 +49,9 @@ const ManajemenTemplate = () => {
 
     // Filter Data
     const filteredData = useMemo(() => {
-        return templates.filter(t => 
-            t.name.toLowerCase().includes(search.toLowerCase()) ||
-            t.type.toLowerCase().includes(search.toLowerCase())
+        return templates.filter(t =>
+            (t.name || '').toLowerCase().includes(search.toLowerCase()) ||
+            (t.type || '').toLowerCase().includes(search.toLowerCase())
         );
     }, [templates, search]);
 
@@ -87,23 +83,33 @@ const ManajemenTemplate = () => {
         setShowModal(true);
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!formData.name) { toast.error("Nama template wajib diisi"); return; }
-        if (modalType === 'add') {
-            setTemplates(prev => [{ id: Date.now(), ...formData, lastUpdated: new Date().toISOString() }, ...prev]);
-            toast.success("Template berhasil ditambahkan");
-        } else {
-            setTemplates(prev => prev.map(t => t.id === editId ? { ...t, ...formData, lastUpdated: new Date().toISOString() } : t));
-            toast.success("Template berhasil diperbarui");
+        try {
+            if (modalType === 'add') {
+                await templateApi.create(formData);
+                toast.success("Template berhasil ditambahkan");
+            } else {
+                await templateApi.update(editId, formData);
+                toast.success("Template berhasil diperbarui");
+            }
+            setShowModal(false);
+            refetch();
+        } catch (err) {
+            toast.error(err.message || 'Gagal menyimpan template');
         }
-        setShowModal(false);
     };
 
-    const executeDelete = () => {
+    const executeDelete = async () => {
         if (deleteTarget) {
-            setTemplates(prev => prev.filter(t => t.id !== deleteTarget.id));
-            toast.success("Template berhasil dihapus");
-            setDeleteTarget(null);
+            try {
+                await templateApi.delete(deleteTarget.id);
+                toast.success("Template berhasil dihapus");
+                setDeleteTarget(null);
+                refetch();
+            } catch (err) {
+                toast.error(err.message || 'Gagal menghapus template');
+            }
         }
     };
 
@@ -143,8 +149,8 @@ const ManajemenTemplate = () => {
                         {/* Select Snippet untuk Pembatas Data */}
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Tampil:</span>
-                            <select 
-                                value={perPage} 
+                            <select
+                                value={perPage}
                                 onChange={(e) => setPerPage(Number(e.target.value))}
                                 style={{ padding: '4px 8px', background: 'var(--bg-input)', border: '1px solid var(--border-input)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.8rem' }}
                             >
@@ -233,11 +239,11 @@ const ManajemenTemplate = () => {
                         <div className="modal-body">
                             <div className="form-group">
                                 <label className="form-label">Nama Template</label>
-                                <input className="form-input" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} />
+                                <input className="form-input" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
                             </div>
                             <div className="form-group">
                                 <label className="form-label">Jenis Dokumen</label>
-                                <select className="form-select" value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})}>
+                                <select className="form-select" value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })}>
                                     <option value="BAST">BAST</option>
                                     <option value="Checklist">Checklist</option>
                                     <option value="Surat">Surat</option>
@@ -257,7 +263,7 @@ const ManajemenTemplate = () => {
             {deleteTarget && (
                 <div className="modal-overlay" onClick={() => setDeleteTarget(null)}>
                     <div className="modal" style={{ maxWidth: '400px' }} onClick={e => e.stopPropagation()}>
-                         <div className="modal-body" style={{ textAlign: 'center', padding: '32px 24px' }}>
+                        <div className="modal-body" style={{ textAlign: 'center', padding: '32px 24px' }}>
                             <div style={{ width: 64, height: 64, borderRadius: '50%', background: 'rgba(239, 68, 68, 0.1)', color: 'var(--accent-red)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
                                 <AlertTriangle size={32} />
                             </div>
@@ -280,7 +286,7 @@ const ManajemenTemplate = () => {
                             <div className="modal-title">Panduan Penggunaan Template</div>
                             <button className="modal-close" onClick={() => setShowGuide(false)}><X size={18} /></button>
                         </div>
-                        
+
                         <div className="modal-body" style={{ padding: 0 }}>
                             <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--border-color)', background: 'var(--bg-primary)' }}>
                                 <h4 style={{ marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Informasi Umum</h4>
@@ -291,13 +297,13 @@ const ManajemenTemplate = () => {
 
                             <div style={{ borderBottom: '1px solid var(--border-color)', padding: '0 1.5rem', display: 'flex', gap: '0.5rem', background: 'var(--bg-primary)' }}>
                                 {Object.keys(GUIDE_DATA).map((key) => (
-                                    <button 
+                                    <button
                                         key={key}
                                         onClick={() => setActiveGuideTab(key)}
-                                        style={{ 
-                                            padding: '0.75rem 0', 
-                                            background: 'transparent', 
-                                            border: 'none', 
+                                        style={{
+                                            padding: '0.75rem 0',
+                                            background: 'transparent',
+                                            border: 'none',
                                             borderBottom: activeGuideTab === key ? '2px solid var(--accent-blue)' : '2px solid transparent',
                                             fontWeight: 600,
                                             fontSize: '0.875rem',
@@ -325,12 +331,12 @@ const ManajemenTemplate = () => {
                                         {GUIDE_DATA[activeGuideTab].map((item, idx) => (
                                             <tr key={idx}>
                                                 <td>
-                                                    <span style={{ 
-                                                        background: 'var(--bg-secondary)', 
-                                                        padding: '4px 8px', 
-                                                        borderRadius: '4px', 
-                                                        fontFamily: 'monospace', 
-                                                        fontSize: '0.85rem', 
+                                                    <span style={{
+                                                        background: 'var(--bg-secondary)',
+                                                        padding: '4px 8px',
+                                                        borderRadius: '4px',
+                                                        fontFamily: 'monospace',
+                                                        fontSize: '0.85rem',
                                                         color: 'var(--accent-blue)',
                                                         border: '1px solid var(--border-color)'
                                                     }}>
@@ -340,7 +346,7 @@ const ManajemenTemplate = () => {
                                                 <td style={{ fontSize: '0.875rem' }}>{item.description}</td>
                                                 <td style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{item.example}</td>
                                                 <td style={{ textAlign: 'center' }}>
-                                                    <button 
+                                                    <button
                                                         onClick={() => handleCopy(item.variable, `${activeGuideTab}-${idx}`)}
                                                         className="btn btn-ghost btn-sm"
                                                         style={{ padding: '4px 8px' }}

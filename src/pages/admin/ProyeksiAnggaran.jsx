@@ -4,13 +4,8 @@ import { useProyeksiData, useSarprasData, useSekolahData } from '../../data/data
 import { JENIS_PRASARANA, JENJANG } from '../../utils/constants';
 import { formatCurrency } from '../../utils/formatters';
 import toast from 'react-hot-toast';
-
-// Initial Data SNP (Acuan)
-const INITIAL_SNP_DATA = [
-    { id: 1, jenisPrasarana: 'Ruang Kelas', jenjang: 'SD', judulRehabilitasi: 'Rehabilitasi Ruang Kelas SD', judulPembangunan: 'Pembangunan Ruang Kelas Baru SD' },
-    { id: 2, jenisPrasarana: 'Ruang Kelas', jenjang: 'SMP', judulRehabilitasi: 'Rehabilitasi Ruang Kelas SMP', judulPembangunan: 'Pembangunan Ruang Kelas Baru SMP' },
-    { id: 3, jenisPrasarana: 'Toilet', jenjang: 'SD', judulRehabilitasi: 'Rehabilitasi Toilet SD', judulPembangunan: 'Pembangunan Toilet Baru SD' },
-];
+import { proyeksiApi } from '../../api/index';
+import { useApi } from '../../api/hooks';
 
 // Opsi untuk Keterangan (Combo Box)
 const KETERANGAN_OPTIONS = [
@@ -42,10 +37,12 @@ const ProyeksiAnggaran = () => {
     const { data: sarprasList } = useSarprasData();
 
     const [anggaranData, setAnggaranData] = useState([]);
-    const [snpData, setSnpData] = useState(INITIAL_SNP_DATA);
+    const { data: snpApiData, refetch: refetchSnp } = useApi(() => proyeksiApi.listSnp(), []);
+    const [snpData, setSnpData] = useState([]);
     const [expandedRows, setExpandedRows] = useState([]);
 
     useEffect(() => { if (proyeksiList?.length) setAnggaranData(proyeksiList); }, [proyeksiList]);
+    useEffect(() => { if (snpApiData?.data) setSnpData(snpApiData.data); else if (Array.isArray(snpApiData)) setSnpData(snpApiData); }, [snpApiData]);
 
     // ===== STATE UNTUK KETERANGAN MANUAL =====
     const [sekolahKeterangan, setSekolahKeterangan] = useState({});
@@ -255,7 +252,7 @@ const ProyeksiAnggaran = () => {
         setShowModal(true);
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!formData.jenisPrasarana || !formData.jenjang) { toast.error('Wajib diisi'); return; }
         const payload = { ...formData };
         if (modalType === 'anggaran') {
@@ -263,24 +260,28 @@ const ProyeksiAnggaran = () => {
             payload.rusakBerat = parseFormattedNumber(payload.rusakBerat);
             payload.pembangunan = parseFormattedNumber(payload.pembangunan);
         }
-
-        if (modalType === 'anggaran') {
-            if (editItem) setAnggaranData(prev => prev.map(d => d.id === editItem.id ? { ...payload, id: editItem.id } : d));
-            else setAnggaranData(prev => [...prev, { ...payload, id: Date.now() }]);
-            toast.success('Data Anggaran Disimpan');
-        } else {
-            if (editItem) setSnpData(prev => prev.map(d => d.id === editItem.id ? { ...payload, id: editItem.id } : d));
-            else setSnpData(prev => [...prev, { ...payload, id: Date.now() }]);
-            toast.success('Data SNP Disimpan');
-        }
-        setShowModal(false);
+        try {
+            if (modalType === 'anggaran') {
+                if (editItem) await proyeksiApi.updateAnggaran(editItem.id, payload);
+                else await proyeksiApi.createAnggaran(payload);
+                toast.success('Data Anggaran Disimpan');
+            } else {
+                if (editItem) await proyeksiApi.updateSnp(editItem.id, payload);
+                else await proyeksiApi.createSnp(payload);
+                toast.success('Data SNP Disimpan');
+                refetchSnp();
+            }
+            setShowModal(false);
+        } catch (err) { toast.error(err.message || 'Gagal menyimpan'); }
     };
 
-    const handleDelete = (type, id) => {
+    const handleDelete = async (type, id) => {
         if (!confirm('Hapus data ini?')) return;
-        if (type === 'anggaran') setAnggaranData(prev => prev.filter(d => d.id !== id));
-        else setSnpData(prev => prev.filter(d => d.id !== id));
-        toast.success('Data dihapus');
+        try {
+            if (type === 'anggaran') { await proyeksiApi.deleteAnggaran(id); setAnggaranData(prev => prev.filter(d => d.id !== id)); }
+            else { await proyeksiApi.deleteSnp(id); refetchSnp(); }
+            toast.success('Data dihapus');
+        } catch (err) { toast.error(err.message || 'Gagal menghapus'); }
     };
 
     const handleExport = (type) => toast.success('Ekspor berhasil');

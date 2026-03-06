@@ -6,25 +6,12 @@ import { exportToExcel, exportToCSV, exportToPDF } from '../../utils/exportUtils
 import SearchableSelect from '../../components/ui/SearchableSelect';
 import useAuthStore from '../../store/authStore';
 import toast from 'react-hot-toast';
+import { prestasiApi } from '../../api/index';
+import { useApi } from '../../api/hooks';
 
 // ===== CONSTANTS =====
 const KATEGORI_PRESTASI = ['Perorangan', 'Beregu'];
 const CAPAIAN_PRESTASI = ['Juara 1', 'Juara 2', 'Juara 3', 'Harapan 1', 'Harapan 2', 'Harapan 3', 'Peserta Terbaik', 'Peserta'];
-
-const INITIAL_POINT_SETTINGS = [
-    { id: 1, tingkat: 'Kabupaten/Kota', kategori: 'Perorangan', capaian: 'Juara 1', poin: 10 },
-    { id: 2, tingkat: 'Kabupaten/Kota', kategori: 'Perorangan', capaian: 'Juara 2', poin: 8 },
-    { id: 3, tingkat: 'Kabupaten/Kota', kategori: 'Perorangan', capaian: 'Juara 3', poin: 6 },
-    { id: 4, tingkat: 'Kabupaten/Kota', kategori: 'Beregu', capaian: 'Juara 1', poin: 15 },
-    { id: 5, tingkat: 'Provinsi', kategori: 'Perorangan', capaian: 'Juara 1', poin: 20 },
-    { id: 6, tingkat: 'Nasional', kategori: 'Perorangan', capaian: 'Juara 1', poin: 30 },
-    { id: 7, tingkat: 'Provinsi', kategori: 'Perorangan', capaian: 'Juara 2', poin: 18 },
-    { id: 8, tingkat: 'Provinsi', kategori: 'Perorangan', capaian: 'Juara 3', poin: 16 },
-    { id: 9, tingkat: 'Nasional', kategori: 'Beregu', capaian: 'Juara 1', poin: 40 },
-    { id: 10, tingkat: 'Kabupaten/Kota', kategori: 'Beregu', capaian: 'Juara 2', poin: 12 },
-    { id: 11, tingkat: 'Kabupaten/Kota', kategori: 'Beregu', capaian: 'Juara 3', poin: 10 },
-    { id: 12, tingkat: 'Provinsi', kategori: 'Beregu', capaian: 'Juara 1', poin: 25 },
-];
 
 const Prestasi = () => {
     // ===== AUTHORIZATION =====
@@ -41,17 +28,16 @@ const Prestasi = () => {
     // State Tab
     const [activeTab, setActiveTab] = useState('data');
 
-    // State Data Prestasi
-    const [data, setData] = useState([
-        { id: 1, jenisPrestasi: 'Olimpiade Matematika', siswa: 'Ahmad Rizki', kategori: 'Perorangan', tingkat: 'Kabupaten/Kota', tahun: 2025, sertifikat: 'Sertifikat_Ahmad.pdf', fileUrl: '#', keterangan: 'Juara 2', namaSekolah: 'SDN 01 Kroya', npsn: '123456', kecamatan: 'Kroya', status: 'Diverifikasi' },
-        { id: 2, jenisPrestasi: 'Lomba Cerdas Cermat', siswa: 'Tim A', kategori: 'Beregu', tingkat: 'Provinsi', tahun: 2025, sertifikat: 'Sertifikat_TimA.pdf', fileUrl: '#', keterangan: 'Juara 1', namaSekolah: 'SMPN 01 Cilacap Tengah', npsn: '654321', kecamatan: 'Cilacap Tengah', status: 'Menunggu Verifikasi' },
-        { id: 3, jenisPrestasi: 'Lomba Lukis', siswa: 'Budi Santoso', kategori: 'Perorangan', tingkat: 'Kabupaten/Kota', tahun: 2025, sertifikat: 'Sertifikat_Budi.pdf', fileUrl: '#', keterangan: 'Juara 1', namaSekolah: 'SDN 02 Kroya', npsn: '123457', kecamatan: 'Kroya', status: 'Diverifikasi' },
-        { id: 4, jenisPrestasi: 'Olimpiade Sains', siswa: 'Siti Aminah', kategori: 'Perorangan', tingkat: 'Nasional', tahun: 2024, sertifikat: 'Sertifikat_Siti.pdf', fileUrl: '#', keterangan: 'Peserta', namaSekolah: 'SMA Negeri 1 Cilacap', npsn: '123458', kecamatan: 'Cilacap Tengah', status: 'Ditolak' },
-        { id: 5, jenisPrestasi: 'Lomba Pidato', siswa: 'Joko Widodo', kategori: 'Perorangan', tingkat: 'Provinsi', tahun: 2025, sertifikat: 'Sertifikat_Joko.pdf', fileUrl: '#', keterangan: 'Juara 3', namaSekolah: 'SMKN 1 Cilacap', npsn: '123459', kecamatan: 'Cilacap Tengah', status: 'Diverifikasi' },
-    ]);
+    // State Data Prestasi (from API)
+    const { data: apiData, loading, refetch } = useApi(() => prestasiApi.list(), []);
+    const [data, setData] = useState([]);
 
-    // State Pengaturan Poin
-    const [pointSettings, setPointSettings] = useState(INITIAL_POINT_SETTINGS);
+    // State Pengaturan Poin (from API)
+    const { data: apiPointData, refetch: refetchPoints } = useApi(() => prestasiApi.listPointRules(), []);
+    const [pointSettings, setPointSettings] = useState([]);
+
+    useEffect(() => { if (apiData?.data) setData(apiData.data); else if (Array.isArray(apiData)) setData(apiData); }, [apiData]);
+    useEffect(() => { if (apiPointData?.data) setPointSettings(apiPointData.data); else if (Array.isArray(apiPointData)) setPointSettings(apiPointData); }, [apiPointData]);
 
     // UI State
     const [search, setSearch] = useState('');
@@ -166,46 +152,36 @@ const Prestasi = () => {
         setShowModal(true);
     };
 
-    const handleSave = () => {
-        // Jika Sekolah, paksa nama sekolah sesuai akunnya
+    const handleSave = async () => {
         const sekolahName = isSekolah ? user.namaAkun : formSekolah;
         const sekolah = sekolahList.find(s => s.nama === sekolahName);
-
         if (!sekolah) { toast.error('Pilih sekolah yang valid'); return; }
         if (!formData.jenisPrestasi || !formData.siswa) { toast.error('Jenis prestasi dan nama siswa wajib diisi'); return; }
-        if (isSekolah && !formSertifikat && !editItem?.sertifikat) { toast.error('Upload sertifikat wajib!'); return; }
-
-        let sertifikatName = editItem ? editItem.sertifikat : null;
-        let fileUrl = editItem ? editItem.fileUrl : null;
-        if (formSertifikat) { sertifikatName = formSertifikat.name; fileUrl = URL.createObjectURL(formSertifikat); }
-
-        const newItem = {
-            id: editItem ? editItem.id : Date.now(),
-            namaSekolah: sekolah.nama,
-            npsn: sekolah.npsn,
-            kecamatan: sekolah.kecamatan, // Tambahkan kecamatan dari data sekolah
-            ...formData,
-            tahun: parseInt(formData.tahun),
-            sertifikat: sertifikatName,
-            fileUrl: fileUrl,
-            status: 'Menunggu Verifikasi'
-        };
-
-        if (editItem) { setData(prev => prev.map(d => d.id === editItem.id ? newItem : d)); toast.success('Data diperbarui ✅'); }
-        else { setData(prev => [newItem, ...prev]); toast.success('Pengajuan berhasil 🚀'); }
-        setShowModal(false); resetForm();
+        try {
+            const payload = { ...formData, tahun: parseInt(formData.tahun), namaSekolah: sekolah.nama, npsn: sekolah.npsn, kecamatan: sekolah.kecamatan, sekolahId: sekolah.id };
+            if (editItem) {
+                await prestasiApi.update(editItem.id, payload);
+                toast.success('Data diperbarui ✅');
+            } else {
+                await prestasiApi.create(payload);
+                toast.success('Pengajuan berhasil 🚀');
+            }
+            setShowModal(false); resetForm(); refetch();
+        } catch (err) { toast.error(err.message || 'Gagal menyimpan'); }
     };
 
-    const executeDelete = () => { if (deleteTarget) { setData(prev => prev.filter(d => d.id !== deleteTarget.id)); toast.success('Data dihapus 🗑️'); setDeleteTarget(null); } };
-    const handleVerify = (id) => { setData(prev => prev.map(d => d.id === id ? { ...d, status: 'Diverifikasi' } : d)); toast.success("Diverifikasi ✔️"); };
+    const executeDelete = async () => { if (deleteTarget) { try { await prestasiApi.delete(deleteTarget.id); toast.success('Data dihapus 🗑️'); setDeleteTarget(null); refetch(); } catch (err) { toast.error(err.message || 'Gagal hapus'); } } };
+    const handleVerify = async (id) => { try { await prestasiApi.verify(id); toast.success("Diverifikasi ✔️"); refetch(); } catch (err) { toast.error(err.message || 'Gagal'); } };
     const openRejectModal = (item) => { setRejectionReason(''); setStatusModal({ isOpen: true, type: 'reject', data: item }); };
     const openUnverifyModal = (item) => { setStatusModal({ isOpen: true, type: 'unverify', data: item }); };
 
-    const executeStatusAction = () => {
-        const { type, data } = statusModal;
-        if (type === 'reject') { if (!rejectionReason.trim()) { toast.error("Alasan wajib diisi!"); return; } setData(prev => prev.map(d => d.id === data.id ? { ...d, status: 'Ditolak', alasan: rejectionReason } : d)); toast.error("Ditolak 🚫"); }
-        else if (type === 'unverify') { setData(prev => prev.map(d => d.id === data.id ? { ...d, status: 'Menunggu Verifikasi' } : d)); toast.success("Verifikasi dibatalkan 🔄"); }
-        setStatusModal({ isOpen: false, type: '', data: null });
+    const executeStatusAction = async () => {
+        const { type, data: item } = statusModal;
+        try {
+            if (type === 'reject') { if (!rejectionReason.trim()) { toast.error("Alasan wajib diisi!"); return; } await prestasiApi.reject(item.id, rejectionReason); toast.error("Ditolak 🚫"); }
+            else if (type === 'unverify') { await prestasiApi.unverify(item.id); toast.success("Verifikasi dibatalkan 🔄"); }
+            setStatusModal({ isOpen: false, type: '', data: null }); refetch();
+        } catch (err) { toast.error(err.message || 'Gagal'); }
     };
 
     const openPointModal = (item = null) => {
@@ -213,13 +189,15 @@ const Prestasi = () => {
         else { setEditPoint(null); setPointForm({ tingkat: TINGKAT_LOMBA[0], kategori: KATEGORI_PRESTASI[0], capaian: CAPAIAN_PRESTASI[0], poin: 0 }); }
         setShowPointModal(true);
     };
-    const handleSavePoint = () => {
+    const handleSavePoint = async () => {
         if (!pointForm.poin) { toast.error("Masukkan nilai poin"); return; }
-        if (editPoint) { setPointSettings(prev => prev.map(p => p.id === editPoint.id ? { ...p, ...pointForm } : p)); toast.success(`Aturan diperbarui ✨`); }
-        else { setPointSettings(prev => [...prev, { id: Date.now(), ...pointForm }]); toast.success("Aturan ditambahkan 🎉"); }
-        setShowPointModal(false);
+        try {
+            if (editPoint) { await prestasiApi.updatePointRule(editPoint.id, pointForm); toast.success(`Aturan diperbarui ✨`); }
+            else { await prestasiApi.createPointRule(pointForm); toast.success("Aturan ditambahkan 🎉"); }
+            setShowPointModal(false); refetchPoints();
+        } catch (err) { toast.error(err.message || 'Gagal menyimpan aturan'); }
     };
-    const executeDeletePoint = () => { if (deletePointTarget) { setPointSettings(prev => prev.filter(p => p.id !== deletePointTarget.id)); toast.success(`Aturan dihapus 🗑️`); setDeletePointTarget(null); } };
+    const executeDeletePoint = async () => { if (deletePointTarget) { try { await prestasiApi.deletePointRule(deletePointTarget.id); toast.success(`Aturan dihapus 🗑️`); setDeletePointTarget(null); refetchPoints(); } catch (err) { toast.error(err.message || 'Gagal hapus'); } } };
     const handleExport = (format) => { toast.success(`Ekspor ${format} berhasil`); setShowExport(false); };
 
     // ===== HELPERS =====
