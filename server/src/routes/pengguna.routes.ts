@@ -14,6 +14,16 @@ router.get('/', requireAuth, requireRole('admin'), async (req, res) => {
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
+router.post('/batch', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+        if (!Array.isArray(req.body.users)) {
+            res.status(400).json({ error: 'Body harus berisi array users' });
+            return;
+        }
+        res.json(await penggunaService.batchCreate(req.body.users));
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 router.get('/:id', requireAuth, async (req, res) => {
     try {
         const id = req.params.id as string;

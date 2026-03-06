@@ -127,6 +127,7 @@ export const korwilApi = {
 export const penggunaApi = {
     list: (params = {}) => { const q = new URLSearchParams(params).toString(); return api.get(`/pengguna?${q}`); },
     getById: (id) => api.get(`/pengguna/${id}`),
+    batchCreate: (users) => api.post('/pengguna/batch', { users }),
     update: (id, data) => api.put(`/pengguna/${id}`, data),
     toggleActive: (id) => api.put(`/pengguna/${id}/toggle-active`),
     delete: (id) => api.delete(`/pengguna/${id}`),

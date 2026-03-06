@@ -1,14 +1,20 @@
-import { useState, useMemo, useEffect } from 'react';
-import { Search, Download, Edit, Trash2, Eye, Plus, X, UserX, KeyRound, Filter, Save, EyeOff, CheckCircle, XCircle, UserCheck, FileSpreadsheet, FileText, ChevronLeft, ChevronRight, Upload, FileDown } from 'lucide-react';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { Search, Download, Edit, Trash2, Eye, Plus, X, UserX, KeyRound, Filter, Save, EyeOff, CheckCircle, XCircle, UserCheck, FileSpreadsheet, FileText, ChevronLeft, ChevronRight, Upload, FileDown, UploadCloud } from 'lucide-react';
 import { useUsersData } from '../../data/dataProvider';
 import { JENIS_AKUN, KECAMATAN, JENJANG } from '../../utils/constants';
 import { exportToExcel, exportToPDF } from '../../utils/exportUtils';
 import toast from 'react-hot-toast';
+import * as XLSX from 'xlsx';
+import { penggunaApi } from '../../api/index';
 
 const ManajemenPengguna = () => {
-    const { data: usersFromApi, loading: usersLoading } = useUsersData();
+    const { data: usersFromApi, loading: usersLoading, refetch } = useUsersData();
 
     const [users, setUsers] = useState([]);
+
+    // Refs for batch import
+    const fileInputRef = useRef(null);
+    const [isImporting, setIsImporting] = useState(false);
 
     useEffect(() => {
         if (usersFromApi.length) setUsers(usersFromApi.map(u => ({
@@ -67,6 +73,69 @@ const ManajemenPengguna = () => {
     }, [search, filterRole, perPage]);
 
     // ===== HANDLERS =====
+    const handleBatchImport = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        setIsImporting(true);
+        toast.loading("Membaca file Excel...", { id: 'import' });
+        try {
+            const data = await file.arrayBuffer();
+            const workbook = XLSX.read(data);
+            const sheet = workbook.Sheets[workbook.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(sheet);
+
+            if (jsonData.length === 0) {
+                toast.error("File Excel kosong", { id: 'import' });
+                return;
+            }
+
+            const usersToCreate = jsonData.map((row, index) => {
+                const name = row['Nama'] || row['Nama Sekolah'] || row['Nama Akun'];
+                const email = row['Email'] || row['NPSN'] || row['Username'];
+                const password = row['Password'] || '12345678';
+                const role = row['Role'] || row['Peran'] || 'Sekolah';
+
+                if (!name || !email) {
+                    throw new Error(`Baris ${index + 2}: Kolom Nama atau Email tidak boleh kosong`);
+                }
+                return { name: name.toString(), email: email.toString(), password: String(password), role: role.toString() };
+            });
+
+            toast.loading(`Mengimpor ${usersToCreate.length} pengguna...`, { id: 'import' });
+            const result = await penggunaApi.batchCreate(usersToCreate);
+
+            if (result.successCount > 0) {
+                toast.success(`${result.successCount} pengguna berhasil ditambahkan`, { id: 'import' });
+                if (refetch) refetch();
+            } else {
+                toast.error("Gagal menambahkan pengguna", { id: 'import' });
+            }
+            if (result.failCount > 0) {
+                console.warn(`${result.failCount} pengguna gagal ditambahkan`, result.results.filter(r => !r.success));
+                toast.error(`${result.failCount} pengguna gagal ditambahkan. Periksa console log.`, { duration: 5000 });
+            }
+        } catch (error) {
+            toast.error(error.message || "Gagal membaca atau mengimpor file", { id: 'import' });
+            console.error(error);
+        } finally {
+            setIsImporting(false);
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        }
+    };
+
+    const handleDownloadTemplate = () => {
+        const templateData = [
+            { "Nama": "SDN 1 Contoh", "Email": "12345678", "Password": "password123", "Role": "Sekolah" },
+            { "Nama": "Admin Pusat", "Email": "admin@example.com", "Password": "password123", "Role": "Admin" },
+            { "Nama": "Korwil A", "Email": "korwila@example.com", "Password": "password123", "Role": "Korwil" },
+        ];
+        const ws = XLSX.utils.json_to_sheet(templateData);
+        ws['!cols'] = [{ wch: 30 }, { wch: 30 }, { wch: 15 }, { wch: 15 }];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Template_Pengguna");
+        XLSX.writeFile(wb, "Template_Batch_Pengguna.xlsx");
+    };
 
     const openModal = (type, user = null) => {
         if (type === 'add') {
@@ -246,7 +315,14 @@ const ManajemenPengguna = () => {
                     <h1>Manajemen Pengguna</h1>
                     <p>Kelola akun pengguna sistem lengkap</p>
                 </div>
-                <div className="page-header-right">
+                <div className="page-header-right" style={{ display: 'flex', gap: '8px' }}>
+                    <button className="btn btn-outline" onClick={handleDownloadTemplate} title="Unduh Template Excel">
+                        <FileDown size={16} /> Template Excel
+                    </button>
+                    <button className="btn btn-outline" onClick={() => fileInputRef.current?.click()} disabled={isImporting} title="Import dari Excel">
+                        <UploadCloud size={16} /> {isImporting ? 'Mengimpor...' : 'Import Batch'}
+                    </button>
+                    <input type="file" ref={fileInputRef} onChange={handleBatchImport} accept=".xlsx, .xls, .csv" style={{ display: 'none' }} />
                     <button className="btn btn-primary" onClick={() => openModal('add')}><Plus size={16} /> Tambah Pengguna</button>
                 </div>
             </div>

@@ -41,4 +41,26 @@ export const penggunaService = {
     async delete(id: string) {
         await db.delete(user).where(eq(user.id, id));
     },
+
+    async batchCreate(users: Array<{ name: string; email: string; password: string; role?: string }>) {
+        const results: Array<{ email: string; success: boolean; error?: string }> = [];
+        for (const u of users) {
+            try {
+                await auth.api.signUpEmail({
+                    body: {
+                        name: u.name,
+                        email: u.email,
+                        password: u.password || '12345678',
+                        role: u.role || 'Sekolah',
+                    },
+                });
+                results.push({ email: u.email, success: true });
+            } catch (e: any) {
+                results.push({ email: u.email, success: false, error: e.message || 'Gagal mendaftar' });
+            }
+        }
+        const successCount = results.filter(r => r.success).length;
+        const failCount = results.filter(r => !r.success).length;
+        return { results, successCount, failCount, total: users.length };
+    },
 };
