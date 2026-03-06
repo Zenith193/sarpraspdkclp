@@ -4,6 +4,7 @@ import { sarprasApi } from '../../api/index';
 import { useApi } from '../../api/hooks';
 import useAuthStore from '../../store/authStore';
 import toast from 'react-hot-toast';
+import { safeStr } from '../../utils/safeStr';
 
 const VerifikasiSarpras = () => {
     const user = useAuthStore(s => s.user);
@@ -65,8 +66,8 @@ const VerifikasiSarpras = () => {
                                 <tr key={item.id}>
                                     <td>{i + 1}</td>
                                     <td>{item.namaSekolah}</td>
-                                    <td>{item.npsn}</td>
-                                    <td>{item.kecamatan}</td>
+                                    <td>{safeStr(item.npsn)}</td>
+                                    <td>{safeStr(item.kecamatan)}</td>
                                     <td>{item.jenisPrasarana}</td>
                                     <td>{item.namaRuang}</td>
                                     <td>

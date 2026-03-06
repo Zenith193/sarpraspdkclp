@@ -8,6 +8,7 @@ import SearchableSelect from '../../components/ui/SearchableSelect';
 import useAuthStore from '../../store/authStore';
 import useCountdownGuard from '../../hooks/useCountdownGuard';
 import toast from 'react-hot-toast';
+import { safeStr } from '../../utils/safeStr';
 
 const INITIAL_FORM_DATA = {
     subKegiatan: SUB_KEGIATAN[0] || '',
@@ -319,9 +320,9 @@ const Proposal = ({ readOnly = false }) => {
                             {paged.map((item, i) => (
                                 <tr key={item.id}>
                                     <td>{(page - 1) * perPage + i + 1}</td>
-                                    <td style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.namaSekolah}</td>
-                                    <td>{item.npsn}</td>
-                                    <td>{item.kecamatan}</td>
+                                    <td style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis' }}>{safeStr(item.namaSekolah)}</td>
+                                    <td>{safeStr(item.npsn)}</td>
+                                    <td>{safeStr(item.kecamatan)}</td>
                                     <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.subKegiatan}</td>
                                     <td style={{ whiteSpace: 'nowrap' }}>{formatCurrency(item.nilaiPengajuan)}</td>
                                     <td>{item.target}</td>
@@ -388,7 +389,7 @@ const Proposal = ({ readOnly = false }) => {
                                 <label className="form-label">Nama Sekolah *</label>
                                 {editItem ? (<input className="form-input" value={formSekolah} disabled style={{ background: 'var(--bg-secondary)' }} />) : (<SearchableSelect options={schoolNames} value={formSekolah} onChange={setFormSekolah} placeholder="-- Pilih Sekolah --" renderOption={renderSchoolOption} />)}
                             </div>
-                            {selectedSchoolData && (<div style={{ padding: '10px 14px', background: 'rgba(59,130,246,0.06)', borderRadius: 'var(--radius-md)', marginBottom: 16, fontSize: 13, color: 'var(--text-secondary)', display: 'flex', gap: 20, flexWrap: 'wrap' }}><span><b>NPSN:</b> {selectedSchoolData.npsn}</span><span><b>Kecamatan:</b> {selectedSchoolData.kecamatan}</span><span><b>Jenjang:</b> {selectedSchoolData.jenjang}</span></div>)}
+                            {selectedSchoolData && (<div style={{ padding: '10px 14px', background: 'rgba(59,130,246,0.06)', borderRadius: 'var(--radius-md)', marginBottom: 16, fontSize: 13, color: 'var(--text-secondary)', display: 'flex', gap: 20, flexWrap: 'wrap' }}><span><b>NPSN:</b> {safeStr(selectedSchoolData.npsn)}</span><span><b>Kecamatan:</b> {safeStr(selectedSchoolData.kecamatan)}</span><span><b>Jenjang:</b> {safeStr(selectedSchoolData.jenjang)}</span></div>)}
 
                             <div className="form-row">
                                 <div className="form-group"><label className="form-label">Sub Kegiatan</label><select className="form-select" value={formData.subKegiatan || ''} onChange={e => setFormData({ ...formData, subKegiatan: e.target.value })}>{SUB_KEGIATAN.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
@@ -420,8 +421,8 @@ const Proposal = ({ readOnly = false }) => {
                     <div className="modal" style={{ maxWidth: 700 }} onClick={e => e.stopPropagation()}>
                         <div className="modal-header"><div className="modal-title">Detail Proposal</div><button className="modal-close" onClick={() => setViewItem(null)}><X size={18} /></button></div>
                         <div className="modal-body">
-                            <div className="form-row"><div className="form-group"><label className="form-label">Nama Sekolah</label><div style={{ fontWeight: 500 }}>{viewItem.namaSekolah}</div></div><div className="form-group"><label className="form-label">NPSN</label><div>{viewItem.npsn}</div></div></div>
-                            <div className="form-row"><div className="form-group"><label className="form-label">Kecamatan</label><div>{viewItem.kecamatan}</div></div><div className="form-group"><label className="form-label">Status</label><div>{getStatusBadge(viewItem.status)}</div></div></div>
+                            <div className="form-row"><div className="form-group"><label className="form-label">Nama Sekolah</label><div style={{ fontWeight: 500 }}>{safeStr(viewItem.namaSekolah)}</div></div><div className="form-group"><label className="form-label">NPSN</label><div>{safeStr(viewItem.npsn)}</div></div></div>
+                            <div className="form-row"><div className="form-group"><label className="form-label">Kecamatan</label><div>{safeStr(viewItem.kecamatan)}</div></div><div className="form-group"><label className="form-label">Status</label><div>{getStatusBadge(viewItem.status)}</div></div></div>
                             <div className="form-group"><label className="form-label">Sub Kegiatan</label><div>{viewItem.subKegiatan}</div></div>
                             {canManageKeranjang && (<div className="form-group"><label className="form-label">Keranjang</label><div>{viewItem.keranjang || 'Belum Ditetapkan'}</div></div>)}
                             <div className="form-row"><div className="form-group"><label className="form-label">Nilai Pengajuan</label><div style={{ fontWeight: 600, color: 'var(--accent-green)', fontSize: 16 }}>{formatCurrency(viewItem.nilaiPengajuan)}</div></div><div className="form-group"><label className="form-label">Target</label><div>{viewItem.target}</div></div></div>

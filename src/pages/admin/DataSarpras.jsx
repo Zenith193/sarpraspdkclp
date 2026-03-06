@@ -6,6 +6,7 @@ import { formatNumber } from '../../utils/formatters';
 import { exportToExcel, exportToCSV, exportToPDF } from '../../utils/exportUtils';
 import SearchableSelect from '../../components/ui/SearchableSelect';
 import useAuthStore from '../../store/authStore';
+import { safeStr } from '../../utils/safeStr';
 import useCountdownGuard from '../../hooks/useCountdownGuard';
 import toast from 'react-hot-toast';
 
@@ -340,7 +341,7 @@ const DataSarpras = ({ readOnly = false }) => {
         return (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
                 <span>{name}</span>
-                {sch && <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{sch.npsn} • {sch.kecamatan}</span>}
+                {sch && <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{safeStr(sch.npsn)} • {safeStr(sch.kecamatan)}</span>}
             </div>
         );
     };
@@ -637,9 +638,9 @@ const DataSarpras = ({ readOnly = false }) => {
                                 const sch = sekolahList.find(s => s.nama === formSekolah);
                                 return sch && (
                                     <div style={{ padding: '10px 14px', background: 'rgba(59,130,246,0.06)', borderRadius: 'var(--radius-md)', marginBottom: 16, fontSize: '0.8rem', color: 'var(--text-secondary)', display: 'flex', gap: 20, flexWrap: 'wrap' }}>
-                                        <span><b>NPSN:</b> {sch.npsn}</span>
-                                        <span><b>Kecamatan:</b> {sch.kecamatan}</span>
-                                        <span><b>Jenjang:</b> {sch.jenjang}</span>
+                                        <span><b>NPSN:</b> {safeStr(sch.npsn)}</span>
+                                        <span><b>Kecamatan:</b> {safeStr(sch.kecamatan)}</span>
+                                        <span><b>Jenjang:</b> {safeStr(sch.jenjang)}</span>
                                         <span><b>Kepala Sekolah:</b> {sch.kepsek}</span>
                                     </div>
                                 );
@@ -806,9 +807,9 @@ const DataSarpras = ({ readOnly = false }) => {
 
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px 20px' }}>
                                 <div><div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: 2 }}>Nama Sekolah</div><div style={{ fontWeight: 500 }}>{viewItem.namaSekolah}</div></div>
-                                <div><div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: 2 }}>NPSN</div><div>{viewItem.npsn}</div></div>
-                                <div><div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: 2 }}>Jenjang</div><div>{viewItem.jenjang}</div></div>
-                                <div><div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: 2 }}>Kecamatan</div><div>{viewItem.kecamatan}</div></div>
+                                <div><div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: 2 }}>NPSN</div><div>{safeStr(viewItem.npsn)}</div></div>
+                                <div><div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: 2 }}>Jenjang</div><div>{safeStr(viewItem.jenjang)}</div></div>
+                                <div><div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: 2 }}>Kecamatan</div><div>{safeStr(viewItem.kecamatan)}</div></div>
                                 <div><div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: 2 }}>Masa Bangunan</div><div>Bangunan {viewItem.masaBangunan}</div></div>
                                 <div><div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: 2 }}>Jenis Prasarana</div><div>{viewItem.jenisPrasarana}</div></div>
                                 <div><div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: 2 }}>Nama Ruang</div><div style={{ fontWeight: 500 }}>{viewItem.namaRuang}</div></div>

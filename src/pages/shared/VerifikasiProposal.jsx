@@ -5,6 +5,7 @@ import { useApi } from '../../api/hooks';
 import useAuthStore from '../../store/authStore';
 import { formatCurrency } from '../../utils/formatters';
 import toast from 'react-hot-toast';
+import { safeStr } from '../../utils/safeStr';
 
 const VerifikasiProposal = () => {
     const user = useAuthStore(s => s.user);
@@ -66,7 +67,7 @@ const VerifikasiProposal = () => {
                                 <tr key={p.id}>
                                     <td>{i + 1}</td>
                                     <td>{p.namaSekolah}</td>
-                                    <td>{p.kecamatan}</td>
+                                    <td>{safeStr(p.kecamatan)}</td>
                                     <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.subKegiatan}</td>
                                     <td>{formatCurrency(p.nilaiPengajuan)}</td>
                                     <td>{p.target}</td>
