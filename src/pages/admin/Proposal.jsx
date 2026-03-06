@@ -217,18 +217,23 @@ const Proposal = ({ readOnly = false }) => {
     const handlePrintChecklist = () => {
         const sch = checklistForm.sekolah;
         const tahun = new Date().getFullYear();
+        const bulanIndo = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+        const now = new Date();
+        const tanggal = `${now.getDate()} ${bulanIndo[now.getMonth()]} ${now.getFullYear()}`;
         const rows = checklistForm.items.map((item, i) =>
             `<tr><td style="text-align:center;padding:6px;border:1px solid #000">${i + 1}</td><td style="padding:6px;border:1px solid #000">${item.indikator}</td><td style="text-align:center;padding:6px;border:1px solid #000">${item.status === 'Ada' ? '✓' : ''}</td><td style="text-align:center;padding:6px;border:1px solid #000">${item.status === 'Tidak Ada' ? '✓' : ''}</td><td style="padding:6px;border:1px solid #000">${item.keterangan || ''}</td></tr>`
         ).join('');
-        const verRows = checklistForm.verifikators.map((v, i) =>
-            `<div style="margin-top:40px;text-align:center"><div style="font-weight:bold">Verifikator ${i + 1}</div><br/><br/><br/><div style="text-decoration:underline;font-weight:bold">${v.nama || '...........................'}</div><div>NIP. ${v.nip || '...........................'}</div></div>`
-        ).join('');
+        const verSection = checklistForm.verifikators.length > 0
+            ? checklistForm.verifikators.map(v =>
+                `<div style="text-align:left;margin-top:60px"><div>Cilacap, ${tanggal}</div><div>Verifikator</div><br/><br/><br/><div style="text-decoration:underline;font-weight:bold">${v.nama || '...........................'}</div><div>NIP. ${v.nip || '...........................'}</div></div>`
+            ).join('')
+            : `<div style="text-align:left;margin-top:60px"><div>Cilacap, ${tanggal}</div><div>Verifikator</div><br/><br/><br/><div style="text-decoration:underline;font-weight:bold">.............................</div><div>NIP. .............................</div></div>`;
         const html = `<!DOCTYPE html><html><head><title>Instrumen Verifikasi Proposal</title><style>@page{size:A4;margin:2cm}body{font-family:'Times New Roman',serif;font-size:12pt;color:#000}table{width:100%;border-collapse:collapse}th{padding:6px;border:1px solid #000;background:#f0f0f0;font-weight:bold}</style></head><body>
         <div style="text-align:center;margin-bottom:24px"><h3 style="margin:0">INSTRUMEN VERIFIKASI PROPOSAL</h3><h3 style="margin:4px 0">PENGAJUAN DANA HIBAH TAHUN ${tahun}</h3></div>
         <div style="margin-bottom:16px"><table style="border:none"><tr><td style="border:none;width:200px">1. Nama Lembaga / Sekolah</td><td style="border:none">: ${sch?.nama || '...........................'}</td></tr><tr><td style="border:none">2. Alamat</td><td style="border:none">: ${sch?.alamat || checklistForm.alamat || '...........................'}</td></tr><tr><td style="border:none">3. Jenis Usulan</td><td style="border:none">: ${checklistForm.jenisUsulan || '...........................'}</td></tr></table></div>
         <table><thead><tr><th rowspan="2" style="width:30px">NO</th><th rowspan="2">INDIATOR / URAIAN</th><th colspan="2">HASIL</th><th rowspan="2">KETERANGAN</th></tr><tr><th style="width:60px">ADA</th><th style="width:60px">TIDAK ADA</th></tr></thead><tbody>${rows}</tbody></table>
         <div style="margin-top:24px"><p><b>Kesimpulan / Catatan :</b></p><p>1. ............................................................................................................</p><p>2. ............................................................................................................</p><p>dst.</p></div>
-        <div style="display:flex;justify-content:flex-end;margin-top:40px"><div style="text-align:center"><div>Cilacap, ..........................</div>${verRows || '<br/><br/><br/><div style="font-weight:bold">Verifikator</div><br/><br/><br/><div>.............................</div><div>NIP.</div>'}</div></div>
+        <div style="display:flex;justify-content:flex-end;margin-top:20px">${verSection}</div>
         </body></html>`;
         const w = window.open('', '_blank');
         w.document.write(html);
