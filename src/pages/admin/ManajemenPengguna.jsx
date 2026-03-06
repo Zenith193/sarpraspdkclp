@@ -95,18 +95,24 @@ const ManajemenPengguna = () => {
             }
 
             const usersToCreate = [];
-            jsonData.forEach((row, index) => {
-                const name = row['Nama'] || row['Nama Sekolah'] || row['Nama Akun'];
-                const role = row['Role'] || row['Peran'] || 'Sekolah';
-                let email = row['Email'] || row['Username'];
-                const npsn = row['NPSN'] ? row['NPSN'].toString() : null;
+            jsonData.forEach((origRow, index) => {
+                // Normalize keys: lowercase and trim
+                const row = {};
+                for (const key in origRow) {
+                    row[key.toLowerCase().trim()] = origRow[key];
+                }
+
+                const name = row['nama'] || row['nama sekolah'] || row['nama akun'] || row['namasekolah'];
+                const role = row['role'] || row['peran'] || row['hak akses'] || 'Sekolah';
+                let email = row['email'] || row['username'] || row['surel'];
+                const npsn = row['npsn'] ? row['npsn'].toString() : null;
 
                 // Jika role Sekolah dan email kosong tapi NPSN ada, pakai NPSN sebagai email/username
-                if (!email && npsn && role.toLowerCase() === 'sekolah') {
+                if (!email && npsn && role.toString().toLowerCase() === 'sekolah') {
                     email = npsn;
                 }
 
-                const password = row['Password'] || '12345678';
+                const password = row['password'] || row['kata sandi'] || row['katasandi'] || '12345678';
 
                 if (!name || !email) {
                     console.warn(`Baris ${index + 2} dilewati: Kolom Nama atau Email/NPSN kosong`);
@@ -119,15 +125,15 @@ const ManajemenPengguna = () => {
                     password: String(password),
                     role: role.toString(),
                     npsn: npsn,
-                    jenjang: row['Jenjang'] ? row['Jenjang'].toString() : undefined,
-                    kecamatan: row['Kecamatan'] ? row['Kecamatan'].toString() : undefined,
-                    statusSekolah: row['Status'] ? row['Status'].toString() : undefined,
-                    alamat: row['Alamat'] ? row['Alamat'].toString() : undefined,
-                    kepsek: row['Kepala Sekolah'] ? row['Kepala Sekolah'].toString() : undefined,
-                    nip: row['NIP'] ? row['NIP'].toString() : undefined,
-                    noRek: row['No Rekening'] ? row['No Rekening'].toString() : undefined,
-                    namaBank: row['Bank'] ? row['Bank'].toString() : undefined,
-                    rombel: row['Rombel'] ? parseInt(row['Rombel']) : undefined,
+                    jenjang: row['jenjang'] ? row['jenjang'].toString() : undefined,
+                    kecamatan: row['kecamatan'] ? row['kecamatan'].toString() : undefined,
+                    statusSekolah: row['status'] || row['status sekolah'] ? (row['status'] || row['status sekolah']).toString() : undefined,
+                    alamat: row['alamat'] || row['alamat sekolah'] ? (row['alamat'] || row['alamat sekolah']).toString() : undefined,
+                    kepsek: row['kepala sekolah'] || row['kepsek'] || row['nama kepsek'] ? (row['kepala sekolah'] || row['kepsek'] || row['nama kepsek']).toString() : undefined,
+                    nip: row['nip'] || row['nip kepsek'] ? (row['nip'] || row['nip kepsek']).toString() : undefined,
+                    noRek: row['no rekening'] || row['norek'] || row['rekening'] ? (row['no rekening'] || row['norek'] || row['rekening']).toString() : undefined,
+                    namaBank: row['bank'] || row['nama bank'] ? (row['bank'] || row['nama bank']).toString() : undefined,
+                    rombel: row['rombel'] || row['jumlah rombel'] ? parseInt(row['rombel'] || row['jumlah rombel']) : undefined,
                 });
             });
 
@@ -161,15 +167,16 @@ const ManajemenPengguna = () => {
 
     const handleDownloadTemplate = () => {
         const templateData = [
-            { "Nama": "SDN 1 Contoh", "Email": "", "Password": "password123", "Role": "Sekolah", "NPSN": "12345678", "Jenjang": "SD", "Kecamatan": "Kroya", "Status": "Negeri", "Alamat": "Jalan Raya Kroya", "Kepala Sekolah": "Budi, S.Pd", "NIP": "198001012005011001", "No Rekening": "123456789", "Bank": "BPD Jateng", "Rombel": 6 },
-            { "Nama": "Admin Pusat", "Email": "admin@example.com", "Password": "password123", "Role": "Admin", "NPSN": "", "Jenjang": "", "Kecamatan": "", "Status": "", "Alamat": "", "Kepala Sekolah": "", "NIP": "", "No Rekening": "", "Bank": "", "Rombel": "" },
-            { "Nama": "Korwil A", "Email": "korwila@example.com", "Password": "password123", "Role": "Korwil", "NPSN": "", "Jenjang": "", "Kecamatan": "", "Status": "", "Alamat": "", "Kepala Sekolah": "", "NIP": "", "No Rekening": "", "Bank": "", "Rombel": "" },
+            { "Nama": "SDN 1 Contoh", "Role": "Sekolah", "NPSN": "12345678", "Jenjang": "SD", "Kecamatan": "Kroya", "Status": "Negeri", "Alamat": "Jalan Raya Kroya", "Kepala Sekolah": "Budi, S.Pd", "NIP": "198001012005011001", "No Rekening": "123456789", "Bank": "BPD Jateng", "Rombel": 6, "Email": "", "Password": "password123" },
+            { "Nama": "Admin Pusat", "Role": "Admin", "NPSN": "", "Jenjang": "", "Kecamatan": "", "Status": "", "Alamat": "", "Kepala Sekolah": "", "NIP": "", "No Rekening": "", "Bank": "", "Rombel": "", "Email": "admin@example.com", "Password": "password123" },
+            { "Nama": "Korwil A", "Role": "Korwil", "NPSN": "", "Jenjang": "", "Kecamatan": "", "Status": "", "Alamat": "", "Kepala Sekolah": "", "NIP": "", "No Rekening": "", "Bank": "", "Rombel": "", "Email": "korwila@example.com", "Password": "password123" },
         ];
         const ws = XLSX.utils.json_to_sheet(templateData);
         ws['!cols'] = [
-            { wch: 25 }, { wch: 20 }, { wch: 15 }, { wch: 10 }, { wch: 12 },
-            { wch: 8 }, { wch: 15 }, { wch: 10 }, { wch: 30 }, { wch: 20 },
-            { wch: 20 }, { wch: 15 }, { wch: 12 }, { wch: 8 }
+            { wch: 25 }, { wch: 10 }, { wch: 12 }, { wch: 8 },
+            { wch: 15 }, { wch: 10 }, { wch: 30 }, { wch: 20 },
+            { wch: 20 }, { wch: 15 }, { wch: 12 }, { wch: 8 },
+            { wch: 20 }, { wch: 15 }
         ];
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Template_Pengguna");
