@@ -222,28 +222,57 @@ const ManajemenPengguna = () => {
         toast.success("File berhasil dimuat");
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!formData.namaAkun || !formData.role) {
             toast.error("Nama Akun dan Role wajib diisi!");
             return;
         }
 
-        if (modalState.type === 'add') {
-            const newUser = {
-                ...formData,
-                id: Date.now(),
-                npsn: formData.email || Math.floor(Math.random() * 10000000).toString(),
-            };
-            setUsers(prev => [newUser, ...prev]);
-            toast.success("Pengguna baru berhasil ditambahkan");
-        } else if (modalState.type === 'edit') {
-            setUsers(prev => prev.map(u => u.id === formData.id ? formData : u));
-            toast.success("Data pengguna berhasil diperbarui");
-        } else if (modalState.type === 'reset') {
-            setUsers(prev => prev.map(u => u.id === formData.id ? { ...u, password: formData.password } : u));
-            toast.success("Password berhasil direset");
+        toast.loading("Menyimpan...", { id: 'save' });
+        try {
+            if (modalState.type === 'add') {
+                const npsn = formData.email || Math.floor(Math.random() * 10000000).toString();
+                const userPayload = {
+                    name: formData.namaAkun.toString(),
+                    email: formData.email ? formData.email.toString() : npsn.toString(),
+                    password: formData.password || '12345678',
+                    role: formData.role.toString(),
+                    npsn: npsn.toString(),
+                    jenjang: formData.jenjang,
+                    kecamatan: formData.kecamatan,
+                    alamat: formData.alamat,
+                    kepsek: formData.kepsek,
+                    nip: formData.nip,
+                    noRek: formData.noRek,
+                    namaBank: formData.namaBank,
+                    rombel: formData.rombel ? parseInt(formData.rombel) : 0,
+                };
+
+                const result = await penggunaApi.batchCreate([userPayload]);
+                if (result.successCount > 0) {
+                    toast.success("Pengguna baru berhasil ditambahkan", { id: 'save' });
+                    if (refetch) refetch();
+                } else {
+                    toast.error(result.results[0]?.error || "Gagal menambahkan pengguna", { id: 'save' });
+                }
+            } else if (modalState.type === 'edit') {
+                await penggunaApi.update(formData.id, {
+                    name: formData.namaAkun,
+                    role: formData.role,
+                    // If we need to update sekolah fields, that would require more backend logic, 
+                    // but we update user table for now.
+                });
+                toast.success("Data pengguna berhasil diperbarui", { id: 'save' });
+                if (refetch) refetch();
+            } else if (modalState.type === 'reset') {
+                // Placeholder reset if no backend endpoint exists yet
+                setUsers(prev => prev.map(u => u.id === formData.id ? { ...u, password: formData.password } : u));
+                toast.success("Password berhasil direset (Hanya di UI lokal untuk saat ini)", { id: 'save' });
+            }
+            closeModal();
+        } catch (e) {
+            toast.error(e.message || "Gagal menyimpan data", { id: 'save' });
         }
-        closeModal();
     };
 
     const requestAction = (type, user) => {

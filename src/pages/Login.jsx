@@ -28,7 +28,10 @@ const Login = () => {
 
         try {
             // For sekolah tab, use NPSN as email (convention from our user setup)
-            const loginEmail = tab === 'sekolah' ? npsn : email;
+            let loginEmail = tab === 'sekolah' ? npsn : email;
+            if (!loginEmail.includes('@')) {
+                loginEmail = `${loginEmail}@spidol.cilacapkab.go.id`;
+            }
             const user = await authLogin(loginEmail, password);
 
             if (user) {

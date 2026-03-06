@@ -89,10 +89,15 @@ export const penggunaService = {
                     }
                 }
 
+                let validEmail = u.email;
+                if (!validEmail.includes('@')) {
+                    validEmail = `${validEmail}@spidol.cilacapkab.go.id`;
+                }
+
                 await auth.api.signUpEmail({
                     body: {
                         name: u.name,
-                        email: u.email,
+                        email: validEmail,
                         password: u.password || '12345678',
                         role: u.role || 'Sekolah',
                         sekolahId: sekolahId,
