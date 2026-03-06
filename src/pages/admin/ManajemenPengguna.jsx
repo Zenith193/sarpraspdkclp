@@ -90,7 +90,8 @@ const ManajemenPengguna = () => {
                 return;
             }
 
-            const usersToCreate = jsonData.map((row, index) => {
+            const usersToCreate = [];
+            jsonData.forEach((row, index) => {
                 const name = row['Nama'] || row['Nama Sekolah'] || row['Nama Akun'];
                 const role = row['Role'] || row['Peran'] || 'Sekolah';
                 let email = row['Email'] || row['Username'];
@@ -104,10 +105,11 @@ const ManajemenPengguna = () => {
                 const password = row['Password'] || '12345678';
 
                 if (!name || !email) {
-                    throw new Error(`Baris ${index + 2}: Kolom Nama atau Email (Atau NPSN untuk sekolah) tidak boleh kosong`);
+                    console.warn(`Baris ${index + 2} dilewati: Kolom Nama atau Email/NPSN kosong`);
+                    return; // Skip this row instead of throwing an error
                 }
 
-                return {
+                usersToCreate.push({
                     name: name.toString(),
                     email: email.toString(),
                     password: String(password),
@@ -122,8 +124,14 @@ const ManajemenPengguna = () => {
                     noRek: row['No Rekening'] ? row['No Rekening'].toString() : undefined,
                     namaBank: row['Bank'] ? row['Bank'].toString() : undefined,
                     rombel: row['Rombel'] ? parseInt(row['Rombel']) : undefined,
-                };
+                });
             });
+
+            if (usersToCreate.length === 0) {
+                toast.error("Tidak ada data valid yang bisa diimpor", { id: 'import' });
+                setIsImporting(false);
+                return;
+            }
 
             toast.loading(`Mengimpor ${usersToCreate.length} pengguna...`, { id: 'import' });
             const result = await penggunaApi.batchCreate(usersToCreate);
@@ -259,8 +267,14 @@ const ManajemenPengguna = () => {
                 await penggunaApi.update(formData.id, {
                     name: formData.namaAkun,
                     role: formData.role,
-                    // If we need to update sekolah fields, that would require more backend logic, 
-                    // but we update user table for now.
+                    jenjang: formData.jenjang,
+                    kecamatan: formData.kecamatan,
+                    alamat: formData.alamat,
+                    kepsek: formData.kepsek,
+                    nip: formData.nip,
+                    noRek: formData.noRek,
+                    namaBank: formData.namaBank,
+                    rombel: formData.rombel ? parseInt(formData.rombel) : 0,
                 });
                 toast.success("Data pengguna berhasil diperbarui", { id: 'save' });
                 if (refetch) refetch();
@@ -279,16 +293,20 @@ const ManajemenPengguna = () => {
         setConfirmModal({ isOpen: true, type, data: user });
     };
 
-    const executeConfirmedAction = () => {
+    const executeConfirmedAction = async () => {
         const { type, data } = confirmModal;
 
-        if (type === 'delete') {
-            setUsers(prev => prev.filter(u => u.id !== data.id));
-            toast.success(`Pengguna "${data.namaAkun}" berhasil dihapus`);
-        } else if (type === 'status') {
-            const newStatus = !data.aktif;
-            setUsers(prev => prev.map(u => u.id === data.id ? { ...u, aktif: newStatus } : u));
-            toast.success(`Status akun berhasil diubah`);
+        try {
+            if (type === 'delete') {
+                await penggunaApi.delete(data.id);
+                toast.success(`Pengguna "${data.namaAkun}" berhasil dihapus`);
+            } else if (type === 'status') {
+                await penggunaApi.toggleActive(data.id);
+                toast.success(`Status akun berhasil diubah`);
+            }
+            if (refetch) refetch();
+        } catch (e) {
+            toast.error(e.message || "Gagal memproses aksi");
         }
 
         setConfirmModal({ isOpen: false, type: '', data: null });

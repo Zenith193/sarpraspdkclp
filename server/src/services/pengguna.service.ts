@@ -15,20 +15,54 @@ export const penggunaService = {
         const data = await db.select({
             id: user.id, name: user.name, email: user.email, role: user.role,
             sekolahId: user.sekolahId, aktif: user.aktif, createdAt: user.createdAt,
-        }).from(user).where(where).limit(limit).offset(offset);
+            npsn: sekolah.npsn, jenjang: sekolah.jenjang, kecamatan: sekolah.kecamatan,
+            statusSekolah: sekolah.status, alamat: sekolah.alamat, kepsek: sekolah.kepsek,
+            nip: sekolah.nip, noRek: sekolah.noRek, namaBank: sekolah.namaBank, rombel: sekolah.rombel
+        }).from(user)
+            .leftJoin(sekolah, eq(user.sekolahId, sekolah.id))
+            .where(where).limit(limit).offset(offset);
         const countResult = await db.select({ count: sql<number>`count(*)` }).from(user).where(where);
         return { data, total: Number(countResult[0]?.count || 0), page, limit };
     },
 
     async getById(id: string) {
-        const r = await db.select({ id: user.id, name: user.name, email: user.email, role: user.role, sekolahId: user.sekolahId, aktif: user.aktif, createdAt: user.createdAt })
-            .from(user).where(eq(user.id, id));
+        const r = await db.select({
+            id: user.id, name: user.name, email: user.email, role: user.role, sekolahId: user.sekolahId, aktif: user.aktif, createdAt: user.createdAt,
+            npsn: sekolah.npsn, jenjang: sekolah.jenjang, kecamatan: sekolah.kecamatan,
+            statusSekolah: sekolah.status, alamat: sekolah.alamat, kepsek: sekolah.kepsek,
+            nip: sekolah.nip, noRek: sekolah.noRek, namaBank: sekolah.namaBank, rombel: sekolah.rombel
+        })
+            .from(user)
+            .leftJoin(sekolah, eq(user.sekolahId, sekolah.id))
+            .where(eq(user.id, id));
         return r[0] || null;
     },
 
-    async update(id: string, data: { name?: string; role?: string; sekolahId?: number; aktif?: boolean }) {
-        const r = await db.update(user).set({ ...data, updatedAt: new Date() }).where(eq(user.id, id)).returning();
-        return r[0];
+    async update(id: string, data: {
+        name?: string; role?: string; sekolahId?: number; aktif?: boolean;
+        jenjang?: string; kecamatan?: string; alamat?: string; kepsek?: string;
+        nip?: string; noRek?: string; namaBank?: string; rombel?: number;
+    }) {
+        const { name, role, aktif, ...sekolahData } = data;
+        const r = await db.update(user).set({ name, role, aktif, updatedAt: new Date() }).where(eq(user.id, id)).returning();
+        const updatedUser = r[0];
+
+        // Jika user memiliki sekolahId, update tabel sekolah
+        if (updatedUser?.sekolahId && Object.keys(sekolahData).length > 0) {
+            await db.update(sekolah).set({
+                jenjang: sekolahData.jenjang,
+                kecamatan: sekolahData.kecamatan,
+                alamat: sekolahData.alamat,
+                kepsek: sekolahData.kepsek,
+                nip: sekolahData.nip,
+                noRek: sekolahData.noRek,
+                namaBank: sekolahData.namaBank,
+                rombel: sekolahData.rombel,
+                updatedAt: new Date(),
+            }).where(eq(sekolah.id, updatedUser.sekolahId));
+        }
+
+        return updatedUser;
     },
 
     async toggleActive(id: string) {
