@@ -413,7 +413,9 @@ const DataSarpras = ({ readOnly = false }) => {
                 if (photos.length === 0) return <div style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-input)', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)' }}><Image size={14} /></div>;
                 return (
                     <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => { setPhotoModal(item); setPhotoIdx(0); }}>
-                        <img src={photos[0].url} alt="" style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }} />
+                        <img src={photos[0].url} alt=""
+                            onError={(e) => { if (photos[0].proxyUrl && e.target.src !== photos[0].proxyUrl) e.target.src = photos[0].proxyUrl; }}
+                            style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }} />
                         {photos.length > 1 && (
                             <span style={{ position: 'absolute', bottom: -2, right: -4, background: 'var(--accent-blue)', color: '#fff', fontSize: '0.6rem', fontWeight: 700, padding: '1px 4px', borderRadius: 'var(--radius-full)', lineHeight: 1.3 }}>+{photos.length - 1}</span>
                         )}

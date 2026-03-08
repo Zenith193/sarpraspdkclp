@@ -51,6 +51,61 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 // Static file serving for uploads
 app.use('/uploads', express.static(process.env.UPLOAD_DIR || './uploads'));
 
+// ===== FILE PROXY: serve sarpras photos from local or NAS =====
+import fs from 'fs';
+import path from 'path';
+import { getNasDownloadLink, isNasEnabled } from './utils/nasClient.js';
+
+app.get('/api/foto/:fotoId', async (req, res) => {
+    try {
+        const { sarprasFoto } = await import('./db/schema/index.js');
+        const foto = await db.select().from(sarprasFoto).where(eq(sarprasFoto.id, Number(req.params.fotoId)));
+        if (!foto[0]) { res.status(404).json({ error: 'Foto not found' }); return; }
+
+        const filePath = foto[0].filePath || '';
+        const normalizedPath = filePath.replace(/\\/g, '/');
+
+        // Check if file exists locally
+        if (fs.existsSync(filePath)) {
+            res.sendFile(path.resolve(filePath));
+            return;
+        }
+
+        // Check if in uploads dir with relative path
+        const uploadDir = process.env.UPLOAD_DIR || './uploads';
+        const uploadsIdx = normalizedPath.indexOf('uploads/');
+        if (uploadsIdx >= 0) {
+            const relPath = normalizedPath.substring(uploadsIdx);
+            const localPath = path.resolve(relPath);
+            if (fs.existsSync(localPath)) {
+                res.sendFile(localPath);
+                return;
+            }
+        }
+
+        // Try filename only in fotos folder
+        const filename = path.basename(normalizedPath);
+        const fotosPath = path.resolve(uploadDir, 'fotos', filename);
+        if (fs.existsSync(fotosPath)) {
+            res.sendFile(fotosPath);
+            return;
+        }
+
+        // If NAS enabled, try to get download link
+        if (isNasEnabled() && normalizedPath.startsWith('/')) {
+            const nasUrl = await getNasDownloadLink(normalizedPath);
+            if (nasUrl) {
+                res.redirect(nasUrl);
+                return;
+            }
+        }
+
+        res.status(404).json({ error: 'File not found', path: filePath });
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // ===== CUSTOM NPSN LOGIN (sekolah only, no password) =====
 import { db } from './db/index.js';
 import { sekolah, user, account, session as sessionTable } from './db/schema/index.js';

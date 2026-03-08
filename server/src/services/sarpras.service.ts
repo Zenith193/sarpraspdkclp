@@ -45,23 +45,28 @@ export const sarprasService = {
             sarpras: {
                 ...d.sarpras,
                 foto: fotos.filter(f => f.sarprasId === d.sarpras.id).map(f => {
-                    // filePath may be absolute OS path — extract relative part for URL
-                    let url = f.filePath || '';
-                    // Normalize backslashes
-                    url = url.replace(/\\/g, '/');
-                    // If it contains 'uploads/', extract from there
-                    const uploadsIdx = url.indexOf('uploads/');
+                    // Build URL for photo access
+                    let url = '';
+                    const rawPath = (f.filePath || '').replace(/\\/g, '/');
+
+                    // If path contains 'uploads/', serve via express.static
+                    const uploadsIdx = rawPath.indexOf('uploads/');
                     if (uploadsIdx >= 0) {
-                        url = '/' + url.substring(uploadsIdx);
-                    } else {
-                        // Just use filename
-                        const parts = url.split('/');
+                        url = '/' + rawPath.substring(uploadsIdx);
+                    } else if (rawPath && !rawPath.startsWith('/spidol')) {
+                        // Local file not in uploads — try filename in fotos dir
+                        const parts = rawPath.split('/');
                         url = '/uploads/fotos/' + parts[parts.length - 1];
                     }
+
+                    // Always provide proxy URL as fallback
+                    const proxyUrl = `/api/foto/${f.id}`;
+
                     return {
                         id: f.id,
                         nama: f.fileName,
-                        url,
+                        url: url || proxyUrl,
+                        proxyUrl,
                         geoLat: f.geoLat,
                         geoLng: f.geoLng,
                     };

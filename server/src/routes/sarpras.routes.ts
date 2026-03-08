@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { sarprasService } from '../services/sarpras.service.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import { uploadFotos } from '../middleware/upload.js';
+import { uploadFotos, forwardToNas } from '../middleware/upload.js';
 import { logActivity } from '../middleware/logActivity.js';
 
 const router = Router();
@@ -40,7 +40,7 @@ router.get('/:id', requireAuth, async (req, res) => {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadFotos.array('fotos', 5), async (req, res) => {
+router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadFotos.array('fotos', 5), forwardToNas('sarpras'), async (req, res) => {
     try {
         const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
         if (isSekolah) {
@@ -51,10 +51,11 @@ router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadFotos.array
         // Save uploaded fotos
         if (req.files && Array.isArray(req.files)) {
             for (const file of req.files) {
+                const f = file as any;
                 await sarprasService.addFoto(item.id, {
                     sarprasId: item.id,
                     fileName: file.originalname,
-                    filePath: file.path,
+                    filePath: f.finalPath || file.path,
                     fileSize: file.size,
                     geoLat: req.body[`geo_lat_${file.originalname}`] ? parseFloat(req.body[`geo_lat_${file.originalname}`]) : null,
                     geoLng: req.body[`geo_lng_${file.originalname}`] ? parseFloat(req.body[`geo_lng_${file.originalname}`]) : null,
@@ -109,13 +110,14 @@ router.post('/:id/unverify', requireAuth, requireRole('admin', 'verifikator'), a
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/:id/foto', requireAuth, requireRole('admin', 'sekolah'), uploadFotos.single('foto'), async (req, res) => {
+router.post('/:id/foto', requireAuth, requireRole('admin', 'sekolah'), uploadFotos.single('foto'), forwardToNas('sarpras'), async (req, res) => {
     try {
         if (!req.file) { res.status(400).json({ error: 'No file uploaded' }); return; }
+        const f = req.file as any;
         const result = await sarprasService.addFoto(Number(req.params.id), {
             sarprasId: Number(req.params.id),
             fileName: req.file.originalname,
-            filePath: req.file.path,
+            filePath: f.finalPath || req.file.path,
             fileSize: req.file.size,
             geoLat: req.body.geoLat ? parseFloat(req.body.geoLat) : null,
             geoLng: req.body.geoLng ? parseFloat(req.body.geoLng) : null,
