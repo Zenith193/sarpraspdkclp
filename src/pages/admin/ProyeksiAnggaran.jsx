@@ -32,7 +32,7 @@ const parseFormattedNumber = (value) => {
 
 const ProyeksiAnggaran = () => {
     const [tab, setTab] = useState('anggaran');
-    const { data: proyeksiList } = useProyeksiData();
+    const { data: proyeksiList, refetch: refetchAnggaran } = useProyeksiData();
     const { data: sekolahList } = useSekolahData();
     const { data: sarprasList } = useSarprasData();
 
@@ -265,6 +265,7 @@ const ProyeksiAnggaran = () => {
                 if (editItem) await proyeksiApi.updateAnggaran(editItem.id, payload);
                 else await proyeksiApi.createAnggaran(payload);
                 toast.success('Data Anggaran Disimpan');
+                refetchAnggaran();
             } else {
                 if (editItem) await proyeksiApi.updateSnp(editItem.id, payload);
                 else await proyeksiApi.createSnp(payload);

@@ -2,12 +2,22 @@ import { useState, useEffect } from 'react';
 import { Clock, AlertTriangle, Timer, X } from 'lucide-react';
 import useSettingsStore from '../../store/settingsStore';
 import useAuthStore from '../../store/authStore';
+import { settingsApi } from '../../api/index';
 
 const CountdownBanner = () => {
     const user = useAuthStore(s => s.user);
-    const { countdownConfig } = useSettingsStore();
+    const { countdownConfig, updateCountdown } = useSettingsStore();
     const [remaining, setRemaining] = useState(null);
     const [dismissed, setDismissed] = useState(false);
+
+    // Load countdown config from server on mount (so all users see admin's settings)
+    useEffect(() => {
+        settingsApi.getCountdown().then(serverCfg => {
+            if (serverCfg && serverCfg.value) {
+                updateCountdown(serverCfg.value);
+            }
+        }).catch(() => { });
+    }, []);
 
     const role = user?.role?.toLowerCase();
     const cfg = countdownConfig;

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { sarprasService } from '../services/sarpras.service.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { uploadFotos } from '../middleware/upload.js';
+import { logActivity } from '../middleware/logActivity.js';
 
 const router = Router();
 
@@ -61,6 +62,7 @@ router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadFotos.array
             }
         }
         res.status(201).json(item);
+        logActivity(req, 'Tambah Sarpras', `Menambahkan data sarpras: ${req.body.namaRuang || 'N/A'}`);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
@@ -81,6 +83,7 @@ router.put('/:id', requireAuth, requireRole('admin', 'sekolah'), async (req, res
 
         const result = await sarprasService.update(id, req.body);
         res.json(result);
+        logActivity(req, 'Edit Sarpras', `Mengubah data sarpras ID: ${id}`);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
@@ -88,6 +91,7 @@ router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
     try {
         await sarprasService.delete(Number(req.params.id));
         res.json({ success: true });
+        logActivity(req, 'Hapus Sarpras', `Menghapus data sarpras ID: ${req.params.id}`);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 

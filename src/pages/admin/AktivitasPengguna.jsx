@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { Search, Download, Filter, Edit, Trash2, X, FileSpreadsheet, FileText, FileDown, ChevronDown, Save, AlertTriangle, Radio } from 'lucide-react';
 import { useAktivitasData } from '../../data/dataProvider';
+import { aktivitasApi } from '../../api/index';
 import { formatDateTime, formatCurrency } from '../../utils/formatters';
 import { JENIS_AKUN } from '../../utils/constants';
 import { exportToExcel, exportToCSV, exportToPDF } from '../../utils/exportUtils';
@@ -8,28 +9,6 @@ import useAuthStore from '../../store/authStore';
 import toast from 'react-hot-toast';
 
 const PER_PAGE_OPTIONS = [10, 15, 50, 100];
-
-// Helper: Generate realistic activity description for simulation
-const generateRealDescription = () => {
-    const users = [
-        { namaAkun: 'SDN 1 Cilacap', role: 'Sekolah' },
-        { namaAkun: 'SDN 2 Majenang', role: 'Sekolah' },
-        { namaAkun: 'SMPN 1 Sidareja', role: 'Sekolah' },
-        { namaAkun: 'Korwil Cilacap Selatan', role: 'Korwil' },
-        { namaAkun: 'Verifikator Dinas', role: 'Verifikator' },
-    ];
-    const activities = [
-        { aktivitas: 'Input Data Sarpras', keterangan: 'Menambahkan data ruang kelas baru' },
-        { aktivitas: 'Upload Proposal', keterangan: 'Mengunggah proposal rehabilitasi gedung' },
-        { aktivitas: 'Verifikasi Data', keterangan: 'Memverifikasi data sarpras sekolah' },
-        { aktivitas: 'Download Laporan', keterangan: 'Mengunduh laporan rekapitulasi sarpras' },
-        { aktivitas: 'Update Profil', keterangan: 'Memperbarui data profil sekolah' },
-        { aktivitas: 'Login', keterangan: 'Berhasil masuk ke sistem' },
-    ];
-    const user = users[Math.floor(Math.random() * users.length)];
-    const act = activities[Math.floor(Math.random() * activities.length)];
-    return { user, ...act };
-};
 
 const AktivitasPengguna = () => {
     const currentUser = useAuthStore((state) => state.user);
@@ -50,8 +29,6 @@ const AktivitasPengguna = () => {
     const [filterJenis, setFilterJenis] = useState('');
     const [showFilters, setShowFilters] = useState(false);
 
-    useEffect(() => { if (aktivitasRaw?.length) setData(aktivitasRaw); }, [aktivitasRaw]);
-
     // Pagination
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(15);
@@ -64,49 +41,19 @@ const AktivitasPengguna = () => {
     const [showExport, setShowExport] = useState(false);
     const exportRef = useRef(null);
 
-    // ===== REALTIME SIMULATION EFFECT =====
+    useEffect(() => { if (aktivitasRaw?.length) setData(aktivitasRaw); }, [aktivitasRaw]);
+
+    // Auto-refetch real data every 30 seconds for live updates
     useEffect(() => {
-        // 1. Log aktivitas pembukaan halaman ini
-        if (currentUser) {
-            const newLog = {
-                id: Date.now(),
-                namaAkun: currentUser.namaAkun,
-                jenisAkun: currentUser.role,
-                aktivitas: 'Login Sistem',
-                keterangan: `Pengguna "${currentUser.namaAkun}" berhasil login dan mengakses halaman "Aktivitas Pengguna" pada pukul ${new Date().toLocaleTimeString('id-ID')}.`,
-                waktu: new Date().toISOString()
-            };
-            // Tambahkan log hanya jika belum ada (untuk menghindari duplikasi saat re-render strict mode)
-            setData(prev => {
-                const exists = prev.find(d => d.keterangan === newLog.keterangan);
-                if (!exists) return [newLog, ...prev];
-                return prev;
-            });
-        }
-
-        // 2. Simulasi User Lain (Hanya jika Admin/Verifikator yang melihat, atau jika simulasi diperlukan)
-        // Jika user biasa, kita tidak perlu banyak simulasi aktivitas orang lain di background
-        if (canViewAll) {
-            const interval = setInterval(() => {
-                const generated = generateRealDescription();
-                const randomUser = generated.user;
-
-                const newLog = {
-                    id: Date.now() + Math.random(),
-                    namaAkun: randomUser.namaAkun,
-                    jenisAkun: randomUser.role,
-                    aktivitas: generated.aktivitas,
-                    keterangan: generated.keterangan,
-                    waktu: new Date().toISOString()
-                };
-
-                setData(prev => [newLog, ...prev]);
-            }, 15000);
-
-            return () => clearInterval(interval);
-        }
-
-    }, [currentUser, canViewAll]);
+        if (!canViewAll) return;
+        const interval = setInterval(() => {
+            aktivitasApi.list({ limit: 50 }).then(res => {
+                const items = res?.data || (Array.isArray(res) ? res : []);
+                if (items.length) setData(items);
+            }).catch(() => { });
+        }, 30000);
+        return () => clearInterval(interval);
+    }, [canViewAll]);
 
     // Effects for closing dropdown
     useEffect(() => {

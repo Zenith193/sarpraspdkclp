@@ -123,6 +123,19 @@ app.post('/api/npsn-login', async (req, res) => {
                 expiresAt,
             },
         });
+
+        // Log login activity (fire-and-forget)
+        try {
+            const { aktivitasService } = await import('./services/aktivitas.service.js');
+            await aktivitasService.log({
+                userId: foundUser.id,
+                namaAkun: foundUser.name || foundUser.email,
+                jenisAkun: foundUser.role || 'Sekolah',
+                aktivitas: 'Login',
+                keterangan: `Login berhasil via NPSN ${npsn}`,
+                ipAddress: req.ip || '',
+            });
+        } catch (_) { }
     } catch (e: any) {
         console.error('[NPSN Login Error]', e);
         res.status(500).json({ error: e.message });

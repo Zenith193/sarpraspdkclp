@@ -152,6 +152,11 @@ const CreateBAST = () => {
     const [generateTarget, setGenerateTarget] = useState(null);
     const [selectedTemplateId, setSelectedTemplateId] = useState(null);
 
+    // Batch selection
+    const [selectedIds, setSelectedIds] = useState([]);
+    const [showBatchGenerate, setShowBatchGenerate] = useState(false);
+    const [batchTemplateId, setBatchTemplateId] = useState(null);
+
     // Edit form
     const [editForm, setEditForm] = useState({});
 
@@ -287,6 +292,58 @@ const CreateBAST = () => {
         generateBASTDocument({ ...item, noBAST, bastN: n }, template);
     };
 
+    // ===== BATCH GENERATE =====
+    const handleBatchGenerate = () => {
+        if (!batchTemplateId || selectedIds.length === 0) return;
+        const template = bastTemplates.find(t => t.id === batchTemplateId);
+        let count = 0;
+        selectedIds.forEach(id => {
+            const item = enrichedData.find(d => d.id === id);
+            if (!item || item.isGenerated) return;
+            const n = (bastCountMap[item.id] || 0) + 1;
+            const noBAST = generateNoBAST(item.noMatrik, item.jenisPengadaan, item.sumberDana, item.tahunAnggaran || currentYear, n);
+            addBAST({
+                matrikId: item.id,
+                npsn: item.npsn,
+                namaSekolah: item.namaSekolah,
+                namaPaket: item.namaPaket,
+                noMatrik: item.noMatrik,
+                noBAST,
+                kepsek: item.kepsek,
+                nipKepsek: item.nipKepsek,
+                nilaiBAST: item.nilaiBAST,
+                nilaiKontrak: item.nilaiKontrak,
+                volume: item.volume || '',
+                honor: item.honor || 0,
+                jenisPengadaan: item.jenisPengadaan,
+                sumberDana: item.sumberDana,
+                penyedia: item.penyedia,
+                terbilangBAST: item.terbilangBAST,
+                tanggalGenerate: new Date().toISOString(),
+                templateId: batchTemplateId,
+                templateNama: template?.nama || 'Default',
+                bastN: n,
+            });
+            count++;
+        });
+        toast.success(`${count} BAST berhasil di-generate!`);
+        setSelectedIds([]);
+        setShowBatchGenerate(false);
+    };
+
+    const toggleSelect = (id) => {
+        setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    };
+
+    const toggleSelectAll = () => {
+        const ungenerated = filtered.filter(d => !d.isGenerated).map(d => d.id);
+        if (ungenerated.every(id => selectedIds.includes(id))) {
+            setSelectedIds([]);
+        } else {
+            setSelectedIds(ungenerated);
+        }
+    };
+
     // ===== REVERT =====
     const handleRevert = () => {
         if (!revertTarget) return;
@@ -417,10 +474,29 @@ const CreateBAST = () => {
                     </div>
                 </div>
 
+                {/* Batch actions bar */}
+                {selectedIds.length > 0 && (
+                    <div style={{ padding: '10px 20px', background: 'rgba(59,130,246,0.08)', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>{selectedIds.length} item dipilih</span>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <button className="btn btn-ghost btn-sm" onClick={() => setSelectedIds([])}>Batal Pilih</button>
+                            <button className="btn btn-primary btn-sm" onClick={() => { setBatchTemplateId(bastTemplates[0]?.id || null); setShowBatchGenerate(true); }}>
+                                <Printer size={14} /> Generate All Selected
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 <div style={{ overflowX: 'auto' }}>
                     <table className="data-table">
                         <thead>
                             <tr>
+                                <th style={{ width: 36 }}>
+                                    <input type="checkbox"
+                                        checked={filtered.filter(d => !d.isGenerated).length > 0 && filtered.filter(d => !d.isGenerated).every(d => selectedIds.includes(d.id))}
+                                        onChange={toggleSelectAll}
+                                        style={{ accentColor: 'var(--accent-blue)' }} />
+                                </th>
                                 <th style={{ whiteSpace: 'nowrap', width: 40 }}>No</th>
                                 <th style={{ whiteSpace: 'nowrap' }}>No Matrik</th>
                                 <th style={{ whiteSpace: 'nowrap', minWidth: 200 }}>Nama Paket</th>
@@ -439,9 +515,14 @@ const CreateBAST = () => {
                                 const anakan = isAnakan(d.noMatrik);
                                 return (
                                     <tr key={d.id} style={{
-                                        background: anakan ? 'var(--bg-secondary)' : undefined,
+                                        background: anakan ? 'var(--bg-secondary)' : selectedIds.includes(d.id) ? 'rgba(59,130,246,0.04)' : undefined,
                                         fontSize: '0.85rem'
                                     }}>
+                                        <td>
+                                            {!d.isGenerated ? (
+                                                <input type="checkbox" checked={selectedIds.includes(d.id)} onChange={() => toggleSelect(d.id)} style={{ accentColor: 'var(--accent-blue)' }} />
+                                            ) : <span style={{ color: 'var(--text-secondary)', fontSize: '0.7rem' }}>—</span>}
+                                        </td>
                                         <td>{(currentPage - 1) * pageSize + i + 1}</td>
                                         <td style={{ fontFamily: 'monospace', fontWeight: anakan ? 400 : 700, paddingLeft: anakan ? 24 : undefined }}>
                                             {anakan ? '└ ' : ''}{d.noMatrik}
@@ -497,7 +578,7 @@ const CreateBAST = () => {
                                 );
                             })}
                             {pagedData.length === 0 && (
-                                <tr><td colSpan={11} style={{ textAlign: 'center', padding: 40, fontSize: '0.9rem' }}>
+                                <tr><td colSpan={12} style={{ textAlign: 'center', padding: 40, fontSize: '0.9rem' }}>
                                     Tidak ada data. Tambahkan paket di Matriks Kegiatan.
                                 </td></tr>
                             )}
@@ -563,6 +644,51 @@ const CreateBAST = () => {
                             <button className="btn btn-ghost" onClick={() => setGenerateTarget(null)}>Batal</button>
                             <button className="btn btn-primary" onClick={handleConfirmGenerate} disabled={!selectedTemplateId}>
                                 <Printer size={14} /> Generate BAST
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ===== BATCH GENERATE DIALOG ===== */}
+            {showBatchGenerate && (
+                <div className="modal-overlay" onClick={() => setShowBatchGenerate(false)}>
+                    <div className="modal" style={{ maxWidth: 500 }} onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <div className="modal-title">Generate {selectedIds.length} BAST Sekaligus</div>
+                            <button className="modal-close" onClick={() => setShowBatchGenerate(false)}><X size={18} /></button>
+                        </div>
+                        <div className="modal-body">
+                            <div style={{ background: 'var(--bg-secondary)', padding: 12, borderRadius: 8, marginBottom: 16, fontSize: '0.85rem' }}>
+                                <strong>{selectedIds.length} item</strong> akan di-generate BAST dengan template yang sama.
+                            </div>
+                            <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: 8 }}>Pilih Template:</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                {bastTemplates.map(t => (
+                                    <label key={t.id} style={{
+                                        display: 'flex', alignItems: 'flex-start', gap: 10, padding: 12,
+                                        borderRadius: 8, cursor: 'pointer',
+                                        border: batchTemplateId === t.id ? '2px solid var(--accent-blue)' : '1px solid var(--border-color)',
+                                        background: batchTemplateId === t.id ? 'rgba(59,130,246,0.05)' : 'var(--bg-primary)',
+                                        transition: 'all 0.15s'
+                                    }}>
+                                        <input type="radio" name="batchTemplate" checked={batchTemplateId === t.id}
+                                            onChange={() => setBatchTemplateId(t.id)}
+                                            style={{ marginTop: 3 }} />
+                                        <div>
+                                            <div style={{ fontWeight: 600, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                <FileCheck size={14} /> {t.nama}
+                                            </div>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 2 }}>{t.deskripsi}</div>
+                                        </div>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+                        <div className="modal-footer">
+                            <button className="btn btn-ghost" onClick={() => setShowBatchGenerate(false)}>Batal</button>
+                            <button className="btn btn-primary" onClick={handleBatchGenerate} disabled={!batchTemplateId}>
+                                <Printer size={14} /> Generate {selectedIds.length} BAST
                             </button>
                         </div>
                     </div>

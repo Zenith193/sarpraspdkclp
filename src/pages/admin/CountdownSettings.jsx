@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Timer, Save, RotateCcw, Play, Pause, Clock, Users, ShieldAlert, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
 import useSettingsStore, { AVAILABLE_ACTIONS } from '../../store/settingsStore';
+import { settingsApi } from '../../api/index';
 import toast from 'react-hot-toast';
 
 const ROLE_OPTIONS = [
@@ -15,9 +16,15 @@ const CountdownSettings = () => {
     const [hasChanges, setHasChanges] = useState(false);
     const [preview, setPreview] = useState(null);
 
+    // Load countdown config from server on mount
     useEffect(() => {
-        setForm({ ...countdownConfig });
-    }, [countdownConfig]);
+        settingsApi.getCountdown().then(serverCfg => {
+            if (serverCfg && serverCfg.value) {
+                updateCountdown(serverCfg.value);
+                setForm({ ...countdownConfig, ...serverCfg.value });
+            }
+        }).catch(() => { });
+    }, []);
 
     // Live preview timer
     useEffect(() => {
@@ -60,14 +67,24 @@ const CountdownSettings = () => {
         handleChange('restrictedActions', actions);
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (form.enabled && !form.deadline) {
             toast.error('Tentukan deadline terlebih dahulu');
             return;
         }
-        updateCountdown(form);
-        setHasChanges(false);
-        toast.success('Pengaturan countdown berhasil disimpan');
+        try {
+            // Save to server so all users get the same config
+            await settingsApi.setCountdown(form);
+            // Also save to local store
+            updateCountdown(form);
+            setHasChanges(false);
+            toast.success('Pengaturan countdown berhasil disimpan ke server');
+        } catch (err) {
+            // Fallback: save to local only
+            updateCountdown(form);
+            setHasChanges(false);
+            toast.success('Disimpan lokal (gagal sync ke server)');
+        }
     };
 
     const handleReset = () => {
