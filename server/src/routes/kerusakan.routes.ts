@@ -7,8 +7,11 @@ const router = Router();
 
 router.get('/', requireAuth, async (req, res) => {
     try {
+        const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
+        const rawSekolahId = req.query.sekolahId ? Number(req.query.sekolahId) : undefined;
+
         const result = await kerusakanService.list({
-            sekolahId: req.query.sekolahId ? Number(req.query.sekolahId) : undefined,
+            sekolahId: isSekolah ? req.user!.sekolahId : rawSekolahId,
             search: req.query.search as string,
             page: Number(req.query.page) || 1, limit: Number(req.query.limit) || 50,
         });
@@ -17,14 +20,29 @@ router.get('/', requireAuth, async (req, res) => {
 });
 router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadFormKerusakan.single('file'), async (req, res) => {
     try {
+        const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
         const data = { ...req.body, fileName: req.file?.originalname || null, filePath: req.file?.path || null, status: req.file ? 'Menunggu Verifikasi' : 'Belum Upload' };
+        if (isSekolah) {
+            data.sekolahId = req.user!.sekolahId;
+        }
         res.status(201).json(await kerusakanService.create(data, req.user!.id));
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.put('/:id/upload', requireAuth, requireRole('admin', 'sekolah'), uploadFormKerusakan.single('file'), async (req, res) => {
     try {
+        const id = Number(req.params.id);
+        const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
         if (!req.file) { res.status(400).json({ error: 'No file' }); return; }
-        res.json(await kerusakanService.updateFile(Number(req.params.id), req.file.originalname, req.file.path));
+
+        if (isSekolah) {
+            const existing = await kerusakanService.getById(id);
+            if (!existing || existing.formKerusakan.sekolahId !== req.user!.sekolahId) {
+                res.status(403).json({ error: 'Forbidden: You can only upload for your own school' });
+                return;
+            }
+        }
+
+        res.json(await kerusakanService.updateFile(id, req.file.originalname, req.file.path));
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {

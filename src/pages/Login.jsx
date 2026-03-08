@@ -19,8 +19,15 @@ const Login = () => {
     const authLogin = useAuthStore(s => s.login);
     const { theme, toggleTheme } = useThemeStore();
 
-    // Stats are populated after login or from public endpoint
-    // Pre-auth calls removed to avoid 401 redirect loops
+    // Fetch public stats for the login page (no auth required)
+    useEffect(() => {
+        fetch('/api/public-stats')
+            .then(r => r.ok ? r.json() : null)
+            .then(data => {
+                if (data) setStats(data);
+            })
+            .catch(() => { }); // Silently fail if server is down
+    }, []);
 
     const handleLogin = async (e) => {
         e.preventDefault();

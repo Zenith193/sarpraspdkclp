@@ -73,6 +73,31 @@ app.use('/api/settings', settingsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/iklan', iklanRoutes);
 
+// ===== PUBLIC STATS (no auth required for login page) =====
+import { db } from './db/index.js';
+import { sekolah, user } from './db/schema/index.js';
+import { eq, sql } from 'drizzle-orm';
+
+app.get('/api/public-stats', async (_req, res) => {
+    try {
+        const [schoolResult, userResult] = await Promise.all([
+            db.select({ count: sql<number>`count(*)` }).from(sekolah),
+            db.select({ count: sql<number>`count(*)` }).from(user).where(eq(user.aktif, true)),
+        ]);
+
+        const schoolCount = Number(schoolResult[0]?.count || 0);
+        const userCount = Number(userResult[0]?.count || 0);
+
+        // Count distinct kecamatan
+        const kecResult = await db.selectDistinct({ kecamatan: sekolah.kecamatan }).from(sekolah);
+        const kecamatanCount = kecResult.filter(r => r.kecamatan).length;
+
+        res.json({ schoolCount, userCount, kecamatanCount });
+    } catch (e: any) {
+        res.json({ schoolCount: 0, userCount: 0, kecamatanCount: 0 });
+    }
+});
+
 // ===== HEALTH CHECK =====
 app.get('/api/health', (_req, res) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });

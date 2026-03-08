@@ -3,10 +3,11 @@ import { sekolah } from '../db/schema/index.js';
 import { eq, ilike, and, sql } from 'drizzle-orm';
 
 export const sekolahService = {
-    async list(filters: { search?: string; kecamatan?: string; jenjang?: string; page?: number; limit?: number }) {
-        const { search, kecamatan, jenjang, page = 1, limit = 50 } = filters;
+    async list(filters: { id?: number; search?: string; kecamatan?: string; jenjang?: string; page?: number; limit?: number }) {
+        const { id, search, kecamatan, jenjang, page = 1, limit = 50 } = filters;
         const conditions = [];
 
+        if (id) conditions.push(eq(sekolah.id, id));
         if (search) conditions.push(ilike(sekolah.nama, `%${search}%`));
         if (kecamatan) conditions.push(eq(sekolah.kecamatan, kecamatan));
         if (jenjang) conditions.push(eq(sekolah.jenjang, jenjang));

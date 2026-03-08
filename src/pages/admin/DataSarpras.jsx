@@ -8,6 +8,7 @@ import SearchableSelect from '../../components/ui/SearchableSelect';
 import useAuthStore from '../../store/authStore';
 import { safeStr } from '../../utils/safeStr';
 import useCountdownGuard from '../../hooks/useCountdownGuard';
+import { sarprasApi } from '../../api/index';
 import toast from 'react-hot-toast';
 
 const PER_PAGE_OPTIONS = [10, 15, 50, 100];
@@ -19,7 +20,7 @@ const DataSarpras = ({ readOnly = false }) => {
     const canAccessPriority = user?.role === 'Admin' || user?.role === 'Verifikator';
 
     const { data: sekolahList } = useSekolahData();
-    const { data: sarprasList, loading: sarprasLoading } = useSarprasData();
+    const { data: sarprasList, loading: sarprasLoading, refetch: refetchSarpras } = useSarprasData();
 
     const [data, setData] = useState([]);
 
@@ -66,6 +67,13 @@ const DataSarpras = ({ readOnly = false }) => {
 
     // Form state
     const [formSekolah, setFormSekolah] = useState('');
+
+    useEffect(() => {
+        if (sekolahList?.length === 1 && !formSekolah && !editItem) {
+            setFormSekolah(sekolahList[0].nama);
+        }
+    }, [sekolahList, formSekolah, editItem]);
+
     const [formData, setFormData] = useState({
         masaBangunan: 'A', jenisPrasarana: JENIS_PRASARANA[0], namaRuang: '',
         lantai: 1, panjang: '', lebar: '', kondisi: KONDISI[0], keterangan: ''
@@ -154,9 +162,15 @@ const DataSarpras = ({ readOnly = false }) => {
     const activeColumns = ALL_COLUMNS.filter(c => visibleCols.includes(c.key) && (c.key !== 'aksi' || !readOnly));
 
     // ===== STAR PRIORITY =====
-    const handleStar = (id) => {
+    const handleStar = async (item) => {
         if (!canAccessPriority) return;
-        setData(prev => prev.map(d => d.id === id ? { ...d, bintang: d.bintang ? 0 : 1 } : d));
+        try {
+            const newBintang = item.bintang ? 0 : 1;
+            await sarprasApi.update(item.id, { bintang: newBintang });
+            if (refetchSarpras) refetchSarpras();
+        } catch (e) {
+            toast.error('Gagal memperbarui prioritas');
+        }
     };
 
     const getConditionBadge = (kondisi) => {
@@ -277,7 +291,7 @@ const DataSarpras = ({ readOnly = false }) => {
         setFormPhotos([]);
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!guard(editItem ? 'edit' : 'tambah')) return;
         const sekolah = sekolahList.find(s => s.nama === formSekolah);
         if (!sekolah) { toast.error('Pilih sekolah terlebih dahulu'); return; }
@@ -285,29 +299,65 @@ const DataSarpras = ({ readOnly = false }) => {
         const panjang = parseFloat(formData.panjang) || 0;
         const lebar = parseFloat(formData.lebar) || 0;
         if (!panjang || !lebar) { toast.error('Panjang dan lebar harus diisi'); return; }
-        if (!formPhotos.length) { toast.error('Wajib upload minimal 1 foto dengan geotagging'); return; }
+        if (!editItem && !formPhotos.length) { toast.error('Wajib upload minimal 1 foto dengan geotagging'); return; }
 
-        const newItem = {
-            id: editItem ? editItem.id : Date.now(),
-            sekolahId: sekolah.id, namaSekolah: sekolah.nama, npsn: sekolah.npsn,
-            jenjang: sekolah.jenjang, kecamatan: sekolah.kecamatan,
-            ...formData, panjang, lebar, luas: +(panjang * lebar).toFixed(2),
-            foto: formPhotos,
-            verified: editItem ? editItem.verified : false,
-            bintang: editItem ? editItem.bintang : 0,
-            createdAt: editItem ? editItem.createdAt : new Date().toISOString(),
-        };
+        try {
+            toast.loading(editItem ? 'Memperbarui data...' : 'Menyimpan data...', { id: 'save' });
 
-        if (editItem) {
-            setData(prev => prev.map(d => d.id === editItem.id ? newItem : d));
-            toast.success('Data berhasil diperbarui');
-        } else {
-            setData(prev => [newItem, ...prev]);
-            toast.success('Data berhasil disimpan');
+            if (editItem) {
+                const updateData = {
+                    namaRuang: formData.namaRuang,
+                    lantai: formData.lantai,
+                    panjang,
+                    lebar,
+                    kondisi: formData.kondisi,
+                    keterangan: formData.keterangan,
+                    masaBangunan: formData.masaBangunan,
+                    jenisPrasarana: formData.jenisPrasarana,
+                };
+                await sarprasApi.update(editItem.id, updateData);
+
+                for (const photo of formPhotos) {
+                    if (photo.url && photo.url.startsWith('data:')) {
+                        const fData = new FormData();
+                        const blob = await (await fetch(photo.url)).blob();
+                        fData.append('foto', blob, photo.name);
+                        if (photo.geo?.lat) fData.append('geoLat', photo.geo.lat);
+                        if (photo.geo?.lng) fData.append('geoLng', photo.geo.lng);
+                        await sarprasApi.addFoto(editItem.id, fData);
+                    }
+                }
+                toast.success('Data berhasil diperbarui', { id: 'save' });
+            } else {
+                const fData = new FormData();
+                fData.append('sekolahId', sekolah.id);
+                fData.append('namaRuang', formData.namaRuang);
+                fData.append('lantai', formData.lantai);
+                fData.append('panjang', panjang);
+                fData.append('lebar', lebar);
+                fData.append('kondisi', formData.kondisi);
+                fData.append('keterangan', formData.keterangan);
+                fData.append('masaBangunan', formData.masaBangunan);
+                fData.append('jenisPrasarana', formData.jenisPrasarana);
+
+                for (const photo of formPhotos) {
+                    const blob = await (await fetch(photo.url)).blob();
+                    fData.append('fotos', blob, photo.name);
+                    if (photo.geo?.lat) fData.append(`geo_lat_${photo.name}`, photo.geo.lat);
+                    if (photo.geo?.lng) fData.append(`geo_lng_${photo.name}`, photo.geo.lng);
+                }
+
+                await sarprasApi.create(fData);
+                toast.success('Data berhasil disimpan', { id: 'save' });
+            }
+
+            setShowAddModal(false);
+            setEditItem(null);
+            resetForm();
+            if (refetchSarpras) refetchSarpras();
+        } catch (e) {
+            toast.error(e.message || 'Gagal menyimpan data', { id: 'save' });
         }
-        setShowAddModal(false);
-        setEditItem(null);
-        resetForm();
     };
 
     const handleEdit = (item) => {
@@ -320,10 +370,16 @@ const DataSarpras = ({ readOnly = false }) => {
     };
 
     // ===== UPDATED DELETE HANDLER =====
-    const performDelete = () => {
-        setData(prev => prev.filter(d => d.id !== deleteConfirm.id));
-        toast.success('Data berhasil dihapus');
-        setDeleteConfirm(null);
+    const performDelete = async () => {
+        try {
+            toast.loading('Menghapus data...', { id: 'delete' });
+            await sarprasApi.delete(deleteConfirm.id);
+            toast.success('Data berhasil dihapus', { id: 'delete' });
+            setDeleteConfirm(null);
+            if (refetchSarpras) refetchSarpras();
+        } catch (e) {
+            toast.error(e.message || 'Gagal menghapus data', { id: 'delete' });
+        }
     };
 
     const handleExport = (format) => {
@@ -372,7 +428,7 @@ const DataSarpras = ({ readOnly = false }) => {
                 return (
                     <span className={`star ${item.bintang ? 'filled' : ''}`}
                         style={{ fontSize: '1.25rem', cursor: 'pointer', color: item.bintang ? 'var(--accent-yellow)' : 'var(--border-color)', transition: 'color 150ms' }}
-                        onClick={() => handleStar(item.id)} title={item.bintang ? 'Hapus prioritas' : 'Tandai prioritas'}>★</span>
+                        onClick={() => handleStar(item)} title={item.bintang ? 'Hapus prioritas' : 'Tandai prioritas'}>★</span>
                 );
             case 'aksi':
                 return (

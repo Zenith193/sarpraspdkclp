@@ -7,8 +7,11 @@ const router = Router();
 
 router.get('/', requireAuth, async (req, res) => {
     try {
+        const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
+        const rawSekolahId = req.query.sekolahId ? Number(req.query.sekolahId) : undefined;
+
         const result = await prestasiService.list({
-            sekolahId: req.query.sekolahId ? Number(req.query.sekolahId) : undefined,
+            sekolahId: isSekolah ? req.user!.sekolahId : rawSekolahId,
             search: req.query.search as string,
             page: Number(req.query.page) || 1, limit: Number(req.query.limit) || 50,
         });
@@ -18,12 +21,31 @@ router.get('/', requireAuth, async (req, res) => {
 
 router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadSertifikat.single('sertifikat'), async (req, res) => {
     try {
+        const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
         const data = { ...req.body, sertifikatPath: req.file?.path || null };
+        if (isSekolah) {
+            data.sekolahId = req.user!.sekolahId;
+        }
         res.status(201).json(await prestasiService.create(data, req.user!.id));
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.put('/:id', requireAuth, requireRole('admin', 'sekolah'), async (req, res) => {
-    try { res.json(await prestasiService.update(Number(req.params.id), req.body)); } catch (e: any) { res.status(500).json({ error: e.message }); }
+    try {
+        const id = Number(req.params.id);
+        const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
+
+        if (isSekolah) {
+            const existing = await prestasiService.list({ sekolahId: req.user!.sekolahId });
+            const item = existing.data.find(d => (d.prestasi as any).id === id);
+            if (!item) {
+                res.status(403).json({ error: 'Forbidden: You can only update your own achievements' });
+                return;
+            }
+            delete req.body.sekolahId;
+        }
+
+        res.json(await prestasiService.update(id, req.body));
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
     try { await prestasiService.delete(Number(req.params.id)); res.json({ success: true }); } catch (e: any) { res.status(500).json({ error: e.message }); }

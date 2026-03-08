@@ -6,12 +6,15 @@ const router = Router();
 
 router.get('/', requireAuth, async (req, res) => {
     try {
+        const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
+        const rawSekolahId = req.query.sekolahId ? Number(req.query.sekolahId) : undefined;
+
         const result = await proposalService.list({
             status: req.query.status as string,
             keranjang: req.query.keranjang as string,
             kecamatan: req.query.kecamatan as string,
             jenjang: req.query.jenjang as string,
-            sekolahId: req.query.sekolahId ? Number(req.query.sekolahId) : undefined,
+            sekolahId: isSekolah ? req.user!.sekolahId : rawSekolahId,
             search: req.query.search as string,
             page: Number(req.query.page) || 1,
             limit: Number(req.query.limit) || 50,
@@ -22,14 +25,27 @@ router.get('/', requireAuth, async (req, res) => {
 
 router.get('/:id', requireAuth, async (req, res) => {
     try {
-        const result = await proposalService.getById(Number(req.params.id));
+        const id = Number(req.params.id);
+        const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
+
+        const result = await proposalService.getById(id);
         if (!result) { res.status(404).json({ error: 'Not found' }); return; }
+
+        if (isSekolah && result.proposal.sekolahId !== req.user!.sekolahId) {
+            res.status(403).json({ error: 'Forbidden: You can only view your own proposals' });
+            return;
+        }
+
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 router.post('/', requireAuth, requireRole('admin', 'sekolah'), async (req, res) => {
     try {
+        const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
+        if (isSekolah) {
+            req.body.sekolahId = req.user!.sekolahId;
+        }
         const result = await proposalService.create(req.body, req.user!.id);
         res.status(201).json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
@@ -37,7 +53,19 @@ router.post('/', requireAuth, requireRole('admin', 'sekolah'), async (req, res) 
 
 router.put('/:id', requireAuth, requireRole('admin', 'sekolah'), async (req, res) => {
     try {
-        const result = await proposalService.update(Number(req.params.id), req.body);
+        const id = Number(req.params.id);
+        const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
+
+        if (isSekolah) {
+            const existing = await proposalService.getById(id);
+            if (!existing || existing.proposal.sekolahId !== req.user!.sekolahId) {
+                res.status(403).json({ error: 'Forbidden: You can only update your own proposals' });
+                return;
+            }
+            delete req.body.sekolahId;
+        }
+
+        const result = await proposalService.update(id, req.body);
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });

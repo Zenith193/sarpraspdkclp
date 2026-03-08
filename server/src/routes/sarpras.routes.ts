@@ -7,8 +7,11 @@ const router = Router();
 
 router.get('/', requireAuth, async (req, res) => {
     try {
+        const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
+        const rawSekolahId = req.query.sekolahId ? Number(req.query.sekolahId) : undefined;
+
         const result = await sarprasService.list({
-            sekolahId: req.query.sekolahId ? Number(req.query.sekolahId) : undefined,
+            sekolahId: isSekolah ? req.user!.sekolahId : rawSekolahId,
             kecamatan: req.query.kecamatan as string,
             jenjang: req.query.jenjang as string,
             kondisi: req.query.kondisi as string,
@@ -38,6 +41,11 @@ router.get('/:id', requireAuth, async (req, res) => {
 
 router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadFotos.array('fotos', 5), async (req, res) => {
     try {
+        const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
+        if (isSekolah) {
+            req.body.sekolahId = req.user!.sekolahId;
+        }
+
         const item = await sarprasService.create(req.body, req.user!.id);
         // Save uploaded fotos
         if (req.files && Array.isArray(req.files)) {
@@ -58,7 +66,20 @@ router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadFotos.array
 
 router.put('/:id', requireAuth, requireRole('admin', 'sekolah'), async (req, res) => {
     try {
-        const result = await sarprasService.update(Number(req.params.id), req.body);
+        const id = Number(req.params.id);
+        const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
+
+        if (isSekolah) {
+            const existing = await sarprasService.getById(id);
+            if (!existing || existing.sarpras.sekolahId !== req.user!.sekolahId) {
+                res.status(403).json({ error: 'Forbidden: You can only update your own school\'s sarpras' });
+                return;
+            }
+            // Ensure they don't try to change sekolahId
+            delete req.body.sekolahId;
+        }
+
+        const result = await sarprasService.update(id, req.body);
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });

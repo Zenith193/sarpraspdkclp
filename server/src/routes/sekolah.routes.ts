@@ -6,7 +6,9 @@ const router = Router();
 
 router.get('/', requireAuth, async (req, res) => {
     try {
+        const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
         const result = await sekolahService.list({
+            id: isSekolah ? req.user!.sekolahId : undefined,
             search: req.query.search as string,
             kecamatan: req.query.kecamatan as string,
             jenjang: req.query.jenjang as string,
@@ -19,7 +21,15 @@ router.get('/', requireAuth, async (req, res) => {
 
 router.get('/:id', requireAuth, async (req, res) => {
     try {
-        const result = await sekolahService.getById(Number(req.params.id));
+        const id = Number(req.params.id);
+        const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
+
+        if (isSekolah && req.user!.sekolahId !== id) {
+            res.status(403).json({ error: 'Forbidden: You can only view your own school' });
+            return;
+        }
+
+        const result = await sekolahService.getById(id);
         if (!result) { res.status(404).json({ error: 'Not found' }); return; }
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }

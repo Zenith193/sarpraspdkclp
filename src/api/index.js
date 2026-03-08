@@ -18,7 +18,7 @@ export const sekolahApi = {
 export const sarprasApi = {
     list: (params = {}) => { const q = new URLSearchParams(params).toString(); return api.get(`/sarpras?${q}`); },
     getById: (id) => api.get(`/sarpras/${id}`),
-    create: (data) => api.post('/sarpras', data),
+    create: (formData) => api.upload('/sarpras', formData),
     update: (id, data) => api.put(`/sarpras/${id}`, data),
     delete: (id) => api.delete(`/sarpras/${id}`),
     verify: (id) => api.post(`/sarpras/${id}/verify`),

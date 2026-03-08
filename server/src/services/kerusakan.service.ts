@@ -14,6 +14,11 @@ export const kerusakanService = {
         const countResult = await db.select({ count: sql<number>`count(*)` }).from(formKerusakan).where(where);
         return { data, total: Number(countResult[0]?.count || 0), page, limit };
     },
+    async getById(id: number) {
+        const result = await db.select({ formKerusakan, sekolahNama: sekolah.nama, sekolahNpsn: sekolah.npsn })
+            .from(formKerusakan).leftJoin(sekolah, eq(formKerusakan.sekolahId, sekolah.id)).where(eq(formKerusakan.id, id));
+        return result[0] || null;
+    },
     async create(data: typeof formKerusakan.$inferInsert, userId: string) {
         const r = await db.insert(formKerusakan).values({ ...data, uploadedBy: userId }).returning(); return r[0];
     },
