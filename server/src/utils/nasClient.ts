@@ -74,6 +74,25 @@ function getBaseUrl(): string {
     return `${cfg.protocol}://${cfg.host}:${cfg.port}`;
 }
 
+// HTTPS agent that accepts self-signed certificates (needed for Synology NAS)
+import https from 'https';
+const insecureAgent = new https.Agent({ rejectUnauthorized: false });
+
+/**
+ * Wrapper around fetch that handles self-signed certs for NAS.
+ */
+async function nasFetch(url: string, options: RequestInit = {}): Promise<Response> {
+    const cfg = getConfig();
+    const fetchOptions: any = { ...options };
+    if (cfg.protocol === 'https') {
+        // @ts-ignore - Node.js fetch supports dispatcher/agent
+        fetchOptions.dispatcher = undefined;
+        // For Node 18+ native fetch, we need to set NODE_TLS_REJECT_UNAUTHORIZED
+        process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+    }
+    return fetch(url, fetchOptions);
+}
+
 // ==================== AUTH ====================
 
 let sessionId: string | null = null;
@@ -82,7 +101,7 @@ async function login(): Promise<string> {
     const cfg = getConfig();
     const url = `${getBaseUrl()}/webapi/auth.cgi?api=SYNO.API.Auth&version=6&method=login&account=${encodeURIComponent(cfg.username)}&passwd=${encodeURIComponent(cfg.password)}&format=sid`;
 
-    const res = await fetch(url, {
+    const res = await nasFetch(url, {
         method: 'GET',
         // @ts-ignore - allow self-signed certs on NAS
     });
@@ -132,7 +151,7 @@ async function createFolder(folderPath: string, name: string): Promise<boolean> 
         _sid: sid,
     });
 
-    const res = await fetch(url, {
+    const res = await nasFetch(url, {
         method: 'POST',
         body: params,
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -183,7 +202,7 @@ async function uploadFile(localFilePath: string, nasDestFolder: string, nasFilen
     formData.append('overwrite', 'true');
     formData.append('file', blob, nasFilename);
 
-    const res = await fetch(url, {
+    const res = await nasFetch(url, {
         method: 'POST',
         body: formData,
     });
@@ -318,7 +337,7 @@ export async function getNasDownloadLink(nasFilePath: string): Promise<string | 
             _sid: sid,
         });
 
-        const res = await fetch(url, {
+        const res = await nasFetch(url, {
             method: 'POST',
             body: params,
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -361,12 +380,12 @@ export async function testNasConnection(): Promise<{
         // Get NAS info
         const sid = await getSid();
         const infoUrl = `${getBaseUrl()}/webapi/entry.cgi?api=SYNO.DSM.Info&version=2&method=getinfo&_sid=${sid}`;
-        const infoRes = await fetch(infoUrl);
+        const infoRes = await nasFetch(infoUrl);
         const infoData = await infoRes.json() as any;
 
         // Get disk usage
         const shareUrl = `${getBaseUrl()}/webapi/entry.cgi?api=SYNO.FileStation.Info&version=2&method=get&_sid=${sid}`;
-        const shareRes = await fetch(shareUrl);
+        const shareRes = await nasFetch(shareUrl);
         const shareData = await shareRes.json() as any;
 
         const model = infoData.data?.model || 'Unknown';
@@ -420,7 +439,7 @@ export async function listNasSharedFolders(parentPath: string = '/'): Promise<Ar
             _sid: sid,
         });
 
-        const res = await fetch(`${url}?${params.toString()}`);
+        const res = await nasFetch(`${url}?${params.toString()}`);
         const data = await res.json() as any;
 
         if (!data.success) {
@@ -434,7 +453,7 @@ export async function listNasSharedFolders(parentPath: string = '/'): Promise<Ar
                     sort_direction: 'asc',
                     _sid: sid,
                 });
-                const shareRes = await fetch(`${url}?${shareParams.toString()}`);
+                const shareRes = await nasFetch(`${url}?${shareParams.toString()}`);
                 const shareData = await shareRes.json() as any;
                 if (shareData.success && shareData.data?.shares) {
                     return shareData.data.shares.map((s: any) => ({
