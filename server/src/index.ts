@@ -142,7 +142,7 @@ app.post('/api/admin/reset-sekolah-passwords', requireAuth, requireRole('admin')
             })
             .from(user)
             .innerJoin(sekolah, eq(user.sekolahId, sekolah.id))
-            .where(eq(user.role, 'sekolah'));
+            .where(sql`lower(${user.role}) = 'sekolah'`);
 
         const results: Array<{ name: string; npsn: string; success: boolean; error?: string }> = [];
 
