@@ -133,7 +133,7 @@ export const penggunaService = {
                     body: {
                         name: u.name,
                         email: validEmail,
-                        password: u.password || '12345678',
+                        password: u.password || (u.role?.toLowerCase() === 'sekolah' && u.npsn ? u.npsn : '12345678'),
                         role: u.role || 'Sekolah',
                         sekolahId: sekolahId,
                         aktif: true
