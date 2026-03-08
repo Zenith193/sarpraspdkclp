@@ -9,7 +9,7 @@ import useAuthStore from '../../store/authStore';
 import useSettingsStore from '../../store/settingsStore';
 import toast from 'react-hot-toast';
 
-const Sidebar = ({ collapsed, onToggle }) => {
+const Sidebar = ({ collapsed, onToggle, className = '' }) => {
     const { user, logout } = useAuthStore();
     const { accessConfig } = useSettingsStore();
     const navigate = useNavigate();
@@ -117,7 +117,7 @@ const Sidebar = ({ collapsed, onToggle }) => {
     const showSettingsSection = role === 'admin' && adminSettingsMenu.length > 0;
 
     return (
-        <div className={`sidebar ${collapsed ? 'collapsed' : ''}`}>
+        <div className={`sidebar ${collapsed ? 'collapsed' : ''} ${className}`}>
             <div className="sidebar-header">
                 <div className="sidebar-logo">
                     <School size={20} />

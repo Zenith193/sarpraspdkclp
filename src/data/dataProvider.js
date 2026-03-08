@@ -14,8 +14,11 @@ import {
     kerusakanApi, korwilApi, penggunaApi, aktivitasApi, dashboardApi, settingsApi
 } from '../api/index';
 
-// Generic data fetching hook
-function useDataFetch(fetchFn, defaultValue = [], deps = []) {
+// Auto-refresh interval (ms) — 0 = off
+const DEFAULT_REFRESH_INTERVAL = 60_000; // 60 seconds
+
+// Generic data fetching hook with optional auto-refresh
+function useDataFetch(fetchFn, defaultValue = [], deps = [], autoRefreshMs = DEFAULT_REFRESH_INTERVAL) {
     const [data, setData] = useState(defaultValue);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -37,6 +40,31 @@ function useDataFetch(fetchFn, defaultValue = [], deps = []) {
     }, deps);
 
     useEffect(() => { refetch(); }, [refetch]);
+
+    // Auto-refresh: refetch every N ms when tab is visible
+    useEffect(() => {
+        if (!autoRefreshMs || autoRefreshMs <= 0) return;
+
+        let interval;
+
+        const start = () => {
+            interval = setInterval(() => {
+                if (!document.hidden) refetch();
+            }, autoRefreshMs);
+        };
+
+        const handleVisibility = () => {
+            if (!document.hidden) refetch(); // Refresh immediately on tab focus
+        };
+
+        start();
+        document.addEventListener('visibilitychange', handleVisibility);
+
+        return () => {
+            clearInterval(interval);
+            document.removeEventListener('visibilitychange', handleVisibility);
+        };
+    }, [refetch, autoRefreshMs]);
 
     return { data, setData, loading, error, refetch };
 }
