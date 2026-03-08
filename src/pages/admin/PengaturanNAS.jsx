@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
-import { HardDrive, Save, RotateCcw, Wifi, WifiOff, FolderOpen, Server, Lock, Eye, EyeOff, RefreshCw, CheckCircle, XCircle, AlertTriangle, Shield, Database, FileText, Image, Archive, ClipboardList } from 'lucide-react';
+import { HardDrive, Save, RotateCcw, Wifi, WifiOff, FolderOpen, Server, Lock, Eye, EyeOff, RefreshCw, CheckCircle, XCircle, AlertTriangle, Shield, Database, FileText, Image, Archive, ClipboardList, ChevronRight } from 'lucide-react';
 import useSettingsStore from '../../store/settingsStore';
+import { settingsApi } from '../../api/index';
 import toast from 'react-hot-toast';
 
 const PROTOCOL_OPTIONS = [
@@ -28,6 +29,10 @@ const PengaturanNAS = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [testing, setTesting] = useState(false);
     const [hasChanges, setHasChanges] = useState(false);
+    const [nasFolders, setNasFolders] = useState([]);
+    const [loadingFolders, setLoadingFolders] = useState(false);
+    const [folderPickerFor, setFolderPickerFor] = useState(null);
+    const [browsingPath, setBrowsingPath] = useState('/');
 
     useEffect(() => {
         setForm({ ...nasConfig });
@@ -82,30 +87,61 @@ const PengaturanNAS = () => {
         }
         setTesting(true);
 
-        // Simulate connection test
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        try {
+            // Save config to server first so test uses the right credentials
+            await settingsApi.setNas({
+                enabled: form.enabled,
+                hostname: form.hostname,
+                port: form.port,
+                protocol: form.protocol,
+                username: form.username,
+                password: form.password,
+            });
 
-        // Simulated result
-        const isSuccess = form.hostname && form.username;
-        const result = {
-            success: isSuccess,
-            message: isSuccess
-                ? `Berhasil terhubung ke ${form.hostname}:${form.port}`
-                : `Gagal terhubung: Periksa hostname dan kredensial`,
-            diskTotal: isSuccess ? '4 TB' : null,
-            diskUsed: isSuccess ? '1.2 TB' : null,
-            diskFree: isSuccess ? '2.8 TB' : null,
-            model: isSuccess ? 'DS220+' : null,
-            dsm: isSuccess ? 'DSM 7.2.1' : null,
-        };
+            // Real API test
+            const result = await settingsApi.testNas();
+            setTestResult(result);
 
-        setTestResult(result);
-        setTesting(false);
-
-        if (isSuccess) {
-            toast.success('Koneksi NAS berhasil!');
-        } else {
+            if (result.success) {
+                toast.success('Koneksi NAS berhasil!');
+                // Auto-load shared folders
+                fetchNasFolders('/');
+            } else {
+                toast.error(result.message || 'Koneksi NAS gagal');
+            }
+        } catch (e) {
+            const result = { success: false, message: e.message || 'Gagal menghubungi server' };
+            setTestResult(result);
             toast.error('Koneksi NAS gagal');
+        } finally {
+            setTesting(false);
+        }
+    };
+
+    const fetchNasFolders = async (parentPath = '/') => {
+        setLoadingFolders(true);
+        try {
+            const res = await settingsApi.listNasFolders(parentPath);
+            if (res.success && res.folders) {
+                setNasFolders(res.folders);
+                setBrowsingPath(parentPath);
+            }
+        } catch (e) {
+            console.error('Failed to list NAS folders:', e);
+        } finally {
+            setLoadingFolders(false);
+        }
+    };
+
+    const selectFolder = (folderPath) => {
+        if (folderPickerFor) {
+            handleFolderChange(folderPickerFor, folderPath);
+            setFolderPickerFor(null);
+            toast.success(`Folder dipilih: ${folderPath}`);
+        } else {
+            // Set as main shared folder
+            handleChange('sharedFolder', folderPath);
+            toast.success(`Shared folder dipilih: ${folderPath}`);
         }
     };
 
@@ -295,41 +331,73 @@ const PengaturanNAS = () => {
                     <div className="table-container" style={{ padding: 20, opacity: form.enabled ? 1 : 0.5, pointerEvents: form.enabled ? 'auto' : 'none' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, paddingBottom: 10, borderBottom: '2px solid var(--bg-secondary)' }}>
                             <FolderOpen size={16} style={{ color: 'var(--accent-green)' }} />
-                            <h3 style={{ fontSize: '0.9rem', fontWeight: 600, margin: 0 }}>Mapping Folder</h3>
+                            <h3 style={{ fontSize: '0.9rem', fontWeight: 600, margin: 0 }}>Shared Folder</h3>
                         </div>
-                        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 16 }}>
-                            Tentukan folder tujuan di NAS untuk setiap jenis file. Folder akan otomatis dibuat jika belum ada.
-                        </p>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                            {FOLDER_CONFIG.map(fc => (
-                                <div key={fc.key} style={{
-                                    padding: '12px 16px', borderRadius: 10,
-                                    border: '1px solid var(--border-color)',
-                                    background: 'var(--bg-primary)',
-                                    transition: '0.2s'
-                                }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                                        <div style={{
-                                            width: 32, height: 32, borderRadius: 8,
-                                            background: 'rgba(59,130,246,0.08)',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                            color: 'var(--accent-blue)'
-                                        }}>
-                                            {fc.icon}
-                                        </div>
-                                        <div>
-                                            <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{fc.label}</div>
-                                            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{fc.desc}</div>
-                                        </div>
-                                    </div>
-                                    <input className="form-input" value={form.folders?.[fc.key] || ''}
-                                        onChange={e => handleFolderChange(fc.key, e.target.value)}
-                                        placeholder={`/volume1/${fc.key}/`}
-                                        style={{ fontFamily: 'monospace', fontSize: '0.82rem' }} />
-                                </div>
-                            ))}
+                        {/* Main Shared Folder */}
+                        <div className="form-group" style={{ marginBottom: 16 }}>
+                            <label className="form-label">Root Shared Folder</label>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                <input className="form-input" value={form.sharedFolder || ''}
+                                    onChange={e => handleChange('sharedFolder', e.target.value)}
+                                    placeholder="/volume1/spidol" style={{ fontFamily: 'monospace', fontSize: '0.82rem' }} />
+                                {lastTest?.success && (
+                                    <button className="btn btn-secondary btn-sm" onClick={() => { setFolderPickerFor(null); fetchNasFolders('/'); }}
+                                        disabled={loadingFolders} style={{ whiteSpace: 'nowrap' }}>
+                                        <FolderOpen size={14} /> Pilih
+                                    </button>
+                                )}
+                            </div>
                         </div>
+
+                        {/* NAS Folder Picker (shown after successful connection) */}
+                        {nasFolders.length > 0 && (
+                            <div style={{
+                                padding: 12, borderRadius: 8, marginBottom: 16,
+                                border: '1px solid var(--border-color)', background: 'var(--bg-primary)',
+                                maxHeight: 220, overflow: 'auto'
+                            }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                                    <FolderOpen size={12} />
+                                    <span style={{ fontFamily: 'monospace' }}>{browsingPath}</span>
+                                    {browsingPath !== '/' && (
+                                        <button className="btn btn-ghost" style={{ marginLeft: 'auto', fontSize: '0.7rem', padding: '2px 8px' }}
+                                            onClick={() => {
+                                                const parent = browsingPath.split('/').slice(0, -1).join('/') || '/';
+                                                fetchNasFolders(parent);
+                                            }}>← Kembali</button>
+                                    )}
+                                </div>
+                                {loadingFolders ? (
+                                    <div style={{ textAlign: 'center', padding: 16, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                        <RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> Memuat...
+                                    </div>
+                                ) : nasFolders.map(f => (
+                                    <div key={f.path} style={{
+                                        display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px',
+                                        borderRadius: 6, cursor: 'pointer', fontSize: '0.82rem',
+                                        background: 'var(--bg-secondary)', marginBottom: 4,
+                                        transition: 'all 0.15s'
+                                    }}
+                                        onMouseEnter={e => e.target.style.background = 'rgba(59,130,246,0.08)'}
+                                        onMouseLeave={e => e.target.style.background = 'var(--bg-secondary)'}
+                                    >
+                                        <FolderOpen size={14} style={{ color: 'var(--accent-blue)', flexShrink: 0 }} />
+                                        <span style={{ flex: 1, fontFamily: 'monospace', fontSize: '0.8rem' }}>{f.name}</span>
+                                        <button className="btn btn-ghost" style={{ padding: '2px 8px', fontSize: '0.7rem' }}
+                                            onClick={() => selectFolder(f.path)}>Pilih</button>
+                                        <button className="btn-icon" title="Browse" style={{ padding: 2 }}
+                                            onClick={() => fetchNasFolders(f.path)}>
+                                            <ChevronRight size={14} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 16 }}>
+                            Folder akan otomatis dibuat di dalam shared folder yang dipilih sesuai skema di bawah.
+                        </p>
                     </div>
 
                     {/* Folder Structure Diagram */}

@@ -378,3 +378,65 @@ export function isNasEnabled(): boolean {
 }
 
 export { getConfig as getNasConfig, logout as nasLogout };
+
+/**
+ * List folders on NAS at a given path.
+ * Used for the folder chooser in PengaturanNAS.
+ */
+export async function listNasSharedFolders(parentPath: string = '/'): Promise<Array<{ name: string; path: string; isDir: boolean }>> {
+    const cfg = getConfig();
+    if (!cfg.enabled || !cfg.host) {
+        throw new Error('NAS not configured');
+    }
+
+    try {
+        const sid = await getSid();
+        const url = `${getBaseUrl()}/webapi/entry.cgi`;
+        const params = new URLSearchParams({
+            api: 'SYNO.FileStation.List',
+            version: '2',
+            method: 'list',
+            folder_path: parentPath,
+            sort_by: 'name',
+            sort_direction: 'asc',
+            filetype: 'dir',
+            _sid: sid,
+        });
+
+        const res = await fetch(`${url}?${params.toString()}`);
+        const data = await res.json() as any;
+
+        if (!data.success) {
+            // Try listing shared folders at root
+            if (parentPath === '/') {
+                const shareParams = new URLSearchParams({
+                    api: 'SYNO.FileStation.List',
+                    version: '2',
+                    method: 'list_share',
+                    sort_by: 'name',
+                    sort_direction: 'asc',
+                    _sid: sid,
+                });
+                const shareRes = await fetch(`${url}?${shareParams.toString()}`);
+                const shareData = await shareRes.json() as any;
+                if (shareData.success && shareData.data?.shares) {
+                    return shareData.data.shares.map((s: any) => ({
+                        name: s.name,
+                        path: s.path,
+                        isDir: true,
+                    }));
+                }
+            }
+            return [];
+        }
+
+        return (data.data?.files || []).filter((f: any) => f.isdir).map((f: any) => ({
+            name: f.name,
+            path: f.path,
+            isDir: true,
+        }));
+    } catch (err) {
+        console.error('NAS folder listing error:', err);
+        throw err;
+    }
+}

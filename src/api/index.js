@@ -149,6 +149,7 @@ export const settingsApi = {
     setNas: (config) => api.put('/settings/nas', config),
     testNas: () => api.post('/settings/nas/test'),
     resetNas: () => api.post('/settings/nas/reset'),
+    listNasFolders: (path = '/') => api.get(`/settings/nas/folders?path=${encodeURIComponent(path)}`),
 };
 
 export const dashboardApi = {

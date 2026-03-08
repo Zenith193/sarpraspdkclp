@@ -65,13 +65,13 @@ app.get('/api/foto/:fotoId', async (req, res) => {
         const filePath = foto[0].filePath || '';
         const normalizedPath = filePath.replace(/\\/g, '/');
 
-        // Check if file exists locally
+        // 1. Check if file exists at exact path
         if (fs.existsSync(filePath)) {
             res.sendFile(path.resolve(filePath));
             return;
         }
 
-        // Check if in uploads dir with relative path
+        // 2. Check relative uploads path
         const uploadDir = process.env.UPLOAD_DIR || './uploads';
         const uploadsIdx = normalizedPath.indexOf('uploads/');
         if (uploadsIdx >= 0) {
@@ -83,7 +83,7 @@ app.get('/api/foto/:fotoId', async (req, res) => {
             }
         }
 
-        // Try filename only in fotos folder
+        // 3. Try filename only in fotos folder
         const filename = path.basename(normalizedPath);
         const fotosPath = path.resolve(uploadDir, 'fotos', filename);
         if (fs.existsSync(fotosPath)) {
@@ -91,12 +91,31 @@ app.get('/api/foto/:fotoId', async (req, res) => {
             return;
         }
 
-        // If NAS enabled, try to get download link
+        // 4. If NAS enabled, download from NAS and stream through server
         if (isNasEnabled() && normalizedPath.startsWith('/')) {
             const nasUrl = await getNasDownloadLink(normalizedPath);
             if (nasUrl) {
-                res.redirect(nasUrl);
-                return;
+                try {
+                    const nasRes = await fetch(nasUrl);
+                    if (nasRes.ok && nasRes.body) {
+                        const contentType = nasRes.headers.get('content-type') || 'image/jpeg';
+                        res.setHeader('Content-Type', contentType);
+                        res.setHeader('Cache-Control', 'public, max-age=86400');
+                        // Stream the NAS response to the client
+                        const reader = nasRes.body.getReader();
+                        const pump = async () => {
+                            while (true) {
+                                const { done, value } = await reader.read();
+                                if (done) { res.end(); break; }
+                                res.write(value);
+                            }
+                        };
+                        await pump();
+                        return;
+                    }
+                } catch (nasErr) {
+                    console.error('NAS stream error:', nasErr);
+                }
             }
         }
 

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { settingsService } from '../services/settings.service.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import { testNasConnection, isNasEnabled } from '../utils/nasClient.js';
+import { testNasConnection, isNasEnabled, listNasSharedFolders } from '../utils/nasClient.js';
 
 const router = Router();
 
@@ -45,6 +45,15 @@ router.post('/nas/test', requireAuth, requireRole('admin'), async (_req, res) =>
 });
 router.post('/nas/reset', requireAuth, requireRole('admin'), async (_req, res) => {
     try { res.json(await settingsService.reset('nas_config')); } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ===== NAS FOLDER LISTING (for folder chooser) =====
+router.get('/nas/folders', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+        const parentPath = (req.query.path as string) || '/';
+        const folders = await listNasSharedFolders(parentPath);
+        res.json({ success: true, folders });
+    } catch (e: any) { res.status(500).json({ success: false, error: e.message, folders: [] }); }
 });
 
 export default router;
