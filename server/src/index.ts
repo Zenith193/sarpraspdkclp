@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import { toNodeHandler } from 'better-auth/node';
+import { toNodeHandler, fromNodeHeaders } from 'better-auth/node';
 import { auth } from './auth/index.js';
 import { requireAuth, requireRole } from './middleware/auth.js';
 
@@ -129,7 +129,58 @@ app.post('/api/npsn-login', async (req, res) => {
     }
 });
 
-// ===== BETTER AUTH HANDLER =====
+// ===== CUSTOM SESSION CHECK (fallback for NPSN login sessions) =====
+app.get('/api/check-session', async (req, res) => {
+    try {
+        // Try Better Auth first
+        const session = await auth.api.getSession({
+            headers: fromNodeHeaders(req.headers),
+        });
+        if (session?.user) {
+            res.json({ user: session.user, session: session.session });
+            return;
+        }
+
+        // Fallback: check session table directly
+        const cookieHeader = req.headers.cookie || '';
+        const tokenMatch = cookieHeader.match(/better-auth\.session_token=([^;]+)/);
+        if (tokenMatch) {
+            const token = tokenMatch[1];
+            const sessions = await db
+                .select({
+                    userId: sessionTable.userId,
+                    expiresAt: sessionTable.expiresAt,
+                    token: sessionTable.token,
+                })
+                .from(sessionTable)
+                .where(eq(sessionTable.token, token));
+
+            const s = sessions[0];
+            if (s && new Date(s.expiresAt) > new Date()) {
+                const users = await db.select().from(user).where(eq(user.id, s.userId));
+                const u = users[0];
+                if (u) {
+                    res.json({
+                        user: {
+                            id: u.id,
+                            name: u.name,
+                            email: u.email,
+                            role: u.role,
+                            sekolahId: u.sekolahId,
+                            aktif: u.aktif,
+                        },
+                        session: { token: s.token, expiresAt: s.expiresAt },
+                    });
+                    return;
+                }
+            }
+        }
+
+        res.status(401).json({ error: 'No session' });
+    } catch (e: any) {
+        res.status(401).json({ error: 'Invalid session' });
+    }
+});
 // Mount Better Auth on /api/auth/*
 app.all('/api/auth/*splat', toNodeHandler(auth));
 

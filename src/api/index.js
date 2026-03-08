@@ -4,7 +4,7 @@ export const authApi = {
     login: (email, password) => api.post('/auth/sign-in/email', { email, password }),
     register: (data) => api.post('/auth/sign-up/email', data),
     logout: () => api.post('/auth/sign-out', {}),
-    getSession: () => api.get('/auth/get-session'),
+    getSession: () => api.get('/check-session').catch(() => api.get('/auth/get-session')),
 };
 
 export const sekolahApi = {
