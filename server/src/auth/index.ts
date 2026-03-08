@@ -41,6 +41,12 @@ export const auth = betterAuth({
         'http://localhost:5174',
         'http://localhost:5175',
         'http://localhost:3000',
+        'http://sarpraspdkclp.site',
+        'https://sarpraspdkclp.site',
+        'http://www.sarpraspdkclp.site',
+        'https://www.sarpraspdkclp.site',
+        'http://202.155.18.22',
+        ...(process.env.CORS_ORIGIN ? process.env.CORS_ORIGIN.split(',').map(o => o.trim()) : []),
     ],
 });
 
