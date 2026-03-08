@@ -365,7 +365,7 @@ export async function uploadToNas(
     const filename = path.basename(localFilePath);
 
     // If NAS is disabled, keep file locally
-    if (!cfg.enabled || !cfg.host) {
+    if (!cfg.enabled || (!cfg.host && !cfg.quickConnectId)) {
         return { stored: 'local', path: localFilePath };
     }
 
