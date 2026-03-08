@@ -478,7 +478,7 @@ const ManajemenPengguna = () => {
                                     </td>
                                     <td><span className="badge badge-disetujui">{u.role}</span></td>
                                     <td>
-                                        <div>{u.email || u.npsn}</div>
+                                        <div>{u.npsn || (u.email?.replace('@spidol.cilacapkab.go.id', '') || '-')}</div>
                                     </td>
                                     <td>{(u.role === 'Korwil' || u.role === 'Sekolah') ? (u.jenjang || '-') : '-'}</td>
                                     <td>{(u.role === 'Korwil' || u.role === 'Sekolah') ? (u.kecamatan || '-') : '-'}</td>
@@ -551,7 +551,7 @@ const ManajemenPengguna = () => {
                                             <div className="form-group"><label className="form-label">Role</label><div><span className="badge badge-disetujui">{formData.role}</span></div></div>
                                         </div>
                                         <div className="form-row">
-                                            <div className="form-group"><label className="form-label">Email / NPSN</label><div>{formData.email || formData.npsn}</div></div>
+                                            <div className="form-group"><label className="form-label">Email / NPSN</label><div>{formData.npsn || (formData.email?.replace('@spidol.cilacapkab.go.id', '') || '-')}</div></div>
                                             <div className="form-group"><label className="form-label">Status</label><div>{formData.aktif ? 'Aktif' : 'Nonaktif'}</div></div>
                                         </div>
                                         <div className="form-group"><label className="form-label">Alamat</label><div>{formData.alamat || '-'}</div></div>
