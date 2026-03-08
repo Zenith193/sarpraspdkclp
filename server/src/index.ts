@@ -76,20 +76,18 @@ app.use('/api/iklan', iklanRoutes);
 
 // ===== PUBLIC STATS (no auth required for login page) =====
 import { db } from './db/index.js';
-import { sekolah, user } from './db/schema/index.js';
+import { sekolah, user, account } from './db/schema/index.js';
 import { eq, sql } from 'drizzle-orm';
 
 app.get('/api/public-stats', async (_req, res) => {
     try {
-        // Count users with role 'sekolah' and aktif = true
-        const sekolahUsers = await db
+        const sekolahUsersCount = await db
             .select({ count: sql<number>`count(*)` })
             .from(user)
             .where(eq(user.aktif, true));
 
-        const userCount = Number(sekolahUsers[0]?.count || 0);
+        const userCount = Number(sekolahUsersCount[0]?.count || 0);
 
-        // Count schools that have at least one aktif sekolah user
         const sekolahWithUsers = await db
             .selectDistinct({ sekolahId: user.sekolahId })
             .from(user)
@@ -101,19 +99,8 @@ app.get('/api/public-stats', async (_req, res) => {
 
         const schoolCount = validSekolahIds.length;
 
-        // Per-jenjang breakdown (from sekolah table filtered to registered schools)
         let jenjangBreakdown: Record<string, number> = {};
         if (validSekolahIds.length > 0) {
-            const withJenjang = await db
-                .select({ jenjang: sekolah.jenjang })
-                .from(sekolah);
-
-            const filtered = withJenjang.filter(r =>
-                validSekolahIds.some(id => id !== null) && r.jenjang
-            );
-
-            // Count all schools with jenjang from ALL sekolah table (since we have the full table)
-            // But only count those linked to users
             const sekolahData = await db
                 .select({ id: sekolah.id, jenjang: sekolah.jenjang })
                 .from(sekolah);
@@ -126,15 +113,12 @@ app.get('/api/public-stats', async (_req, res) => {
             });
         }
 
-        // Count distinct kecamatan from registered schools
         let kecamatanCount = 0;
         if (validSekolahIds.length > 0) {
             const kecData = await db
                 .selectDistinct({ kecamatan: sekolah.kecamatan })
                 .from(sekolah);
-            const validKec = kecData.filter(r =>
-                r.kecamatan
-            );
+            const validKec = kecData.filter(r => r.kecamatan);
             kecamatanCount = validKec.length;
         }
 
@@ -145,8 +129,6 @@ app.get('/api/public-stats', async (_req, res) => {
 });
 
 // ===== ADMIN: RESET SEKOLAH PASSWORDS TO NPSN =====
-import { account } from './db/schema/index.js';
-
 app.post('/api/admin/reset-sekolah-passwords', requireAuth, requireRole('admin'), async (_req: any, res: any) => {
     try {
         // Get all sekolah users with their NPSN
@@ -155,6 +137,7 @@ app.post('/api/admin/reset-sekolah-passwords', requireAuth, requireRole('admin')
                 userId: user.id,
                 name: user.name,
                 email: user.email,
+                sekolahId: user.sekolahId,
                 npsn: sekolah.npsn,
             })
             .from(user)
@@ -165,31 +148,21 @@ app.post('/api/admin/reset-sekolah-passwords', requireAuth, requireRole('admin')
 
         for (const su of sekolahUsers) {
             try {
-                // Use Better Auth's internal password hash via ctx
-                const hashFn = (auth as any).options?.hash?.password
-                    || (auth as any).context?.password?.hash;
+                // Delete old account credential + user, then re-create via Better Auth signUp
+                // This guarantees the password is hashed with the correct algorithm
+                await db.delete(account).where(sql`${account.userId} = ${su.userId}`);
+                await db.delete(user).where(eq(user.id, su.userId));
 
-                let hashedPassword: string;
-
-                if (hashFn) {
-                    hashedPassword = await hashFn(su.npsn);
-                } else {
-                    // Fallback: use the same scrypt approach Better Auth uses internally
-                    const { scrypt, randomBytes } = await import('crypto');
-                    const { promisify } = await import('util');
-                    const scryptAsync = promisify(scrypt);
-                    const salt = randomBytes(16).toString('hex');
-                    const derivedKey = (await scryptAsync(su.npsn, salt, 64)) as Buffer;
-                    hashedPassword = `${salt}:${derivedKey.toString('hex')}`;
-                }
-
-                // Update the password in the account table
-                await db
-                    .update(account)
-                    .set({ password: hashedPassword })
-                    .where(
-                        sql`${account.userId} = ${su.userId} AND ${account.providerId} = 'credential'`
-                    );
+                await auth.api.signUpEmail({
+                    body: {
+                        name: su.name,
+                        email: su.email,
+                        password: su.npsn,
+                        role: 'sekolah',
+                        sekolahId: su.sekolahId,
+                        aktif: true,
+                    },
+                });
 
                 results.push({ name: su.name, npsn: su.npsn, success: true });
             } catch (e: any) {
@@ -201,7 +174,7 @@ app.post('/api/admin/reset-sekolah-passwords', requireAuth, requireRole('admin')
             total: sekolahUsers.length,
             success: results.filter(r => r.success).length,
             failed: results.filter(r => !r.success).length,
-            results
+            results,
         });
     } catch (e: any) {
         res.status(500).json({ error: e.message });
