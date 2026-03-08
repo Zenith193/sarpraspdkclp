@@ -34,12 +34,13 @@ const Login = () => {
         setSubmitting(true);
 
         try {
-            // For sekolah tab, use NPSN as email (convention from our user setup)
+            // For sekolah tab, use NPSN as email and as password
             let loginEmail = tab === 'sekolah' ? npsn : email;
             if (!loginEmail.includes('@')) {
                 loginEmail = `${loginEmail}@spidol.cilacapkab.go.id`;
             }
-            const user = await authLogin(loginEmail, password);
+            const loginPassword = tab === 'sekolah' ? npsn : password;
+            const user = await authLogin(loginEmail, loginPassword);
 
             if (user) {
                 toast.success(`Sugeng Rawuh, ${user.name} (${user.role})`, {
@@ -187,25 +188,27 @@ const Login = () => {
                             </div>
                         )}
 
-                        <div className="login-field">
-                            <label>Password</label>
-                            <div className="login-input-wrapper">
-                                <input
-                                    type={showPassword ? 'text' : 'password'}
-                                    placeholder="Masukkan password"
-                                    value={password}
-                                    onChange={e => setPassword(e.target.value)}
-                                    required
-                                />
-                                <button
-                                    type="button"
-                                    className="login-password-toggle"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                >
-                                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                                </button>
+                        {tab === 'staff' && (
+                            <div className="login-field">
+                                <label>Password</label>
+                                <div className="login-input-wrapper">
+                                    <input
+                                        type={showPassword ? 'text' : 'password'}
+                                        placeholder="Masukkan password"
+                                        value={password}
+                                        onChange={e => setPassword(e.target.value)}
+                                        required
+                                    />
+                                    <button
+                                        type="button"
+                                        className="login-password-toggle"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                    >
+                                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
+                                </div>
                             </div>
-                        </div>
+                        )}
 
                         <button type="submit" className="login-submit-btn" disabled={submitting}>
                             {submitting ? <Loader2 size={18} className="spin" /> : <LogIn size={18} />}

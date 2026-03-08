@@ -71,7 +71,7 @@ function useDataFetch(fetchFn, defaultValue = [], deps = [], autoRefreshMs = DEF
 
 // ===== SEKOLAH =====
 export function useSekolahData() {
-    return useDataFetch(() => sekolahApi.list({ limit: 999 }).then(r => r.data || r));
+    return useDataFetch(() => sekolahApi.list({ limit: 999, onlyWithUsers: true }).then(r => r.data || r));
 }
 
 // ===== SARPRAS =====

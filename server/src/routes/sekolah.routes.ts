@@ -14,6 +14,7 @@ router.get('/', requireAuth, async (req, res) => {
             jenjang: req.query.jenjang as string,
             page: Number(req.query.page) || 1,
             limit: Number(req.query.limit) || 50,
+            onlyWithUsers: req.query.onlyWithUsers === 'true',
         });
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }

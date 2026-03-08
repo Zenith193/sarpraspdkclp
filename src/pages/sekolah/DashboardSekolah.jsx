@@ -97,7 +97,7 @@ const DashboardSekolah = () => {
                 ))}
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+            <div className="charts-grid">
                 {/* Sarpras Data */}
                 <div className="table-container">
                     <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: 8 }}>

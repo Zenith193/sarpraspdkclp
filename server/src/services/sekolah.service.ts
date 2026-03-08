@@ -1,16 +1,33 @@
 import { db } from '../db/index.js';
-import { sekolah } from '../db/schema/index.js';
-import { eq, ilike, and, sql } from 'drizzle-orm';
+import { sekolah, user } from '../db/schema/index.js';
+import { eq, ilike, and, sql, inArray } from 'drizzle-orm';
 
 export const sekolahService = {
-    async list(filters: { id?: number; search?: string; kecamatan?: string; jenjang?: string; page?: number; limit?: number }) {
-        const { id, search, kecamatan, jenjang, page = 1, limit = 50 } = filters;
+    async list(filters: { id?: number; search?: string; kecamatan?: string; jenjang?: string; page?: number; limit?: number; onlyWithUsers?: boolean }) {
+        const { id, search, kecamatan, jenjang, page = 1, limit = 50, onlyWithUsers } = filters;
         const conditions = [];
 
         if (id) conditions.push(eq(sekolah.id, id));
         if (search) conditions.push(ilike(sekolah.nama, `%${search}%`));
         if (kecamatan) conditions.push(eq(sekolah.kecamatan, kecamatan));
         if (jenjang) conditions.push(eq(sekolah.jenjang, jenjang));
+
+        // Only return schools that have at least 1 active user linked
+        if (onlyWithUsers) {
+            const activeUserSchools = await db
+                .selectDistinct({ sekolahId: user.sekolahId })
+                .from(user)
+                .where(eq(user.aktif, true));
+            const activeIds = activeUserSchools
+                .map(r => r.sekolahId)
+                .filter((id): id is number => id !== null && id !== undefined);
+            if (activeIds.length > 0) {
+                conditions.push(inArray(sekolah.id, activeIds));
+            } else {
+                // No active users → return empty
+                return { data: [], total: 0, page, limit };
+            }
+        }
 
         const where = conditions.length > 0 ? and(...conditions) : undefined;
         const offset = (page - 1) * limit;
