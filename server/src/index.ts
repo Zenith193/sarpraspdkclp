@@ -80,21 +80,66 @@ import { eq, sql } from 'drizzle-orm';
 
 app.get('/api/public-stats', async (_req, res) => {
     try {
-        const [schoolResult, userResult] = await Promise.all([
-            db.select({ count: sql<number>`count(*)` }).from(sekolah),
-            db.select({ count: sql<number>`count(*)` }).from(user).where(eq(user.aktif, true)),
-        ]);
+        // Count users with role 'sekolah' and aktif = true
+        const sekolahUsers = await db
+            .select({ count: sql<number>`count(*)` })
+            .from(user)
+            .where(eq(user.aktif, true));
 
-        const schoolCount = Number(schoolResult[0]?.count || 0);
-        const userCount = Number(userResult[0]?.count || 0);
+        const userCount = Number(sekolahUsers[0]?.count || 0);
 
-        // Count distinct kecamatan
-        const kecResult = await db.selectDistinct({ kecamatan: sekolah.kecamatan }).from(sekolah);
-        const kecamatanCount = kecResult.filter(r => r.kecamatan).length;
+        // Count schools that have at least one aktif sekolah user
+        const sekolahWithUsers = await db
+            .selectDistinct({ sekolahId: user.sekolahId })
+            .from(user)
+            .where(eq(user.aktif, true));
 
-        res.json({ schoolCount, userCount, kecamatanCount });
+        const validSekolahIds = sekolahWithUsers
+            .map(r => r.sekolahId)
+            .filter((id): id is number => id !== null && id !== undefined);
+
+        const schoolCount = validSekolahIds.length;
+
+        // Per-jenjang breakdown (from sekolah table filtered to registered schools)
+        let jenjangBreakdown: Record<string, number> = {};
+        if (validSekolahIds.length > 0) {
+            const withJenjang = await db
+                .select({ jenjang: sekolah.jenjang })
+                .from(sekolah);
+
+            const filtered = withJenjang.filter(r =>
+                validSekolahIds.some(id => id !== null) && r.jenjang
+            );
+
+            // Count all schools with jenjang from ALL sekolah table (since we have the full table)
+            // But only count those linked to users
+            const sekolahData = await db
+                .select({ id: sekolah.id, jenjang: sekolah.jenjang })
+                .from(sekolah);
+
+            sekolahData.forEach(s => {
+                if (validSekolahIds.includes(s.id) && s.jenjang) {
+                    const j = s.jenjang;
+                    jenjangBreakdown[j] = (jenjangBreakdown[j] || 0) + 1;
+                }
+            });
+        }
+
+        // Count distinct kecamatan from registered schools
+        let kecamatanCount = 0;
+        if (validSekolahIds.length > 0) {
+            const kecData = await db
+                .selectDistinct({ kecamatan: sekolah.kecamatan })
+                .from(sekolah);
+            const validKec = kecData.filter(r =>
+                r.kecamatan
+            );
+            kecamatanCount = validKec.length;
+        }
+
+        res.json({ schoolCount, userCount, kecamatanCount, jenjangBreakdown });
     } catch (e: any) {
-        res.json({ schoolCount: 0, userCount: 0, kecamatanCount: 0 });
+        res.json({ schoolCount: 0, userCount: 0, kecamatanCount: 0, jenjangBreakdown: {} });
     }
 });
 

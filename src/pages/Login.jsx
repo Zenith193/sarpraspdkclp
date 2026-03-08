@@ -14,7 +14,7 @@ const Login = () => {
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
     const [submitting, setSubmitting] = useState(false);
-    const [stats, setStats] = useState({ schoolCount: 0, userCount: 0, kecamatanCount: 0 });
+    const [stats, setStats] = useState({ schoolCount: 0, userCount: 0, kecamatanCount: 0, jenjangBreakdown: {} });
     const navigate = useNavigate();
     const authLogin = useAuthStore(s => s.login);
     const { theme, toggleTheme } = useThemeStore();
@@ -96,6 +96,15 @@ const Login = () => {
                         <div className="login-stat-icon"><Building2 size={18} /></div>
                         <div className="login-stat-value">{stats.schoolCount} Sekolah</div>
                         <div className="login-stat-label">Terdaftar</div>
+                        {Object.keys(stats.jenjangBreakdown || {}).length > 0 && (
+                            <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 4, justifyContent: 'center' }}>
+                                {Object.entries(stats.jenjangBreakdown).sort().map(([j, count]) => (
+                                    <span key={j} style={{ fontSize: '0.65rem', background: 'rgba(255,255,255,0.1)', padding: '1px 6px', borderRadius: 8, color: 'rgba(255,255,255,0.7)' }}>
+                                        {j}: {count}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
                     </div>
                     <div className="login-stat-card">
                         <div className="login-stat-icon"><Users size={18} /></div>
