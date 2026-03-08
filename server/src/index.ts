@@ -257,51 +257,81 @@ app.get('/api/public-stats', async (_req, res) => {
 // ===== ADMIN: RESET SEKOLAH PASSWORDS TO NPSN =====
 app.post('/api/admin/reset-sekolah-passwords', requireAuth, requireRole('admin'), async (_req: any, res: any) => {
     try {
-        // Get all sekolah users with their NPSN
-        const sekolahUsers = await db
-            .select({
-                userId: user.id,
-                name: user.name,
-                email: user.email,
-                sekolahId: user.sekolahId,
-                npsn: sekolah.npsn,
-            })
-            .from(user)
-            .innerJoin(sekolah, eq(user.sekolahId, sekolah.id))
-            .where(sql`lower(${user.role}) = 'sekolah'`);
+        // Get all sekolah records with their NPSN
+        const sekolahList = await db.select().from(sekolah);
 
         const results: Array<{ name: string; npsn: string; success: boolean; error?: string }> = [];
 
-        for (const su of sekolahUsers) {
+        for (const sch of sekolahList) {
             try {
-                // Delete old account credential + user, then re-create via Better Auth signUp
-                // This guarantees the password is hashed with the correct algorithm
-                await db.delete(account).where(sql`${account.userId} = ${su.userId}`);
-                await db.delete(user).where(eq(user.id, su.userId));
+                if (!sch.npsn) {
+                    results.push({ name: sch.nama || '?', npsn: '?', success: false, error: 'No NPSN' });
+                    continue;
+                }
 
+                const email = `${sch.npsn}@spidol.cilacapkab.go.id`;
+
+                // Check if user already exists with this email
+                const existingUsers = await db.select().from(user).where(eq(user.email, email));
+                const existing = existingUsers[0];
+
+                if (existing) {
+                    // Delete old user and account, then re-create
+                    await db.delete(account).where(eq(account.userId, existing.id));
+                    await db.delete(user).where(eq(user.id, existing.id));
+                }
+
+                // Create new user via Better Auth
                 await auth.api.signUpEmail({
                     body: {
-                        name: su.name,
-                        email: su.email,
-                        password: su.npsn,
-                        role: 'sekolah',
-                        sekolahId: su.sekolahId,
-                        aktif: true,
+                        name: sch.nama || `Sekolah ${sch.npsn}`,
+                        email,
+                        password: sch.npsn,
                     },
                 });
 
-                results.push({ name: su.name, npsn: su.npsn, success: true });
+                // Manually update custom fields that Better Auth doesn't handle
+                await db.update(user).set({
+                    role: 'Sekolah',
+                    sekolahId: sch.id,
+                    aktif: true,
+                }).where(eq(user.email, email));
+
+                results.push({ name: sch.nama || '?', npsn: sch.npsn, success: true });
             } catch (e: any) {
-                results.push({ name: su.name, npsn: su.npsn, success: false, error: e.message });
+                results.push({ name: sch.nama || '?', npsn: sch.npsn || '?', success: false, error: e.message });
             }
         }
 
         res.json({
-            total: sekolahUsers.length,
+            total: sekolahList.length,
             success: results.filter(r => r.success).length,
             failed: results.filter(r => !r.success).length,
             results,
         });
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
+    }
+});
+
+// ===== ADMIN: FIX SEKOLAH LINKS (repair sekolahId on existing users) =====
+app.post('/api/admin/fix-sekolah-links', requireAuth, requireRole('admin'), async (_req: any, res: any) => {
+    try {
+        const sekolahList = await db.select().from(sekolah);
+        let fixed = 0;
+
+        for (const sch of sekolahList) {
+            if (!sch.npsn) continue;
+            const email = `${sch.npsn}@spidol.cilacapkab.go.id`;
+            const result = await db.update(user).set({
+                sekolahId: sch.id,
+                role: 'Sekolah',
+                aktif: true,
+            }).where(eq(user.email, email)).returning();
+            if (result.length > 0) fixed++;
+        }
+
+        res.json({ total: sekolahList.length, fixed });
     } catch (e: any) {
         res.status(500).json({ error: e.message });
     }
