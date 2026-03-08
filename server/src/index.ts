@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import { toNodeHandler } from 'better-auth/node';
 import { auth } from './auth/index.js';
+import { requireAuth, requireRole } from './middleware/auth.js';
 
 // Route imports
 import sekolahRoutes from './routes/sekolah.routes.js';
@@ -140,6 +141,70 @@ app.get('/api/public-stats', async (_req, res) => {
         res.json({ schoolCount, userCount, kecamatanCount, jenjangBreakdown });
     } catch (e: any) {
         res.json({ schoolCount: 0, userCount: 0, kecamatanCount: 0, jenjangBreakdown: {} });
+    }
+});
+
+// ===== ADMIN: RESET SEKOLAH PASSWORDS TO NPSN =====
+import { account } from './db/schema/index.js';
+
+app.post('/api/admin/reset-sekolah-passwords', requireAuth, requireRole('admin'), async (_req: any, res: any) => {
+    try {
+        // Get all sekolah users with their NPSN
+        const sekolahUsers = await db
+            .select({
+                userId: user.id,
+                name: user.name,
+                email: user.email,
+                npsn: sekolah.npsn,
+            })
+            .from(user)
+            .innerJoin(sekolah, eq(user.sekolahId, sekolah.id))
+            .where(eq(user.role, 'sekolah'));
+
+        const results: Array<{ name: string; npsn: string; success: boolean; error?: string }> = [];
+
+        for (const su of sekolahUsers) {
+            try {
+                // Use Better Auth's internal password hash via ctx
+                const hashFn = (auth as any).options?.hash?.password
+                    || (auth as any).context?.password?.hash;
+
+                let hashedPassword: string;
+
+                if (hashFn) {
+                    hashedPassword = await hashFn(su.npsn);
+                } else {
+                    // Fallback: use the same scrypt approach Better Auth uses internally
+                    const { scrypt, randomBytes } = await import('crypto');
+                    const { promisify } = await import('util');
+                    const scryptAsync = promisify(scrypt);
+                    const salt = randomBytes(16).toString('hex');
+                    const derivedKey = (await scryptAsync(su.npsn, salt, 64)) as Buffer;
+                    hashedPassword = `${salt}:${derivedKey.toString('hex')}`;
+                }
+
+                // Update the password in the account table
+                await db
+                    .update(account)
+                    .set({ password: hashedPassword })
+                    .where(
+                        sql`${account.userId} = ${su.userId} AND ${account.providerId} = 'credential'`
+                    );
+
+                results.push({ name: su.name, npsn: su.npsn, success: true });
+            } catch (e: any) {
+                results.push({ name: su.name, npsn: su.npsn, success: false, error: e.message });
+            }
+        }
+
+        res.json({
+            total: sekolahUsers.length,
+            success: results.filter(r => r.success).length,
+            failed: results.filter(r => !r.success).length,
+            results
+        });
+    } catch (e: any) {
+        res.status(500).json({ error: e.message });
     }
 });
 
