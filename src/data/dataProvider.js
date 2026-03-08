@@ -76,7 +76,23 @@ export function useSekolahData() {
 
 // ===== SARPRAS =====
 export function useSarprasData(params = {}) {
-    return useDataFetch(() => sarprasApi.list({ limit: 500, ...params }).then(r => r.data || r), [], [JSON.stringify(params)]);
+    return useDataFetch(() => sarprasApi.list({ limit: 500, ...params }).then(r => {
+        const items = r.data || r;
+        // Flatten nested structure: { sarpras: {...}, sekolahNama, sekolahNpsn, ... } → flat object
+        return items.map(item => {
+            if (item.sarpras) {
+                return {
+                    ...item.sarpras,
+                    namaSekolah: item.sekolahNama || '',
+                    npsn: item.sekolahNpsn || '',
+                    kecamatan: item.sekolahKecamatan || '',
+                    jenjang: item.sekolahJenjang || '',
+                    foto: item.sarpras.foto || [],
+                };
+            }
+            return item;
+        });
+    }), [], [JSON.stringify(params)]);
 }
 
 // ===== PROPOSAL =====
