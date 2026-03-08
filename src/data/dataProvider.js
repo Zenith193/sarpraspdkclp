@@ -97,7 +97,21 @@ export function useSarprasData(params = {}) {
 
 // ===== PROPOSAL =====
 export function useProposalData(params = {}) {
-    return useDataFetch(() => proposalApi.list({ limit: 500, ...params }).then(r => r.data || r), [], [JSON.stringify(params)]);
+    return useDataFetch(() => proposalApi.list({ limit: 500, ...params }).then(r => {
+        const items = r.data || r;
+        return items.map(item => {
+            if (item.proposal) {
+                return {
+                    ...item.proposal,
+                    namaSekolah: item.sekolahNama || '',
+                    npsn: item.sekolahNpsn || '',
+                    kecamatan: item.sekolahKecamatan || '',
+                    jenjang: item.sekolahJenjang || '',
+                };
+            }
+            return item;
+        });
+    }), [], [JSON.stringify(params)]);
 }
 
 // ===== AKTIVITAS =====
@@ -117,12 +131,37 @@ export function useRiwayatBantuanData(params = {}) {
 
 // ===== PRESTASI =====
 export function usePrestasiData(params = {}) {
-    return useDataFetch(() => prestasiApi.list({ limit: 500, ...params }).then(r => r.data || r), [], [JSON.stringify(params)]);
+    return useDataFetch(() => prestasiApi.list({ limit: 500, ...params }).then(r => {
+        const items = r.data || r;
+        return items.map(item => {
+            if (item.prestasi) {
+                return {
+                    ...item.prestasi,
+                    namaSekolah: item.sekolahNama || '',
+                    npsn: item.sekolahNpsn || '',
+                    kecamatan: item.sekolahKecamatan || '',
+                };
+            }
+            return item;
+        });
+    }), [], [JSON.stringify(params)]);
 }
 
 // ===== FORM KERUSAKAN =====
 export function useKerusakanData(params = {}) {
-    return useDataFetch(() => kerusakanApi.list({ limit: 500, ...params }).then(r => r.data || r), [], [JSON.stringify(params)]);
+    return useDataFetch(() => kerusakanApi.list({ limit: 500, ...params }).then(r => {
+        const items = r.data || r;
+        return items.map(item => {
+            if (item.formKerusakan) {
+                return {
+                    ...item.formKerusakan,
+                    namaSekolah: item.sekolahNama || '',
+                    npsn: item.sekolahNpsn || '',
+                };
+            }
+            return item;
+        });
+    }), [], [JSON.stringify(params)]);
 }
 
 // ===== KORWIL =====

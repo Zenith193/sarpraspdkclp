@@ -15,7 +15,25 @@ const VerifikasiSarpras = () => {
     const [detailItem, setDetailItem] = useState(null);
     const [lightboxIdx, setLightboxIdx] = useState(-1);
 
-    useEffect(() => { if (apiData?.data) setData(apiData.data); }, [apiData]);
+    useEffect(() => {
+        if (apiData?.data) {
+            // Flatten nested structure
+            const flat = apiData.data.map(item => {
+                if (item.sarpras) {
+                    return {
+                        ...item.sarpras,
+                        namaSekolah: item.sekolahNama || '',
+                        npsn: item.sekolahNpsn || '',
+                        kecamatan: item.sekolahKecamatan || '',
+                        jenjang: item.sekolahJenjang || '',
+                        foto: item.sarpras.foto || [],
+                    };
+                }
+                return item;
+            });
+            setData(flat);
+        }
+    }, [apiData]);
 
     const pending = useMemo(() =>
         data.filter(s => {

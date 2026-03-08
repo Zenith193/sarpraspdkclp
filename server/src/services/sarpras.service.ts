@@ -32,7 +32,29 @@ export const sarprasService = {
             db.select({ count: sql<number>`count(*)` }).from(sarpras).where(where),
         ]);
 
-        return { data, total: Number(countResult[0]?.count || 0), page, limit };
+        // Load fotos for all sarpras in batch
+        const sarprasIds = data.map(d => d.sarpras.id);
+        let fotos: any[] = [];
+        if (sarprasIds.length > 0) {
+            fotos = await db.select().from(sarprasFoto).where(sql`${sarprasFoto.sarprasId} IN (${sql.join(sarprasIds.map(id => sql`${id}`), sql`, `)})`);
+        }
+
+        // Map fotos onto sarpras items
+        const dataWithFotos = data.map(d => ({
+            ...d,
+            sarpras: {
+                ...d.sarpras,
+                foto: fotos.filter(f => f.sarprasId === d.sarpras.id).map(f => ({
+                    id: f.id,
+                    nama: f.fileName,
+                    url: `/uploads/${f.filePath}`,
+                    geoLat: f.geoLat,
+                    geoLng: f.geoLng,
+                })),
+            },
+        }));
+
+        return { data: dataWithFotos, total: Number(countResult[0]?.count || 0), page, limit };
     },
 
     async getById(id: number) {
