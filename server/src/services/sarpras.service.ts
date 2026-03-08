@@ -44,13 +44,28 @@ export const sarprasService = {
             ...d,
             sarpras: {
                 ...d.sarpras,
-                foto: fotos.filter(f => f.sarprasId === d.sarpras.id).map(f => ({
-                    id: f.id,
-                    nama: f.fileName,
-                    url: `/uploads/${f.filePath}`,
-                    geoLat: f.geoLat,
-                    geoLng: f.geoLng,
-                })),
+                foto: fotos.filter(f => f.sarprasId === d.sarpras.id).map(f => {
+                    // filePath may be absolute OS path — extract relative part for URL
+                    let url = f.filePath || '';
+                    // Normalize backslashes
+                    url = url.replace(/\\/g, '/');
+                    // If it contains 'uploads/', extract from there
+                    const uploadsIdx = url.indexOf('uploads/');
+                    if (uploadsIdx >= 0) {
+                        url = '/' + url.substring(uploadsIdx);
+                    } else {
+                        // Just use filename
+                        const parts = url.split('/');
+                        url = '/uploads/fotos/' + parts[parts.length - 1];
+                    }
+                    return {
+                        id: f.id,
+                        nama: f.fileName,
+                        url,
+                        geoLat: f.geoLat,
+                        geoLng: f.geoLng,
+                    };
+                }),
             },
         }));
 
