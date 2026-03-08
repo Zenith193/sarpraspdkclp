@@ -44,22 +44,32 @@ export const penggunaService = {
         nip?: string; noRek?: string; namaBank?: string; rombel?: number;
     }) {
         const { name, role, aktif, ...sekolahData } = data;
-        const r = await db.update(user).set({ name, role, aktif, updatedAt: new Date() }).where(eq(user.id, id)).returning();
+
+        // Only include defined user fields
+        const userUpdate: Record<string, any> = { updatedAt: new Date() };
+        if (name !== undefined) userUpdate.name = name;
+        if (role !== undefined) userUpdate.role = role;
+        if (aktif !== undefined) userUpdate.aktif = aktif;
+
+        const r = await db.update(user).set(userUpdate).where(eq(user.id, id)).returning();
         const updatedUser = r[0];
 
-        // Jika user memiliki sekolahId, update tabel sekolah
-        if (updatedUser?.sekolahId && Object.keys(sekolahData).length > 0) {
-            await db.update(sekolah).set({
-                jenjang: sekolahData.jenjang,
-                kecamatan: sekolahData.kecamatan,
-                alamat: sekolahData.alamat,
-                kepsek: sekolahData.kepsek,
-                nip: sekolahData.nip,
-                noRek: sekolahData.noRek,
-                namaBank: sekolahData.namaBank,
-                rombel: sekolahData.rombel,
-                updatedAt: new Date(),
-            }).where(eq(sekolah.id, updatedUser.sekolahId));
+        // Update sekolah table only with defined fields
+        if (updatedUser?.sekolahId) {
+            const sekolahUpdate: Record<string, any> = { updatedAt: new Date() };
+            if (sekolahData.jenjang !== undefined) sekolahUpdate.jenjang = sekolahData.jenjang;
+            if (sekolahData.kecamatan !== undefined) sekolahUpdate.kecamatan = sekolahData.kecamatan;
+            if (sekolahData.alamat !== undefined) sekolahUpdate.alamat = sekolahData.alamat;
+            if (sekolahData.kepsek !== undefined) sekolahUpdate.kepsek = sekolahData.kepsek;
+            if (sekolahData.nip !== undefined) sekolahUpdate.nip = sekolahData.nip;
+            if (sekolahData.noRek !== undefined) sekolahUpdate.noRek = sekolahData.noRek;
+            if (sekolahData.namaBank !== undefined) sekolahUpdate.namaBank = sekolahData.namaBank;
+            if (sekolahData.rombel !== undefined) sekolahUpdate.rombel = sekolahData.rombel;
+            if (name !== undefined) sekolahUpdate.nama = name; // sync sekolah name too
+
+            if (Object.keys(sekolahUpdate).length > 1) { // more than just updatedAt
+                await db.update(sekolah).set(sekolahUpdate).where(eq(sekolah.id, updatedUser.sekolahId));
+            }
         }
 
         return updatedUser;
