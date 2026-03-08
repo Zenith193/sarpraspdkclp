@@ -59,9 +59,15 @@ import crypto from 'crypto';
 
 app.post('/api/npsn-login', async (req, res) => {
     try {
-        const { npsn } = req.body;
-        if (!npsn) {
-            res.status(400).json({ error: 'NPSN wajib diisi' });
+        const { npsn, password } = req.body;
+        if (!npsn || !password) {
+            res.status(400).json({ error: 'NPSN dan Password wajib diisi' });
+            return;
+        }
+
+        // Verify password matches NPSN
+        if (password !== npsn) {
+            res.status(401).json({ error: 'Password salah' });
             return;
         }
 

@@ -35,12 +35,12 @@ const Login = () => {
 
         try {
             if (tab === 'sekolah') {
-                // NPSN-only login: call custom endpoint (no password needed)
+                // NPSN + password login: call custom endpoint
                 const res = await fetch('/api/npsn-login', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include',
-                    body: JSON.stringify({ npsn }),
+                    body: JSON.stringify({ npsn, password }),
                 });
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.error || 'Login gagal');
@@ -213,7 +213,8 @@ const Login = () => {
                             </div>
                         )}
 
-                        {tab === 'staff' && (
+                        {/* Password field for all tabs */}
+                        {(
                             <div className="login-field">
                                 <label>Password</label>
                                 <div className="login-input-wrapper">
