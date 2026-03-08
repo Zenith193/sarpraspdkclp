@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { settingsService } from '../services/settings.service.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import { testNasConnection, isNasEnabled, listNasSharedFolders } from '../utils/nasClient.js';
+import { testNasConnection, isNasEnabled, listNasSharedFolders, setRuntimeConfig } from '../utils/nasClient.js';
 
 const router = Router();
 
@@ -27,6 +27,24 @@ router.post('/countdown/reset', requireAuth, requireRole('admin'), async (_req, 
     try { res.json(await settingsService.reset('countdown')); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// ===== HELPER: load NAS config from DB and apply to runtime =====
+async function applyNasConfigFromDb() {
+    try {
+        const saved = await settingsService.get('nas_config');
+        if (saved && typeof saved === 'object') {
+            setRuntimeConfig({
+                enabled: saved.enabled ?? false,
+                host: saved.hostname || saved.host || '',
+                port: saved.port ? Number(saved.port) : 5001,
+                protocol: saved.protocol || 'https',
+                username: saved.username || '',
+                password: saved.password || '',
+                sharedFolder: saved.sharedFolder || '/spidol',
+            });
+        }
+    } catch { /* ignore if no config saved yet */ }
+}
+
 // ===== NAS CONFIG =====
 router.get('/nas', requireAuth, requireRole('admin'), async (_req, res) => {
     try {
@@ -34,15 +52,33 @@ router.get('/nas', requireAuth, requireRole('admin'), async (_req, res) => {
         res.json({ ...config, nasEnabled: isNasEnabled() });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
+
 router.put('/nas', requireAuth, requireRole('admin'), async (req, res) => {
-    try { res.json(await settingsService.set('nas_config', req.body)); } catch (e: any) { res.status(500).json({ error: e.message }); }
+    try {
+        const result = await settingsService.set('nas_config', req.body);
+        // Apply to runtime immediately so test/upload uses new config
+        setRuntimeConfig({
+            enabled: req.body.enabled ?? false,
+            host: req.body.hostname || req.body.host || '',
+            port: req.body.port ? Number(req.body.port) : 5001,
+            protocol: req.body.protocol || 'https',
+            username: req.body.username || '',
+            password: req.body.password || '',
+            sharedFolder: req.body.sharedFolder || '/spidol',
+        });
+        res.json(result);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
+
 router.post('/nas/test', requireAuth, requireRole('admin'), async (_req, res) => {
     try {
+        // Ensure runtime config is loaded from DB
+        await applyNasConfigFromDb();
         const result = await testNasConnection();
         res.json(result);
     } catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 });
+
 router.post('/nas/reset', requireAuth, requireRole('admin'), async (_req, res) => {
     try { res.json(await settingsService.reset('nas_config')); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
@@ -50,10 +86,14 @@ router.post('/nas/reset', requireAuth, requireRole('admin'), async (_req, res) =
 // ===== NAS FOLDER LISTING (for folder chooser) =====
 router.get('/nas/folders', requireAuth, requireRole('admin'), async (req, res) => {
     try {
+        await applyNasConfigFromDb();
         const parentPath = (req.query.path as string) || '/';
         const folders = await listNasSharedFolders(parentPath);
         res.json({ success: true, folders });
     } catch (e: any) { res.status(500).json({ success: false, error: e.message, folders: [] }); }
 });
+
+// Load NAS config from DB on module init
+applyNasConfigFromDb().catch(() => { });
 
 export default router;

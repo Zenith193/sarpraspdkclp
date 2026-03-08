@@ -40,15 +40,32 @@ interface NasConfig {
     sharedFolder: string;  // e.g. "/spidol"
 }
 
+// Runtime config override (set from settings DB)
+let runtimeConfig: Partial<NasConfig> | null = null;
+
+export function setRuntimeConfig(config: Partial<NasConfig>) {
+    runtimeConfig = config;
+    // Also set env vars so other parts of the code pick them up
+    if (config.enabled !== undefined) process.env.NAS_ENABLED = config.enabled ? 'true' : 'false';
+    if (config.host) process.env.NAS_HOST = config.host;
+    if (config.port) process.env.NAS_PORT = String(config.port);
+    if (config.protocol) process.env.NAS_PROTOCOL = config.protocol;
+    if (config.username) process.env.NAS_USERNAME = config.username;
+    if (config.password) process.env.NAS_PASSWORD = config.password;
+    if (config.sharedFolder) process.env.NAS_SHARED_FOLDER = config.sharedFolder;
+    // Reset session so new credentials are used
+    sessionId = null;
+}
+
 function getConfig(): NasConfig {
     return {
-        enabled: process.env.NAS_ENABLED === 'true',
-        host: process.env.NAS_HOST || '',
-        port: parseInt(process.env.NAS_PORT || '5001'),
-        protocol: (process.env.NAS_PROTOCOL || 'https') as 'http' | 'https',
-        username: process.env.NAS_USERNAME || '',
-        password: process.env.NAS_PASSWORD || '',
-        sharedFolder: process.env.NAS_SHARED_FOLDER || '/spidol',
+        enabled: runtimeConfig?.enabled ?? (process.env.NAS_ENABLED === 'true'),
+        host: runtimeConfig?.host ?? (process.env.NAS_HOST || ''),
+        port: runtimeConfig?.port ?? parseInt(process.env.NAS_PORT || '5001'),
+        protocol: runtimeConfig?.protocol ?? ((process.env.NAS_PROTOCOL || 'https') as 'http' | 'https'),
+        username: runtimeConfig?.username ?? (process.env.NAS_USERNAME || ''),
+        password: runtimeConfig?.password ?? (process.env.NAS_PASSWORD || ''),
+        sharedFolder: runtimeConfig?.sharedFolder ?? (process.env.NAS_SHARED_FOLDER || '/spidol'),
     };
 }
 
