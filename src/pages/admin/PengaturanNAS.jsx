@@ -52,8 +52,8 @@ const PengaturanNAS = () => {
     };
 
     const handleSave = () => {
-        if (form.enabled && !form.hostname) {
-            toast.error('Hostname NAS wajib diisi');
+        if (form.enabled && !form.hostname && !form.quickConnectId) {
+            toast.error('Hostname NAS atau QuickConnect ID wajib diisi');
             return;
         }
         // Save connection config
@@ -64,6 +64,7 @@ const PengaturanNAS = () => {
             protocol: form.protocol,
             username: form.username,
             password: form.password,
+            quickConnectId: form.quickConnectId || '',
         });
         // Save folder config
         Object.entries(form.folders).forEach(([key, value]) => {
@@ -81,8 +82,8 @@ const PengaturanNAS = () => {
     };
 
     const handleTestConnection = async () => {
-        if (!form.hostname) {
-            toast.error('Isi hostname terlebih dahulu');
+        if (!form.hostname && !form.quickConnectId) {
+            toast.error('Isi hostname atau QuickConnect ID terlebih dahulu');
             return;
         }
         setTesting(true);
@@ -96,6 +97,7 @@ const PengaturanNAS = () => {
                 protocol: form.protocol,
                 username: form.username,
                 password: form.password,
+                quickConnectId: form.quickConnectId || '',
             });
 
             // Real API test
@@ -243,6 +245,25 @@ const PengaturanNAS = () => {
                                 <label className="form-label">Port</label>
                                 <input className="form-input" type="number" placeholder="5000"
                                     value={form.port || ''} onChange={e => handleChange('port', parseInt(e.target.value) || 5000)} />
+                            </div>
+                        </div>
+
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: 12, margin: '16px 0',
+                            color: 'var(--text-secondary)', fontSize: '0.75rem'
+                        }}>
+                            <div style={{ flex: 1, height: 1, background: 'var(--border-color)' }} />
+                            <span>atau gunakan QuickConnect</span>
+                            <div style={{ flex: 1, height: 1, background: 'var(--border-color)' }} />
+                        </div>
+
+                        <div className="form-group">
+                            <label className="form-label">QuickConnect ID</label>
+                            <input className="form-input" placeholder="sarpras-NAS"
+                                value={form.quickConnectId || ''} onChange={e => handleChange('quickConnectId', e.target.value)}
+                                style={{ fontFamily: 'monospace' }} />
+                            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: 4 }}>
+                                Jika tersedia, QuickConnect akan digunakan sebagai pengganti hostname langsung (tidak perlu port forwarding)
                             </div>
                         </div>
 

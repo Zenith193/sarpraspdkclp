@@ -40,6 +40,7 @@ async function applyNasConfigFromDb() {
                 username: saved.username || '',
                 password: saved.password || '',
                 sharedFolder: saved.sharedFolder || '/spidol',
+                quickConnectId: saved.quickConnectId || '',
             });
         }
     } catch { /* ignore if no config saved yet */ }
@@ -65,6 +66,7 @@ router.put('/nas', requireAuth, requireRole('admin'), async (req, res) => {
             username: req.body.username || '',
             password: req.body.password || '',
             sharedFolder: req.body.sharedFolder || '/spidol',
+            quickConnectId: req.body.quickConnectId || '',
         });
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }

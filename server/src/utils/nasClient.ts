@@ -41,6 +41,7 @@ interface NasConfig {
     username: string;
     password: string;
     sharedFolder: string;  // e.g. "/spidol"
+    quickConnectId?: string; // e.g. "sarpras-NAS"
 }
 
 // Runtime config override (set from settings DB)
@@ -56,8 +57,10 @@ export function setRuntimeConfig(config: Partial<NasConfig>) {
     if (config.username) process.env.NAS_USERNAME = config.username;
     if (config.password) process.env.NAS_PASSWORD = config.password;
     if (config.sharedFolder) process.env.NAS_SHARED_FOLDER = config.sharedFolder;
-    // Reset session so new credentials are used
+    if (config.quickConnectId) process.env.NAS_QUICKCONNECT_ID = config.quickConnectId;
+    // Reset session and resolved URL so new credentials are used
     sessionId = null;
+    resolvedBaseUrl = null;
 }
 
 function getConfig(): NasConfig {
@@ -69,11 +72,102 @@ function getConfig(): NasConfig {
         username: runtimeConfig?.username ?? (process.env.NAS_USERNAME || ''),
         password: runtimeConfig?.password ?? (process.env.NAS_PASSWORD || ''),
         sharedFolder: runtimeConfig?.sharedFolder ?? (process.env.NAS_SHARED_FOLDER || '/spidol'),
+        quickConnectId: runtimeConfig?.quickConnectId ?? (process.env.NAS_QUICKCONNECT_ID || ''),
     };
 }
 
-function getBaseUrl(): string {
+// ==================== QUICKCONNECT RESOLUTION ====================
+
+let resolvedBaseUrl: string | null = null;
+
+/**
+ * Resolve QuickConnect ID to actual server URL.
+ * Calls Synology's global relay API to find the relay/tunnel URL.
+ */
+async function resolveQuickConnect(qcId: string): Promise<string> {
+    console.log(`[NAS] Resolving QuickConnect ID: ${qcId}`);
+
+    try {
+        // Step 1: Get server info from Synology global relay
+        const serverInfoRes = await fetch('https://global.quickconnect.to/Serv.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                version: 1,
+                command: 'get_server_info',
+                stop_when_error: false,
+                stop_when_success: false,
+                id: 'dsm',
+                serverID: qcId,
+            }),
+        });
+        const serverInfo = await serverInfoRes.json() as any;
+
+        if (!serverInfo.errno && serverInfo.errno !== 0) {
+            console.log('[NAS] QuickConnect server info:', JSON.stringify(serverInfo).substring(0, 300));
+        }
+
+        // Try relay URL first (most reliable for remote access)
+        if (serverInfo.service?.relay_dn) {
+            const relayHost = serverInfo.service.relay_dn;
+            const relayPort = serverInfo.service.relay_port || 443;
+            const relayUrl = `https://${relayHost}:${relayPort}`;
+            console.log(`[NAS] Using relay: ${relayUrl}`);
+            return relayUrl;
+        }
+
+        // Try tunnel
+        if (serverInfo.service?.tunnel_dn) {
+            const tunnelUrl = `https://${serverInfo.service.tunnel_dn}`;
+            console.log(`[NAS] Using tunnel: ${tunnelUrl}`);
+            return tunnelUrl;
+        }
+
+        // Try direct WAN access
+        if (serverInfo.server?.external?.ip) {
+            const extIp = serverInfo.server.external.ip;
+            const extPort = serverInfo.server.external.port || 5001;
+            const directUrl = `https://${extIp}:${extPort}`;
+            console.log(`[NAS] Using direct WAN: ${directUrl}`);
+            return directUrl;
+        }
+
+        // Try DDNS
+        if (serverInfo.server?.ddns) {
+            const ddnsUrl = `https://${serverInfo.server.ddns}:5001`;
+            console.log(`[NAS] Using DDNS: ${ddnsUrl}`);
+            return ddnsUrl;
+        }
+
+        // Fallback: use QuickConnect relay directly
+        const fallbackUrl = `https://${qcId}.quickconnect.to`;
+        console.log(`[NAS] Using fallback: ${fallbackUrl}`);
+        return fallbackUrl;
+
+    } catch (err: any) {
+        console.error('[NAS] QuickConnect resolution failed:', err.message);
+        // Fallback
+        return `https://${qcId}.quickconnect.to`;
+    }
+}
+
+/**
+ * Get the base URL for NAS API calls.
+ * If QuickConnect is configured, resolves and caches the URL.
+ * Otherwise uses direct host:port.
+ */
+async function getBaseUrl(): Promise<string> {
     const cfg = getConfig();
+
+    // If QuickConnect ID is set, resolve it
+    if (cfg.quickConnectId) {
+        if (!resolvedBaseUrl) {
+            resolvedBaseUrl = await resolveQuickConnect(cfg.quickConnectId);
+        }
+        return resolvedBaseUrl;
+    }
+
+    // Direct connection
     return `${cfg.protocol}://${cfg.host}:${cfg.port}`;
 }
 
@@ -114,7 +208,7 @@ let sessionId: string | null = null;
 
 async function login(): Promise<string> {
     const cfg = getConfig();
-    const url = `${getBaseUrl()}/webapi/auth.cgi?api=SYNO.API.Auth&version=6&method=login&account=${encodeURIComponent(cfg.username)}&passwd=${encodeURIComponent(cfg.password)}&format=sid`;
+    const url = `${await getBaseUrl()}/webapi/auth.cgi?api=SYNO.API.Auth&version=6&method=login&account=${encodeURIComponent(cfg.username)}&passwd=${encodeURIComponent(cfg.password)}&format=sid`;
 
     const res = await nasFetch(url, {
         method: 'GET',
@@ -154,7 +248,7 @@ async function logout(): Promise<void> {
  */
 async function createFolder(folderPath: string, name: string): Promise<boolean> {
     const sid = await getSid();
-    const url = `${getBaseUrl()}/webapi/entry.cgi`;
+    const url = `${await getBaseUrl()}/webapi/entry.cgi`;
 
     const params = new URLSearchParams({
         api: 'SYNO.FileStation.CreateFolder',
@@ -202,7 +296,7 @@ async function ensureNasDir(fullPath: string): Promise<void> {
  */
 async function uploadFile(localFilePath: string, nasDestFolder: string, nasFilename: string): Promise<{ success: boolean; path: string }> {
     const sid = await getSid();
-    const url = `${getBaseUrl()}/webapi/entry.cgi?api=SYNO.FileStation.Upload&version=2&method=upload&_sid=${sid}`;
+    const url = `${await getBaseUrl()}/webapi/entry.cgi?api=SYNO.FileStation.Upload&version=2&method=upload&_sid=${sid}`;
 
     // Ensure destination folder exists
     await ensureNasDir(nasDestFolder);
@@ -343,7 +437,7 @@ export async function getNasDownloadLink(nasFilePath: string): Promise<string | 
     try {
         const sid = await getSid();
         // Create a sharing link
-        const url = `${getBaseUrl()}/webapi/entry.cgi`;
+        const url = `${await getBaseUrl()}/webapi/entry.cgi`;
         const params = new URLSearchParams({
             api: 'SYNO.FileStation.Sharing',
             version: '3',
@@ -364,7 +458,7 @@ export async function getNasDownloadLink(nasFilePath: string): Promise<string | 
         }
 
         // Fallback: direct download via API
-        return `${getBaseUrl()}/webapi/entry.cgi?api=SYNO.FileStation.Download&version=2&method=download&path=${encodeURIComponent(`["${nasFilePath}"]`)}&_sid=${sid}`;
+        return `${await getBaseUrl()}/webapi/entry.cgi?api=SYNO.FileStation.Download&version=2&method=download&path=${encodeURIComponent(`["${nasFilePath}"]`)}&_sid=${sid}`;
 
     } catch (err) {
         console.error('NAS download link error:', err);
@@ -384,8 +478,8 @@ export async function testNasConnection(): Promise<{
     diskFree?: string;
 }> {
     const cfg = getConfig();
-    if (!cfg.host) {
-        return { success: false, message: 'NAS host tidak dikonfigurasi' };
+    if (!cfg.host && !cfg.quickConnectId) {
+        return { success: false, message: 'NAS host atau QuickConnect ID belum dikonfigurasi' };
     }
 
     try {
@@ -394,12 +488,12 @@ export async function testNasConnection(): Promise<{
 
         // Get NAS info
         const sid = await getSid();
-        const infoUrl = `${getBaseUrl()}/webapi/entry.cgi?api=SYNO.DSM.Info&version=2&method=getinfo&_sid=${sid}`;
+        const infoUrl = `${await getBaseUrl()}/webapi/entry.cgi?api=SYNO.DSM.Info&version=2&method=getinfo&_sid=${sid}`;
         const infoRes = await nasFetch(infoUrl);
         const infoData = await infoRes.json() as any;
 
         // Get disk usage
-        const shareUrl = `${getBaseUrl()}/webapi/entry.cgi?api=SYNO.FileStation.Info&version=2&method=get&_sid=${sid}`;
+        const shareUrl = `${await getBaseUrl()}/webapi/entry.cgi?api=SYNO.FileStation.Info&version=2&method=get&_sid=${sid}`;
         const shareRes = await nasFetch(shareUrl);
         const shareData = await shareRes.json() as any;
 
@@ -408,7 +502,7 @@ export async function testNasConnection(): Promise<{
 
         return {
             success: true,
-            message: `Berhasil terhubung ke ${cfg.host}:${cfg.port}`,
+            message: `Berhasil terhubung ke NAS${cfg.quickConnectId ? ` (QuickConnect: ${cfg.quickConnectId})` : ` (${cfg.host}:${cfg.port})`}`,
             model,
             dsm,
         };
@@ -436,13 +530,13 @@ export { getConfig as getNasConfig, logout as nasLogout };
  */
 export async function listNasSharedFolders(parentPath: string = '/'): Promise<Array<{ name: string; path: string; isDir: boolean }>> {
     const cfg = getConfig();
-    if (!cfg.enabled || !cfg.host) {
+    if (!cfg.enabled || (!cfg.host && !cfg.quickConnectId)) {
         throw new Error('NAS not configured');
     }
 
     try {
         const sid = await getSid();
-        const url = `${getBaseUrl()}/webapi/entry.cgi`;
+        const url = `${await getBaseUrl()}/webapi/entry.cgi`;
         const params = new URLSearchParams({
             api: 'SYNO.FileStation.List',
             version: '2',
