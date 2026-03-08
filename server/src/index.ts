@@ -51,6 +51,78 @@ app.use(express.urlencoded({ extended: true }));
 // Static file serving for uploads
 app.use('/uploads', express.static(process.env.UPLOAD_DIR || './uploads'));
 
+// ===== CUSTOM NPSN LOGIN (sekolah only, no password) =====
+import { db } from './db/index.js';
+import { sekolah, user, account, session as sessionTable } from './db/schema/index.js';
+import { eq, sql } from 'drizzle-orm';
+import crypto from 'crypto';
+
+app.post('/api/npsn-login', async (req, res) => {
+    try {
+        const { npsn } = req.body;
+        if (!npsn) {
+            res.status(400).json({ error: 'NPSN wajib diisi' });
+            return;
+        }
+
+        // Find user by NPSN email
+        const email = `${npsn}@spidol.cilacapkab.go.id`;
+        const users = await db.select().from(user).where(eq(user.email, email));
+        const foundUser = users[0];
+
+        if (!foundUser) {
+            res.status(401).json({ error: 'NPSN tidak ditemukan' });
+            return;
+        }
+
+        if (!foundUser.aktif) {
+            res.status(401).json({ error: 'Akun tidak aktif' });
+            return;
+        }
+
+        // Create session directly
+        const sessionToken = crypto.randomBytes(32).toString('hex');
+        const sessionId = crypto.randomBytes(16).toString('hex');
+        const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+        await db.insert(sessionTable).values({
+            id: sessionId,
+            token: sessionToken,
+            userId: foundUser.id,
+            expiresAt,
+            ipAddress: req.ip || null,
+            userAgent: req.headers['user-agent'] || null,
+        });
+
+        // Set session cookie (same name Better Auth uses)
+        res.cookie('better-auth.session_token', sessionToken, {
+            httpOnly: true,
+            secure: req.protocol === 'https',
+            sameSite: 'lax',
+            path: '/',
+            expires: expiresAt,
+        });
+
+        // Return user info
+        res.json({
+            user: {
+                id: foundUser.id,
+                name: foundUser.name,
+                email: foundUser.email,
+                role: foundUser.role,
+                sekolahId: foundUser.sekolahId,
+            },
+            session: {
+                token: sessionToken,
+                expiresAt,
+            },
+        });
+    } catch (e: any) {
+        console.error('[NPSN Login Error]', e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 // ===== BETTER AUTH HANDLER =====
 // Mount Better Auth on /api/auth/*
 app.all('/api/auth/*splat', toNodeHandler(auth));
@@ -75,9 +147,6 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/iklan', iklanRoutes);
 
 // ===== PUBLIC STATS (no auth required for login page) =====
-import { db } from './db/index.js';
-import { sekolah, user, account } from './db/schema/index.js';
-import { eq, sql } from 'drizzle-orm';
 
 app.get('/api/public-stats', async (_req, res) => {
     try {

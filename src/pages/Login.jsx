@@ -34,27 +34,52 @@ const Login = () => {
         setSubmitting(true);
 
         try {
-            // For sekolah tab, use NPSN as email and as password
-            let loginEmail = tab === 'sekolah' ? npsn : email;
-            if (!loginEmail.includes('@')) {
-                loginEmail = `${loginEmail}@spidol.cilacapkab.go.id`;
-            }
-            const loginPassword = tab === 'sekolah' ? npsn : password;
-            const user = await authLogin(loginEmail, loginPassword);
+            if (tab === 'sekolah') {
+                // NPSN-only login: call custom endpoint (no password needed)
+                const res = await fetch('/api/npsn-login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ npsn }),
+                });
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || 'Login gagal');
 
-            if (user) {
-                toast.success(`Sugeng Rawuh, ${user.name} (${user.role})`, {
+                // Set user state directly in auth store
+                const user = {
+                    ...data.user,
+                    role: data.user.role ? data.user.role.charAt(0).toUpperCase() + data.user.role.slice(1) : 'Sekolah',
+                    namaAkun: data.user.name,
+                };
+                useAuthStore.setState({ user, isAuthenticated: true });
+
+                toast.success(`Sugeng Rawuh, ${user.namaAkun} (${user.role})`, {
                     duration: 3000,
                     style: { background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }
                 });
-                const rolePath = user.role?.toLowerCase();
-                if (rolePath === 'admin') navigate('/admin/dashboard');
-                else if (rolePath === 'verifikator') navigate('/verifikator/dashboard');
-                else if (rolePath === 'korwil') navigate('/korwil/dashboard');
-                else navigate('/sekolah/data-sarpras');
+                navigate('/sekolah/data-sarpras');
+            } else {
+                // Staff login: use Better Auth email/password
+                let loginEmail = email;
+                if (!loginEmail.includes('@')) {
+                    loginEmail = `${loginEmail}@spidol.cilacapkab.go.id`;
+                }
+                const user = await authLogin(loginEmail, password);
+
+                if (user) {
+                    toast.success(`Sugeng Rawuh, ${user.name} (${user.role})`, {
+                        duration: 3000,
+                        style: { background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }
+                    });
+                    const rolePath = user.role?.toLowerCase();
+                    if (rolePath === 'admin') navigate('/admin/dashboard');
+                    else if (rolePath === 'verifikator') navigate('/verifikator/dashboard');
+                    else if (rolePath === 'korwil') navigate('/korwil/dashboard');
+                    else navigate('/sekolah/data-sarpras');
+                }
             }
         } catch (err) {
-            toast.error(err.message || 'Email/NPSN atau password salah!', {
+            toast.error(err.message || 'Login gagal!', {
                 style: { background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }
             });
         } finally {
