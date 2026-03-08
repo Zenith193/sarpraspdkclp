@@ -150,6 +150,12 @@ export const settingsApi = {
     testNas: () => api.post('/settings/nas/test'),
     resetNas: () => api.post('/settings/nas/reset'),
     listNasFolders: (path = '/') => api.get(`/settings/nas/folders?path=${encodeURIComponent(path)}`),
+    // Google Drive
+    getGdrive: () => api.get('/settings/gdrive'),
+    setGdrive: (config) => api.put('/settings/gdrive', config),
+    testGdrive: () => api.post('/settings/gdrive/test'),
+    resetGdrive: () => api.post('/settings/gdrive/reset'),
+    listGdriveFolders: (parentId = '') => api.get(`/settings/gdrive/folders?parentId=${encodeURIComponent(parentId)}`),
 };
 
 export const dashboardApi = {

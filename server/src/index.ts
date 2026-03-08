@@ -91,7 +91,20 @@ app.get('/api/foto/:fotoId', async (req, res) => {
             return;
         }
 
-        // 4. If NAS enabled, download from NAS and stream through server
+        // 4. If file is stored in Google Drive (path = gdrive://fileId)
+        if (normalizedPath.startsWith('gdrive://')) {
+            const { streamFromGDrive } = await import('./utils/googleDriveClient.js');
+            const fileId = normalizedPath.replace('gdrive://', '');
+            const gResult = await streamFromGDrive(fileId);
+            if (gResult) {
+                res.setHeader('Content-Type', gResult.mimeType);
+                res.setHeader('Cache-Control', 'public, max-age=86400');
+                gResult.stream.pipe(res);
+                return;
+            }
+        }
+
+        // 5. If NAS enabled, download from NAS and stream through server
         if (isNasEnabled() && normalizedPath.startsWith('/')) {
             const nasUrl = await getNasDownloadLink(normalizedPath);
             if (nasUrl) {
@@ -101,7 +114,6 @@ app.get('/api/foto/:fotoId', async (req, res) => {
                         const contentType = nasRes.headers.get('content-type') || 'image/jpeg';
                         res.setHeader('Content-Type', contentType);
                         res.setHeader('Cache-Control', 'public, max-age=86400');
-                        // Stream the NAS response to the client
                         const reader = nasRes.body.getReader();
                         const pump = async () => {
                             while (true) {

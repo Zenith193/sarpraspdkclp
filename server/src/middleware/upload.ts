@@ -9,6 +9,7 @@ import {
     type SekolahInfo, type SarprasInfo
 } from '../utils/storagePaths';
 import { uploadToNas, isNasEnabled } from '../utils/nasClient';
+import { isGDriveEnabled, uploadFileToGDrive } from '../utils/googleDriveClient';
 
 // ===================================================================
 // Upload strategy:
@@ -96,29 +97,46 @@ export function forwardToNas(
             tahun: body.tahun,
         };
 
-        // Forward each file to NAS
+        // Determine sub-path for Google Drive folder hierarchy
+        const subPath = sekolah
+            ? `${sekolah.kecamatan}/${sekolah.nama}_${sekolah.npsn}/${category}${extra.namaRuang ? '/' + extra.namaRuang : ''}`
+            : category;
+
+        // Forward each file to storage
         for (const file of files) {
             try {
-                const result = await uploadToNas(file.path, category, sekolah, extra);
-                // Attach storage info to file object
-                (file as any).storedAt = result.stored;
-                (file as any).nasPath = result.path;
-
-                if (result.stored === 'nas') {
-                    // File moved to NAS, update path to NAS path
+                // Priority: Google Drive > NAS > Local
+                if (isGDriveEnabled()) {
+                    const result = await uploadFileToGDrive(file.path, category, subPath);
+                    (file as any).storedAt = result.stored;
                     (file as any).finalPath = result.path;
                 } else {
-                    // NAS disabled or failed — move from temp to local hierarchical structure
+                    const result = await uploadToNas(file.path, category, sekolah, extra);
+                    (file as any).storedAt = result.stored;
+                    (file as any).nasPath = result.path;
+
+                    if (result.stored === 'nas') {
+                        (file as any).finalPath = result.path;
+                    } else {
+                        // NAS disabled or failed — move from temp to local
+                        const localDest = getLocalDestination(category, body);
+                        const finalLocalPath = path.join(localDest, file.filename);
+                        fs.renameSync(file.path, finalLocalPath);
+                        (file as any).finalPath = finalLocalPath;
+                    }
+                }
+            } catch (err) {
+                console.error('Storage forwarding error for', file.filename, err);
+                // Keep in temp as fallback — move to local
+                try {
                     const localDest = getLocalDestination(category, body);
                     const finalLocalPath = path.join(localDest, file.filename);
                     fs.renameSync(file.path, finalLocalPath);
                     (file as any).finalPath = finalLocalPath;
+                } catch {
+                    (file as any).finalPath = file.path;
                 }
-            } catch (err) {
-                console.error('NAS forwarding error for', file.filename, err);
-                // Keep in temp as fallback
                 (file as any).storedAt = 'local';
-                (file as any).finalPath = file.path;
             }
         }
 

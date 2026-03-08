@@ -95,7 +95,80 @@ router.get('/nas/folders', requireAuth, requireRole('admin'), async (req, res) =
     } catch (e: any) { res.status(500).json({ success: false, error: e.message, folders: [] }); }
 });
 
-// Load NAS config from DB on module init
+// ===== GOOGLE DRIVE CONFIG =====
+import { setGDriveRuntimeConfig, testGDriveConnection, listGDriveFolders, isGDriveEnabled } from '../utils/googleDriveClient.js';
+
+async function applyGDriveConfigFromDb() {
+    try {
+        const saved = await settingsService.get('gdrive_config');
+        if (saved && typeof saved === 'object') {
+            setGDriveRuntimeConfig({
+                enabled: saved.enabled ?? false,
+                credentials: saved.credentials || null,
+                folderId: saved.folderId || '',
+            });
+        }
+    } catch { /* ignore */ }
+}
+
+router.get('/gdrive', requireAuth, requireRole('admin'), async (_req, res) => {
+    try {
+        const config = await settingsService.get('gdrive_config');
+        // Don't send full credentials to frontend for security
+        const safe = config ? {
+            enabled: config.enabled,
+            folderId: config.folderId,
+            hasCredentials: !!config.credentials,
+            clientEmail: config.credentials?.client_email || '',
+            gdriveEnabled: isGDriveEnabled(),
+        } : { enabled: false, folderId: '', hasCredentials: false, clientEmail: '', gdriveEnabled: false };
+        res.json(safe);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.put('/gdrive', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+        // Parse credentials if it's a string
+        let creds = req.body.credentials;
+        if (typeof creds === 'string' && creds.trim()) {
+            try { creds = JSON.parse(creds); } catch { return res.status(400).json({ error: 'Invalid JSON credentials' }); }
+        }
+
+        const config = {
+            enabled: req.body.enabled ?? false,
+            credentials: creds || null,
+            folderId: req.body.folderId || '',
+        };
+
+        const result = await settingsService.set('gdrive_config', config);
+        setGDriveRuntimeConfig(config);
+        res.json(result);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.post('/gdrive/test', requireAuth, requireRole('admin'), async (_req, res) => {
+    try {
+        await applyGDriveConfigFromDb();
+        const result = await testGDriveConnection();
+        res.json(result);
+    } catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
+});
+
+router.get('/gdrive/folders', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+        await applyGDriveConfigFromDb();
+        const parentId = (req.query.parentId as string) || '';
+        const folders = await listGDriveFolders(parentId || undefined);
+        res.json({ success: true, folders });
+    } catch (e: any) { res.status(500).json({ success: false, error: e.message, folders: [] }); }
+});
+
+router.post('/gdrive/reset', requireAuth, requireRole('admin'), async (_req, res) => {
+    try { res.json(await settingsService.reset('gdrive_config')); } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// Load configs from DB on module init
 applyNasConfigFromDb().catch(() => { });
+applyGDriveConfigFromDb().catch(() => { });
 
 export default router;
