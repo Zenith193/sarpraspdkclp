@@ -1,3 +1,6 @@
+// MUST be set before any HTTPS connections are made
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+
 import fs from 'fs';
 import path from 'path';
 import {
@@ -76,21 +79,33 @@ function getBaseUrl(): string {
 
 // HTTPS agent that accepts self-signed certificates (needed for Synology NAS)
 import https from 'https';
-const insecureAgent = new https.Agent({ rejectUnauthorized: false });
+import http from 'http';
 
 /**
  * Wrapper around fetch that handles self-signed certs for NAS.
+ * Adds timeout and detailed error logging for debugging.
  */
 async function nasFetch(url: string, options: RequestInit = {}): Promise<Response> {
-    const cfg = getConfig();
-    const fetchOptions: any = { ...options };
-    if (cfg.protocol === 'https') {
-        // @ts-ignore - Node.js fetch supports dispatcher/agent
-        fetchOptions.dispatcher = undefined;
-        // For Node 18+ native fetch, we need to set NODE_TLS_REJECT_UNAUTHORIZED
-        process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout
+
+    try {
+        console.log(`[NAS] Fetching: ${url.substring(0, 120)}...`);
+        const res = await fetch(url, {
+            ...options,
+            signal: controller.signal,
+        });
+        clearTimeout(timeout);
+        return res;
+    } catch (err: any) {
+        clearTimeout(timeout);
+        // Add detailed error info for debugging
+        const cfg = getConfig();
+        const detail = err.cause ? ` (cause: ${err.cause.message || err.cause.code || JSON.stringify(err.cause)})` : '';
+        console.error(`[NAS] Fetch failed to ${cfg.protocol}://${cfg.host}:${cfg.port}${detail}`);
+        console.error(`[NAS] Error:`, err.message, err.code || '');
+        throw new Error(`Koneksi ke NAS gagal (${cfg.host}:${cfg.port}): ${err.cause?.code || err.cause?.message || err.message}${detail ? ' - Pastikan hostname/IP, port, dan protocol sudah benar' : ''}`);
     }
-    return fetch(url, fetchOptions);
 }
 
 // ==================== AUTH ====================
