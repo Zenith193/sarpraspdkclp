@@ -64,9 +64,11 @@ export const sarprasService = {
 
                     return {
                         id: f.id,
-                        nama: f.fileName,
+                        name: f.fileName,
                         url: url || proxyUrl,
                         proxyUrl,
+                        size: f.fileSize || 0,
+                        geo: (f.geoLat && f.geoLng) ? { lat: f.geoLat, lng: f.geoLng } : null,
                         geoLat: f.geoLat,
                         geoLng: f.geoLng,
                     };
