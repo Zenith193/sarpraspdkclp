@@ -42,6 +42,7 @@ import VerifikasiSarpras from './pages/shared/VerifikasiSarpras';
 import VerifikasiProposal from './pages/shared/VerifikasiProposal';
 import FormKerusakan from './pages/shared/FormKerusakan';
 import Iklan from './pages/shared/Iklan';
+import QueueStatus from './components/ui/QueueStatus';
 
 // Route guard
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -63,6 +64,7 @@ function App() {
   return (
     <BrowserRouter>
       <Toaster position="top-right" />
+      <QueueStatus />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Navigate to="/login" replace />} />
