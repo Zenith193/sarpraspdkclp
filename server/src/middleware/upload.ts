@@ -101,8 +101,9 @@ export function forwardToNas(
         };
 
         // Determine sub-path for Google Drive folder hierarchy
+        // sarpras: kecamatan/namaSekolah_npsn/sarpras/masaBangunan/namaRuang
         const subPath = sekolah
-            ? `${sekolah.kecamatan}/${sekolah.nama}_${sekolah.npsn}/${category}${extra.namaRuang ? '/' + extra.namaRuang : ''}`
+            ? `${sekolah.kecamatan}/${sekolah.nama}_${sekolah.npsn}/${category}${extra.masaBangunan ? '/' + extra.masaBangunan : ''}${extra.namaRuang ? '/' + extra.namaRuang : ''}`
             : category;
 
         // Forward each file to storage

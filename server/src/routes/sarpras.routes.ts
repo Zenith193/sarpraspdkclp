@@ -118,6 +118,14 @@ router.post('/:id/unverify', requireAuth, requireRole('admin', 'verifikator'), a
 router.post('/:id/foto', requireAuth, requireRole('admin', 'sekolah'), uploadFotos.single('foto'), forwardToNas('sarpras'), async (req, res) => {
     try {
         if (!req.file) { res.status(400).json({ error: 'No file uploaded' }); return; }
+
+        // Enforce max 5 photos per sarpras
+        const existing = await sarprasService.getById(Number(req.params.id));
+        if (existing && existing.fotos && existing.fotos.length >= 5) {
+            res.status(400).json({ error: 'Maksimal 5 foto per data sarpras' });
+            return;
+        }
+
         const f = req.file as any;
         const result = await sarprasService.addFoto(Number(req.params.id), {
             sarprasId: Number(req.params.id),
