@@ -101,17 +101,35 @@ import { setGDriveRuntimeConfig, testGDriveConnection, listGDriveFolders, isGDri
 async function applyGDriveConfigFromDb() {
     try {
         const saved = await settingsService.get('gdrive_config');
-        console.log('[GDrive] DB config keys:', saved ? Object.keys(saved) : 'null');
-        console.log('[GDrive] DB config:', saved ? { enabled: saved.enabled, clientId: saved.clientId ? 'SET' : 'EMPTY', clientSecret: saved.clientSecret ? 'SET' : 'EMPTY', refreshToken: saved.refreshToken ? 'SET' : 'EMPTY', folderId: saved.folderId || '' } : 'null');
-        if (saved && typeof saved === 'object') {
-            setGDriveRuntimeConfig({
-                enabled: saved.enabled ?? false,
-                clientId: saved.clientId || '',
-                clientSecret: saved.clientSecret || '',
-                refreshToken: saved.refreshToken || '',
-                folderId: saved.folderId || '',
-            });
+        if (!saved || typeof saved !== 'object') {
+            console.log('[GDrive] No config in DB');
+            return;
         }
+
+        // Auto-migrate: old Service Account format has 'credentials' but no 'clientId'
+        if (saved.credentials && !saved.clientId) {
+            console.log('[GDrive] Old Service Account format detected — auto-resetting to OAuth2 format');
+            const fresh = { enabled: false, clientId: '', clientSecret: '', refreshToken: '', folderId: saved.folderId || '' };
+            await settingsService.set('gdrive_config', fresh);
+            setGDriveRuntimeConfig(fresh);
+            return;
+        }
+
+        console.log('[GDrive] Config:', {
+            enabled: saved.enabled,
+            clientId: saved.clientId ? 'SET' : 'EMPTY',
+            clientSecret: saved.clientSecret ? 'SET' : 'EMPTY',
+            refreshToken: saved.refreshToken ? 'SET' : 'EMPTY',
+            folderId: saved.folderId || ''
+        });
+
+        setGDriveRuntimeConfig({
+            enabled: saved.enabled ?? false,
+            clientId: saved.clientId || '',
+            clientSecret: saved.clientSecret || '',
+            refreshToken: saved.refreshToken || '',
+            folderId: saved.folderId || '',
+        });
     } catch (e) { console.error('[GDrive] applyConfig error:', e); }
 }
 
@@ -119,8 +137,8 @@ router.get('/gdrive', requireAuth, requireRole('admin'), async (_req, res) => {
     try {
         const config = await settingsService.get('gdrive_config');
         const safe = config ? {
-            enabled: config.enabled,
-            folderId: config.folderId,
+            enabled: config.enabled ?? false,
+            folderId: config.folderId || '',
             clientId: config.clientId || '',
             hasRefreshToken: !!config.refreshToken,
             gdriveEnabled: isGDriveEnabled(),
@@ -132,20 +150,18 @@ router.get('/gdrive', requireAuth, requireRole('admin'), async (_req, res) => {
 router.put('/gdrive', requireAuth, requireRole('admin'), async (req, res) => {
     try {
         console.log('[GDrive] PUT body keys:', Object.keys(req.body));
-        // Merge with existing config (don't lose refreshToken if not sent)
-        const existing = await settingsService.get('gdrive_config') || {};
         const config = {
-            enabled: req.body.enabled ?? existing.enabled ?? false,
-            clientId: req.body.clientId || existing.clientId || '',
-            clientSecret: req.body.clientSecret || existing.clientSecret || '',
-            refreshToken: req.body.refreshToken || existing.refreshToken || '',
-            folderId: req.body.folderId || existing.folderId || '',
+            enabled: req.body.enabled ?? false,
+            clientId: req.body.clientId || '',
+            clientSecret: req.body.clientSecret || '',
+            refreshToken: req.body.refreshToken || '',
+            folderId: req.body.folderId || '',
         };
-        console.log('[GDrive] Saving config:', { ...config, clientSecret: config.clientSecret ? 'SET' : 'EMPTY', refreshToken: config.refreshToken ? 'SET' : 'EMPTY' });
+        console.log('[GDrive] Saving:', { ...config, clientSecret: config.clientSecret ? 'SET' : 'EMPTY', refreshToken: config.refreshToken ? 'SET' : 'EMPTY' });
 
         const result = await settingsService.set('gdrive_config', config);
         setGDriveRuntimeConfig(config);
-        console.log('[GDrive] Config saved, isEnabled:', isGDriveEnabled());
+        console.log('[GDrive] Saved! isEnabled:', isGDriveEnabled());
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
@@ -168,7 +184,32 @@ router.get('/gdrive/folders', requireAuth, requireRole('admin'), async (req, res
 });
 
 router.post('/gdrive/reset', requireAuth, requireRole('admin'), async (_req, res) => {
-    try { res.json(await settingsService.reset('gdrive_config')); } catch (e: any) { res.status(500).json({ error: e.message }); }
+    try {
+        const fresh = { enabled: false, clientId: '', clientSecret: '', refreshToken: '', folderId: '' };
+        res.json(await settingsService.set('gdrive_config', fresh));
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ===== LOCALHOST-ONLY SETUP (no auth — for initial VPS config via curl) =====
+router.post('/gdrive/setup', async (req, res) => {
+    const ip = req.ip || req.socket?.remoteAddress || '';
+    if (!ip.includes('127.0.0.1') && !ip.includes('::1') && !ip.includes('::ffff:127.0.0.1')) {
+        return res.status(403).json({ error: 'Only accessible from localhost' });
+    }
+    try {
+        const config = {
+            enabled: req.body.enabled ?? true,
+            clientId: req.body.clientId || '',
+            clientSecret: req.body.clientSecret || '',
+            refreshToken: req.body.refreshToken || '',
+            folderId: req.body.folderId || '',
+        };
+        console.log('[GDrive] SETUP from localhost');
+        await settingsService.set('gdrive_config', config);
+        setGDriveRuntimeConfig(config);
+        const testResult = await testGDriveConnection();
+        res.json({ saved: true, test: testResult, isEnabled: isGDriveEnabled() });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 // Load configs from DB on module init
