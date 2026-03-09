@@ -458,7 +458,47 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
     });
 });
 
-// ===== START =====
+// ===== GDRIVE DIRECT TEST (localhost only, no auth) =====
+app.get('/api/gdrive-test', async (req, res) => {
+    const ip = req.ip || req.socket?.remoteAddress || '';
+    if (!ip.includes('127.0.0.1') && !ip.includes('::1') && !ip.includes('::ffff:127.0.0.1')) {
+        return res.status(403).json({ error: 'localhost only' });
+    }
+    try {
+        const { google } = await import('googleapis');
+        // Read directly from process.env
+        const cid = process.env.GDRIVE_CLIENT_ID || '';
+        const cs = process.env.GDRIVE_CLIENT_SECRET || '';
+        const rt = process.env.GDRIVE_REFRESH_TOKEN || '';
+        const fid = process.env.GDRIVE_FOLDER_ID || '';
+
+        console.log('[GDRIVE-TEST] env:', { cid: cid ? 'SET' : 'EMPTY', cs: cs ? 'SET' : 'EMPTY', rt: rt ? 'SET' : 'EMPTY', fid: fid || 'EMPTY' });
+
+        if (!cid || !cs || !rt) {
+            return res.json({ success: false, message: 'ENV vars missing', cid: !!cid, cs: !!cs, rt: !!rt });
+        }
+
+        const oauth2 = new google.auth.OAuth2(cid, cs, 'https://developers.google.com/oauthplayground');
+        oauth2.setCredentials({ refresh_token: rt });
+        const drive = google.drive({ version: 'v3', auth: oauth2 });
+
+        const about = await drive.about.get({ fields: 'user' });
+        const email = about.data.user?.emailAddress || 'unknown';
+
+        let folderName = 'unknown';
+        if (fid) {
+            const folder = await drive.files.get({ fileId: fid, fields: 'name' });
+            folderName = folder.data.name || 'unknown';
+        }
+
+        res.json({ success: true, message: `Connected! Email: ${email}, Folder: ${folderName}`, email, folderName });
+    } catch (e: any) {
+        console.error('[GDRIVE-TEST] Error:', e.message);
+        res.json({ success: false, message: e.message });
+    }
+});
+
+
 app.listen(PORT, () => {
     console.log(`🚀 SPIDOL API running at http://localhost:${PORT}`);
     console.log(`📦 Auth: http://localhost:${PORT}/api/auth`);
