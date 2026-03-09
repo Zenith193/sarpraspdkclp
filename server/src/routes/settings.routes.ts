@@ -101,6 +101,8 @@ import { setGDriveRuntimeConfig, testGDriveConnection, listGDriveFolders, isGDri
 async function applyGDriveConfigFromDb() {
     try {
         const saved = await settingsService.get('gdrive_config');
+        console.log('[GDrive] DB config keys:', saved ? Object.keys(saved) : 'null');
+        console.log('[GDrive] DB config:', saved ? { enabled: saved.enabled, clientId: saved.clientId ? 'SET' : 'EMPTY', clientSecret: saved.clientSecret ? 'SET' : 'EMPTY', refreshToken: saved.refreshToken ? 'SET' : 'EMPTY', folderId: saved.folderId || '' } : 'null');
         if (saved && typeof saved === 'object') {
             setGDriveRuntimeConfig({
                 enabled: saved.enabled ?? false,
@@ -110,7 +112,7 @@ async function applyGDriveConfigFromDb() {
                 folderId: saved.folderId || '',
             });
         }
-    } catch { /* ignore */ }
+    } catch (e) { console.error('[GDrive] applyConfig error:', e); }
 }
 
 router.get('/gdrive', requireAuth, requireRole('admin'), async (_req, res) => {
@@ -129,6 +131,7 @@ router.get('/gdrive', requireAuth, requireRole('admin'), async (_req, res) => {
 
 router.put('/gdrive', requireAuth, requireRole('admin'), async (req, res) => {
     try {
+        console.log('[GDrive] PUT body keys:', Object.keys(req.body));
         // Merge with existing config (don't lose refreshToken if not sent)
         const existing = await settingsService.get('gdrive_config') || {};
         const config = {
@@ -138,9 +141,11 @@ router.put('/gdrive', requireAuth, requireRole('admin'), async (req, res) => {
             refreshToken: req.body.refreshToken || existing.refreshToken || '',
             folderId: req.body.folderId || existing.folderId || '',
         };
+        console.log('[GDrive] Saving config:', { ...config, clientSecret: config.clientSecret ? 'SET' : 'EMPTY', refreshToken: config.refreshToken ? 'SET' : 'EMPTY' });
 
         const result = await settingsService.set('gdrive_config', config);
         setGDriveRuntimeConfig(config);
+        console.log('[GDrive] Config saved, isEnabled:', isGDriveEnabled());
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });

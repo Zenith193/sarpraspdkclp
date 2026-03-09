@@ -35,3 +35,5 @@ server/drizzle/
 *.iam.gserviceaccount.com*
 *service_account*.json
 storangesarpraspdkclp*.json
+client_secret_*.json
+OAuth client*
