@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { prestasiService } from '../services/prestasi.service.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import { uploadSertifikat } from '../middleware/upload.js';
+import { uploadSertifikat, forwardToNas } from '../middleware/upload.js';
 
 const router = Router();
 
@@ -19,10 +19,11 @@ router.get('/', requireAuth, async (req, res) => {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadSertifikat.single('sertifikat'), async (req, res) => {
+router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadSertifikat.single('sertifikat'), forwardToNas('prestasi'), async (req, res) => {
     try {
         const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
-        const data = { ...req.body, sertifikatPath: req.file?.path || null };
+        const f = req.file as any;
+        const data = { ...req.body, sertifikatPath: f?.finalPath || req.file?.path || null };
         if (isSekolah) {
             data.sekolahId = req.user!.sekolahId;
         }

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { kerusakanService } from '../services/kerusakan.service.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import { uploadFormKerusakan } from '../middleware/upload.js';
+import { uploadFormKerusakan, forwardToNas } from '../middleware/upload.js';
 
 const router = Router();
 
@@ -18,17 +18,18 @@ router.get('/', requireAuth, async (req, res) => {
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
-router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadFormKerusakan.single('file'), async (req, res) => {
+router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadFormKerusakan.single('file'), forwardToNas('kerusakan'), async (req, res) => {
     try {
         const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
-        const data = { ...req.body, fileName: req.file?.originalname || null, filePath: req.file?.path || null, status: req.file ? 'Menunggu Verifikasi' : 'Belum Upload' };
+        const f = req.file as any;
+        const data = { ...req.body, fileName: req.file?.originalname || null, filePath: f?.finalPath || req.file?.path || null, status: req.file ? 'Menunggu Verifikasi' : 'Belum Upload' };
         if (isSekolah) {
             data.sekolahId = req.user!.sekolahId;
         }
         res.status(201).json(await kerusakanService.create(data, req.user!.id));
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
-router.put('/:id/upload', requireAuth, requireRole('admin', 'sekolah'), uploadFormKerusakan.single('file'), async (req, res) => {
+router.put('/:id/upload', requireAuth, requireRole('admin', 'sekolah'), uploadFormKerusakan.single('file'), forwardToNas('kerusakan'), async (req, res) => {
     try {
         const id = Number(req.params.id);
         const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
@@ -42,7 +43,8 @@ router.put('/:id/upload', requireAuth, requireRole('admin', 'sekolah'), uploadFo
             }
         }
 
-        res.json(await kerusakanService.updateFile(id, req.file.originalname, req.file.path));
+        const fUp = req.file as any;
+        res.json(await kerusakanService.updateFile(id, req.file.originalname, fUp.finalPath || req.file.path));
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {

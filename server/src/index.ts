@@ -146,6 +146,72 @@ app.get('/api/foto/:fotoId', async (req, res) => {
     }
 });
 
+// ===== GENERIC FILE PROXY HELPER =====
+async function serveFileFromPath(filePath: string, res: any) {
+    const normalizedPath = filePath.replace(/\\/g, '/');
+
+    // 1. Local file
+    if (fs.existsSync(filePath)) {
+        return res.sendFile(path.resolve(filePath));
+    }
+
+    // 2. Google Drive
+    if (normalizedPath.startsWith('gdrive://')) {
+        const { streamFromGDrive } = await import('./utils/googleDriveClient.js');
+        const fileId = normalizedPath.replace('gdrive://', '');
+        const gResult = await streamFromGDrive(fileId);
+        if (gResult) {
+            res.setHeader('Content-Type', gResult.mimeType);
+            res.setHeader('Cache-Control', 'public, max-age=86400');
+            gResult.stream.pipe(res);
+            return;
+        }
+    }
+
+    // 3. NAS
+    if (isNasEnabled() && normalizedPath.startsWith('/')) {
+        const nasUrl = await getNasDownloadLink(normalizedPath);
+        if (nasUrl) {
+            try {
+                const nasRes = await fetch(nasUrl);
+                if (nasRes.ok && nasRes.body) {
+                    res.setHeader('Content-Type', nasRes.headers.get('content-type') || 'application/octet-stream');
+                    res.setHeader('Cache-Control', 'public, max-age=86400');
+                    const reader = nasRes.body.getReader();
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        if (done) { res.end(); break; }
+                        res.write(value);
+                    }
+                    return;
+                }
+            } catch { /* fall through */ }
+        }
+    }
+
+    res.status(404).json({ error: 'File not found' });
+}
+
+// ===== KERUSAKAN FILE PROXY =====
+app.get('/api/file/kerusakan/:id', async (req, res) => {
+    try {
+        const { formKerusakan } = await import('./db/schema/index.js');
+        const result = await db.select().from(formKerusakan).where(eq(formKerusakan.id, Number(req.params.id)));
+        if (!result[0] || !result[0].filePath) { res.status(404).json({ error: 'File not found' }); return; }
+        await serveFileFromPath(result[0].filePath, res);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ===== PRESTASI SERTIFIKAT PROXY =====
+app.get('/api/file/prestasi/:id', async (req, res) => {
+    try {
+        const { prestasi } = await import('./db/schema/index.js');
+        const result = await db.select().from(prestasi).where(eq(prestasi.id, Number(req.params.id)));
+        if (!result[0] || !result[0].sertifikatPath) { res.status(404).json({ error: 'File not found' }); return; }
+        await serveFileFromPath(result[0].sertifikatPath, res);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 // ===== CUSTOM NPSN LOGIN (sekolah only, no password) =====
 import { db } from './db/index.js';
 import { sekolah, user, account, session as sessionTable } from './db/schema/index.js';
