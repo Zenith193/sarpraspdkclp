@@ -339,6 +339,10 @@ const DataSarpras = ({ readOnly = false }) => {
                 fData.append('keterangan', formData.keterangan);
                 fData.append('masaBangunan', formData.masaBangunan);
                 fData.append('jenisPrasarana', formData.jenisPrasarana);
+                // Sekolah info for storage folder hierarchy
+                if (sekolah.kecamatan) fData.append('kecamatan', sekolah.kecamatan);
+                if (sekolah.nama) fData.append('namaSekolah', sekolah.nama);
+                if (sekolah.npsn) fData.append('npsn', sekolah.npsn);
 
                 for (const photo of formPhotos) {
                     const blob = await (await fetch(photo.url)).blob();
