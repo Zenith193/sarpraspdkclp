@@ -491,222 +491,221 @@ const PengaturanNAS = () => {
             </div>
         </div>
     );
-};
 
-// ===== GOOGLE DRIVE TAB =====
-const renderGDriveTab = () => {
-    const handleGDriveSave = async () => {
-        if (gdriveForm.enabled && !gdriveForm.folderId) {
-            toast.error('Folder ID wajib diisi');
-            return;
-        }
-        setGdriveSaving(true);
-        try {
-            const payload = {
-                enabled: gdriveForm.enabled,
-                folderId: gdriveForm.folderId,
-            };
-            if (gdriveForm.credentials?.trim()) {
-                payload.credentials = gdriveForm.credentials;
+    // ===== GOOGLE DRIVE TAB =====
+    const renderGDriveTab = () => {
+        const handleGDriveSave = async () => {
+            if (gdriveForm.enabled && !gdriveForm.folderId) {
+                toast.error('Folder ID wajib diisi');
+                return;
             }
-            await settingsApi.setGdrive(payload);
-            toast.success('Konfigurasi Google Drive tersimpan!');
-        } catch (e) {
-            toast.error('Gagal menyimpan: ' + (e.message || ''));
-        } finally {
-            setGdriveSaving(false);
-        }
-    };
-
-    const handleGDriveTest = async () => {
-        if (!gdriveForm.folderId && !gdriveStatus?.hasCredentials) {
-            toast.error('Simpan konfigurasi terlebih dahulu');
-            return;
-        }
-        setGdriveTesting(true);
-        try {
-            // Save first if there are new credentials
-            if (gdriveForm.credentials?.trim()) {
-                await settingsApi.setGdrive({
+            setGdriveSaving(true);
+            try {
+                const payload = {
                     enabled: gdriveForm.enabled,
                     folderId: gdriveForm.folderId,
-                    credentials: gdriveForm.credentials,
-                });
+                };
+                if (gdriveForm.credentials?.trim()) {
+                    payload.credentials = gdriveForm.credentials;
+                }
+                await settingsApi.setGdrive(payload);
+                toast.success('Konfigurasi Google Drive tersimpan!');
+            } catch (e) {
+                toast.error('Gagal menyimpan: ' + (e.message || ''));
+            } finally {
+                setGdriveSaving(false);
             }
-            const result = await settingsApi.testGdrive();
-            setGdriveStatus(prev => ({ ...prev, ...result }));
-            if (result.success) {
-                toast.success('Google Drive terhubung!');
-            } else {
-                toast.error(result.message || 'Koneksi gagal');
-            }
-        } catch (e) {
-            toast.error('Test gagal: ' + (e.message || ''));
-        } finally {
-            setGdriveTesting(false);
-        }
-    };
+        };
 
-    return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            {/* Toggle */}
-            <div className="table-container" style={{ padding: 20 }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        const handleGDriveTest = async () => {
+            if (!gdriveForm.folderId && !gdriveStatus?.hasCredentials) {
+                toast.error('Simpan konfigurasi terlebih dahulu');
+                return;
+            }
+            setGdriveTesting(true);
+            try {
+                // Save first if there are new credentials
+                if (gdriveForm.credentials?.trim()) {
+                    await settingsApi.setGdrive({
+                        enabled: gdriveForm.enabled,
+                        folderId: gdriveForm.folderId,
+                        credentials: gdriveForm.credentials,
+                    });
+                }
+                const result = await settingsApi.testGdrive();
+                setGdriveStatus(prev => ({ ...prev, ...result }));
+                if (result.success) {
+                    toast.success('Google Drive terhubung!');
+                } else {
+                    toast.error(result.message || 'Koneksi gagal');
+                }
+            } catch (e) {
+                toast.error('Test gagal: ' + (e.message || ''));
+            } finally {
+                setGdriveTesting(false);
+            }
+        };
+
+        return (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {/* Toggle */}
+                <div className="table-container" style={{ padding: 20 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                            <div style={{
+                                width: 40, height: 40, borderRadius: 10,
+                                background: gdriveForm.enabled ? 'rgba(59,130,246,0.1)' : 'var(--bg-secondary)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            }}>
+                                <Cloud size={20} style={{ color: gdriveForm.enabled ? '#4285F4' : 'var(--text-secondary)' }} />
+                            </div>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600 }}>Google Drive Storage</h3>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Simpan file ke Google Drive via Service Account</span>
+                            </div>
+                        </div>
+                        <label className="toggle">
+                            <input type="checkbox" checked={gdriveForm.enabled}
+                                onChange={e => setGdriveForm(prev => ({ ...prev, enabled: e.target.checked }))} />
+                            <span className="toggle-slider" />
+                        </label>
+                    </div>
+                </div>
+
+                {/* Credentials */}
+                <div className="table-container" style={{ padding: 20, opacity: gdriveForm.enabled ? 1 : 0.5 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, paddingBottom: 10, borderBottom: '2px solid var(--bg-secondary)' }}>
+                        <Key size={16} style={{ color: 'var(--accent-blue)' }} />
+                        <h3 style={{ fontSize: '0.9rem', fontWeight: 600, margin: 0 }}>Service Account Credentials</h3>
+                    </div>
+
+                    {gdriveStatus?.hasCredentials && (
                         <div style={{
-                            width: 40, height: 40, borderRadius: 10,
-                            background: gdriveForm.enabled ? 'rgba(59,130,246,0.1)' : 'var(--bg-secondary)',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            padding: '8px 12px', borderRadius: 8, marginBottom: 12,
+                            background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.2)',
+                            display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem'
                         }}>
-                            <Cloud size={20} style={{ color: gdriveForm.enabled ? '#4285F4' : 'var(--text-secondary)' }} />
-                        </div>
-                        <div>
-                            <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600 }}>Google Drive Storage</h3>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Simpan file ke Google Drive via Service Account</span>
-                        </div>
-                    </div>
-                    <label className="toggle">
-                        <input type="checkbox" checked={gdriveForm.enabled}
-                            onChange={e => setGdriveForm(prev => ({ ...prev, enabled: e.target.checked }))} />
-                        <span className="toggle-slider" />
-                    </label>
-                </div>
-            </div>
-
-            {/* Credentials */}
-            <div className="table-container" style={{ padding: 20, opacity: gdriveForm.enabled ? 1 : 0.5 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, paddingBottom: 10, borderBottom: '2px solid var(--bg-secondary)' }}>
-                    <Key size={16} style={{ color: 'var(--accent-blue)' }} />
-                    <h3 style={{ fontSize: '0.9rem', fontWeight: 600, margin: 0 }}>Service Account Credentials</h3>
-                </div>
-
-                {gdriveStatus?.hasCredentials && (
-                    <div style={{
-                        padding: '8px 12px', borderRadius: 8, marginBottom: 12,
-                        background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.2)',
-                        display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem'
-                    }}>
-                        <CheckCircle size={14} style={{ color: '#22c55e' }} />
-                        <span>Credentials tersimpan: <code style={{ fontSize: '0.75rem' }}>{gdriveStatus.clientEmail}</code></span>
-                    </div>
-                )}
-
-                <div className="form-group">
-                    <label className="form-label">JSON Key (paste isi file JSON)</label>
-                    <textarea className="form-input" rows={4}
-                        placeholder={gdriveStatus?.hasCredentials ? 'Credentials sudah tersimpan. Paste JSON baru untuk mengganti.' : '{\n  "type": "service_account",\n  "project_id": "...",\n  ...\n}'}
-                        value={gdriveForm.credentials}
-                        onChange={e => setGdriveForm(prev => ({ ...prev, credentials: e.target.value }))}
-                        style={{ fontFamily: 'monospace', fontSize: '0.75rem', resize: 'vertical' }} />
-                </div>
-
-                <div className="form-group" style={{ marginTop: 12 }}>
-                    <label className="form-label">Folder ID</label>
-                    <input className="form-input" placeholder="1AbCdEfGhIjKlMnOpQrStUvWxYz"
-                        value={gdriveForm.folderId}
-                        onChange={e => setGdriveForm(prev => ({ ...prev, folderId: e.target.value }))}
-                        style={{ fontFamily: 'monospace', fontSize: '0.82rem' }} />
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: 4 }}>
-                        Buka folder di Google Drive → URL: drive.google.com/drive/folders/<strong>ID_FOLDER</strong>
-                    </div>
-                </div>
-            </div>
-
-            {/* Actions */}
-            <div style={{ display: 'flex', gap: 8 }}>
-                <button className="btn btn-primary" onClick={handleGDriveSave} disabled={gdriveSaving}
-                    style={{ flex: 1 }}>
-                    <Save size={14} /> {gdriveSaving ? 'Menyimpan...' : 'Simpan'}
-                </button>
-                <button className="btn btn-secondary" onClick={handleGDriveTest} disabled={gdriveTesting}>
-                    {gdriveTesting ? <><RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> Testing...</>
-                        : <><Wifi size={14} /> Test Koneksi</>}
-                </button>
-            </div>
-
-            {/* Test Result */}
-            {gdriveStatus?.success !== undefined && (
-                <div className="table-container" style={{ padding: 16 }}>
-                    <div style={{
-                        display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10,
-                        color: gdriveStatus.success ? '#22c55e' : '#ef4444'
-                    }}>
-                        {gdriveStatus.success ? <CheckCircle size={16} /> : <XCircle size={16} />}
-                        <strong style={{ fontSize: '0.85rem' }}>
-                            {gdriveStatus.success ? 'Koneksi Berhasil' : 'Koneksi Gagal'}
-                        </strong>
-                    </div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                        {gdriveStatus.message}
-                    </div>
-                    {gdriveStatus.success && (
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 10 }}>
-                            {gdriveStatus.folderName && (
-                                <div style={{ padding: 8, borderRadius: 6, background: 'var(--bg-secondary)', fontSize: '0.75rem' }}>
-                                    <div style={{ color: 'var(--text-secondary)' }}>Folder</div>
-                                    <div style={{ fontWeight: 600 }}>{gdriveStatus.folderName}</div>
-                                </div>
-                            )}
-                            {gdriveStatus.email && (
-                                <div style={{ padding: 8, borderRadius: 6, background: 'var(--bg-secondary)', fontSize: '0.75rem' }}>
-                                    <div style={{ color: 'var(--text-secondary)' }}>Service Account</div>
-                                    <div style={{ fontWeight: 600, fontSize: '0.7rem', wordBreak: 'break-all' }}>{gdriveStatus.email}</div>
-                                </div>
-                            )}
-                            {gdriveStatus.fileCount !== undefined && (
-                                <div style={{ padding: 8, borderRadius: 6, background: 'var(--bg-secondary)', fontSize: '0.75rem' }}>
-                                    <div style={{ color: 'var(--text-secondary)' }}>File di folder</div>
-                                    <div style={{ fontWeight: 600 }}>{gdriveStatus.fileCount}</div>
-                                </div>
-                            )}
+                            <CheckCircle size={14} style={{ color: '#22c55e' }} />
+                            <span>Credentials tersimpan: <code style={{ fontSize: '0.75rem' }}>{gdriveStatus.clientEmail}</code></span>
                         </div>
                     )}
+
+                    <div className="form-group">
+                        <label className="form-label">JSON Key (paste isi file JSON)</label>
+                        <textarea className="form-input" rows={4}
+                            placeholder={gdriveStatus?.hasCredentials ? 'Credentials sudah tersimpan. Paste JSON baru untuk mengganti.' : '{\n  "type": "service_account",\n  "project_id": "...",\n  ...\n}'}
+                            value={gdriveForm.credentials}
+                            onChange={e => setGdriveForm(prev => ({ ...prev, credentials: e.target.value }))}
+                            style={{ fontFamily: 'monospace', fontSize: '0.75rem', resize: 'vertical' }} />
+                    </div>
+
+                    <div className="form-group" style={{ marginTop: 12 }}>
+                        <label className="form-label">Folder ID</label>
+                        <input className="form-input" placeholder="1AbCdEfGhIjKlMnOpQrStUvWxYz"
+                            value={gdriveForm.folderId}
+                            onChange={e => setGdriveForm(prev => ({ ...prev, folderId: e.target.value }))}
+                            style={{ fontFamily: 'monospace', fontSize: '0.82rem' }} />
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: 4 }}>
+                            Buka folder di Google Drive → URL: drive.google.com/drive/folders/<strong>ID_FOLDER</strong>
+                        </div>
+                    </div>
                 </div>
-            )}
+
+                {/* Actions */}
+                <div style={{ display: 'flex', gap: 8 }}>
+                    <button className="btn btn-primary" onClick={handleGDriveSave} disabled={gdriveSaving}
+                        style={{ flex: 1 }}>
+                        <Save size={14} /> {gdriveSaving ? 'Menyimpan...' : 'Simpan'}
+                    </button>
+                    <button className="btn btn-secondary" onClick={handleGDriveTest} disabled={gdriveTesting}>
+                        {gdriveTesting ? <><RefreshCw size={14} style={{ animation: 'spin 1s linear infinite' }} /> Testing...</>
+                            : <><Wifi size={14} /> Test Koneksi</>}
+                    </button>
+                </div>
+
+                {/* Test Result */}
+                {gdriveStatus?.success !== undefined && (
+                    <div className="table-container" style={{ padding: 16 }}>
+                        <div style={{
+                            display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10,
+                            color: gdriveStatus.success ? '#22c55e' : '#ef4444'
+                        }}>
+                            {gdriveStatus.success ? <CheckCircle size={16} /> : <XCircle size={16} />}
+                            <strong style={{ fontSize: '0.85rem' }}>
+                                {gdriveStatus.success ? 'Koneksi Berhasil' : 'Koneksi Gagal'}
+                            </strong>
+                        </div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                            {gdriveStatus.message}
+                        </div>
+                        {gdriveStatus.success && (
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 10 }}>
+                                {gdriveStatus.folderName && (
+                                    <div style={{ padding: 8, borderRadius: 6, background: 'var(--bg-secondary)', fontSize: '0.75rem' }}>
+                                        <div style={{ color: 'var(--text-secondary)' }}>Folder</div>
+                                        <div style={{ fontWeight: 600 }}>{gdriveStatus.folderName}</div>
+                                    </div>
+                                )}
+                                {gdriveStatus.email && (
+                                    <div style={{ padding: 8, borderRadius: 6, background: 'var(--bg-secondary)', fontSize: '0.75rem' }}>
+                                        <div style={{ color: 'var(--text-secondary)' }}>Service Account</div>
+                                        <div style={{ fontWeight: 600, fontSize: '0.7rem', wordBreak: 'break-all' }}>{gdriveStatus.email}</div>
+                                    </div>
+                                )}
+                                {gdriveStatus.fileCount !== undefined && (
+                                    <div style={{ padding: 8, borderRadius: 6, background: 'var(--bg-secondary)', fontSize: '0.75rem' }}>
+                                        <div style={{ color: 'var(--text-secondary)' }}>File di folder</div>
+                                        <div style={{ fontWeight: 600 }}>{gdriveStatus.fileCount}</div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    // ===== MAIN RENDER =====
+    return (
+        <div className="page-content">
+            <div className="page-header">
+                <div>
+                    <h1 className="page-title">Pengaturan Storage</h1>
+                    <p className="page-subtitle">Konfigurasi penyimpanan file: Google Drive atau Synology NAS</p>
+                </div>
+            </div>
+
+            {/* Tab Selector */}
+            <div style={{
+                display: 'flex', gap: 4, padding: 4, borderRadius: 10, marginBottom: 16,
+                background: 'var(--bg-secondary)', width: 'fit-content'
+            }}>
+                <button onClick={() => setActiveTab('gdrive')} style={{
+                    padding: '8px 20px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                    fontSize: '0.82rem', fontWeight: 600, transition: '0.2s',
+                    background: activeTab === 'gdrive' ? 'var(--bg-card)' : 'transparent',
+                    color: activeTab === 'gdrive' ? '#4285F4' : 'var(--text-secondary)',
+                    boxShadow: activeTab === 'gdrive' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                }}>
+                    <Cloud size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />
+                    Google Drive
+                </button>
+                <button onClick={() => setActiveTab('nas')} style={{
+                    padding: '8px 20px', borderRadius: 8, border: 'none', cursor: 'pointer',
+                    fontSize: '0.82rem', fontWeight: 600, transition: '0.2s',
+                    background: activeTab === 'nas' ? 'var(--bg-card)' : 'transparent',
+                    color: activeTab === 'nas' ? 'var(--accent-green)' : 'var(--text-secondary)',
+                    boxShadow: activeTab === 'nas' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
+                }}>
+                    <HardDrive size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />
+                    Synology NAS
+                </button>
+            </div>
+
+            {activeTab === 'gdrive' ? renderGDriveTab() : renderNasTab()}
         </div>
     );
-};
-
-// ===== MAIN RENDER =====
-return (
-    <div className="page-content">
-        <div className="page-header">
-            <div>
-                <h1 className="page-title">Pengaturan Storage</h1>
-                <p className="page-subtitle">Konfigurasi penyimpanan file: Google Drive atau Synology NAS</p>
-            </div>
-        </div>
-
-        {/* Tab Selector */}
-        <div style={{
-            display: 'flex', gap: 4, padding: 4, borderRadius: 10, marginBottom: 16,
-            background: 'var(--bg-secondary)', width: 'fit-content'
-        }}>
-            <button onClick={() => setActiveTab('gdrive')} style={{
-                padding: '8px 20px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                fontSize: '0.82rem', fontWeight: 600, transition: '0.2s',
-                background: activeTab === 'gdrive' ? 'var(--bg-card)' : 'transparent',
-                color: activeTab === 'gdrive' ? '#4285F4' : 'var(--text-secondary)',
-                boxShadow: activeTab === 'gdrive' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-            }}>
-                <Cloud size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />
-                Google Drive
-            </button>
-            <button onClick={() => setActiveTab('nas')} style={{
-                padding: '8px 20px', borderRadius: 8, border: 'none', cursor: 'pointer',
-                fontSize: '0.82rem', fontWeight: 600, transition: '0.2s',
-                background: activeTab === 'nas' ? 'var(--bg-card)' : 'transparent',
-                color: activeTab === 'nas' ? 'var(--accent-green)' : 'var(--text-secondary)',
-                boxShadow: activeTab === 'nas' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-            }}>
-                <HardDrive size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} />
-                Synology NAS
-            </button>
-        </div>
-
-        {activeTab === 'gdrive' ? renderGDriveTab() : renderNasTab()}
-    </div>
-);
 };
 
 export default PengaturanNAS;

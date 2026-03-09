@@ -30,3 +30,8 @@ server/drizzle/
 
 # Gemini
 .gemini/
+
+# Google Service Account credentials
+*.iam.gserviceaccount.com*
+*service_account*.json
+storangesarpraspdkclp*.json
