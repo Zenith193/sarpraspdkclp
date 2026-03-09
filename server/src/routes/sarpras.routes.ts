@@ -62,6 +62,7 @@ router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadFotos.array
                     fileSize: file.size,
                     geoLat: req.body[`geo_lat_${file.originalname}`] ? parseFloat(req.body[`geo_lat_${file.originalname}`]) : null,
                     geoLng: req.body[`geo_lng_${file.originalname}`] ? parseFloat(req.body[`geo_lng_${file.originalname}`]) : null,
+                    uploadStatus: f.uploadPending ? 'uploading' : 'done',
                 });
             }
         } else {

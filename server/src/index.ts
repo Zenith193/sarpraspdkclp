@@ -274,6 +274,64 @@ app.get('/api/queue/status', async (_req, res) => {
     } catch (e: any) { res.json({ totalUploading: 0, totalFailed: 0, error: e.message }); }
 });
 
+// Re-queue all local files for GDrive upload (for existing data migration)
+app.post('/api/queue/requeue', async (_req, res) => {
+    try {
+        const { sarprasFoto, formKerusakan, prestasi, proposal, proposalFoto } = await import('./db/schema/index.js');
+        const { db: database } = await import('./db/index.js');
+        const { sql, ne, and, isNotNull } = await import('drizzle-orm');
+
+        // Find records with local paths (not gdrive://) and status 'done' or 'failed'
+        let count = 0;
+        const requeue = async (table: any, pathCol: string) => {
+            const result = await database.execute(sql`
+                UPDATE ${table}
+                SET upload_status = 'uploading'
+                WHERE ${sql.raw(pathCol)} IS NOT NULL 
+                AND ${sql.raw(pathCol)} != ''
+                AND ${sql.raw(pathCol)} NOT LIKE 'gdrive://%'
+                AND (upload_status = 'done' OR upload_status = 'failed' OR upload_status IS NULL)
+            `);
+            return Number((result as any).rowCount || 0);
+        };
+
+        count += await requeue(sarprasFoto, 'file_path');
+        count += await requeue(formKerusakan, 'file_path');
+        count += await requeue(prestasi, 'sertifikat_path');
+        count += await requeue(proposal, 'file_path');
+        count += await requeue(proposalFoto, 'file_path');
+
+        res.json({ success: true, requeued: count, message: `${count} file(s) queued for GDrive upload` });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// Retry failed uploads
+app.post('/api/queue/retry', async (_req, res) => {
+    try {
+        const { sarprasFoto, formKerusakan, prestasi, proposal, proposalFoto } = await import('./db/schema/index.js');
+        const { db: database } = await import('./db/index.js');
+        const { sql } = await import('drizzle-orm');
+
+        let count = 0;
+        const retry = async (table: any) => {
+            const result = await database.execute(sql`
+                UPDATE ${table}
+                SET upload_status = 'uploading'
+                WHERE upload_status = 'failed'
+            `);
+            return Number((result as any).rowCount || 0);
+        };
+
+        count += await retry(sarprasFoto);
+        count += await retry(formKerusakan);
+        count += await retry(prestasi);
+        count += await retry(proposal);
+        count += await retry(proposalFoto);
+
+        res.json({ success: true, retried: count });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 // ===== CUSTOM NPSN LOGIN (sekolah only, no password) =====
 import { db } from './db/index.js';
 import { sekolah, user, account, session as sessionTable } from './db/schema/index.js';
