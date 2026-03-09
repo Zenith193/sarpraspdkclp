@@ -349,7 +349,7 @@ const DataSarpras = ({ readOnly = false }) => {
                         await sarprasApi.addFoto(editItem.id, fData);
                     }
                 }
-                toast.success('Data berhasil diperbarui', { id: 'save' });
+                toast.success('Data berhasil diperbarui. Foto sedang diproses ke GDrive...', { id: 'save', duration: 4000 });
             } else {
                 const fData = new FormData();
                 fData.append('sekolahId', sekolah.id);
@@ -374,7 +374,7 @@ const DataSarpras = ({ readOnly = false }) => {
                 }
 
                 await sarprasApi.create(fData);
-                toast.success('Data berhasil disimpan', { id: 'save' });
+                toast.success('Data berhasil disimpan. Foto sedang diproses ke GDrive...', { id: 'save', duration: 4000 });
             }
 
             setShowAddModal(false);
@@ -401,7 +401,7 @@ const DataSarpras = ({ readOnly = false }) => {
         try {
             toast.loading('Menghapus data...', { id: 'delete' });
             await sarprasApi.delete(deleteConfirm.id);
-            toast.success('Data berhasil dihapus', { id: 'delete' });
+            toast.success('Data berhasil dihapus. File GDrive sedang dihapus...', { id: 'delete', duration: 4000 });
             setDeleteConfirm(null);
             if (refetchSarpras) refetchSarpras();
         } catch (e) {

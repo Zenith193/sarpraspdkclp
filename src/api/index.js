@@ -163,3 +163,7 @@ export const dashboardApi = {
     korwil: (kecamatan) => api.get(`/dashboard/korwil?kecamatan=${kecamatan}`),
     sekolah: () => api.get('/dashboard/sekolah'),
 };
+
+export const queueApi = {
+    status: () => api.get('/queue/status'),
+};

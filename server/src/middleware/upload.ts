@@ -97,24 +97,14 @@ export function forwardToNas(
             tahun: body.tahun,
         };
 
-        // Determine sub-path for Google Drive folder hierarchy
-        // sarpras: kecamatan/namaSekolah_npsn/sarpras/masaBangunan/namaRuang
-        const subPath = sekolah
-            ? `${sekolah.kecamatan}/${sekolah.nama}_${sekolah.npsn}/${category}${extra.masaBangunan ? '/' + extra.masaBangunan : ''}${extra.namaRuang ? '/' + extra.namaRuang : ''}`
-            : category;
-
-        // Process a single file — save locally, let background queue handle GDrive
+        // Process a single file
         const processFile = async (file: Express.Multer.File) => {
             try {
-                const gdriveEnabled = isGDriveEnabled();
-                if (gdriveEnabled) {
-                    // Save locally — background queue will upload to GDrive
-                    const localDest = getLocalDestination(category, body);
-                    const finalLocalPath = path.join(localDest, file.filename);
-                    fs.renameSync(file.path, finalLocalPath);
-                    (file as any).finalPath = finalLocalPath;
+                if (isGDriveEnabled()) {
+                    // Keep file in multer temp dir — background queue will upload to GDrive
+                    (file as any).finalPath = file.path;
                     (file as any).storedAt = 'local';
-                    (file as any).uploadPending = true; // Flag for route handler to set uploadStatus='uploading'
+                    (file as any).uploadPending = true;
                 } else {
                     const result = await uploadToNas(file.path, category, sekolah, extra);
                     (file as any).storedAt = result.stored;
@@ -131,21 +121,12 @@ export function forwardToNas(
                 }
             } catch (err) {
                 console.error('Storage forwarding error for', file.filename, err);
-                try {
-                    const localDest = getLocalDestination(category, body);
-                    const finalLocalPath = path.join(localDest, file.filename);
-                    fs.renameSync(file.path, finalLocalPath);
-                    (file as any).finalPath = finalLocalPath;
-                } catch {
-                    (file as any).finalPath = file.path;
-                }
+                (file as any).finalPath = file.path;
                 (file as any).storedAt = 'local';
             }
         };
 
-        // Process all files in parallel
         await Promise.all(files.map(processFile));
-
         next();
     };
 }

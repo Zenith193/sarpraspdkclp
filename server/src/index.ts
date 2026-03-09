@@ -242,6 +242,38 @@ app.get('/api/file/template/:id', async (req, res) => {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// ===== QUEUE STATUS API =====
+app.get('/api/queue/status', async (_req, res) => {
+    try {
+        const { sarprasFoto, formKerusakan, prestasi, proposal, proposalFoto } = await import('./db/schema/index.js');
+        const { db: database } = await import('./db/index.js');
+        const { eq, sql } = await import('drizzle-orm');
+
+        const count = async (table: any, col: string) => {
+            const uploading = await database.select({ count: sql<number>`count(*)` }).from(table).where(eq((table as any).uploadStatus, 'uploading'));
+            const failed = await database.select({ count: sql<number>`count(*)` }).from(table).where(eq((table as any).uploadStatus, 'failed'));
+            return { uploading: Number(uploading[0]?.count || 0), failed: Number(failed[0]?.count || 0) };
+        };
+
+        const [foto, kerusakan, prest, prop, propFoto] = await Promise.all([
+            count(sarprasFoto, 'uploadStatus'),
+            count(formKerusakan, 'uploadStatus'),
+            count(prestasi, 'uploadStatus'),
+            count(proposal, 'uploadStatus'),
+            count(proposalFoto, 'uploadStatus'),
+        ]);
+
+        const totalUploading = foto.uploading + kerusakan.uploading + prest.uploading + prop.uploading + propFoto.uploading;
+        const totalFailed = foto.failed + kerusakan.failed + prest.failed + prop.failed + propFoto.failed;
+
+        res.json({
+            totalUploading,
+            totalFailed,
+            details: { sarprasFoto: foto, kerusakan, prestasi: prest, proposal: prop, proposalFoto: propFoto },
+        });
+    } catch (e: any) { res.json({ totalUploading: 0, totalFailed: 0, error: e.message }); }
+});
+
 // ===== CUSTOM NPSN LOGIN (sekolah only, no password) =====
 import { db } from './db/index.js';
 import { sekolah, user, account, session as sessionTable } from './db/schema/index.js';
