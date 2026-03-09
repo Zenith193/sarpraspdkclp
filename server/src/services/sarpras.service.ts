@@ -1,7 +1,7 @@
 import { db } from '../db/index.js';
 import { sarpras, sarprasFoto, sekolah } from '../db/schema/index.js';
 import { eq, ilike, and, sql } from 'drizzle-orm';
-import { deleteGDriveFile } from '../utils/googleDriveClient.js';
+import { queueGDriveDelete } from '../utils/uploadQueue.js';
 
 export const sarprasService = {
     async list(filters: { sekolahId?: number; kecamatan?: string; jenjang?: string; kondisi?: string; verified?: string; search?: string; page?: number; limit?: number }) {
@@ -100,7 +100,7 @@ export const sarprasService = {
         // Delete GDrive files for all fotos of this sarpras
         const fotos = await db.select().from(sarprasFoto).where(eq(sarprasFoto.sarprasId, id));
         for (const f of fotos) {
-            await deleteGDriveFile(f.filePath);
+            queueGDriveDelete(f.filePath);
         }
         await db.delete(sarpras).where(eq(sarpras.id, id));
     },
@@ -125,7 +125,7 @@ export const sarprasService = {
     async removeFoto(fotoId: number) {
         // Delete GDrive file before removing DB record
         const foto = await db.select().from(sarprasFoto).where(eq(sarprasFoto.id, fotoId));
-        if (foto[0]) await deleteGDriveFile(foto[0].filePath);
+        if (foto[0]) queueGDriveDelete(foto[0].filePath);
         await db.delete(sarprasFoto).where(eq(sarprasFoto.id, fotoId));
     },
 

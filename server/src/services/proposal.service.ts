@@ -1,7 +1,7 @@
 import { db } from '../db/index.js';
 import { proposal, proposalFoto, sekolah } from '../db/schema/index.js';
 import { eq, ilike, and, sql } from 'drizzle-orm';
-import { deleteGDriveFile } from '../utils/googleDriveClient.js';
+import { queueGDriveDelete } from '../utils/uploadQueue.js';
 
 export const proposalService = {
     async list(filters: { status?: string; keranjang?: string; kecamatan?: string; jenjang?: string; sekolahId?: number; search?: string; page?: number; limit?: number }) {
@@ -42,7 +42,7 @@ export const proposalService = {
         // Delete old GDrive file if filePath is being replaced
         if (data.filePath) {
             const existing = await db.select().from(proposal).where(eq(proposal.id, id));
-            if (existing[0]) await deleteGDriveFile(existing[0].filePath);
+            if (existing[0]) queueGDriveDelete(existing[0].filePath);
         }
         const result = await db.update(proposal).set({ ...data, updatedAt: new Date() }).where(eq(proposal.id, id)).returning();
         return result[0];
@@ -51,10 +51,10 @@ export const proposalService = {
     async delete(id: number) {
         // Delete proposal PDF from GDrive
         const existing = await db.select().from(proposal).where(eq(proposal.id, id));
-        if (existing[0]) await deleteGDriveFile(existing[0].filePath);
+        if (existing[0]) queueGDriveDelete(existing[0].filePath);
         // Delete all proposal fotos from GDrive
         const fotos = await db.select().from(proposalFoto).where(eq(proposalFoto.proposalId, id));
-        for (const f of fotos) await deleteGDriveFile(f.filePath);
+        for (const f of fotos) queueGDriveDelete(f.filePath);
         await db.delete(proposal).where(eq(proposal.id, id));
     },
 
@@ -77,7 +77,7 @@ export const proposalService = {
 
     async removeFoto(fotoId: number) {
         const foto = await db.select().from(proposalFoto).where(eq(proposalFoto.id, fotoId));
-        if (foto[0]) await deleteGDriveFile(foto[0].filePath);
+        if (foto[0]) queueGDriveDelete(foto[0].filePath);
         await db.delete(proposalFoto).where(eq(proposalFoto.id, fotoId));
     },
 };
