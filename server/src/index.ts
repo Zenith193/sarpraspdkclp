@@ -446,73 +446,42 @@ app.post('/api/admin/fix-sekolah-links', requireAuth, requireRole('admin'), asyn
 });
 
 // ===== HEALTH CHECK =====
-app.get('/api/health', async (req, res) => {
-    // Normal health check
-    if (!req.query.gdrive) {
-        return res.json({ status: 'ok', timestamp: new Date().toISOString() });
-    }
-    // GDrive test (localhost only)
-    const ip = req.ip || req.socket?.remoteAddress || '';
-    if (!ip.includes('127.0.0.1') && !ip.includes('::1') && !ip.includes('::ffff:127.0.0.1')) {
-        return res.status(403).json({ error: 'localhost only' });
-    }
-    try {
-        const { google } = await import('googleapis');
-        const cid = process.env.GDRIVE_CLIENT_ID || '';
-        const cs = process.env.GDRIVE_CLIENT_SECRET || '';
-        const rt = process.env.GDRIVE_REFRESH_TOKEN || '';
-        const fid = process.env.GDRIVE_FOLDER_ID || '';
-        if (!cid || !cs || !rt) {
-            return res.json({ success: false, message: 'ENV vars missing', cid: !!cid, cs: !!cs, rt: !!rt });
+app.get('/api/health', async (req: any, res: any) => {
+    const q = req.query.gdrive;
+    if (q) {
+        // GDrive test (localhost only)
+        const ip = req.ip || req.socket?.remoteAddress || '';
+        if (!ip.includes('127.0.0.1') && !ip.includes('::1') && !ip.includes('::ffff:127.0.0.1')) {
+            return res.status(403).json({ error: 'localhost only' });
         }
-        const oauth2 = new google.auth.OAuth2(cid, cs, 'https://developers.google.com/oauthplayground');
-        oauth2.setCredentials({ refresh_token: rt });
-        const drive = google.drive({ version: 'v3', auth: oauth2 });
-        const about = await drive.about.get({ fields: 'user' });
-        const email = about.data.user?.emailAddress || 'unknown';
-        let folderName = '';
-        if (fid) {
-            const folder = await drive.files.get({ fileId: fid, fields: 'name' });
-            folderName = folder.data.name || '';
+        try {
+            const { google } = await import('googleapis');
+            const cid = process.env.GDRIVE_CLIENT_ID || '';
+            const cs = process.env.GDRIVE_CLIENT_SECRET || '';
+            const rt = process.env.GDRIVE_REFRESH_TOKEN || '';
+            const fid = process.env.GDRIVE_FOLDER_ID || '';
+            if (!cid || !cs || !rt) {
+                return res.json({ success: false, v: 2, msg: 'ENV missing', cid: !!cid, cs: !!cs, rt: !!rt });
+            }
+            const oauth2 = new google.auth.OAuth2(cid, cs, 'https://developers.google.com/oauthplayground');
+            oauth2.setCredentials({ refresh_token: rt });
+            const drive = google.drive({ version: 'v3', auth: oauth2 });
+            const about = await drive.about.get({ fields: 'user' });
+            const email = about.data.user?.emailAddress || 'unknown';
+            let folderName = '';
+            if (fid) {
+                const f = await drive.files.get({ fileId: fid, fields: 'name' });
+                folderName = f.data.name || '';
+            }
+            return res.json({ success: true, v: 2, email, folderName });
+        } catch (e: any) {
+            return res.json({ success: false, v: 2, msg: e.message });
         }
-        res.json({ success: true, email, folderName });
-    } catch (e: any) {
-        res.json({ success: false, message: e.message });
     }
+    res.json({ status: 'ok', v: 2, timestamp: new Date().toISOString() });
 });
 
-// ===== GDRIVE DIRECT TEST (localhost only, no auth) =====
-app.get('/api/gdrive-test', async (req, res) => {
-    const ip = req.ip || req.socket?.remoteAddress || '';
-    if (!ip.includes('127.0.0.1') && !ip.includes('::1') && !ip.includes('::ffff:127.0.0.1')) {
-        return res.status(403).json({ error: 'localhost only' });
-    }
-    try {
-        const { google } = await import('googleapis');
-        const cid = process.env.GDRIVE_CLIENT_ID || '';
-        const cs = process.env.GDRIVE_CLIENT_SECRET || '';
-        const rt = process.env.GDRIVE_REFRESH_TOKEN || '';
-        const fid = process.env.GDRIVE_FOLDER_ID || '';
-        console.log('[GDRIVE-TEST] env:', { cid: cid ? 'SET' : 'EMPTY', cs: cs ? 'SET' : 'EMPTY', rt: rt ? 'SET' : 'EMPTY', fid: fid || 'EMPTY' });
-        if (!cid || !cs || !rt) {
-            return res.json({ success: false, message: 'ENV vars missing', cid: !!cid, cs: !!cs, rt: !!rt });
-        }
-        const oauth2 = new google.auth.OAuth2(cid, cs, 'https://developers.google.com/oauthplayground');
-        oauth2.setCredentials({ refresh_token: rt });
-        const drive = google.drive({ version: 'v3', auth: oauth2 });
-        const about = await drive.about.get({ fields: 'user' });
-        const email = about.data.user?.emailAddress || 'unknown';
-        let folderName = 'unknown';
-        if (fid) {
-            const folder = await drive.files.get({ fileId: fid, fields: 'name' });
-            folderName = folder.data.name || 'unknown';
-        }
-        res.json({ success: true, message: 'Connected to Google Drive', email, folderName });
-    } catch (e: any) {
-        console.error('[GDRIVE-TEST] Error:', e.message);
-        res.json({ success: false, message: e.message });
-    }
-});
+
 
 // ===== ERROR HANDLER =====
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
