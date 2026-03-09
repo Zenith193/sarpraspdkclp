@@ -187,6 +187,25 @@ router.post('/gdrive/test', requireAuth, requireRole('admin'), async (_req, res)
     } catch (e: any) { res.status(500).json({ success: false, message: e.message }); }
 });
 
+// Localhost-only debug endpoint — no auth required
+router.get('/gdrive/debug-test', async (req, res) => {
+    const ip = req.ip || req.socket?.remoteAddress || '';
+    if (!ip.includes('127.0.0.1') && !ip.includes('::1') && !ip.includes('::ffff:127.0.0.1')) {
+        return res.status(403).json({ error: 'localhost only' });
+    }
+    try {
+        console.log('[GDrive DEBUG-TEST] Starting...');
+        await applyGDriveConfigFromDb();
+        console.log('[GDrive DEBUG-TEST] Config applied, calling testGDriveConnection...');
+        const result = await testGDriveConnection();
+        console.log('[GDrive DEBUG-TEST] Result:', JSON.stringify(result));
+        res.json(result);
+    } catch (e: any) {
+        console.error('[GDrive DEBUG-TEST] CRASH:', e.message, e.stack);
+        res.status(500).json({ success: false, message: e.message, stack: e.stack });
+    }
+});
+
 router.get('/gdrive/folders', requireAuth, requireRole('admin'), async (req, res) => {
     try {
         await applyGDriveConfigFromDb();
