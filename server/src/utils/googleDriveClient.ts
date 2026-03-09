@@ -389,27 +389,67 @@ export async function uploadFileToGDrive(
 
 /**
  * Delete a file from Google Drive by its file ID.
+ * Returns the parent folder ID (for cleanup) or null.
  */
-export async function deleteFromGDrive(fileId: string): Promise<boolean> {
+export async function deleteFromGDrive(fileId: string): Promise<string | null> {
     try {
         const drive = getDriveClient();
+        // Get parent folder before deleting
+        const meta = await drive.files.get({ fileId, fields: 'parents' });
+        const parentId = meta.data.parents?.[0] || null;
         await drive.files.delete({ fileId });
         console.log(`[GDrive] Deleted file: ${fileId}`);
-        return true;
+        return parentId;
     } catch (err: any) {
         console.error('[GDrive] Delete failed:', err.message);
-        return false;
+        return null;
+    }
+}
+
+/**
+ * Recursively delete empty parent folders up to the root GDrive folder.
+ */
+async function cleanupEmptyFolders(folderId: string | null): Promise<void> {
+    if (!folderId) return;
+    const config = getGDriveConfig();
+    // Don't delete the root folder
+    if (folderId === config.folderId) return;
+
+    try {
+        const drive = getDriveClient();
+        // Check if folder is empty
+        const list = await drive.files.list({
+            q: `'${folderId}' in parents and trashed = false`,
+            fields: 'files(id)',
+            pageSize: 1,
+        });
+        if (list.data.files && list.data.files.length > 0) return; // Not empty
+
+        // Get parent before deleting
+        const meta = await drive.files.get({ fileId: folderId, fields: 'parents' });
+        const parentId = meta.data.parents?.[0] || null;
+
+        await drive.files.delete({ fileId: folderId });
+        console.log(`[GDrive] Deleted empty folder: ${folderId}`);
+        folderCache.forEach((v, k) => { if (v === folderId) folderCache.delete(k); });
+
+        // Recurse up
+        await cleanupEmptyFolders(parentId);
+    } catch (err: any) {
+        console.error('[GDrive] Folder cleanup failed:', err.message);
     }
 }
 
 /**
  * Safe helper: delete a GDrive file from a path like "gdrive://fileId".
- * Does nothing if the path is not a GDrive path or GDrive is disabled.
+ * Also cleans up empty parent folders after deletion.
  */
 export async function deleteGDriveFile(filePath: string | null | undefined): Promise<void> {
     if (!filePath || !filePath.startsWith('gdrive://') || !isGDriveEnabled()) return;
     const fileId = filePath.replace('gdrive://', '');
-    await deleteFromGDrive(fileId);
+    const parentId = await deleteFromGDrive(fileId);
+    // Clean up empty folders after file deletion
+    await cleanupEmptyFolders(parentId);
 }
 
 // ==================== HELPERS ====================
