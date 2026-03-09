@@ -11,6 +11,7 @@ export const formKerusakan = pgTable('form_kerusakan', {
     masaBangunan: text('masa_bangunan'),
     fileName: text('file_name'),
     filePath: text('file_path'),
+    uploadStatus: text('upload_status').default('done'), // 'uploading' | 'done' | 'failed'
     status: text('status').default('Belum Upload'),  // Belum Upload | Menunggu Verifikasi | Diverifikasi | Ditolak
     alasanPenolakan: text('alasan_penolakan'),
     verifiedBy: text('verified_by').references(() => user.id),

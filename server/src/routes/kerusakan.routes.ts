@@ -22,7 +22,7 @@ router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadFormKerusak
     try {
         const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
         const f = req.file as any;
-        const data = { ...req.body, fileName: req.file?.originalname || null, filePath: f?.finalPath || req.file?.path || null, status: req.file ? 'Menunggu Verifikasi' : 'Belum Upload' };
+        const data = { ...req.body, fileName: req.file?.originalname || null, filePath: f?.finalPath || req.file?.path || null, uploadStatus: f?.uploadPending ? 'uploading' : 'done', status: req.file ? 'Menunggu Verifikasi' : 'Belum Upload' };
         if (isSekolah) {
             data.sekolahId = req.user!.sekolahId;
         }
@@ -44,7 +44,8 @@ router.put('/:id/upload', requireAuth, requireRole('admin', 'sekolah'), uploadFo
         }
 
         const fUp = req.file as any;
-        res.json(await kerusakanService.updateFile(id, req.file.originalname, fUp.finalPath || req.file.path));
+        const uploadStatus = fUp.uploadPending ? 'uploading' : 'done';
+        res.json(await kerusakanService.updateFile(id, req.file.originalname, fUp.finalPath || req.file.path, uploadStatus));
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {

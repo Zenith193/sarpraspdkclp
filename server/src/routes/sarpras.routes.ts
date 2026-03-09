@@ -134,6 +134,7 @@ router.post('/:id/foto', requireAuth, requireRole('admin', 'sekolah'), uploadFot
             fileSize: req.file.size,
             geoLat: req.body.geoLat ? parseFloat(req.body.geoLat) : null,
             geoLng: req.body.geoLng ? parseFloat(req.body.geoLng) : null,
+            uploadStatus: f.uploadPending ? 'uploading' : 'done',
         });
         res.status(201).json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }

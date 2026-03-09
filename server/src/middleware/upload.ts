@@ -103,14 +103,18 @@ export function forwardToNas(
             ? `${sekolah.kecamatan}/${sekolah.nama}_${sekolah.npsn}/${category}${extra.masaBangunan ? '/' + extra.masaBangunan : ''}${extra.namaRuang ? '/' + extra.namaRuang : ''}`
             : category;
 
-        // Process a single file upload
+        // Process a single file — save locally, let background queue handle GDrive
         const processFile = async (file: Express.Multer.File) => {
             try {
                 const gdriveEnabled = isGDriveEnabled();
                 if (gdriveEnabled) {
-                    const result = await uploadFileToGDrive(file.path, category, subPath);
-                    (file as any).storedAt = result.stored;
-                    (file as any).finalPath = result.path;
+                    // Save locally — background queue will upload to GDrive
+                    const localDest = getLocalDestination(category, body);
+                    const finalLocalPath = path.join(localDest, file.filename);
+                    fs.renameSync(file.path, finalLocalPath);
+                    (file as any).finalPath = finalLocalPath;
+                    (file as any).storedAt = 'local';
+                    (file as any).uploadPending = true; // Flag for route handler to set uploadStatus='uploading'
                 } else {
                     const result = await uploadToNas(file.path, category, sekolah, extra);
                     (file as any).storedAt = result.stored;
@@ -139,7 +143,7 @@ export function forwardToNas(
             }
         };
 
-        // Upload all files in parallel for speed
+        // Process all files in parallel
         await Promise.all(files.map(processFile));
 
         next();

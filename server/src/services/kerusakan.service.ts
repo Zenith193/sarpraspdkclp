@@ -23,11 +23,11 @@ export const kerusakanService = {
     async create(data: typeof formKerusakan.$inferInsert, userId: string) {
         const r = await db.insert(formKerusakan).values({ ...data, uploadedBy: userId }).returning(); return r[0];
     },
-    async updateFile(id: number, fileName: string, filePath: string) {
+    async updateFile(id: number, fileName: string, filePath: string, uploadStatus: string = 'done') {
         // Delete old GDrive file before replacing
         const existing = await db.select().from(formKerusakan).where(eq(formKerusakan.id, id));
         if (existing[0]) await deleteGDriveFile(existing[0].filePath);
-        return db.update(formKerusakan).set({ fileName, filePath, status: 'Menunggu Verifikasi', updatedAt: new Date() }).where(eq(formKerusakan.id, id)).returning();
+        return db.update(formKerusakan).set({ fileName, filePath, uploadStatus, status: 'Menunggu Verifikasi', updatedAt: new Date() }).where(eq(formKerusakan.id, id)).returning();
     },
     async delete(id: number) {
         // Delete GDrive file before removing DB record

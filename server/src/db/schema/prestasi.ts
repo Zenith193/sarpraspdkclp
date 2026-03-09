@@ -15,6 +15,7 @@ export const prestasi = pgTable('prestasi', {
     tahun: integer('tahun'),
     capaian: text('capaian'),                     // Juara 1, 2, 3, etc.
     sertifikatPath: text('sertifikat_path'),
+    uploadStatus: text('upload_status').default('done'), // 'uploading' | 'done' | 'failed'
     status: text('status').default('Menunggu Verifikasi'),
     alasanPenolakan: text('alasan_penolakan'),
     verifiedBy: text('verified_by').references(() => user.id),

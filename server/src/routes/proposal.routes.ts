@@ -108,6 +108,7 @@ router.put('/:id/upload', requireAuth, requireRole('admin', 'sekolah'), uploadPr
         const result = await proposalService.update(id, {
             fileName: req.file.originalname,
             filePath: f.finalPath || req.file.path,
+            uploadStatus: f.uploadPending ? 'uploading' : 'done',
         });
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
@@ -122,6 +123,7 @@ router.post('/:id/foto', requireAuth, requireRole('admin', 'sekolah'), uploadFot
             proposalId: Number(req.params.id),
             fileName: req.file.originalname,
             filePath: f.finalPath || req.file.path,
+            uploadStatus: f.uploadPending ? 'uploading' : 'done',
         });
         res.status(201).json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }

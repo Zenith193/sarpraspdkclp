@@ -599,6 +599,8 @@ app.listen(PORT, () => {
         RT: process.env.GDRIVE_REFRESH_TOKEN ? 'SET' : 'EMPTY',
         FID: process.env.GDRIVE_FOLDER_ID ? 'SET' : 'EMPTY',
     });
+    // Start background GDrive upload queue
+    import('./utils/uploadQueue.js').then(({ startUploadQueue }) => startUploadQueue());
 });
 
 export default app;

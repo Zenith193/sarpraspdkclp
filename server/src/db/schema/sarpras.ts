@@ -36,5 +36,6 @@ export const sarprasFoto = pgTable('sarpras_foto', {
     fileSize: integer('file_size'),
     geoLat: doublePrecision('geo_lat'),
     geoLng: doublePrecision('geo_lng'),
+    uploadStatus: text('upload_status').default('done'), // 'uploading' | 'done' | 'failed'
     createdAt: timestamp('created_at').defaultNow(),
 });

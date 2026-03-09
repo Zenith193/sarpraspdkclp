@@ -21,6 +21,7 @@ export const proposal = pgTable('proposal', {
     ranking: integer('ranking'),
     fileName: text('file_name'),
     filePath: text('file_path'),
+    uploadStatus: text('upload_status').default('done'), // 'uploading' | 'done' | 'failed'
     verifiedBy: text('verified_by').references(() => user.id),
     createdBy: text('created_by').references(() => user.id),
     createdAt: timestamp('created_at').defaultNow(),
@@ -35,5 +36,6 @@ export const proposalFoto = pgTable('proposal_foto', {
     proposalId: integer('proposal_id').notNull().references(() => proposal.id, { onDelete: 'cascade' }),
     fileName: text('file_name').notNull(),
     filePath: text('file_path').notNull(),
+    uploadStatus: text('upload_status').default('done'),
     createdAt: timestamp('created_at').defaultNow(),
 });
