@@ -1,6 +1,7 @@
 import { db } from '../db/index.js';
 import { bast, bastTemplate, matrikKegiatan } from '../db/schema/index.js';
 import { eq } from 'drizzle-orm';
+import { deleteGDriveFile } from '../utils/googleDriveClient.js';
 
 export const bastService = {
     async list() {
@@ -42,8 +43,17 @@ export const templateService = {
         return result[0];
     },
     async update(id: number, data: Partial<typeof bastTemplate.$inferInsert>) {
+        // Delete old GDrive file if replacing
+        if (data.filePath) {
+            const existing = await db.select().from(bastTemplate).where(eq(bastTemplate.id, id));
+            if (existing[0]) await deleteGDriveFile(existing[0].filePath);
+        }
         const result = await db.update(bastTemplate).set({ ...data, updatedAt: new Date() }).where(eq(bastTemplate.id, id)).returning();
         return result[0];
     },
-    async delete(id: number) { await db.delete(bastTemplate).where(eq(bastTemplate.id, id)); },
+    async delete(id: number) {
+        const existing = await db.select().from(bastTemplate).where(eq(bastTemplate.id, id));
+        if (existing[0]) await deleteGDriveFile(existing[0].filePath);
+        await db.delete(bastTemplate).where(eq(bastTemplate.id, id));
+    },
 };

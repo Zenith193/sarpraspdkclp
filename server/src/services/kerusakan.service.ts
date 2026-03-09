@@ -1,6 +1,7 @@
 import { db } from '../db/index.js';
 import { formKerusakan, sekolah } from '../db/schema/index.js';
 import { eq, and, sql, notInArray, isNotNull } from 'drizzle-orm';
+import { deleteGDriveFile } from '../utils/googleDriveClient.js';
 
 export const kerusakanService = {
     async list(filters: { sekolahId?: number; search?: string; page?: number; limit?: number }) {
@@ -23,9 +24,17 @@ export const kerusakanService = {
         const r = await db.insert(formKerusakan).values({ ...data, uploadedBy: userId }).returning(); return r[0];
     },
     async updateFile(id: number, fileName: string, filePath: string) {
+        // Delete old GDrive file before replacing
+        const existing = await db.select().from(formKerusakan).where(eq(formKerusakan.id, id));
+        if (existing[0]) await deleteGDriveFile(existing[0].filePath);
         return db.update(formKerusakan).set({ fileName, filePath, status: 'Menunggu Verifikasi', updatedAt: new Date() }).where(eq(formKerusakan.id, id)).returning();
     },
-    async delete(id: number) { await db.delete(formKerusakan).where(eq(formKerusakan.id, id)); },
+    async delete(id: number) {
+        // Delete GDrive file before removing DB record
+        const existing = await db.select().from(formKerusakan).where(eq(formKerusakan.id, id));
+        if (existing[0]) await deleteGDriveFile(existing[0].filePath);
+        await db.delete(formKerusakan).where(eq(formKerusakan.id, id));
+    },
     async verify(id: number, userId: string) { return db.update(formKerusakan).set({ status: 'Diverifikasi', verifiedBy: userId, updatedAt: new Date() }).where(eq(formKerusakan.id, id)).returning(); },
     async reject(id: number, userId: string, alasan: string) { return db.update(formKerusakan).set({ status: 'Ditolak', verifiedBy: userId, alasanPenolakan: alasan, updatedAt: new Date() }).where(eq(formKerusakan.id, id)).returning(); },
     async unverify(id: number) { return db.update(formKerusakan).set({ status: 'Menunggu Verifikasi', verifiedBy: null, updatedAt: new Date() }).where(eq(formKerusakan.id, id)).returning(); },

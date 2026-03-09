@@ -1,6 +1,7 @@
 import { db } from '../db/index.js';
 import { prestasi, prestasiPointRule, sekolah } from '../db/schema/index.js';
 import { eq, ilike, and, sql } from 'drizzle-orm';
+import { deleteGDriveFile } from '../utils/googleDriveClient.js';
 
 export const prestasiService = {
     async list(filters: { sekolahId?: number; search?: string; page?: number; limit?: number }) {
@@ -25,7 +26,11 @@ export const prestasiService = {
         const result = await db.update(prestasi).set({ ...data, updatedAt: new Date() }).where(eq(prestasi.id, id)).returning();
         return result[0];
     },
-    async delete(id: number) { await db.delete(prestasi).where(eq(prestasi.id, id)); },
+    async delete(id: number) {
+        const existing = await db.select().from(prestasi).where(eq(prestasi.id, id));
+        if (existing[0]) await deleteGDriveFile(existing[0].sertifikatPath);
+        await db.delete(prestasi).where(eq(prestasi.id, id));
+    },
 
     async verify(id: number, userId: string) {
         return db.update(prestasi).set({ status: 'Diverifikasi', verifiedBy: userId, updatedAt: new Date() }).where(eq(prestasi.id, id)).returning();

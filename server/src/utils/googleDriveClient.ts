@@ -385,6 +385,33 @@ export async function uploadFileToGDrive(
     }
 }
 
+// ==================== DELETE ====================
+
+/**
+ * Delete a file from Google Drive by its file ID.
+ */
+export async function deleteFromGDrive(fileId: string): Promise<boolean> {
+    try {
+        const drive = getDriveClient();
+        await drive.files.delete({ fileId });
+        console.log(`[GDrive] Deleted file: ${fileId}`);
+        return true;
+    } catch (err: any) {
+        console.error('[GDrive] Delete failed:', err.message);
+        return false;
+    }
+}
+
+/**
+ * Safe helper: delete a GDrive file from a path like "gdrive://fileId".
+ * Does nothing if the path is not a GDrive path or GDrive is disabled.
+ */
+export async function deleteGDriveFile(filePath: string | null | undefined): Promise<void> {
+    if (!filePath || !filePath.startsWith('gdrive://') || !isGDriveEnabled()) return;
+    const fileId = filePath.replace('gdrive://', '');
+    await deleteFromGDrive(fileId);
+}
+
 // ==================== HELPERS ====================
 
 function getMimeType(filename: string): string {
