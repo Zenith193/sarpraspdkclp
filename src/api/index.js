@@ -24,7 +24,7 @@ export const sarprasApi = {
     verify: (id) => api.post(`/sarpras/${id}/verify`),
     unverify: (id) => api.post(`/sarpras/${id}/unverify`),
     addFoto: (id, formData) => api.upload(`/sarpras/${id}/foto`, formData),
-    removeFoto: (fotoId) => api.delete(`/sarpras/foto/${fotoId}`),
+    removeFoto: (sarprasId, fotoId) => api.delete(`/sarpras/${sarprasId}/foto/${fotoId}`),
     stats: () => api.get('/sarpras/stats'),
 };
 

@@ -47,6 +47,8 @@ const DataSarpras = ({ readOnly = false }) => {
 
     // Delete Confirmation State
     const [deleteConfirm, setDeleteConfirm] = useState(null);
+    // Track deleted photo IDs during edit (to delete from server on save)
+    const [deletedPhotoIds, setDeletedPhotoIds] = useState([]);
 
     // Export & Filter panel
     const [showExport, setShowExport] = useState(false);
@@ -282,13 +284,23 @@ const DataSarpras = ({ readOnly = false }) => {
         e.target.value = '';
     };
 
-    const removePhoto = (idx) => setFormPhotos(prev => prev.filter((_, i) => i !== idx));
+    const removePhoto = (idx) => {
+        setFormPhotos(prev => {
+            const removed = prev[idx];
+            // If this is an existing server photo (has id), track it for deletion
+            if (removed && removed.id && editItem) {
+                setDeletedPhotoIds(ids => [...ids, removed.id]);
+            }
+            return prev.filter((_, i) => i !== idx);
+        });
+    };
 
     // ===== FORM HANDLERS =====
     const resetForm = () => {
         setFormSekolah('');
         setFormData({ masaBangunan: 'A', jenisPrasarana: JENIS_PRASARANA[0], namaRuang: '', lantai: 1, panjang: '', lebar: '', kondisi: KONDISI[0], keterangan: '' });
         setFormPhotos([]);
+        setDeletedPhotoIds([]);
     };
 
     const handleSave = async () => {
@@ -317,6 +329,16 @@ const DataSarpras = ({ readOnly = false }) => {
                 };
                 await sarprasApi.update(editItem.id, updateData);
 
+                // Delete removed photos from server first
+                for (const fotoId of deletedPhotoIds) {
+                    try {
+                        await sarprasApi.removeFoto(editItem.id, fotoId);
+                    } catch (e) {
+                        console.warn('Failed to delete photo', fotoId, e);
+                    }
+                }
+
+                // Then upload new photos (only base64 data URLs)
                 for (const photo of formPhotos) {
                     if (photo.url && photo.url.startsWith('data:')) {
                         const fData = new FormData();
@@ -370,6 +392,7 @@ const DataSarpras = ({ readOnly = false }) => {
         setFormSekolah(item.namaSekolah);
         setFormData({ masaBangunan: item.masaBangunan, jenisPrasarana: item.jenisPrasarana, namaRuang: item.namaRuang, lantai: item.lantai, panjang: item.panjang, lebar: item.lebar, kondisi: item.kondisi, keterangan: item.keterangan });
         setFormPhotos(item.foto || []);
+        setDeletedPhotoIds([]);
         setShowAddModal(true);
     };
 
