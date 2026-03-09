@@ -80,10 +80,13 @@ export function forwardToNas(
     category: 'sarpras' | 'proposal' | 'bast' | 'kerusakan' | 'prestasi' | 'kop-sekolah' | 'template' | 'backup'
 ) {
     return async (req: any, _res: any, next: any) => {
-        if (!req.files && !req.file) return next();
+        console.log('[UPLOAD] forwardToNas called, category:', category);
+        console.log('[UPLOAD] req.files:', req.files?.length || 0, 'req.file:', !!req.file);
+        if (!req.files && !req.file) { console.log('[UPLOAD] No files found, skipping'); return next(); }
 
         const files: Express.Multer.File[] = req.file ? [req.file] : (req.files as Express.Multer.File[] || []);
         const body = req.body || {};
+        console.log('[UPLOAD] Processing', files.length, 'files. Body keys:', Object.keys(body));
 
         // Build sekolah info from request body
         const sekolah: SekolahInfo | undefined =
@@ -104,25 +107,34 @@ export function forwardToNas(
 
         // Forward each file to storage
         for (const file of files) {
+            console.log('[UPLOAD] File:', file.filename, 'at:', file.path, 'exists:', fs.existsSync(file.path));
             try {
                 // Priority: Google Drive > NAS > Local
-                if (isGDriveEnabled()) {
+                const gdriveEnabled = isGDriveEnabled();
+                console.log('[UPLOAD] GDrive enabled:', gdriveEnabled);
+                if (gdriveEnabled) {
+                    console.log('[UPLOAD] Uploading to GDrive, subPath:', subPath);
                     const result = await uploadFileToGDrive(file.path, category, subPath);
+                    console.log('[UPLOAD] GDrive result:', result);
                     (file as any).storedAt = result.stored;
                     (file as any).finalPath = result.path;
                 } else {
+                    console.log('[UPLOAD] NAS/Local path');
                     const result = await uploadToNas(file.path, category, sekolah, extra);
                     (file as any).storedAt = result.stored;
                     (file as any).nasPath = result.path;
+                    console.log('[UPLOAD] NAS result:', result);
 
                     if (result.stored === 'nas') {
                         (file as any).finalPath = result.path;
                     } else {
                         // NAS disabled or failed — move from temp to local
                         const localDest = getLocalDestination(category, body);
+                        console.log('[UPLOAD] Moving to local:', localDest);
                         const finalLocalPath = path.join(localDest, file.filename);
                         fs.renameSync(file.path, finalLocalPath);
                         (file as any).finalPath = finalLocalPath;
+                        console.log('[UPLOAD] Moved to:', finalLocalPath);
                     }
                 }
             } catch (err) {

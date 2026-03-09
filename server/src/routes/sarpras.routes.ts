@@ -50,17 +50,22 @@ router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadFotos.array
         const item = await sarprasService.create(req.body, req.user!.id);
         // Save uploaded fotos
         if (req.files && Array.isArray(req.files)) {
+            console.log('[SARPRAS] Saving', req.files.length, 'fotos for item', item.id);
             for (const file of req.files) {
                 const f = file as any;
+                const filePath = f.finalPath || file.path;
+                console.log('[SARPRAS] Foto:', file.originalname, 'finalPath:', f.finalPath, 'file.path:', file.path, 'saving:', filePath);
                 await sarprasService.addFoto(item.id, {
                     sarprasId: item.id,
                     fileName: file.originalname,
-                    filePath: f.finalPath || file.path,
+                    filePath: filePath,
                     fileSize: file.size,
                     geoLat: req.body[`geo_lat_${file.originalname}`] ? parseFloat(req.body[`geo_lat_${file.originalname}`]) : null,
                     geoLng: req.body[`geo_lng_${file.originalname}`] ? parseFloat(req.body[`geo_lng_${file.originalname}`]) : null,
                 });
             }
+        } else {
+            console.log('[SARPRAS] No files in req.files');
         }
         res.status(201).json(item);
         logActivity(req, 'Tambah Sarpras', `Menambahkan data sarpras: ${req.body.namaRuang || 'N/A'}`);
