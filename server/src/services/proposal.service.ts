@@ -39,6 +39,11 @@ export const proposalService = {
     },
 
     async update(id: number, data: Partial<typeof proposal.$inferInsert>) {
+        // Delete old GDrive file if filePath is being replaced
+        if (data.filePath) {
+            const existing = await db.select().from(proposal).where(eq(proposal.id, id));
+            if (existing[0]) await deleteGDriveFile(existing[0].filePath);
+        }
         const result = await db.update(proposal).set({ ...data, updatedAt: new Date() }).where(eq(proposal.id, id)).returning();
         return result[0];
     },
