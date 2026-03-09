@@ -159,12 +159,16 @@ router.get('/gdrive', requireAuth, requireRole('admin'), async (_req, res) => {
 router.put('/gdrive', requireAuth, requireRole('admin'), async (req, res) => {
     try {
         console.log('[GDrive] PUT body keys:', Object.keys(req.body));
+
+        // Load existing config to preserve secrets the frontend doesn't send back
+        const existing = await settingsService.get('gdrive_config') || {};
+
         const config = {
             enabled: req.body.enabled ?? false,
-            clientId: req.body.clientId || '',
-            clientSecret: req.body.clientSecret || '',
-            refreshToken: req.body.refreshToken || '',
-            folderId: req.body.folderId || '',
+            clientId: req.body.clientId || existing.clientId || '',
+            clientSecret: req.body.clientSecret?.trim() || existing.clientSecret || '',
+            refreshToken: req.body.refreshToken?.trim() || existing.refreshToken || '',
+            folderId: req.body.folderId || existing.folderId || '',
         };
         console.log('[GDrive] Saving:', { ...config, clientSecret: config.clientSecret ? 'SET' : 'EMPTY', refreshToken: config.refreshToken ? 'SET' : 'EMPTY' });
 
