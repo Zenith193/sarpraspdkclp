@@ -454,6 +454,12 @@ app.listen(PORT, () => {
     console.log(`🚀 SPIDOL API running at http://localhost:${PORT}`);
     console.log(`📦 Auth: http://localhost:${PORT}/api/auth`);
     console.log(`💾 Health: http://localhost:${PORT}/api/health`);
+    console.log(`🔑 ENV GDRIVE:`, {
+        CID: process.env.GDRIVE_CLIENT_ID ? 'SET' : 'EMPTY',
+        CS: process.env.GDRIVE_CLIENT_SECRET ? 'SET' : 'EMPTY',
+        RT: process.env.GDRIVE_REFRESH_TOKEN ? 'SET' : 'EMPTY',
+        FID: process.env.GDRIVE_FOLDER_ID ? 'SET' : 'EMPTY',
+    });
 });
 
 export default app;

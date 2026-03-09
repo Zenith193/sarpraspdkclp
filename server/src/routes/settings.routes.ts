@@ -115,21 +115,30 @@ async function applyGDriveConfigFromDb() {
             return;
         }
 
+        // Merge: env vars take priority over DB values
+        const envCid = process.env.GDRIVE_CLIENT_ID || '';
+        const envCs = process.env.GDRIVE_CLIENT_SECRET || '';
+        const envRt = process.env.GDRIVE_REFRESH_TOKEN || '';
+        const envFid = process.env.GDRIVE_FOLDER_ID || '';
+
+        const merged = {
+            enabled: (envCid && envCs && envRt && envFid) ? true : (saved.enabled ?? false),
+            clientId: envCid || saved.clientId || '',
+            clientSecret: envCs || saved.clientSecret || '',
+            refreshToken: envRt || saved.refreshToken || '',
+            folderId: envFid || saved.folderId || '',
+        };
+
         console.log('[GDrive] Config:', {
-            enabled: saved.enabled,
-            clientId: saved.clientId ? 'SET' : 'EMPTY',
-            clientSecret: saved.clientSecret ? 'SET' : 'EMPTY',
-            refreshToken: saved.refreshToken ? 'SET' : 'EMPTY',
-            folderId: saved.folderId || ''
+            enabled: merged.enabled,
+            clientId: merged.clientId ? 'SET' : 'EMPTY',
+            clientSecret: merged.clientSecret ? 'SET' : 'EMPTY',
+            refreshToken: merged.refreshToken ? 'SET' : 'EMPTY',
+            folderId: merged.folderId || '',
+            source: envCid ? 'ENV+DB' : 'DB',
         });
 
-        setGDriveRuntimeConfig({
-            enabled: saved.enabled ?? false,
-            clientId: saved.clientId || '',
-            clientSecret: saved.clientSecret || '',
-            refreshToken: saved.refreshToken || '',
-            folderId: saved.folderId || '',
-        });
+        setGDriveRuntimeConfig(merged);
     } catch (e) { console.error('[GDrive] applyConfig error:', e); }
 }
 
