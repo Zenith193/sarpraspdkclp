@@ -8,6 +8,8 @@
  */
 import { db } from '../db/index.js';
 import { sarprasFoto, formKerusakan, prestasi, proposal, proposalFoto } from '../db/schema/index.js';
+import { sarpras } from '../db/schema/sarpras.js';
+import { sekolah } from '../db/schema/sekolah.js';
 import { eq } from 'drizzle-orm';
 import { isGDriveEnabled } from '../utils/googleDriveClient.js';
 import fs from 'fs';
@@ -70,7 +72,7 @@ async function processUploadQueue() {
 
     const { uploadFileToGDrive } = await getGDriveUtils();
 
-    // 1. sarpras_foto
+    // 1. sarpras_foto — build full folder path: kecamatan/namaSekolah_npsn/sarpras/masaBangunan/namaRuang
     const pendingFotos = await db.select().from(sarprasFoto).where(eq(sarprasFoto.uploadStatus, 'uploading')).limit(5);
     for (const foto of pendingFotos) {
         if (!foto.filePath || !fs.existsSync(foto.filePath)) {
@@ -78,11 +80,24 @@ async function processUploadQueue() {
             continue;
         }
         try {
-            const result = await uploadFileToGDrive(foto.filePath, 'sarpras', `sarpras/${foto.sarprasId}`);
+            // Look up sarpras + sekolah for folder hierarchy
+            const sarprasRow = await db.select().from(sarpras).where(eq(sarpras.id, foto.sarprasId));
+            let subPath = 'sarpras';
+            if (sarprasRow[0]) {
+                const s = sarprasRow[0];
+                const sekolahRow = await db.select().from(sekolah).where(eq(sekolah.id, s.sekolahId));
+                const sch = sekolahRow[0];
+                if (sch) {
+                    subPath = `${sch.kecamatan || 'unknown'}/${sch.nama}_${sch.npsn}/sarpras`;
+                }
+                if (s.masaBangunan) subPath += `/${s.masaBangunan}`;
+                if (s.namaRuang) subPath += `/${s.namaRuang}`;
+            }
+            const result = await uploadFileToGDrive(foto.filePath, 'sarpras', subPath);
             const oldPath = foto.filePath;
             await db.update(sarprasFoto).set({ filePath: result.path, uploadStatus: 'done' }).where(eq(sarprasFoto.id, foto.id));
             try { fs.unlinkSync(oldPath); } catch { }
-            console.log(`[Queue] Upload sarpras_foto #${foto.id} ✅`);
+            console.log(`[Queue] Upload sarpras_foto #${foto.id} → ${subPath} ✅`);
         } catch (e: any) {
             console.error(`[Queue] Upload sarpras_foto #${foto.id} failed:`, e.message);
             await db.update(sarprasFoto).set({ uploadStatus: 'failed' }).where(eq(sarprasFoto.id, foto.id));
@@ -97,11 +112,17 @@ async function processUploadQueue() {
             continue;
         }
         try {
-            const result = await uploadFileToGDrive(item.filePath, 'kerusakan', `kerusakan/${item.sekolahId}`);
+            // Look up sekolah for folder path
+            let subPath = `kerusakan/${item.sekolahId}`;
+            if (item.sekolahId) {
+                const sch = await db.select().from(sekolah).where(eq(sekolah.id, item.sekolahId));
+                if (sch[0]) subPath = `${sch[0].kecamatan || 'unknown'}/${sch[0].nama}_${sch[0].npsn}/kerusakan`;
+            }
+            const result = await uploadFileToGDrive(item.filePath, 'kerusakan', subPath);
             const oldPath = item.filePath;
             await db.update(formKerusakan).set({ filePath: result.path, uploadStatus: 'done' }).where(eq(formKerusakan.id, item.id));
             try { fs.unlinkSync(oldPath); } catch { }
-            console.log(`[Queue] Upload kerusakan #${item.id} ✅`);
+            console.log(`[Queue] Upload kerusakan #${item.id} → ${subPath} ✅`);
         } catch (e: any) {
             console.error(`[Queue] Upload kerusakan #${item.id} failed:`, e.message);
             await db.update(formKerusakan).set({ uploadStatus: 'failed' }).where(eq(formKerusakan.id, item.id));
@@ -116,11 +137,17 @@ async function processUploadQueue() {
             continue;
         }
         try {
-            const result = await uploadFileToGDrive(item.sertifikatPath, 'prestasi', `prestasi/${item.sekolahId}`);
+            // Look up sekolah for folder path
+            let subPath = `prestasi/${item.sekolahId}`;
+            if (item.sekolahId) {
+                const sch = await db.select().from(sekolah).where(eq(sekolah.id, item.sekolahId));
+                if (sch[0]) subPath = `${sch[0].kecamatan || 'unknown'}/${sch[0].nama}_${sch[0].npsn}/prestasi`;
+            }
+            const result = await uploadFileToGDrive(item.sertifikatPath, 'prestasi', subPath);
             const oldPath = item.sertifikatPath;
             await db.update(prestasi).set({ sertifikatPath: result.path, uploadStatus: 'done' }).where(eq(prestasi.id, item.id));
             try { fs.unlinkSync(oldPath); } catch { }
-            console.log(`[Queue] Upload prestasi #${item.id} ✅`);
+            console.log(`[Queue] Upload prestasi #${item.id} → ${subPath} ✅`);
         } catch (e: any) {
             console.error(`[Queue] Upload prestasi #${item.id} failed:`, e.message);
             await db.update(prestasi).set({ uploadStatus: 'failed' }).where(eq(prestasi.id, item.id));
@@ -135,11 +162,16 @@ async function processUploadQueue() {
             continue;
         }
         try {
-            const result = await uploadFileToGDrive(item.filePath, 'proposal', `proposal/${item.sekolahId}`);
+            let subPath = `proposal/${item.sekolahId}`;
+            if (item.sekolahId) {
+                const sch = await db.select().from(sekolah).where(eq(sekolah.id, item.sekolahId));
+                if (sch[0]) subPath = `${sch[0].kecamatan || 'unknown'}/${sch[0].nama}_${sch[0].npsn}/proposal`;
+            }
+            const result = await uploadFileToGDrive(item.filePath, 'proposal', subPath);
             const oldPath = item.filePath;
             await db.update(proposal).set({ filePath: result.path, uploadStatus: 'done' }).where(eq(proposal.id, item.id));
             try { fs.unlinkSync(oldPath); } catch { }
-            console.log(`[Queue] Upload proposal #${item.id} ✅`);
+            console.log(`[Queue] Upload proposal #${item.id} → ${subPath} ✅`);
         } catch (e: any) {
             console.error(`[Queue] Upload proposal #${item.id} failed:`, e.message);
             await db.update(proposal).set({ uploadStatus: 'failed' }).where(eq(proposal.id, item.id));
@@ -154,11 +186,18 @@ async function processUploadQueue() {
             continue;
         }
         try {
-            const result = await uploadFileToGDrive(item.filePath, 'proposal', `proposal/${item.proposalId}`);
+            // Look up proposal → sekolah for folder path
+            let subPath = `proposal/${item.proposalId}`;
+            const propRow = await db.select().from(proposal).where(eq(proposal.id, item.proposalId));
+            if (propRow[0]?.sekolahId) {
+                const sch = await db.select().from(sekolah).where(eq(sekolah.id, propRow[0].sekolahId));
+                if (sch[0]) subPath = `${sch[0].kecamatan || 'unknown'}/${sch[0].nama}_${sch[0].npsn}/proposal`;
+            }
+            const result = await uploadFileToGDrive(item.filePath, 'proposal', subPath);
             const oldPath = item.filePath;
             await db.update(proposalFoto).set({ filePath: result.path, uploadStatus: 'done' }).where(eq(proposalFoto.id, item.id));
             try { fs.unlinkSync(oldPath); } catch { }
-            console.log(`[Queue] Upload proposal_foto #${item.id} ✅`);
+            console.log(`[Queue] Upload proposal_foto #${item.id} → ${subPath} ✅`);
         } catch (e: any) {
             console.error(`[Queue] Upload proposal_foto #${item.id} failed:`, e.message);
             await db.update(proposalFoto).set({ uploadStatus: 'failed' }).where(eq(proposalFoto.id, item.id));
