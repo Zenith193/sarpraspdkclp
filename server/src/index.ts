@@ -1,4 +1,13 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
+
+// Explicitly load .env from the server directory (PM2 bash wrapper may change CWD)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const envPath = resolve(__dirname, '..', '.env');
+const dotenvResult = dotenv.config({ path: envPath });
+console.log(`[dotenv] Loaded from: ${envPath} (${dotenvResult.error ? 'ERROR: ' + dotenvResult.error.message : 'OK, ' + Object.keys(dotenvResult.parsed || {}).length + ' vars'})`);
 import express from 'express';
 import cors from 'cors';
 import { toNodeHandler, fromNodeHeaders } from 'better-auth/node';
