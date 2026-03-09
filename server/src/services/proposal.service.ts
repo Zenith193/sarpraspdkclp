@@ -57,4 +57,13 @@ export const proposalService = {
     async updateRanking(id: number, ranking: number, bintang: number) {
         return db.update(proposal).set({ ranking, bintang, updatedAt: new Date() }).where(eq(proposal.id, id)).returning();
     },
+
+    async addFoto(proposalId: number, data: typeof proposalFoto.$inferInsert) {
+        const result = await db.insert(proposalFoto).values({ ...data, proposalId }).returning();
+        return result[0];
+    },
+
+    async removeFoto(fotoId: number) {
+        await db.delete(proposalFoto).where(eq(proposalFoto.id, fotoId));
+    },
 };

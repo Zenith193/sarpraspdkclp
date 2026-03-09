@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { proposalService } from '../services/proposal.service.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { uploadFotos, forwardToNas } from '../middleware/upload.js';
 
 const router = Router();
 
@@ -98,4 +99,26 @@ router.put('/:id/ranking', requireAuth, requireRole('admin', 'verifikator'), asy
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// ===== PROPOSAL FOTO UPLOAD =====
+router.post('/:id/foto', requireAuth, requireRole('admin', 'sekolah'), uploadFotos.single('foto'), forwardToNas('proposal'), async (req, res) => {
+    try {
+        if (!req.file) { res.status(400).json({ error: 'No file uploaded' }); return; }
+        const f = req.file as any;
+        const result = await proposalService.addFoto(Number(req.params.id), {
+            proposalId: Number(req.params.id),
+            fileName: req.file.originalname,
+            filePath: f.finalPath || req.file.path,
+        });
+        res.status(201).json(result);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.delete('/:id/foto/:fotoId', requireAuth, requireRole('admin', 'sekolah'), async (req, res) => {
+    try {
+        await proposalService.removeFoto(Number(req.params.fotoId));
+        res.json({ success: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 export default router;
+

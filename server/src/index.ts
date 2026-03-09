@@ -212,6 +212,16 @@ app.get('/api/file/prestasi/:id', async (req, res) => {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// ===== PROPOSAL FOTO PROXY =====
+app.get('/api/file/proposal/:fotoId', async (req, res) => {
+    try {
+        const { proposalFoto } = await import('./db/schema/index.js');
+        const result = await db.select().from(proposalFoto).where(eq(proposalFoto.id, Number(req.params.fotoId)));
+        if (!result[0] || !result[0].filePath) { res.status(404).json({ error: 'File not found' }); return; }
+        await serveFileFromPath(result[0].filePath, res);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 // ===== CUSTOM NPSN LOGIN (sekolah only, no password) =====
 import { db } from './db/index.js';
 import { sekolah, user, account, session as sessionTable } from './db/schema/index.js';

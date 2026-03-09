@@ -10,7 +10,7 @@
  */
 import 'dotenv/config';
 import { db } from '../db/index.js';
-import { sarprasFoto, formKerusakan, prestasi } from '../db/schema/index.js';
+import { sarprasFoto, formKerusakan, prestasi, proposalFoto } from '../db/schema/index.js';
 import { eq, sql } from 'drizzle-orm';
 import { uploadToGDrive, isGDriveEnabled } from '../utils/googleDriveClient.js';
 import fs from 'fs';
@@ -110,6 +110,37 @@ async function migrate() {
             if (result.success) {
                 await db.update(prestasi).set({ sertifikatPath: result.path }).where(eq(prestasi.id, item.id));
                 console.log(`   ✅ ID ${item.id}: → ${result.fileId}`);
+                try { fs.unlinkSync(filePath); } catch { /* ignore */ }
+                migrated++;
+            } else {
+                console.log(`   ❌ ID ${item.id}: Upload failed`);
+                failed++;
+            }
+        } catch (e: any) {
+            console.log(`   ❌ ID ${item.id}: ${e.message}`);
+            failed++;
+        }
+    }
+
+    // ===== 4. Migrate proposal_foto =====
+    console.log('\n📄 Migrating proposal_foto...');
+    const proposalFotos = await db.select().from(proposalFoto).where(
+        sql`${proposalFoto.filePath} NOT LIKE 'gdrive://%'`
+    );
+    console.log(`   Found ${proposalFotos.length} files to migrate`);
+
+    for (const item of proposalFotos) {
+        const filePath = item.filePath || '';
+        if (!filePath || !fs.existsSync(filePath)) {
+            console.log(`   ⏭ ID ${item.id}: File not found at ${filePath}`);
+            skipped++;
+            continue;
+        }
+        try {
+            const result = await uploadToGDrive(filePath, `proposal/${item.proposalId}`, item.fileName);
+            if (result.success) {
+                await db.update(proposalFoto).set({ filePath: result.path }).where(eq(proposalFoto.id, item.id));
+                console.log(`   ✅ ID ${item.id}: ${item.fileName} → ${result.fileId}`);
                 try { fs.unlinkSync(filePath); } catch { /* ignore */ }
                 migrated++;
             } else {
