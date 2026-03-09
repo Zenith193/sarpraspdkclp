@@ -5,24 +5,27 @@ import { Readable } from 'stream';
 
 /**
  * ===================================================================
- * GOOGLE DRIVE CLIENT
+ * GOOGLE DRIVE CLIENT (OAuth2)
  * ===================================================================
  *
- * Stores files in Google Drive using a Service Account.
- * Files are organized in a folder hierarchy mirroring the local structure.
+ * Stores files in Google Drive using OAuth2 refresh token.
+ * This works with consumer (free) Google accounts.
  *
  * Required:
  *   - Google Cloud project with Drive API enabled
- *   - Service Account JSON key
- *   - Shared folder in Google Drive (shared with service account email)
+ *   - OAuth2 Client ID + Client Secret
+ *   - Refresh Token (generated via OAuth Playground)
+ *   - Folder ID in Google Drive
  */
 
 // ==================== CONFIG ====================
 
 interface GDriveConfig {
     enabled: boolean;
-    credentials: any;      // Service Account JSON key contents
-    folderId: string;       // Root folder ID in Google Drive
+    clientId: string;
+    clientSecret: string;
+    refreshToken: string;
+    folderId: string;
 }
 
 let runtimeConfig: Partial<GDriveConfig> | null = null;
@@ -36,14 +39,16 @@ export function setGDriveRuntimeConfig(config: Partial<GDriveConfig>) {
 function getGDriveConfig(): GDriveConfig {
     return {
         enabled: runtimeConfig?.enabled ?? false,
-        credentials: runtimeConfig?.credentials ?? null,
+        clientId: runtimeConfig?.clientId ?? '',
+        clientSecret: runtimeConfig?.clientSecret ?? '',
+        refreshToken: runtimeConfig?.refreshToken ?? '',
         folderId: runtimeConfig?.folderId ?? '',
     };
 }
 
 export function isGDriveEnabled(): boolean {
     const cfg = getGDriveConfig();
-    return cfg.enabled && !!cfg.credentials && !!cfg.folderId;
+    return cfg.enabled && !!cfg.clientId && !!cfg.clientSecret && !!cfg.refreshToken && !!cfg.folderId;
 }
 
 // ==================== AUTH ====================
@@ -52,39 +57,34 @@ function getDriveClient(): drive_v3.Drive {
     if (driveClient) return driveClient;
 
     const cfg = getGDriveConfig();
-    if (!cfg.credentials) {
-        throw new Error('Google Drive credentials not configured');
+    if (!cfg.clientId || !cfg.clientSecret || !cfg.refreshToken) {
+        throw new Error('Google Drive OAuth2 credentials not configured');
     }
 
-    let creds = cfg.credentials;
-    if (typeof creds === 'string') {
-        try { creds = JSON.parse(creds); } catch { throw new Error('Invalid JSON credentials'); }
-    }
+    const oauth2Client = new google.auth.OAuth2(
+        cfg.clientId,
+        cfg.clientSecret,
+        'https://developers.google.com/oauthplayground'
+    );
 
-    const auth = new google.auth.GoogleAuth({
-        credentials: creds,
-        scopes: ['https://www.googleapis.com/auth/drive'],
+    oauth2Client.setCredentials({
+        refresh_token: cfg.refreshToken,
     });
 
-    driveClient = google.drive({ version: 'v3', auth });
+    driveClient = google.drive({ version: 'v3', auth: oauth2Client });
     return driveClient;
 }
 
 // ==================== FOLDER OPERATIONS ====================
 
-// Cache folder IDs to avoid repeated API calls
 const folderCache = new Map<string, string>();
 
-/**
- * Find or create a folder inside a parent folder.
- */
 async function findOrCreateFolder(parentId: string, folderName: string): Promise<string> {
     const cacheKey = `${parentId}/${folderName}`;
     if (folderCache.has(cacheKey)) return folderCache.get(cacheKey)!;
 
     const drive = getDriveClient();
 
-    // Search for existing folder
     const res = await drive.files.list({
         q: `'${parentId}' in parents and name='${folderName.replace(/'/g, "\\'")}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
         fields: 'files(id, name)',
@@ -97,7 +97,6 @@ async function findOrCreateFolder(parentId: string, folderName: string): Promise
         return id;
     }
 
-    // Create folder
     const createRes = await drive.files.create({
         requestBody: {
             name: folderName,
@@ -113,13 +112,6 @@ async function findOrCreateFolder(parentId: string, folderName: string): Promise
     return id;
 }
 
-/**
- * Ensure a full path exists in Google Drive, creating folders as needed.
- * Returns the ID of the deepest folder.
- *
- * Example: ensureGDrivePath("Cilacap_Selatan/SDN_1/sarpras/2020")
- *          → creates each folder level and returns leaf folder ID
- */
 async function ensureGDrivePath(folderPath: string): Promise<string> {
     const cfg = getGDriveConfig();
     let currentId = cfg.folderId;
@@ -134,9 +126,6 @@ async function ensureGDrivePath(folderPath: string): Promise<string> {
 
 // ==================== FILE OPERATIONS ====================
 
-/**
- * Upload a file to Google Drive.
- */
 export async function uploadToGDrive(
     localFilePath: string,
     destFolderPath: string,
@@ -146,10 +135,7 @@ export async function uploadToGDrive(
     const finalName = filename || path.basename(localFilePath);
 
     try {
-        // Ensure destination folder exists
         const folderId = await ensureGDrivePath(destFolderPath);
-
-        // Upload file
         const fileStream = fs.createReadStream(localFilePath);
         const mimeType = getMimeType(finalName);
 
@@ -180,9 +166,6 @@ export async function uploadToGDrive(
     }
 }
 
-/**
- * Download a file from Google Drive and stream it to an Express response.
- */
 export async function streamFromGDrive(fileId: string): Promise<{
     stream: Readable;
     mimeType: string;
@@ -191,13 +174,11 @@ export async function streamFromGDrive(fileId: string): Promise<{
     try {
         const drive = getDriveClient();
 
-        // Get file metadata
         const meta = await drive.files.get({
             fileId,
             fields: 'name, mimeType',
         });
 
-        // Download file content
         const res = await drive.files.get(
             { fileId, alt: 'media' },
             { responseType: 'stream' },
@@ -215,9 +196,6 @@ export async function streamFromGDrive(fileId: string): Promise<{
     }
 }
 
-/**
- * List folders in Google Drive at a given parent folder.
- */
 export async function listGDriveFolders(parentId?: string): Promise<Array<{ name: string; id: string }>> {
     const cfg = getGDriveConfig();
     const folderId = parentId || cfg.folderId;
@@ -239,9 +217,6 @@ export async function listGDriveFolders(parentId?: string): Promise<Array<{ name
     }));
 }
 
-/**
- * Test Google Drive connection.
- */
 export async function testGDriveConnection(): Promise<{
     success: boolean;
     message: string;
@@ -251,8 +226,8 @@ export async function testGDriveConnection(): Promise<{
 }> {
     const cfg = getGDriveConfig();
 
-    if (!cfg.credentials) {
-        return { success: false, message: 'Credentials belum dikonfigurasi' };
+    if (!cfg.clientId || !cfg.clientSecret || !cfg.refreshToken) {
+        return { success: false, message: 'OAuth2 credentials belum dikonfigurasi' };
     }
     if (!cfg.folderId) {
         return { success: false, message: 'Folder ID belum dikonfigurasi' };
@@ -261,10 +236,9 @@ export async function testGDriveConnection(): Promise<{
     try {
         const drive = getDriveClient();
 
-        // Check service account email
-        let creds = cfg.credentials;
-        if (typeof creds === 'string') creds = JSON.parse(creds);
-        const email = creds.client_email || 'unknown';
+        // Get user info
+        const about = await drive.about.get({ fields: 'user' });
+        const email = about.data.user?.emailAddress || 'unknown';
 
         // Try to access the root folder
         const folder = await drive.files.get({
@@ -289,9 +263,9 @@ export async function testGDriveConnection(): Promise<{
 
     } catch (err: any) {
         const msg = err.message?.includes('notFound')
-            ? 'Folder tidak ditemukan atau belum di-share ke service account'
+            ? 'Folder tidak ditemukan'
             : err.message?.includes('invalid_grant')
-                ? 'Credentials tidak valid'
+                ? 'Refresh token tidak valid — generate ulang di OAuth Playground'
                 : err.message || 'Koneksi gagal';
         return { success: false, message: msg };
     }
@@ -299,10 +273,6 @@ export async function testGDriveConnection(): Promise<{
 
 // ==================== STORAGE INTEGRATION ====================
 
-/**
- * Upload a file to Google Drive with hierarchical path.
- * Called by the upload middleware as an alternative to NAS.
- */
 export async function uploadFileToGDrive(
     localFilePath: string,
     category: string,
@@ -313,11 +283,9 @@ export async function uploadFileToGDrive(
     }
 
     try {
-        const destPath = `${category}/${subPath}`.replace(/\/+/g, '/');
-        const result = await uploadToGDrive(localFilePath, destPath);
+        const result = await uploadToGDrive(localFilePath, subPath);
 
         if (result.success) {
-            // Delete local temp file
             try { fs.unlinkSync(localFilePath); } catch { /* ignore */ }
             return { stored: 'gdrive', path: result.path };
         }

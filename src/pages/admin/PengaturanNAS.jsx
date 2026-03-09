@@ -36,7 +36,7 @@ const PengaturanNAS = () => {
     const [activeTab, setActiveTab] = useState('gdrive'); // 'nas' or 'gdrive'
 
     // Google Drive state
-    const [gdriveForm, setGdriveForm] = useState({ enabled: false, folderId: '', credentials: '' });
+    const [gdriveForm, setGdriveForm] = useState({ enabled: false, folderId: '', clientId: '', clientSecret: '', refreshToken: '' });
     const [gdriveStatus, setGdriveStatus] = useState(null);
     const [gdriveTesting, setGdriveTesting] = useState(false);
     const [gdriveSaving, setGdriveSaving] = useState(false);
@@ -49,12 +49,13 @@ const PengaturanNAS = () => {
     useEffect(() => {
         settingsApi.getGdrive().then(cfg => {
             setGdriveForm(prev => ({
+                ...prev,
                 enabled: cfg.enabled || false,
                 folderId: cfg.folderId || '',
-                credentials: '',
+                clientId: cfg.clientId || '',
             }));
-            if (cfg.hasCredentials) {
-                setGdriveStatus({ hasCredentials: true, clientEmail: cfg.clientEmail });
+            if (cfg.hasRefreshToken) {
+                setGdriveStatus({ hasRefreshToken: true });
             }
         }).catch(() => { });
     }, []);
@@ -499,15 +500,19 @@ const PengaturanNAS = () => {
                 toast.error('Folder ID wajib diisi');
                 return;
             }
+            if (gdriveForm.enabled && !gdriveForm.clientId) {
+                toast.error('Client ID wajib diisi');
+                return;
+            }
             setGdriveSaving(true);
             try {
                 const payload = {
                     enabled: gdriveForm.enabled,
                     folderId: gdriveForm.folderId,
+                    clientId: gdriveForm.clientId,
                 };
-                if (gdriveForm.credentials?.trim()) {
-                    payload.credentials = gdriveForm.credentials;
-                }
+                if (gdriveForm.clientSecret?.trim()) payload.clientSecret = gdriveForm.clientSecret;
+                if (gdriveForm.refreshToken?.trim()) payload.refreshToken = gdriveForm.refreshToken;
                 await settingsApi.setGdrive(payload);
                 toast.success('Konfigurasi Google Drive tersimpan!');
             } catch (e) {
@@ -518,18 +523,20 @@ const PengaturanNAS = () => {
         };
 
         const handleGDriveTest = async () => {
-            if (!gdriveForm.folderId && !gdriveStatus?.hasCredentials) {
+            if (!gdriveForm.folderId && !gdriveStatus?.hasRefreshToken) {
                 toast.error('Simpan konfigurasi terlebih dahulu');
                 return;
             }
             setGdriveTesting(true);
             try {
-                // Save first if there are new credentials
-                if (gdriveForm.credentials?.trim()) {
+                // Save first if there are new tokens
+                if (gdriveForm.refreshToken?.trim()) {
                     await settingsApi.setGdrive({
                         enabled: gdriveForm.enabled,
                         folderId: gdriveForm.folderId,
-                        credentials: gdriveForm.credentials,
+                        clientId: gdriveForm.clientId,
+                        clientSecret: gdriveForm.clientSecret,
+                        refreshToken: gdriveForm.refreshToken,
                     });
                 }
                 const result = await settingsApi.testGdrive();
@@ -561,7 +568,7 @@ const PengaturanNAS = () => {
                             </div>
                             <div>
                                 <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600 }}>Google Drive Storage</h3>
-                                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Simpan file ke Google Drive via Service Account</span>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Simpan file ke Google Drive via OAuth2</span>
                             </div>
                         </div>
                         <label className="toggle">
@@ -572,31 +579,50 @@ const PengaturanNAS = () => {
                     </div>
                 </div>
 
-                {/* Credentials */}
+                {/* OAuth2 Credentials */}
                 <div className="table-container" style={{ padding: 20, opacity: gdriveForm.enabled ? 1 : 0.5 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, paddingBottom: 10, borderBottom: '2px solid var(--bg-secondary)' }}>
                         <Key size={16} style={{ color: 'var(--accent-blue)' }} />
-                        <h3 style={{ fontSize: '0.9rem', fontWeight: 600, margin: 0 }}>Service Account Credentials</h3>
+                        <h3 style={{ fontSize: '0.9rem', fontWeight: 600, margin: 0 }}>OAuth2 Credentials</h3>
                     </div>
 
-                    {gdriveStatus?.hasCredentials && (
+                    {gdriveStatus?.hasRefreshToken && (
                         <div style={{
                             padding: '8px 12px', borderRadius: 8, marginBottom: 12,
                             background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.2)',
                             display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem'
                         }}>
                             <CheckCircle size={14} style={{ color: '#22c55e' }} />
-                            <span>Credentials tersimpan: <code style={{ fontSize: '0.75rem' }}>{gdriveStatus.clientEmail}</code></span>
+                            <span>Refresh Token tersimpan ✓</span>
                         </div>
                     )}
 
                     <div className="form-group">
-                        <label className="form-label">JSON Key (paste isi file JSON)</label>
-                        <textarea className="form-input" rows={4}
-                            placeholder={gdriveStatus?.hasCredentials ? 'Credentials sudah tersimpan. Paste JSON baru untuk mengganti.' : '{\n  "type": "service_account",\n  "project_id": "...",\n  ...\n}'}
-                            value={gdriveForm.credentials}
-                            onChange={e => setGdriveForm(prev => ({ ...prev, credentials: e.target.value }))}
+                        <label className="form-label">Client ID</label>
+                        <input className="form-input" placeholder="xxxx.apps.googleusercontent.com"
+                            value={gdriveForm.clientId}
+                            onChange={e => setGdriveForm(prev => ({ ...prev, clientId: e.target.value }))}
+                            style={{ fontFamily: 'monospace', fontSize: '0.8rem' }} />
+                    </div>
+
+                    <div className="form-group" style={{ marginTop: 12 }}>
+                        <label className="form-label">Client Secret</label>
+                        <input className="form-input" type="password" placeholder={gdriveStatus?.hasRefreshToken ? '(tersimpan)' : 'GOCSPX-xxxx'}
+                            value={gdriveForm.clientSecret}
+                            onChange={e => setGdriveForm(prev => ({ ...prev, clientSecret: e.target.value }))}
+                            style={{ fontFamily: 'monospace', fontSize: '0.8rem' }} />
+                    </div>
+
+                    <div className="form-group" style={{ marginTop: 12 }}>
+                        <label className="form-label">Refresh Token</label>
+                        <textarea className="form-input" rows={2}
+                            placeholder={gdriveStatus?.hasRefreshToken ? '(tersimpan — paste baru untuk mengganti)' : '1//xxxx'}
+                            value={gdriveForm.refreshToken}
+                            onChange={e => setGdriveForm(prev => ({ ...prev, refreshToken: e.target.value }))}
                             style={{ fontFamily: 'monospace', fontSize: '0.75rem', resize: 'vertical' }} />
+                        <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: 4 }}>
+                            Generate di <a href="https://developers.google.com/oauthplayground" target="_blank" rel="noopener noreferrer" style={{ color: '#4285F4' }}>OAuth Playground</a> → scope: <code>https://www.googleapis.com/auth/drive</code>
+                        </div>
                     </div>
 
                     <div className="form-group" style={{ marginTop: 12 }}>

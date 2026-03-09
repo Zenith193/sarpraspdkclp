@@ -104,7 +104,9 @@ async function applyGDriveConfigFromDb() {
         if (saved && typeof saved === 'object') {
             setGDriveRuntimeConfig({
                 enabled: saved.enabled ?? false,
-                credentials: saved.credentials || null,
+                clientId: saved.clientId || '',
+                clientSecret: saved.clientSecret || '',
+                refreshToken: saved.refreshToken || '',
                 folderId: saved.folderId || '',
             });
         }
@@ -114,30 +116,27 @@ async function applyGDriveConfigFromDb() {
 router.get('/gdrive', requireAuth, requireRole('admin'), async (_req, res) => {
     try {
         const config = await settingsService.get('gdrive_config');
-        // Don't send full credentials to frontend for security
         const safe = config ? {
             enabled: config.enabled,
             folderId: config.folderId,
-            hasCredentials: !!config.credentials,
-            clientEmail: config.credentials?.client_email || '',
+            clientId: config.clientId || '',
+            hasRefreshToken: !!config.refreshToken,
             gdriveEnabled: isGDriveEnabled(),
-        } : { enabled: false, folderId: '', hasCredentials: false, clientEmail: '', gdriveEnabled: false };
+        } : { enabled: false, folderId: '', clientId: '', hasRefreshToken: false, gdriveEnabled: false };
         res.json(safe);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 router.put('/gdrive', requireAuth, requireRole('admin'), async (req, res) => {
     try {
-        // Parse credentials if it's a string
-        let creds = req.body.credentials;
-        if (typeof creds === 'string' && creds.trim()) {
-            try { creds = JSON.parse(creds); } catch { return res.status(400).json({ error: 'Invalid JSON credentials' }); }
-        }
-
+        // Merge with existing config (don't lose refreshToken if not sent)
+        const existing = await settingsService.get('gdrive_config') || {};
         const config = {
-            enabled: req.body.enabled ?? false,
-            credentials: creds || null,
-            folderId: req.body.folderId || '',
+            enabled: req.body.enabled ?? existing.enabled ?? false,
+            clientId: req.body.clientId || existing.clientId || '',
+            clientSecret: req.body.clientSecret || existing.clientSecret || '',
+            refreshToken: req.body.refreshToken || existing.refreshToken || '',
+            folderId: req.body.folderId || existing.folderId || '',
         };
 
         const result = await settingsService.set('gdrive_config', config);
