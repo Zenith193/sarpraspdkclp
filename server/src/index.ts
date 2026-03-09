@@ -446,8 +446,39 @@ app.post('/api/admin/fix-sekolah-links', requireAuth, requireRole('admin'), asyn
 });
 
 // ===== HEALTH CHECK =====
-app.get('/api/health', (_req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+app.get('/api/health', async (req, res) => {
+    // Normal health check
+    if (!req.query.gdrive) {
+        return res.json({ status: 'ok', timestamp: new Date().toISOString() });
+    }
+    // GDrive test (localhost only)
+    const ip = req.ip || req.socket?.remoteAddress || '';
+    if (!ip.includes('127.0.0.1') && !ip.includes('::1') && !ip.includes('::ffff:127.0.0.1')) {
+        return res.status(403).json({ error: 'localhost only' });
+    }
+    try {
+        const { google } = await import('googleapis');
+        const cid = process.env.GDRIVE_CLIENT_ID || '';
+        const cs = process.env.GDRIVE_CLIENT_SECRET || '';
+        const rt = process.env.GDRIVE_REFRESH_TOKEN || '';
+        const fid = process.env.GDRIVE_FOLDER_ID || '';
+        if (!cid || !cs || !rt) {
+            return res.json({ success: false, message: 'ENV vars missing', cid: !!cid, cs: !!cs, rt: !!rt });
+        }
+        const oauth2 = new google.auth.OAuth2(cid, cs, 'https://developers.google.com/oauthplayground');
+        oauth2.setCredentials({ refresh_token: rt });
+        const drive = google.drive({ version: 'v3', auth: oauth2 });
+        const about = await drive.about.get({ fields: 'user' });
+        const email = about.data.user?.emailAddress || 'unknown';
+        let folderName = '';
+        if (fid) {
+            const folder = await drive.files.get({ fileId: fid, fields: 'name' });
+            folderName = folder.data.name || '';
+        }
+        res.json({ success: true, email, folderName });
+    } catch (e: any) {
+        res.json({ success: false, message: e.message });
+    }
 });
 
 // ===== GDRIVE DIRECT TEST (localhost only, no auth) =====
