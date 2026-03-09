@@ -37,6 +37,23 @@ export function setGDriveRuntimeConfig(config: Partial<GDriveConfig>) {
 }
 
 function getGDriveConfig(): GDriveConfig {
+    // Environment variables take priority over DB/runtime config
+    const envClientId = process.env.GDRIVE_CLIENT_ID || '';
+    const envClientSecret = process.env.GDRIVE_CLIENT_SECRET || '';
+    const envRefreshToken = process.env.GDRIVE_REFRESH_TOKEN || '';
+    const envFolderId = process.env.GDRIVE_FOLDER_ID || '';
+    const envEnabled = envClientId && envClientSecret && envRefreshToken && envFolderId;
+
+    if (envEnabled) {
+        return {
+            enabled: true,
+            clientId: envClientId,
+            clientSecret: envClientSecret,
+            refreshToken: envRefreshToken,
+            folderId: envFolderId,
+        };
+    }
+
     return {
         enabled: runtimeConfig?.enabled ?? false,
         clientId: runtimeConfig?.clientId ?? '',
