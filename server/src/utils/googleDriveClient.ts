@@ -1,7 +1,11 @@
 import { google, drive_v3 } from 'googleapis';
 import fs from 'fs';
 import path from 'path';
+import { fileURLToPath } from 'url';
 import { Readable } from 'stream';
+
+const __gdriveFilename = fileURLToPath(import.meta.url);
+const __gdriveDirname = path.dirname(__gdriveFilename);
 
 /**
  * ===================================================================
@@ -36,30 +40,75 @@ export function setGDriveRuntimeConfig(config: Partial<GDriveConfig>) {
     driveClient = null; // Reset client so it re-initializes
 }
 
+// Cache for .env file values (parsed once, reused)
+let envFileCache: Record<string, string> | null = null;
+
+function readEnvFile(): Record<string, string> {
+    if (envFileCache) return envFileCache;
+    try {
+        // Try multiple possible .env locations
+        const candidates = [
+            path.resolve(process.cwd(), '.env'),
+            path.resolve(__gdriveDirname, '..', '.env'),
+            '/var/www/sarpraspdkclp/server/.env',
+        ];
+        for (const envPath of candidates) {
+            if (fs.existsSync(envPath)) {
+                const content = fs.readFileSync(envPath, 'utf-8');
+                const vars: Record<string, string> = {};
+                content.split('\n').forEach(line => {
+                    const trimmed = line.trim();
+                    if (!trimmed || trimmed.startsWith('#')) return;
+                    const eqIdx = trimmed.indexOf('=');
+                    if (eqIdx > 0) {
+                        vars[trimmed.slice(0, eqIdx).trim()] = trimmed.slice(eqIdx + 1).trim();
+                    }
+                });
+                console.log(`[GDrive] Loaded .env fallback from: ${envPath} (${Object.keys(vars).length} vars)`);
+                envFileCache = vars;
+                return vars;
+            }
+        }
+    } catch (e) { /* ignore */ }
+    envFileCache = {};
+    return {};
+}
+
 function getGDriveConfig(): GDriveConfig {
-    // Environment variables take priority over DB/runtime config
-    const envClientId = process.env.GDRIVE_CLIENT_ID || '';
-    const envClientSecret = process.env.GDRIVE_CLIENT_SECRET || '';
-    const envRefreshToken = process.env.GDRIVE_REFRESH_TOKEN || '';
-    const envFolderId = process.env.GDRIVE_FOLDER_ID || '';
-    const envEnabled = envClientId && envClientSecret && envRefreshToken && envFolderId;
+    // 1. Environment variables (loaded by dotenv or system)
+    let clientId = process.env.GDRIVE_CLIENT_ID || '';
+    let clientSecret = process.env.GDRIVE_CLIENT_SECRET || '';
+    let refreshToken = process.env.GDRIVE_REFRESH_TOKEN || '';
+    let folderId = process.env.GDRIVE_FOLDER_ID || '';
+
+    // 2. If env vars missing, try direct .env file read (PM2 fallback)
+    if (!clientId || !clientSecret || !refreshToken) {
+        const envFile = readEnvFile();
+        clientId = clientId || envFile['GDRIVE_CLIENT_ID'] || '';
+        clientSecret = clientSecret || envFile['GDRIVE_CLIENT_SECRET'] || '';
+        refreshToken = refreshToken || envFile['GDRIVE_REFRESH_TOKEN'] || '';
+        folderId = folderId || envFile['GDRIVE_FOLDER_ID'] || '';
+    }
+
+    const envEnabled = clientId && clientSecret && refreshToken && folderId;
 
     if (envEnabled) {
         return {
             enabled: true,
-            clientId: envClientId,
-            clientSecret: envClientSecret,
-            refreshToken: envRefreshToken,
-            folderId: envFolderId,
+            clientId,
+            clientSecret,
+            refreshToken,
+            folderId,
         };
     }
 
+    // 3. Fall back to runtime config (from DB)
     return {
         enabled: runtimeConfig?.enabled ?? false,
-        clientId: runtimeConfig?.clientId ?? '',
-        clientSecret: runtimeConfig?.clientSecret ?? '',
-        refreshToken: runtimeConfig?.refreshToken ?? '',
-        folderId: runtimeConfig?.folderId ?? '',
+        clientId: runtimeConfig?.clientId || clientId,
+        clientSecret: runtimeConfig?.clientSecret || clientSecret,
+        refreshToken: runtimeConfig?.refreshToken || refreshToken,
+        folderId: runtimeConfig?.folderId || folderId,
     };
 }
 
