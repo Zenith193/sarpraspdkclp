@@ -292,8 +292,29 @@ export async function testGDriveConnection(): Promise<{
 }> {
     const cfg = getGDriveConfig();
 
+    console.log('[GDrive TEST] getGDriveConfig result:', {
+        enabled: cfg.enabled,
+        clientId: cfg.clientId ? 'SET(' + cfg.clientId.slice(0, 8) + ')' : 'EMPTY',
+        clientSecret: cfg.clientSecret ? 'SET' : 'EMPTY',
+        refreshToken: cfg.refreshToken ? 'SET(' + cfg.refreshToken.slice(0, 10) + ')' : 'EMPTY',
+        folderId: cfg.folderId || 'EMPTY',
+    });
+    console.log('[GDrive TEST] process.env check:', {
+        CID: process.env.GDRIVE_CLIENT_ID ? 'SET' : 'EMPTY',
+        CS: process.env.GDRIVE_CLIENT_SECRET ? 'SET' : 'EMPTY',
+        RT: process.env.GDRIVE_REFRESH_TOKEN ? 'SET' : 'EMPTY',
+        FID: process.env.GDRIVE_FOLDER_ID ? 'SET' : 'EMPTY',
+    });
+    console.log('[GDrive TEST] runtimeConfig:', {
+        enabled: runtimeConfig?.enabled,
+        clientId: runtimeConfig?.clientId ? 'SET' : 'EMPTY',
+        clientSecret: runtimeConfig?.clientSecret ? 'SET' : 'EMPTY',
+        refreshToken: runtimeConfig?.refreshToken ? 'SET' : 'EMPTY',
+        folderId: runtimeConfig?.folderId || 'EMPTY',
+    });
+
     if (!cfg.clientId || !cfg.clientSecret || !cfg.refreshToken) {
-        return { success: false, message: 'OAuth2 credentials belum dikonfigurasi' };
+        return { success: false, message: `Credentials belum dikonfigurasi (clientId=${!!cfg.clientId}, clientSecret=${!!cfg.clientSecret}, refreshToken=${!!cfg.refreshToken})` };
     }
     if (!cfg.folderId) {
         return { success: false, message: 'Folder ID belum dikonfigurasi' };
