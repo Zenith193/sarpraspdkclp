@@ -45,27 +45,13 @@ export const sarprasService = {
             sarpras: {
                 ...d.sarpras,
                 foto: fotos.filter(f => f.sarprasId === d.sarpras.id).map(f => {
-                    // Build URL for photo access
-                    let url = '';
-                    const rawPath = (f.filePath || '').replace(/\\/g, '/');
-
-                    // If path contains 'uploads/', serve via express.static
-                    const uploadsIdx = rawPath.indexOf('uploads/');
-                    if (uploadsIdx >= 0) {
-                        url = '/' + rawPath.substring(uploadsIdx);
-                    } else if (rawPath && !rawPath.startsWith('/spidol')) {
-                        // Local file not in uploads — try filename in fotos dir
-                        const parts = rawPath.split('/');
-                        url = '/uploads/fotos/' + parts[parts.length - 1];
-                    }
-
-                    // Always provide proxy URL as fallback
+                    // Always use proxy URL — it reads filePath from DB and serves directly
                     const proxyUrl = `/api/foto/${f.id}`;
 
                     return {
                         id: f.id,
                         name: f.fileName,
-                        url: url || proxyUrl,
+                        url: proxyUrl,
                         proxyUrl,
                         size: f.fileSize || 0,
                         geo: (f.geoLat && f.geoLng) ? { lat: f.geoLat, lng: f.geoLng } : null,
