@@ -61,6 +61,7 @@ export const bastTemplate = pgTable('bast_template', {
     deskripsi: text('deskripsi'),
     jenisCocok: text('jenis_cocok'),
     content: text('content'),
+    filePath: text('file_path'),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
 });

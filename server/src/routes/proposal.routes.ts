@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { proposalService } from '../services/proposal.service.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
-import { uploadFotos, forwardToNas } from '../middleware/upload.js';
+import { uploadFotos, uploadProposal, forwardToNas } from '../middleware/upload.js';
 
 const router = Router();
 
@@ -95,6 +95,20 @@ router.put('/:id/keranjang', requireAuth, requireRole('admin', 'verifikator'), a
 router.put('/:id/ranking', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
     try {
         const result = await proposalService.updateRanking(Number(req.params.id), req.body.ranking, req.body.bintang);
+        res.json(result);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ===== PROPOSAL PDF UPLOAD =====
+router.put('/:id/upload', requireAuth, requireRole('admin', 'sekolah'), uploadProposal.single('file'), forwardToNas('proposal'), async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        if (!req.file) { res.status(400).json({ error: 'No file uploaded' }); return; }
+        const f = req.file as any;
+        const result = await proposalService.update(id, {
+            fileName: req.file.originalname,
+            filePath: f.finalPath || req.file.path,
+        });
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });

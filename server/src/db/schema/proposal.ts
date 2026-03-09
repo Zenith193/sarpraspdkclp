@@ -19,6 +19,8 @@ export const proposal = pgTable('proposal', {
     bintang: integer('bintang').default(0),
     keranjang: text('keranjang'),
     ranking: integer('ranking'),
+    fileName: text('file_name'),
+    filePath: text('file_path'),
     verifiedBy: text('verified_by').references(() => user.id),
     createdBy: text('created_by').references(() => user.id),
     createdAt: timestamp('created_at').defaultNow(),

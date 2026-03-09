@@ -222,6 +222,26 @@ app.get('/api/file/proposal/:fotoId', async (req, res) => {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// ===== PROPOSAL PDF PROXY =====
+app.get('/api/file/proposal-doc/:id', async (req, res) => {
+    try {
+        const { proposal } = await import('./db/schema/index.js');
+        const result = await db.select().from(proposal).where(eq(proposal.id, Number(req.params.id)));
+        if (!result[0] || !result[0].filePath) { res.status(404).json({ error: 'File not found' }); return; }
+        await serveFileFromPath(result[0].filePath, res);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ===== TEMPLATE FILE PROXY =====
+app.get('/api/file/template/:id', async (req, res) => {
+    try {
+        const { bastTemplate } = await import('./db/schema/index.js');
+        const result = await db.select().from(bastTemplate).where(eq(bastTemplate.id, Number(req.params.id)));
+        if (!result[0] || !result[0].filePath) { res.status(404).json({ error: 'File not found' }); return; }
+        await serveFileFromPath(result[0].filePath, res);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 // ===== CUSTOM NPSN LOGIN (sekolah only, no password) =====
 import { db } from './db/index.js';
 import { sekolah, user, account, session as sessionTable } from './db/schema/index.js';
