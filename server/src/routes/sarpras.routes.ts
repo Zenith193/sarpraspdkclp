@@ -77,9 +77,9 @@ router.put('/:id', requireAuth, requireRole('admin', 'sekolah', 'verifikator'), 
     try {
         const id = Number(req.params.id);
         const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
+        const existing = await sarprasService.getById(id);
 
         if (isSekolah) {
-            const existing = await sarprasService.getById(id);
             if (!existing || existing.sarpras.sekolahId !== req.user!.sekolahId) {
                 res.status(403).json({ error: 'Forbidden: You can only update your own school\'s sarpras' });
                 return;
@@ -90,15 +90,21 @@ router.put('/:id', requireAuth, requireRole('admin', 'sekolah', 'verifikator'), 
 
         const result = await sarprasService.update(id, req.body);
         res.json(result);
-        logActivity(req, 'Edit Sarpras', `Mengubah data sarpras ID: ${id}`);
+        const nama = existing?.sekolahNama || '';
+        const ruang = existing?.sarpras?.namaRuang || req.body.namaRuang || '';
+        logActivity(req, 'Edit Sarpras', `Mengubah data sarpras ${nama} ${ruang}`.trim());
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
     try {
-        await sarprasService.delete(Number(req.params.id));
+        const id = Number(req.params.id);
+        const existing = await sarprasService.getById(id);
+        const nama = existing?.sekolahNama || '';
+        const ruang = existing?.sarpras?.namaRuang || '';
+        await sarprasService.delete(id);
         res.json({ success: true });
-        logActivity(req, 'Hapus Sarpras', `Menghapus data sarpras ID: ${req.params.id}`);
+        logActivity(req, 'Hapus Sarpras', `Menghapus data sarpras ${nama} ${ruang}`.trim());
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 

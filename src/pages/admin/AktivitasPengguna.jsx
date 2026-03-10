@@ -132,7 +132,7 @@ const AktivitasPengguna = () => {
             { header: 'Jenis Akun', key: 'jenisAkun' },
             { header: 'Aktivitas', key: 'aktivitas' },
             { header: 'Keterangan', key: 'keterangan' },
-            { header: 'Waktu', key: 'waktu' },
+            { header: 'Waktu', accessor: (r) => formatDateTime(r.createdAt) },
         ];
         try {
             if (format === 'excel') exportToExcel(filtered, exportCols, 'log_aktivitas');
@@ -247,7 +247,7 @@ const AktivitasPengguna = () => {
                                     <td style={{ maxWidth: 600, whiteSpace: 'pre-wrap', lineHeight: 1.5, fontSize: '0.8125rem', color: 'var(--text-primary)' }}>
                                         <span style={{ fontWeight: 600, color: 'var(--accent-blue)' }}>[{a.aktivitas}]</span> {a.keterangan}
                                     </td>
-                                    <td style={{ whiteSpace: 'nowrap', fontSize: '0.8125rem' }}>{formatDateTime(a.waktu)}</td>
+                                    <td style={{ whiteSpace: 'nowrap', fontSize: '0.8125rem' }}>{formatDateTime(a.createdAt)}</td>
                                     <td>
                                         <div style={{ display: 'flex', gap: 4 }}>
                                             <button className="btn-icon" onClick={() => handleOpenEdit(a)} title="Edit"><Edit size={16} /></button>
