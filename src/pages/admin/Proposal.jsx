@@ -11,7 +11,7 @@ import toast from 'react-hot-toast';
 import { safeStr } from '../../utils/safeStr';
 
 const INITIAL_FORM_DATA = {
-    subKegiatan: SUB_KEGIATAN[0] || '',
+    subKegiatan: SUB_KEGIATAN[0]?.nama || '',
     nilaiPengajuan: '',
     target: '',
     keterangan: '',
@@ -429,7 +429,7 @@ const Proposal = ({ readOnly = false }) => {
                             {selectedSchoolData && (<div style={{ padding: '10px 14px', background: 'rgba(59,130,246,0.06)', borderRadius: 'var(--radius-md)', marginBottom: 16, fontSize: 13, color: 'var(--text-secondary)', display: 'flex', gap: 20, flexWrap: 'wrap' }}><span><b>NPSN:</b> {safeStr(selectedSchoolData.npsn)}</span><span><b>Kecamatan:</b> {safeStr(selectedSchoolData.kecamatan)}</span><span><b>Jenjang:</b> {safeStr(selectedSchoolData.jenjang)}</span></div>)}
 
                             <div className="form-row">
-                                <div className="form-group"><label className="form-label">Sub Kegiatan</label><select className="form-select" value={formData.subKegiatan || ''} onChange={e => setFormData({ ...formData, subKegiatan: e.target.value })}>{SUB_KEGIATAN.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+                                <div className="form-group"><label className="form-label">Sub Kegiatan</label><select className="form-select" value={formData.subKegiatan || ''} onChange={e => setFormData({ ...formData, subKegiatan: e.target.value })}>{SUB_KEGIATAN.map(s => <option key={s.kode} value={s.nama}>{s.nama}</option>)}</select></div>
                                 <div className="form-group"><label className="form-label">Status</label><select className="form-select" value={formData.status || ''} onChange={e => setFormData({ ...formData, status: e.target.value })}>{STATUS_PROPOSAL.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
                             </div>
 
@@ -602,7 +602,7 @@ const Proposal = ({ readOnly = false }) => {
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                                 <div className="form-group"><label className="form-label">Nama Sekolah</label><SearchableSelect options={schoolNames} value={rekomendasiForm.namaSekolah} onChange={handleRekomendasiSchoolChange} placeholder="Cari Sekolah..." /></div>
                                 <div className="form-group"><label className="form-label">Kecamatan</label><input className="form-input" value={rekomendasiForm.kecamatan} readOnly placeholder="Otomatis terisi" /></div>
-                                <div className="form-group"><label className="form-label">Sub Kegiatan</label><select className="form-select" value={rekomendasiForm.subKegiatan} onChange={e => handleRekomendasiChange('subKegiatan', e.target.value)}><option value="">Pilih Sub Kegiatan</option>{SUB_KEGIATAN.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+                                <div className="form-group"><label className="form-label">Sub Kegiatan</label><select className="form-select" value={rekomendasiForm.subKegiatan} onChange={e => handleRekomendasiChange('subKegiatan', e.target.value)}><option value="">Pilih Sub Kegiatan</option>{SUB_KEGIATAN.map(s => <option key={s.kode} value={s.nama}>{s.nama}</option>)}</select></div>
                                 <div className="form-group"><label className="form-label">Perihal</label><input className="form-input" placeholder="Isi perihal..." value={rekomendasiForm.perihal} onChange={e => handleRekomendasiChange('perihal', e.target.value)} /></div>
                                 <div className="form-group"><label className="form-label">Jenjang</label><input className="form-input" value={rekomendasiForm.jenjang} readOnly placeholder="Otomatis terisi" /></div>
                                 <div className="form-group"><label className="form-label">Nilai (Rp)</label><input className="form-input" type="number" placeholder="Contoh: 50000000" value={rekomendasiForm.nilai} onChange={e => handleRekomendasiChange('nilai', e.target.value)} /></div>
