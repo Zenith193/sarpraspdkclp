@@ -4,56 +4,100 @@ import toast from 'react-hot-toast';
 import { templateApi } from '../../api/index';
 import { useApi } from '../../api/hooks';
 
-// ===== DATA PANDUAN VARIABEL =====
+// ===== DATA PANDUAN VARIABEL (per Menu) =====
 const GUIDE_DATA = {
-    "Paket Pekerjaan": [
-        { variable: "${KODE_PAKET}", description: "Kode paket pekerjaan" },
-        { variable: "${PEKERJAAN_JUDUL}", description: "Nama pekerjaan + nama sekolah" },
-        { variable: "${NILAI_PAGU_PAKET}", description: "Nilai pagu paket (format angka)" },
-        { variable: "${PAGU_ANGGARAN}", description: "Pagu anggaran (format angka)" },
-        { variable: "${URAIAN_PEKERJAAN}", description: "Uraian/deskripsi pekerjaan" },
-        { variable: "${LOKASI_PEKERJAAN}", description: "Lokasi pekerjaan" },
-        { variable: "${JANGKA_WAKTU}", description: "Jangka waktu pelaksanaan" },
-        { variable: "${SUMBER_DANA}", description: "Sumber dana" },
-        { variable: "${TAHUN_ANGGARAN}", description: "Tahun anggaran" },
+    "Data Sekolah": [
+        { variable: "${NAMA_SEKOLAH}", description: "Nama sekolah" },
+        { variable: "${NPSN}", description: "Nomor Pokok Sekolah Nasional" },
+        { variable: "${JENJANG}", description: "Jenjang sekolah (SD/SMP)" },
+        { variable: "${KECAMATAN}", description: "Kecamatan sekolah" },
+        { variable: "${STATUS_SEKOLAH}", description: "Status sekolah (Negeri/Swasta)" },
+        { variable: "${ALAMAT_SEKOLAH}", description: "Alamat lengkap sekolah" },
+        { variable: "${KEPALA_SEKOLAH}", description: "Nama Kepala Sekolah" },
+        { variable: "${NIP_KEPSEK}", description: "NIP Kepala Sekolah" },
+        { variable: "${NO_REK_SEKOLAH}", description: "Nomor rekening sekolah" },
+        { variable: "${NAMA_BANK_SEKOLAH}", description: "Nama bank sekolah" },
+        { variable: "${ROMBEL}", description: "Jumlah rombongan belajar" },
     ],
-    "Kontrak": [
-        { variable: "${NO_KONTRAK}", description: "Nomor kontrak/SPK" },
-        { variable: "${TANGGAL_KONTRAK}", description: "Tanggal kontrak" },
+    "Data Sarpras": [
+        { variable: "${NAMA_RUANG}", description: "Nama ruang/prasarana" },
+        { variable: "${JENIS_PRASARANA}", description: "Jenis prasarana" },
+        { variable: "${MASA_BANGUNAN}", description: "Masa/tahun bangunan" },
+        { variable: "${LANTAI}", description: "Lantai bangunan" },
+        { variable: "${PANJANG}", description: "Panjang ruang (meter)" },
+        { variable: "${LEBAR}", description: "Lebar ruang (meter)" },
+        { variable: "${LUAS}", description: "Luas ruang (m²)" },
+        { variable: "${KONDISI}", description: "Kondisi ruang (Baik/Rusak Ringan/Sedang/Berat)" },
+        { variable: "${KETERANGAN_SARPRAS}", description: "Keterangan sarpras" },
+    ],
+    "Proposal": [
+        { variable: "${SUB_KEGIATAN}", description: "Nama sub kegiatan" },
+        { variable: "${NILAI_PENGAJUAN}", description: "Nilai pengajuan (format angka)" },
+        { variable: "${TARGET_PROPOSAL}", description: "Target proposal" },
+        { variable: "${NO_AGENDA_SURAT}", description: "Nomor agenda surat" },
+        { variable: "${TANGGAL_SURAT}", description: "Tanggal surat" },
+        { variable: "${STATUS_USULAN}", description: "Status usulan" },
+        { variable: "${KERANJANG}", description: "Keranjang proposal (Sekolah/Korwil/dll)" },
+        { variable: "${RANKING}", description: "Ranking/prioritas proposal" },
+        { variable: "${STATUS_PROPOSAL}", description: "Status verifikasi proposal" },
+    ],
+    "Matrik Kegiatan": [
+        { variable: "${NO_MATRIK}", description: "Nomor matrik kegiatan" },
+        { variable: "${SUB_BIDANG}", description: "Sub bidang kegiatan" },
+        { variable: "${NO_SUB_KEGIATAN}", description: "Nomor sub kegiatan" },
+        { variable: "${SUB_KEGIATAN_MATRIK}", description: "Nama sub kegiatan" },
+        { variable: "${RUP}", description: "Rencana Umum Pengadaan" },
+        { variable: "${NAMA_PAKET}", description: "Nama paket pekerjaan" },
+        { variable: "${PAGU_ANGGARAN}", description: "Pagu anggaran (format angka)" },
+        { variable: "${PAGU_PAKET}", description: "Pagu paket (format angka)" },
+        { variable: "${HPS}", description: "Harga Perkiraan Sendiri" },
+        { variable: "${SUMBER_DANA}", description: "Sumber dana" },
+        { variable: "${METODE}", description: "Metode pengadaan" },
+        { variable: "${JENIS_PENGADAAN}", description: "Jenis pengadaan" },
+        { variable: "${HONOR}", description: "Honor pelaksana" },
+        { variable: "${TAHUN_ANGGARAN}", description: "Tahun anggaran" },
+        { variable: "${JANGKA_WAKTU}", description: "Jangka waktu pelaksanaan (hari)" },
+    ],
+    "Kontrak & SPK": [
+        { variable: "${NO_SPK}", description: "Nomor SPK/kontrak" },
         { variable: "${NILAI_KONTRAK}", description: "Nilai kontrak (format angka)" },
         { variable: "${NILAI_KONTRAK_HURUF}", description: "Nilai kontrak (terbilang)" },
-        { variable: "${MASA_PELAKSANAAN}", description: "Masa pelaksanaan" },
         { variable: "${TANGGAL_MULAI}", description: "Tanggal mulai pekerjaan" },
         { variable: "${TANGGAL_SELESAI}", description: "Tanggal selesai pekerjaan" },
+        { variable: "${MASA_PELAKSANAAN}", description: "Masa pelaksanaan (hari)" },
     ],
     "Penyedia": [
         { variable: "${NAMA_PENYEDIA}", description: "Nama perusahaan penyedia" },
-        { variable: "${ALAMAT_PENYEDIA}", description: "Alamat penyedia" },
-        { variable: "${DIREKTUR_PENYEDIA}", description: "Nama direktur penyedia" },
+        { variable: "${NAMA_PEMILIK}", description: "Nama pemilik/direktur penyedia" },
+        { variable: "${STATUS_PEMILIK}", description: "Status pemilik (Direktur/CV/dll)" },
+        { variable: "${ALAMAT_KANTOR}", description: "Alamat kantor penyedia" },
         { variable: "${NPWP_PENYEDIA}", description: "NPWP penyedia" },
         { variable: "${NO_REKENING_PENYEDIA}", description: "Nomor rekening penyedia" },
         { variable: "${BANK_PENYEDIA}", description: "Nama bank penyedia" },
     ],
-    "PPK & Kepala Dinas": [
-        { variable: "${NAMA_PPK}", description: "Nama Pejabat Pembuat Komitmen" },
-        { variable: "${NIP_PPK}", description: "NIP PPK" },
-        { variable: "${JABATAN_PPK}", description: "Jabatan PPK" },
-        { variable: "${NAMA_KADINAS}", description: "Nama Kepala Dinas" },
-        { variable: "${NIP_KADINAS}", description: "NIP Kepala Dinas" },
-        { variable: "${NAMA_PENGAWAS}", description: "Nama pengawas lapangan" },
-        { variable: "${NIP_PENGAWAS}", description: "NIP pengawas" },
+    "Pencairan": [
+        { variable: "${PENCAIRAN_PERSEN}", description: "Persentase pencairan (%)" },
+        { variable: "${STATUS_PENCAIRAN}", description: "Status pencairan (Belum Masuk/Masuk/Keuangan/Clear)" },
+        { variable: "${NO_REGISTER}", description: "Nomor register pencairan" },
+        { variable: "${NO_SP2D}", description: "Nomor SP2D" },
+        { variable: "${HARI_KALENDER}", description: "Hari kalender pencairan" },
     ],
-    "Data Sekolah": [
-        { variable: "${NAMA_SEKOLAH}", description: "Nama sekolah" },
-        { variable: "${NPSN}", description: "Nomor Pokok Sekolah Nasional" },
-        { variable: "${ALAMAT_SEKOLAH}", description: "Alamat lengkap sekolah" },
-        { variable: "${KECAMATAN}", description: "Kecamatan sekolah" },
-        { variable: "${JENJANG}", description: "Jenjang sekolah (SD/SMP)" },
-        { variable: "${KEPALA_SEKOLAH}", description: "Nama kepala sekolah" },
-        { variable: "${NAMA_RUANG}", description: "Nama ruang/prasarana" },
-        { variable: "${KONDISI}", description: "Kondisi ruang" },
+    "BAST": [
+        { variable: "${NO_BAST}", description: "Nomor BAST" },
+        { variable: "${TANGGAL_BAST}", description: "Tanggal BAST" },
+        { variable: "${NAMA_PAKET_BAST}", description: "Nama paket pekerjaan BAST" },
+        { variable: "${NILAI_KONTRAK_BAST}", description: "Nilai kontrak BAST (format angka)" },
+        { variable: "${PENYEDIA_BAST}", description: "Nama penyedia BAST" },
     ],
-    "Lainnya": [
+    "Prestasi": [
+        { variable: "${JENIS_PRESTASI}", description: "Jenis prestasi" },
+        { variable: "${NAMA_SISWA}", description: "Nama siswa berprestasi" },
+        { variable: "${KATEGORI_PRESTASI}", description: "Kategori (Perorangan/Beregu)" },
+        { variable: "${TINGKAT_PRESTASI}", description: "Tingkat (Kecamatan/Kabupaten/Provinsi/Nasional)" },
+        { variable: "${TAHUN_PRESTASI}", description: "Tahun prestasi" },
+        { variable: "${CAPAIAN}", description: "Capaian (Juara 1/2/3, dll)" },
+    ],
+    "Umum": [
         { variable: "${TANGGAL_HARI_INI}", description: "Tanggal hari ini (format Indonesia)" },
         { variable: "${BULAN}", description: "Nama bulan saat ini" },
         { variable: "${TAHUN}", description: "Tahun saat ini" },
@@ -86,7 +130,7 @@ const ManajemenTemplate = () => {
 
     // State Modal Panduan
     const [showGuide, setShowGuide] = useState(false);
-    const [activeGuideTab, setActiveGuideTab] = useState("Paket Pekerjaan");
+    const [activeGuideTab, setActiveGuideTab] = useState("Data Sekolah");
     const [copiedId, setCopiedId] = useState(null);
 
     // Filter Data
