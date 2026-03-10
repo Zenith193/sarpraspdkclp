@@ -18,7 +18,8 @@ export const formatDate = (date) => {
     return new Intl.DateTimeFormat('id-ID', {
         day: '2-digit',
         month: 'long',
-        year: 'numeric'
+        year: 'numeric',
+        timeZone: 'UTC'
     }).format(new Date(date));
 };
 
@@ -29,7 +30,8 @@ export const formatDateTime = (date) => {
         month: 'long',
         year: 'numeric',
         hour: '2-digit',
-        minute: '2-digit'
+        minute: '2-digit',
+        timeZone: 'UTC'
     }).format(new Date(date));
 };
 

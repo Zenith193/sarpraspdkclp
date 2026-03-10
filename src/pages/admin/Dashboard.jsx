@@ -283,7 +283,7 @@ const Dashboard = () => {
                     </select>
                     <select value={chartYear} onChange={e => setChartYear(e.target.value)}>
                         <option value="">Semua Tahun</option>
-                        {[0, 1, 2].map(offset => {
+                        {[0, 1, 2, 3].map(offset => {
                             const y = new Date().getFullYear() - offset;
                             return <option key={y} value={String(y)}>{y}</option>;
                         })}
