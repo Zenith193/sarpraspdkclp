@@ -100,7 +100,7 @@ export const sarprasService = {
         // Delete GDrive files for all fotos of this sarpras
         const fotos = await db.select().from(sarprasFoto).where(eq(sarprasFoto.sarprasId, id));
         for (const f of fotos) {
-            deleteGDriveFile(f.filePath);
+            queueGDriveDelete(f.filePath);
         }
         await db.delete(sarpras).where(eq(sarpras.id, id));
     },
@@ -125,7 +125,7 @@ export const sarprasService = {
     async removeFoto(fotoId: number) {
         // Delete GDrive file before removing DB record
         const foto = await db.select().from(sarprasFoto).where(eq(sarprasFoto.id, fotoId));
-        if (foto[0]) deleteGDriveFile(foto[0].filePath);
+        if (foto[0]) queueGDriveDelete(foto[0].filePath);
         await db.delete(sarprasFoto).where(eq(sarprasFoto.id, fotoId));
     },
 

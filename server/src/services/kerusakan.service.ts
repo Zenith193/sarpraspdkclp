@@ -26,13 +26,13 @@ export const kerusakanService = {
     async updateFile(id: number, fileName: string, filePath: string, uploadStatus: string = 'done') {
         // Delete old GDrive file before replacing
         const existing = await db.select().from(formKerusakan).where(eq(formKerusakan.id, id));
-        if (existing[0]) deleteGDriveFile(existing[0].filePath);
+        if (existing[0]) queueGDriveDelete(existing[0].filePath);
         return db.update(formKerusakan).set({ fileName, filePath, uploadStatus, status: 'Menunggu Verifikasi', updatedAt: new Date() }).where(eq(formKerusakan.id, id)).returning();
     },
     async delete(id: number) {
         // Delete GDrive file before removing DB record
         const existing = await db.select().from(formKerusakan).where(eq(formKerusakan.id, id));
-        if (existing[0]) deleteGDriveFile(existing[0].filePath);
+        if (existing[0]) queueGDriveDelete(existing[0].filePath);
         await db.delete(formKerusakan).where(eq(formKerusakan.id, id));
     },
     async verify(id: number, userId: string) { return db.update(formKerusakan).set({ status: 'Diverifikasi', verifiedBy: userId, updatedAt: new Date() }).where(eq(formKerusakan.id, id)).returning(); },

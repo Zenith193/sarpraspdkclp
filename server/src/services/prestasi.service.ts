@@ -26,14 +26,14 @@ export const prestasiService = {
         // Delete old GDrive sertifikat if being replaced
         if (data.sertifikatPath) {
             const existing = await db.select().from(prestasi).where(eq(prestasi.id, id));
-            if (existing[0]) deleteGDriveFile(existing[0].sertifikatPath);
+            if (existing[0]) queueGDriveDelete(existing[0].sertifikatPath);
         }
         const result = await db.update(prestasi).set({ ...data, updatedAt: new Date() }).where(eq(prestasi.id, id)).returning();
         return result[0];
     },
     async delete(id: number) {
         const existing = await db.select().from(prestasi).where(eq(prestasi.id, id));
-        if (existing[0]) deleteGDriveFile(existing[0].sertifikatPath);
+        if (existing[0]) queueGDriveDelete(existing[0].sertifikatPath);
         await db.delete(prestasi).where(eq(prestasi.id, id));
     },
 
