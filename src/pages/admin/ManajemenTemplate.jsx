@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
-import { Plus, Search, Download, Edit, Trash2, Save, X, FileText, AlertTriangle, Code, Copy, CheckCheck, Info, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Search, Download, Upload, Edit, Trash2, Save, X, FileText, AlertTriangle, Code, Copy, CheckCheck, Info, ChevronLeft, ChevronRight } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { templateApi } from '../../api/index';
 import { useApi } from '../../api/hooks';
@@ -7,19 +7,60 @@ import { useApi } from '../../api/hooks';
 // ===== DATA PANDUAN VARIABEL =====
 const GUIDE_DATA = {
     "Paket Pekerjaan": [
-        { variable: "${KODE_PAKET}", description: "Kode Paket Pekerjaan", example: "PKT-2025-001" },
-        { variable: "${PEKERZAAN_JUDUL}", description: "Judul Pekerjaan + Nama Sekolah", example: "Renovasi Ruang Kelas SD 1" },
-        { variable: "${NILAI_PAGU_PAKET}", description: "Nilai Pagu (Format Angka)", example: "150000000" },
-        { variable: "${PAGU_ANGGARAN}", description: "Nilai Pagu (Format Rupiah)", example: "Rp 150.000.000" },
+        { variable: "${KODE_PAKET}", description: "Kode paket pekerjaan" },
+        { variable: "${PEKERJAAN_JUDUL}", description: "Nama pekerjaan + nama sekolah" },
+        { variable: "${NILAI_PAGU_PAKET}", description: "Nilai pagu paket (format angka)" },
+        { variable: "${PAGU_ANGGARAN}", description: "Pagu anggaran (format angka)" },
+        { variable: "${URAIAN_PEKERJAAN}", description: "Uraian/deskripsi pekerjaan" },
+        { variable: "${LOKASI_PEKERJAAN}", description: "Lokasi pekerjaan" },
+        { variable: "${JANGKA_WAKTU}", description: "Jangka waktu pelaksanaan" },
+        { variable: "${SUMBER_DANA}", description: "Sumber dana" },
+        { variable: "${TAHUN_ANGGARAN}", description: "Tahun anggaran" },
     ],
     "Kontrak": [
-        { variable: "${NO_KONTRAK}", description: "Nomor Kontrak", example: "021/SPK/VI/2025" },
-        { variable: "${NAMA_PENYEDIA}", description: "Nama Perusahaan Penyedia", example: "PT Maju Jaya" },
+        { variable: "${NO_KONTRAK}", description: "Nomor kontrak/SPK" },
+        { variable: "${TANGGAL_KONTRAK}", description: "Tanggal kontrak" },
+        { variable: "${NILAI_KONTRAK}", description: "Nilai kontrak (format angka)" },
+        { variable: "${NILAI_KONTRAK_HURUF}", description: "Nilai kontrak (terbilang)" },
+        { variable: "${MASA_PELAKSANAAN}", description: "Masa pelaksanaan" },
+        { variable: "${TANGGAL_MULAI}", description: "Tanggal mulai pekerjaan" },
+        { variable: "${TANGGAL_SELESAI}", description: "Tanggal selesai pekerjaan" },
+    ],
+    "Penyedia": [
+        { variable: "${NAMA_PENYEDIA}", description: "Nama perusahaan penyedia" },
+        { variable: "${ALAMAT_PENYEDIA}", description: "Alamat penyedia" },
+        { variable: "${DIREKTUR_PENYEDIA}", description: "Nama direktur penyedia" },
+        { variable: "${NPWP_PENYEDIA}", description: "NPWP penyedia" },
+        { variable: "${NO_REKENING_PENYEDIA}", description: "Nomor rekening penyedia" },
+        { variable: "${BANK_PENYEDIA}", description: "Nama bank penyedia" },
+    ],
+    "PPK & Kepala Dinas": [
+        { variable: "${NAMA_PPK}", description: "Nama Pejabat Pembuat Komitmen" },
+        { variable: "${NIP_PPK}", description: "NIP PPK" },
+        { variable: "${JABATAN_PPK}", description: "Jabatan PPK" },
+        { variable: "${NAMA_KADINAS}", description: "Nama Kepala Dinas" },
+        { variable: "${NIP_KADINAS}", description: "NIP Kepala Dinas" },
+        { variable: "${NAMA_PENGAWAS}", description: "Nama pengawas lapangan" },
+        { variable: "${NIP_PENGAWAS}", description: "NIP pengawas" },
     ],
     "Data Sekolah": [
-        { variable: "${NAMA_SEKOLAH}", description: "Nama Sekolah", example: "SD Negeri 1 Nama Sekolah" },
-        { variable: "${NPSN}", description: "Nomor Pokok Sekolah Nasional", example: "12345678" },
-    ]
+        { variable: "${NAMA_SEKOLAH}", description: "Nama sekolah" },
+        { variable: "${NPSN}", description: "Nomor Pokok Sekolah Nasional" },
+        { variable: "${ALAMAT_SEKOLAH}", description: "Alamat lengkap sekolah" },
+        { variable: "${KECAMATAN}", description: "Kecamatan sekolah" },
+        { variable: "${JENJANG}", description: "Jenjang sekolah (SD/SMP)" },
+        { variable: "${KEPALA_SEKOLAH}", description: "Nama kepala sekolah" },
+        { variable: "${NAMA_RUANG}", description: "Nama ruang/prasarana" },
+        { variable: "${KONDISI}", description: "Kondisi ruang" },
+    ],
+    "Lainnya": [
+        { variable: "${TANGGAL_HARI_INI}", description: "Tanggal hari ini (format Indonesia)" },
+        { variable: "${BULAN}", description: "Nama bulan saat ini" },
+        { variable: "${TAHUN}", description: "Tahun saat ini" },
+        { variable: "${NOMOR_SURAT}", description: "Nomor surat" },
+        { variable: "${PERIHAL}", description: "Perihal surat" },
+        { variable: "${KETERANGAN}", description: "Keterangan tambahan" },
+    ],
 };
 
 const ManajemenTemplate = () => {
@@ -37,6 +78,7 @@ const ManajemenTemplate = () => {
     const [showModal, setShowModal] = useState(false);
     const [modalType, setModalType] = useState('add');
     const [formData, setFormData] = useState({ name: '', type: 'BAST' });
+    const [formFile, setFormFile] = useState(null);
     const [editId, setEditId] = useState(null);
 
     // State Modal Hapus
@@ -72,12 +114,14 @@ const ManajemenTemplate = () => {
     // ===== HANDLERS =====
     const openAddModal = () => {
         setFormData({ name: '', type: 'BAST' });
+        setFormFile(null);
         setModalType('add');
         setShowModal(true);
     };
 
     const openEditModal = (item) => {
         setFormData({ name: item.name, type: item.type });
+        setFormFile(null);
         setEditId(item.id);
         setModalType('edit');
         setShowModal(true);
@@ -85,15 +129,21 @@ const ManajemenTemplate = () => {
 
     const handleSave = async () => {
         if (!formData.name) { toast.error("Nama template wajib diisi"); return; }
+        if (modalType === 'add' && !formFile) { toast.error("File template wajib dipilih"); return; }
         try {
+            const fd = new FormData();
+            fd.append('name', formData.name);
+            fd.append('type', formData.type);
+            if (formFile) fd.append('file', formFile);
             if (modalType === 'add') {
-                await templateApi.create(formData);
+                await templateApi.create(fd);
                 toast.success("Template berhasil ditambahkan");
             } else {
-                await templateApi.update(editId, formData);
+                await templateApi.update(editId, fd);
                 toast.success("Template berhasil diperbarui");
             }
             setShowModal(false);
+            setFormFile(null);
             refetch();
         } catch (err) {
             toast.error(err.message || 'Gagal menyimpan template');
@@ -114,7 +164,8 @@ const ManajemenTemplate = () => {
     };
 
     const formatDate = (dateString) => {
-        return new Date(dateString).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+        if (!dateString) return '-';
+        return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }).format(new Date(dateString));
     };
 
     const handleCopy = (text, id) => {
@@ -198,6 +249,9 @@ const ManajemenTemplate = () => {
                                         <td style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>{formatDate(t.lastUpdated)}</td>
                                         <td>
                                             <div style={{ display: 'flex', gap: 4 }}>
+                                                {t.filePath && (
+                                                    <a href={`/api${t.filePath}`} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Download" style={{ color: 'var(--accent-green)' }}><Download size={16} /></a>
+                                                )}
                                                 <button className="btn-icon" onClick={() => openEditModal(t)} title="Edit"><Edit size={16} /></button>
                                                 <button className="btn-icon" onClick={() => setDeleteTarget(t)} style={{ color: 'var(--accent-red)' }} title="Hapus"><Trash2 size={16} /></button>
                                             </div>
@@ -238,17 +292,42 @@ const ManajemenTemplate = () => {
                         </div>
                         <div className="modal-body">
                             <div className="form-group">
-                                <label className="form-label">Nama Template</label>
-                                <input className="form-input" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
+                                <label className="form-label">Nama Template *</label>
+                                <input className="form-input" placeholder="Contoh: Kontrak APBD 2026" value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })} />
                             </div>
                             <div className="form-group">
                                 <label className="form-label">Jenis Dokumen</label>
                                 <select className="form-select" value={formData.type} onChange={e => setFormData({ ...formData, type: e.target.value })}>
                                     <option value="BAST">BAST</option>
-                                    <option value="Checklist">Checklist</option>
+                                    <option value="Kontrak">Kontrak</option>
                                     <option value="Surat">Surat</option>
-                                    <option value="Contract">Kontrak</option>
+                                    <option value="Checklist">Checklist</option>
+                                    <option value="Lainnya">Lainnya</option>
                                 </select>
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">File Template (PDF/DOCX) {modalType === 'add' ? '*' : ''}</label>
+                                <div style={{ border: '2px dashed var(--border-color)', borderRadius: 'var(--radius-md)', padding: '20px', textAlign: 'center', cursor: 'pointer', background: 'var(--bg-input)', transition: 'border-color 150ms' }}
+                                    onClick={() => document.getElementById('template-file-input').click()}
+                                    onDragOver={e => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--accent-blue)'; }}
+                                    onDragLeave={e => { e.currentTarget.style.borderColor = 'var(--border-color)'; }}
+                                    onDrop={e => { e.preventDefault(); e.currentTarget.style.borderColor = 'var(--border-color)'; const f = e.dataTransfer.files[0]; if (f) setFormFile(f); }}
+                                >
+                                    <input id="template-file-input" type="file" accept=".pdf,.docx,.doc" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) setFormFile(e.target.files[0]); }} />
+                                    {formFile ? (
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                                            <FileText size={20} style={{ color: 'var(--accent-blue)' }} />
+                                            <span style={{ fontWeight: 500, fontSize: '0.875rem' }}>{formFile.name}</span>
+                                            <button className="btn-icon" onClick={e => { e.stopPropagation(); setFormFile(null); }} style={{ color: 'var(--accent-red)' }}><X size={14} /></button>
+                                        </div>
+                                    ) : (
+                                        <div>
+                                            <Upload size={24} style={{ color: 'var(--text-secondary)', marginBottom: 8 }} />
+                                            <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>Klik atau drag file ke sini</div>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 4 }}>PDF, DOCX (Maks. 10MB)</div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </div>
                         <div className="modal-footer">
@@ -318,46 +397,25 @@ const ManajemenTemplate = () => {
                             </div>
 
                             <div style={{ padding: '1.5rem' }}>
-                                <table className="data-table" style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-sm)' }}>
-                                    <thead>
-                                        <tr style={{ background: 'var(--bg-secondary)' }}>
-                                            <th style={{ width: '30%' }}>Kode</th>
-                                            <th style={{ width: '35%' }}>Deskripsi</th>
-                                            <th style={{ width: '35%' }}>Contoh Hasil</th>
-                                            <th style={{ width: 80, textAlign: 'center' }}>Aksi</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {GUIDE_DATA[activeGuideTab].map((item, idx) => (
-                                            <tr key={idx}>
-                                                <td>
-                                                    <span style={{
-                                                        background: 'var(--bg-secondary)',
-                                                        padding: '4px 8px',
-                                                        borderRadius: '4px',
-                                                        fontFamily: 'monospace',
-                                                        fontSize: '0.85rem',
-                                                        color: 'var(--accent-blue)',
-                                                        border: '1px solid var(--border-color)'
-                                                    }}>
-                                                        {item.variable}
-                                                    </span>
-                                                </td>
-                                                <td style={{ fontSize: '0.875rem' }}>{item.description}</td>
-                                                <td style={{ fontSize: '0.875rem', color: 'var(--text-secondary)' }}>{item.example}</td>
-                                                <td style={{ textAlign: 'center' }}>
-                                                    <button
-                                                        onClick={() => handleCopy(item.variable, `${activeGuideTab}-${idx}`)}
-                                                        className="btn btn-ghost btn-sm"
-                                                        style={{ padding: '4px 8px' }}
-                                                    >
-                                                        {copiedId === `${activeGuideTab}-${idx}` ? <CheckCheck size={14} /> : <Copy size={14} />}
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                <h4 style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                    <Code size={16} /> Variables {activeGuideTab}
+                                </h4>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                                    {GUIDE_DATA[activeGuideTab].map((item, idx) => (
+                                        <div key={idx}
+                                            style={{ padding: '12px 16px', background: 'var(--bg-primary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', cursor: 'pointer', transition: 'border-color 150ms' }}
+                                            onClick={() => handleCopy(item.variable, `${activeGuideTab}-${idx}`)}
+                                            onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--accent-blue)'}
+                                            onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
+                                        >
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                                                <code style={{ color: 'var(--accent-blue)', fontSize: '0.85rem', fontWeight: 600 }}>{item.variable}</code>
+                                                {copiedId === `${activeGuideTab}-${idx}` ? <CheckCheck size={14} style={{ color: 'var(--accent-green)' }} /> : <Copy size={14} style={{ color: 'var(--text-secondary)' }} />}
+                                            </div>
+                                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{item.description}</div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     </div>

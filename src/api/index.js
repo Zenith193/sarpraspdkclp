@@ -78,8 +78,8 @@ export const bastApi = {
 
 export const templateApi = {
     list: () => api.get('/template'),
-    create: (data) => api.post('/template', data),
-    update: (id, data) => api.put(`/template/${id}`, data),
+    create: (data) => api.upload('/template', data),
+    update: (id, data) => api.upload(`/template/${id}`, data, 'PUT'),
     delete: (id) => api.delete(`/template/${id}`),
 };
 
