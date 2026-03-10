@@ -20,7 +20,7 @@ const Dashboard = () => {
     const user = useAuthStore(s => s.user);
     const [filterKec, setFilterKec] = useState('');
     const [filterJenjang, setFilterJenjang] = useState('');
-    const [chartYear, setChartYear] = useState('');
+    const [chartYear, setChartYear] = useState(String(new Date().getFullYear()));
     const [searchAktivitas, setSearchAktivitas] = useState('');
     const [showExportMenu, setShowExportMenu] = useState(false);
     const [showExportAktivitas, setShowExportAktivitas] = useState(false);
@@ -140,7 +140,7 @@ const Dashboard = () => {
         { header: 'Nama Pengguna', key: 'namaAkun' },
         { header: 'Jenis Akun', key: 'jenisAkun' },
         { header: 'Aktivitas', key: 'aktivitas' },
-        { header: 'Waktu', accessor: (r) => formatDateTime(r.waktu) },
+        { header: 'Waktu', accessor: (r) => formatDateTime(r.createdAt) },
     ];
 
     const handleExportAktivitas = (format) => {
@@ -375,8 +375,10 @@ const Dashboard = () => {
                                 {JENJANG.map(j => <option key={j} value={j}>{j}</option>)}
                             </select>
                             <select value={chartYear} onChange={e => setChartYear(e.target.value)}>
-                                <option value="2025">2025</option>
-                                <option value="2024">2024</option>
+                                {[0, 1, 2, 3].map(offset => {
+                                    const y = new Date().getFullYear() - offset;
+                                    return <option key={y} value={String(y)}>{y}</option>;
+                                })}
                             </select>
                         </div>
                     </div>
@@ -393,8 +395,10 @@ const Dashboard = () => {
                                 {JENJANG.map(j => <option key={j} value={j}>{j}</option>)}
                             </select>
                             <select value={chartYear} onChange={e => setChartYear(e.target.value)}>
-                                <option value="2025">2025</option>
-                                <option value="2024">2024</option>
+                                {[0, 1, 2, 3].map(offset => {
+                                    const y = new Date().getFullYear() - offset;
+                                    return <option key={y} value={String(y)}>{y}</option>;
+                                })}
                             </select>
                         </div>
                     </div>
@@ -469,7 +473,7 @@ const Dashboard = () => {
                                     <td>{a.namaAkun}</td>
                                     <td><span className="badge badge-disetujui">{a.jenisAkun}</span></td>
                                     <td>{a.aktivitas}</td>
-                                    <td>{formatDateTime(a.waktu)}</td>
+                                    <td>{formatDateTime(a.createdAt)}</td>
                                 </tr>
                             ))}
                         </tbody>
