@@ -851,7 +851,7 @@ const DataSarpras = ({ readOnly = false }) => {
                         <div className="modal-body" style={{ flex: 1, overflow: 'auto', display: 'flex', flexDirection: 'column' }}>
                             {viewItem.foto && viewItem.foto.length > 0 ? (
                                 <div style={{ marginBottom: 20, flex: '1 1 auto', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                                    <div style={{ position: 'relative', borderRadius: 'var(--radius-lg)', overflow: 'hidden', background: '#000', flex: '1 1 auto', minHeight: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                    <div style={{ position: 'relative', borderRadius: 'var(--radius-lg)', overflow: 'hidden', background: '#000', flex: '1 1 auto', minHeight: 450, maxHeight: 'calc(100vh - 350px)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                         <img src={viewItem.foto[photoIdx]?.url} alt={`Foto ${photoIdx + 1}`}
                                             onError={(e) => { const f = viewItem.foto[photoIdx]; if (f?.proxyUrl && e.target.src !== f.proxyUrl) e.target.src = f.proxyUrl; }}
                                             style={{ maxHeight: '100%', maxWidth: '100%', width: '100%', height: '100%', objectFit: 'contain', cursor: 'zoom-in' }}
@@ -883,10 +883,10 @@ const DataSarpras = ({ readOnly = false }) => {
                                             )}
                                         </span>
                                     </div>
-                                    <div style={{ display: 'flex', gap: 6, marginTop: 8, overflowX: 'auto', paddingBottom: 4 }}>
+                                    <div style={{ display: 'flex', gap: 8, marginTop: 8, overflowX: 'auto', paddingBottom: 6, flexShrink: 0 }}>
                                         {viewItem.foto.map((f, i) => (
                                             <div key={i} onClick={() => setPhotoIdx(i)}
-                                                style={{ width: 56, height: 56, minWidth: 56, borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: i === photoIdx ? '2px solid var(--accent-blue)' : '2px solid transparent', cursor: 'pointer', opacity: i === photoIdx ? 1 : 0.6, transition: 'all 150ms' }}>
+                                                style={{ width: 72, height: 72, minWidth: 72, borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: i === photoIdx ? '2px solid var(--accent-blue)' : '2px solid transparent', cursor: 'pointer', opacity: i === photoIdx ? 1 : 0.6, transition: 'all 150ms' }}>
                                                 <img src={f.url} alt={f.name} onError={(e) => { if (f.proxyUrl && e.target.src !== f.proxyUrl) e.target.src = f.proxyUrl; }} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                             </div>
                                         ))}
