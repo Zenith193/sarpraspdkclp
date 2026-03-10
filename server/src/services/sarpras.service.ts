@@ -71,6 +71,7 @@ export const sarprasService = {
             sarpras,
             sekolahNama: sekolah.nama,
             sekolahNpsn: sekolah.npsn,
+            sekolahKecamatan: sekolah.kecamatan,
         })
             .from(sarpras)
             .leftJoin(sekolah, eq(sarpras.sekolahId, sekolah.id))

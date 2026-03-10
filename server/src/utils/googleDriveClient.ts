@@ -198,10 +198,82 @@ async function findOrCreateFolder(parentId: string, folderName: string): Promise
     }
 }
 
+// ==================== FOLDER RENAME / MOVE ====================
+
+/**
+ * Find an existing folder ID by traversing a path from the root folder.
+ * Returns null if any segment doesn't exist.
+ */
+export async function findGDriveFolderByPath(folderPath: string): Promise<string | null> {
+    if (!isGDriveEnabled()) return null;
+    const cfg = getGDriveConfig();
+    let currentId = cfg.folderId;
+    const drive = getDriveClient();
+
+    const parts = folderPath.split('/').filter(Boolean);
+    for (const part of parts) {
+        const cacheKey = `${currentId}/${part}`;
+        if (folderCache.has(cacheKey)) {
+            currentId = folderCache.get(cacheKey)!;
+            continue;
+        }
+        const res = await drive.files.list({
+            q: `'${currentId}' in parents and name='${part.replace(/'/g, "\\'")}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+            fields: 'files(id)',
+            pageSize: 1,
+        });
+        if (!res.data.files || res.data.files.length === 0) return null;
+        currentId = res.data.files[0].id!;
+        folderCache.set(cacheKey, currentId);
+    }
+    return currentId;
+}
+
+/**
+ * Rename a Google Drive folder by ID.
+ */
+export async function renameGDriveFolder(folderId: string, newName: string): Promise<boolean> {
+    try {
+        const drive = getDriveClient();
+        await drive.files.update({
+            fileId: folderId,
+            requestBody: { name: newName },
+        });
+        // Invalidate cache entries for old name
+        folderCache.forEach((v, k) => { if (v === folderId) folderCache.delete(k); });
+        console.log(`[GDrive] Renamed folder ${folderId} → ${newName}`);
+        return true;
+    } catch (err: any) {
+        console.error('[GDrive] Rename failed:', err.message);
+        return false;
+    }
+}
+
+/**
+ * Move a Google Drive folder to a new parent.
+ */
+export async function moveGDriveFolder(folderId: string, newParentId: string, oldParentId?: string): Promise<boolean> {
+    try {
+        const drive = getDriveClient();
+        await drive.files.update({
+            fileId: folderId,
+            addParents: newParentId,
+            removeParents: oldParentId || undefined,
+        });
+        // Invalidate cache
+        folderCache.forEach((v, k) => { if (v === folderId) folderCache.delete(k); });
+        console.log(`[GDrive] Moved folder ${folderId} to parent ${newParentId}`);
+        return true;
+    } catch (err: any) {
+        console.error('[GDrive] Move failed:', err.message);
+        return false;
+    }
+}
+
 // Lock for ensureGDrivePath to serialize full path creation
 const pathLocks = new Map<string, Promise<string>>();
 
-async function ensureGDrivePath(folderPath: string): Promise<string> {
+export async function ensureGDrivePath(folderPath: string): Promise<string> {
     // Serialize calls for the same path
     if (pathLocks.has(folderPath)) return pathLocks.get(folderPath)!;
 

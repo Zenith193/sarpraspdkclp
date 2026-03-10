@@ -3,6 +3,89 @@ import { sarprasService } from '../services/sarpras.service.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { uploadFotos, forwardToNas } from '../middleware/upload.js';
 import { logActivity } from '../middleware/logActivity.js';
+import { isGDriveEnabled, findGDriveFolderByPath, renameGDriveFolder, moveGDriveFolder, ensureGDrivePath } from '../utils/googleDriveClient.js';
+import fs from 'fs';
+import path from 'path';
+
+// Sanitize folder name (same logic as storagePaths.ts)
+function sanitize(name: string): string {
+    return (name || 'unknown').trim().replace(/[<>:"/\\|?*]/g, '').replace(/\s+/g, '_').replace(/_+/g, '_').substring(0, 100);
+}
+
+const uploadRoot = process.env.UPLOAD_DIR || './uploads';
+
+/**
+ * Sync folder in GDrive + Local when masaBangunan or namaRuang changes.
+ * Path: /{Kecamatan}/{Sekolah}/sarpras/{MasaBangunan}/{NamaRuang}/
+ */
+async function syncSarprasFolder(
+    existing: any,
+    oldMasa: string, oldRuang: string,
+    newMasa: string, newRuang: string,
+    masaChanged: boolean, ruangChanged: boolean,
+) {
+    const kec = sanitize(existing.sekolahKecamatan);
+    const sch = sanitize(existing.sekolahNama) + '_' + existing.sekolahNpsn;
+    const basePath = `${kec}/${sch}/sarpras`;
+    const oldMasaSafe = sanitize(oldMasa);
+    const newMasaSafe = sanitize(newMasa);
+    const oldRuangSafe = sanitize(oldRuang);
+    const newRuangSafe = sanitize(newRuang);
+
+    // ===== GOOGLE DRIVE =====
+    if (isGDriveEnabled()) {
+        try {
+            if (ruangChanged && !masaChanged) {
+                // Only namaRuang changed → rename the ruang folder
+                const ruangFolderId = await findGDriveFolderByPath(`${basePath}/${oldMasaSafe}/${oldRuangSafe}`);
+                if (ruangFolderId) {
+                    await renameGDriveFolder(ruangFolderId, newRuangSafe);
+                    console.log(`[SarprasSync][GDrive] Renamed ruang: ${oldRuangSafe} → ${newRuangSafe}`);
+                }
+            } else if (masaChanged && !ruangChanged) {
+                // Only masaBangunan changed → move the ruang folder to new masa parent
+                const ruangFolderId = await findGDriveFolderByPath(`${basePath}/${oldMasaSafe}/${oldRuangSafe}`);
+                if (ruangFolderId) {
+                    const oldMasaFolderId = await findGDriveFolderByPath(`${basePath}/${oldMasaSafe}`);
+                    const newMasaFolderId = await ensureGDrivePath(`${basePath}/${newMasaSafe}`);
+                    await moveGDriveFolder(ruangFolderId, newMasaFolderId, oldMasaFolderId || undefined);
+                    console.log(`[SarprasSync][GDrive] Moved: ${oldMasaSafe}/${oldRuangSafe} → ${newMasaSafe}/${oldRuangSafe}`);
+                }
+            } else if (masaChanged && ruangChanged) {
+                // Both changed → move + rename
+                const ruangFolderId = await findGDriveFolderByPath(`${basePath}/${oldMasaSafe}/${oldRuangSafe}`);
+                if (ruangFolderId) {
+                    const oldMasaFolderId = await findGDriveFolderByPath(`${basePath}/${oldMasaSafe}`);
+                    const newMasaFolderId = await ensureGDrivePath(`${basePath}/${newMasaSafe}`);
+                    await moveGDriveFolder(ruangFolderId, newMasaFolderId, oldMasaFolderId || undefined);
+                    await renameGDriveFolder(ruangFolderId, newRuangSafe);
+                    console.log(`[SarprasSync][GDrive] Moved+Renamed: ${oldMasaSafe}/${oldRuangSafe} → ${newMasaSafe}/${newRuangSafe}`);
+                }
+            }
+        } catch (err: any) {
+            console.error('[SarprasSync][GDrive] Error:', err.message);
+        }
+    }
+
+    // ===== LOCAL FILESYSTEM =====
+    try {
+        const oldLocalPath = path.join(uploadRoot, kec, `${sanitize(existing.sekolahNama)}_${existing.sekolahNpsn}`, 'sarpras', oldMasaSafe, oldRuangSafe);
+        if (fs.existsSync(oldLocalPath)) {
+            let newLocalPath: string;
+            if (masaChanged) {
+                const newMasaDir = path.join(uploadRoot, kec, `${sanitize(existing.sekolahNama)}_${existing.sekolahNpsn}`, 'sarpras', newMasaSafe);
+                if (!fs.existsSync(newMasaDir)) fs.mkdirSync(newMasaDir, { recursive: true });
+                newLocalPath = path.join(newMasaDir, newRuangSafe);
+            } else {
+                newLocalPath = path.join(uploadRoot, kec, `${sanitize(existing.sekolahNama)}_${existing.sekolahNpsn}`, 'sarpras', oldMasaSafe, newRuangSafe);
+            }
+            fs.renameSync(oldLocalPath, newLocalPath);
+            console.log(`[SarprasSync][Local] Moved: ${oldLocalPath} → ${newLocalPath}`);
+        }
+    } catch (err: any) {
+        console.error('[SarprasSync][Local] Error:', err.message);
+    }
+}
 
 const router = Router();
 
@@ -90,9 +173,27 @@ router.put('/:id', requireAuth, requireRole('admin', 'sekolah', 'verifikator'), 
 
         const result = await sarprasService.update(id, req.body);
         res.json(result);
+
         const nama = existing?.sekolahNama || '';
         const ruang = existing?.sarpras?.namaRuang || req.body.namaRuang || '';
         logActivity(req, 'Edit Sarpras', `Mengubah data sarpras ${nama} ${ruang}`.trim());
+
+        // ===== SYNC FOLDER (GDrive + Local) =====
+        // Fire-and-forget: don't block the API response
+        if (existing && existing.sekolahNama && existing.sekolahNpsn && existing.sekolahKecamatan) {
+            const oldMasa = existing.sarpras.masaBangunan || 'Tidak_diketahui';
+            const oldRuang = existing.sarpras.namaRuang;
+            const newMasa = req.body.masaBangunan || oldMasa;
+            const newRuang = req.body.namaRuang || oldRuang;
+            const masaChanged = req.body.masaBangunan && req.body.masaBangunan !== oldMasa;
+            const ruangChanged = req.body.namaRuang && req.body.namaRuang !== oldRuang;
+
+            if (masaChanged || ruangChanged) {
+                syncSarprasFolder(existing, oldMasa, oldRuang, newMasa, newRuang, masaChanged, ruangChanged).catch(err =>
+                    console.error('[SarprasSync] Error:', err.message)
+                );
+            }
+        }
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
