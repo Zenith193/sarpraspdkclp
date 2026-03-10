@@ -73,7 +73,7 @@ router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadFotos.array
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/:id', requireAuth, requireRole('admin', 'sekolah'), async (req, res) => {
+router.put('/:id', requireAuth, requireRole('admin', 'sekolah', 'verifikator'), async (req, res) => {
     try {
         const id = Number(req.params.id);
         const isSekolah = req.user!.role.toLowerCase() === 'sekolah';

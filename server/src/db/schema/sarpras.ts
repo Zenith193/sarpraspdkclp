@@ -17,6 +17,7 @@ export const sarpras = pgTable('sarpras', {
     luas: doublePrecision('luas'),
     kondisi: text('kondisi').notNull(),           // BAIK | RUSAK RINGAN | RUSAK SEDANG | RUSAK BERAT
     keterangan: text('keterangan'),
+    bintang: integer('bintang').default(0),
     verified: boolean('verified').default(false),
     verifiedBy: text('verified_by').references(() => user.id),
     verifiedAt: timestamp('verified_at'),

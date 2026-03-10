@@ -164,14 +164,19 @@ const DataSarpras = ({ readOnly = false }) => {
     const activeColumns = ALL_COLUMNS.filter(c => visibleCols.includes(c.key) && (c.key !== 'aksi' || !readOnly));
 
     // ===== STAR PRIORITY =====
-    const handleStar = async (item) => {
+    const handleStar = async (e, item) => {
+        e.stopPropagation();
         if (!canAccessPriority) return;
+        const newBintang = item.bintang ? 0 : 1;
+        // Optimistic update
+        setData(prev => prev.map(d => d.id === item.id ? { ...d, bintang: newBintang } : d));
         try {
-            const newBintang = item.bintang ? 0 : 1;
             await sarprasApi.update(item.id, { bintang: newBintang });
-            if (refetchSarpras) refetchSarpras();
+            toast.success(newBintang ? 'Ditandai prioritas' : 'Prioritas dihapus', { duration: 1500 });
         } catch (e) {
-            toast.error('Gagal memperbarui prioritas');
+            // Revert on error
+            setData(prev => prev.map(d => d.id === item.id ? { ...d, bintang: item.bintang } : d));
+            toast.error('Gagal memperbarui prioritas: ' + (e.message || 'Unknown error'));
         }
     };
 
@@ -455,9 +460,11 @@ const DataSarpras = ({ readOnly = false }) => {
             case 'jenisPrasarana': return <div style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.jenisPrasarana}</div>;
             case 'bintang':
                 return (
-                    <span className={`star ${item.bintang ? 'filled' : ''}`}
-                        style={{ fontSize: '1.25rem', cursor: 'pointer', color: item.bintang ? 'var(--accent-yellow)' : 'var(--border-color)', transition: 'color 150ms' }}
-                        onClick={() => handleStar(item)} title={item.bintang ? 'Hapus prioritas' : 'Tandai prioritas'}>★</span>
+                    <button type="button"
+                        style={{ background: 'none', border: 'none', fontSize: '1.25rem', cursor: 'pointer', color: item.bintang ? 'var(--accent-yellow)' : 'var(--border-color)', transition: 'all 150ms', padding: '4px 6px', lineHeight: 1, borderRadius: '4px', outline: 'none' }}
+                        onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.7'; e.currentTarget.style.transform = 'scale(1.2)'; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.opacity = '1'; e.currentTarget.style.transform = 'scale(1)'; }}
+                        onClick={(e) => handleStar(e, item)} title={item.bintang ? 'Hapus prioritas' : 'Tandai prioritas'}>★</button>
                 );
             case 'aksi':
                 return (
