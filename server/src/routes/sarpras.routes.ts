@@ -16,7 +16,8 @@ const uploadRoot = process.env.UPLOAD_DIR || './uploads';
 
 /**
  * Sync folder in GDrive + Local when masaBangunan or namaRuang changes.
- * Path: /{Kecamatan}/{Sekolah}/sarpras/{MasaBangunan}/{NamaRuang}/
+ * GDrive path (raw):  {kecamatan}/{nama}_{npsn}/sarpras/{masaBangunan}/{namaRuang}
+ * Local path (sanitized): {uploadRoot}/{Kecamatan}/{Nama_NPSN}/sarpras/{Masa_Bangunan}/{Nama_Ruang}
  */
 async function syncSarprasFolder(
     existing: any,
@@ -24,42 +25,46 @@ async function syncSarprasFolder(
     newMasa: string, newRuang: string,
     masaChanged: boolean, ruangChanged: boolean,
 ) {
-    const kec = sanitize(existing.sekolahKecamatan);
-    const sch = sanitize(existing.sekolahNama) + '_' + existing.sekolahNpsn;
-    const basePath = `${kec}/${sch}/sarpras`;
-    const oldMasaSafe = sanitize(oldMasa);
-    const newMasaSafe = sanitize(newMasa);
-    const oldRuangSafe = sanitize(oldRuang);
-    const newRuangSafe = sanitize(newRuang);
-
-    // ===== GOOGLE DRIVE =====
+    // ===== GOOGLE DRIVE (uses RAW names, matching uploadQueue.ts) =====
     if (isGDriveEnabled()) {
         try {
+            const kecRaw = existing.sekolahKecamatan || 'unknown';
+            const schRaw = `${existing.sekolahNama}_${existing.sekolahNpsn}`;
+            const basePathRaw = `${kecRaw}/${schRaw}/sarpras`;
+
+            console.log(`[SarprasSync][GDrive] Looking for: ${basePathRaw}/${oldMasa}/${oldRuang}`);
+
             if (ruangChanged && !masaChanged) {
                 // Only namaRuang changed → rename the ruang folder
-                const ruangFolderId = await findGDriveFolderByPath(`${basePath}/${oldMasaSafe}/${oldRuangSafe}`);
+                const ruangFolderId = await findGDriveFolderByPath(`${basePathRaw}/${oldMasa}/${oldRuang}`);
                 if (ruangFolderId) {
-                    await renameGDriveFolder(ruangFolderId, newRuangSafe);
-                    console.log(`[SarprasSync][GDrive] Renamed ruang: ${oldRuangSafe} → ${newRuangSafe}`);
+                    await renameGDriveFolder(ruangFolderId, newRuang);
+                    console.log(`[SarprasSync][GDrive] ✅ Renamed ruang: ${oldRuang} → ${newRuang}`);
+                } else {
+                    console.log(`[SarprasSync][GDrive] ⚠ Folder not found, skipping rename`);
                 }
             } else if (masaChanged && !ruangChanged) {
                 // Only masaBangunan changed → move the ruang folder to new masa parent
-                const ruangFolderId = await findGDriveFolderByPath(`${basePath}/${oldMasaSafe}/${oldRuangSafe}`);
+                const ruangFolderId = await findGDriveFolderByPath(`${basePathRaw}/${oldMasa}/${oldRuang}`);
                 if (ruangFolderId) {
-                    const oldMasaFolderId = await findGDriveFolderByPath(`${basePath}/${oldMasaSafe}`);
-                    const newMasaFolderId = await ensureGDrivePath(`${basePath}/${newMasaSafe}`);
+                    const oldMasaFolderId = await findGDriveFolderByPath(`${basePathRaw}/${oldMasa}`);
+                    const newMasaFolderId = await ensureGDrivePath(`${basePathRaw}/${newMasa}`);
                     await moveGDriveFolder(ruangFolderId, newMasaFolderId, oldMasaFolderId || undefined);
-                    console.log(`[SarprasSync][GDrive] Moved: ${oldMasaSafe}/${oldRuangSafe} → ${newMasaSafe}/${oldRuangSafe}`);
+                    console.log(`[SarprasSync][GDrive] ✅ Moved: ${oldMasa}/${oldRuang} → ${newMasa}/${oldRuang}`);
+                } else {
+                    console.log(`[SarprasSync][GDrive] ⚠ Folder not found, skipping move`);
                 }
             } else if (masaChanged && ruangChanged) {
                 // Both changed → move + rename
-                const ruangFolderId = await findGDriveFolderByPath(`${basePath}/${oldMasaSafe}/${oldRuangSafe}`);
+                const ruangFolderId = await findGDriveFolderByPath(`${basePathRaw}/${oldMasa}/${oldRuang}`);
                 if (ruangFolderId) {
-                    const oldMasaFolderId = await findGDriveFolderByPath(`${basePath}/${oldMasaSafe}`);
-                    const newMasaFolderId = await ensureGDrivePath(`${basePath}/${newMasaSafe}`);
+                    const oldMasaFolderId = await findGDriveFolderByPath(`${basePathRaw}/${oldMasa}`);
+                    const newMasaFolderId = await ensureGDrivePath(`${basePathRaw}/${newMasa}`);
                     await moveGDriveFolder(ruangFolderId, newMasaFolderId, oldMasaFolderId || undefined);
-                    await renameGDriveFolder(ruangFolderId, newRuangSafe);
-                    console.log(`[SarprasSync][GDrive] Moved+Renamed: ${oldMasaSafe}/${oldRuangSafe} → ${newMasaSafe}/${newRuangSafe}`);
+                    await renameGDriveFolder(ruangFolderId, newRuang);
+                    console.log(`[SarprasSync][GDrive] ✅ Moved+Renamed: ${oldMasa}/${oldRuang} → ${newMasa}/${newRuang}`);
+                } else {
+                    console.log(`[SarprasSync][GDrive] ⚠ Folder not found, skipping move+rename`);
                 }
             }
         } catch (err: any) {
@@ -67,20 +72,27 @@ async function syncSarprasFolder(
         }
     }
 
-    // ===== LOCAL FILESYSTEM =====
+    // ===== LOCAL FILESYSTEM (uses SANITIZED names, matching storagePaths.ts) =====
     try {
-        const oldLocalPath = path.join(uploadRoot, kec, `${sanitize(existing.sekolahNama)}_${existing.sekolahNpsn}`, 'sarpras', oldMasaSafe, oldRuangSafe);
+        const kecSafe = sanitize(existing.sekolahKecamatan);
+        const schSafe = `${sanitize(existing.sekolahNama)}_${existing.sekolahNpsn}`;
+        const oldMasaSafe = sanitize(oldMasa);
+        const newMasaSafe = sanitize(newMasa);
+        const oldRuangSafe = sanitize(oldRuang);
+        const newRuangSafe = sanitize(newRuang);
+        const oldLocalPath = path.join(uploadRoot, kecSafe, schSafe, 'sarpras', oldMasaSafe, oldRuangSafe);
+
         if (fs.existsSync(oldLocalPath)) {
             let newLocalPath: string;
             if (masaChanged) {
-                const newMasaDir = path.join(uploadRoot, kec, `${sanitize(existing.sekolahNama)}_${existing.sekolahNpsn}`, 'sarpras', newMasaSafe);
+                const newMasaDir = path.join(uploadRoot, kecSafe, schSafe, 'sarpras', newMasaSafe);
                 if (!fs.existsSync(newMasaDir)) fs.mkdirSync(newMasaDir, { recursive: true });
                 newLocalPath = path.join(newMasaDir, newRuangSafe);
             } else {
-                newLocalPath = path.join(uploadRoot, kec, `${sanitize(existing.sekolahNama)}_${existing.sekolahNpsn}`, 'sarpras', oldMasaSafe, newRuangSafe);
+                newLocalPath = path.join(uploadRoot, kecSafe, schSafe, 'sarpras', oldMasaSafe, newRuangSafe);
             }
             fs.renameSync(oldLocalPath, newLocalPath);
-            console.log(`[SarprasSync][Local] Moved: ${oldLocalPath} → ${newLocalPath}`);
+            console.log(`[SarprasSync][Local] ✅ Moved: ${oldLocalPath} → ${newLocalPath}`);
         }
     } catch (err: any) {
         console.error('[SarprasSync][Local] Error:', err.message);
