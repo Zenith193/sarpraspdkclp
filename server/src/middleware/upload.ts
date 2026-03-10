@@ -97,19 +97,15 @@ export function forwardToNas(
             tahun: body.tahun,
         };
 
-        // Build GDrive sub-path from sekolah info
-        const subPath = sekolah
-            ? `${sekolah.kecamatan}/${sekolah.nama}_${sekolah.npsn}/${category}${extra.masaBangunan ? '/' + extra.masaBangunan : ''}${extra.namaRuang ? '/' + extra.namaRuang : ''}`
-            : category;
-
-        // Process a single file — upload directly to GDrive
+        // Process a single file
         const processFile = async (file: Express.Multer.File) => {
             try {
                 if (isGDriveEnabled()) {
-                    // Upload directly to Google Drive
-                    const result = await uploadFileToGDrive(file.path, category, subPath);
-                    (file as any).storedAt = result.stored;
-                    (file as any).finalPath = result.path;
+                    // Save locally — background queue will upload to GDrive
+                    // File stays in multer temp dir (file.path)
+                    (file as any).finalPath = file.path;
+                    (file as any).storedAt = 'local';
+                    (file as any).uploadPending = true;
                 } else {
                     const result = await uploadToNas(file.path, category, sekolah, extra);
                     (file as any).storedAt = result.stored;
@@ -126,13 +122,11 @@ export function forwardToNas(
                 }
             } catch (err) {
                 console.error('Storage error for', file.filename, err);
-                // Fallback: keep in temp dir
                 (file as any).finalPath = file.path;
                 (file as any).storedAt = 'local';
             }
         };
 
-        // Upload all files in parallel for speed
         await Promise.all(files.map(processFile));
         next();
     };

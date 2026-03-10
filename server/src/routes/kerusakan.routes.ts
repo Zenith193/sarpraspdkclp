@@ -22,7 +22,7 @@ router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadFormKerusak
     try {
         const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
         const f = req.file as any;
-        const data = { ...req.body, fileName: req.file?.originalname || null, filePath: f?.finalPath || req.file?.path || null, uploadStatus: 'done', status: req.file ? 'Menunggu Verifikasi' : 'Belum Upload' };
+        const data = { ...req.body, fileName: req.file?.originalname || null, filePath: f?.finalPath || req.file?.path || null, uploadStatus: f?.uploadPending ? 'uploading' : 'done', status: req.file ? 'Menunggu Verifikasi' : 'Belum Upload' };
         if (isSekolah) {
             data.sekolahId = req.user!.sekolahId;
         }

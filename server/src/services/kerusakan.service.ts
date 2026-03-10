@@ -1,7 +1,7 @@
 import { db } from '../db/index.js';
 import { formKerusakan, sekolah } from '../db/schema/index.js';
 import { eq, and, sql, notInArray, isNotNull } from 'drizzle-orm';
-import { deleteGDriveFile } from '../utils/googleDriveClient.js';
+import { queueGDriveDelete } from '../utils/uploadQueue.js';
 
 export const kerusakanService = {
     async list(filters: { sekolahId?: number; search?: string; page?: number; limit?: number }) {

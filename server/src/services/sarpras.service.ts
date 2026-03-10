@@ -1,7 +1,7 @@
 import { db } from '../db/index.js';
 import { sarpras, sarprasFoto, sekolah } from '../db/schema/index.js';
 import { eq, ilike, and, sql } from 'drizzle-orm';
-import { deleteGDriveFile } from '../utils/googleDriveClient.js';
+import { queueGDriveDelete } from '../utils/uploadQueue.js';
 
 export const sarprasService = {
     async list(filters: { sekolahId?: number; kecamatan?: string; jenjang?: string; kondisi?: string; verified?: string; search?: string; page?: number; limit?: number }) {

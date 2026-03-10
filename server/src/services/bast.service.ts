@@ -1,7 +1,7 @@
 import { db } from '../db/index.js';
 import { bast, bastTemplate, matrikKegiatan } from '../db/schema/index.js';
 import { eq } from 'drizzle-orm';
-import { deleteGDriveFile } from '../utils/googleDriveClient.js';
+import { queueGDriveDelete } from '../utils/uploadQueue.js';
 
 export const bastService = {
     async list() {

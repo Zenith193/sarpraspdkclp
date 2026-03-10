@@ -1,7 +1,7 @@
 import { db } from '../db/index.js';
 import { proposal, proposalFoto, sekolah } from '../db/schema/index.js';
 import { eq, ilike, and, sql } from 'drizzle-orm';
-import { deleteGDriveFile } from '../utils/googleDriveClient.js';
+import { queueGDriveDelete } from '../utils/uploadQueue.js';
 
 export const proposalService = {
     async list(filters: { status?: string; keranjang?: string; kecamatan?: string; jenjang?: string; sekolahId?: number; search?: string; page?: number; limit?: number }) {

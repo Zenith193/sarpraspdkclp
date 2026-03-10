@@ -1,7 +1,7 @@
 import { db } from '../db/index.js';
 import { prestasi, prestasiPointRule, sekolah } from '../db/schema/index.js';
 import { eq, ilike, and, sql } from 'drizzle-orm';
-import { deleteGDriveFile } from '../utils/googleDriveClient.js';
+import { queueGDriveDelete } from '../utils/uploadQueue.js';
 
 export const prestasiService = {
     async list(filters: { sekolahId?: number; search?: string; page?: number; limit?: number }) {
