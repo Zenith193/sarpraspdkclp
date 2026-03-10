@@ -23,7 +23,7 @@ router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadSertifikat.
     try {
         const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
         const f = req.file as any;
-        const data = { ...req.body, sertifikatPath: f?.finalPath || req.file?.path || null, uploadStatus: f?.uploadPending ? 'uploading' : 'done' };
+        const data = { ...req.body, sertifikatPath: f?.finalPath || req.file?.path || null, uploadStatus: 'done' };
         if (isSekolah) {
             data.sekolahId = req.user!.sekolahId;
         }

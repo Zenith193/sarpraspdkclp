@@ -62,7 +62,7 @@ router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadFotos.array
                     fileSize: file.size,
                     geoLat: req.body[`geo_lat_${file.originalname}`] ? parseFloat(req.body[`geo_lat_${file.originalname}`]) : null,
                     geoLng: req.body[`geo_lng_${file.originalname}`] ? parseFloat(req.body[`geo_lng_${file.originalname}`]) : null,
-                    uploadStatus: f.uploadPending ? 'uploading' : 'done',
+                    uploadStatus: 'done',
                 });
             }
         } else {
@@ -135,7 +135,7 @@ router.post('/:id/foto', requireAuth, requireRole('admin', 'sekolah'), uploadFot
             fileSize: req.file.size,
             geoLat: req.body.geoLat ? parseFloat(req.body.geoLat) : null,
             geoLng: req.body.geoLng ? parseFloat(req.body.geoLng) : null,
-            uploadStatus: f.uploadPending ? 'uploading' : 'done',
+            uploadStatus: 'done',
         });
         res.status(201).json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }

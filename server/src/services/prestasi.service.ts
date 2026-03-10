@@ -1,7 +1,7 @@
 import { db } from '../db/index.js';
 import { prestasi, prestasiPointRule, sekolah } from '../db/schema/index.js';
 import { eq, ilike, and, sql } from 'drizzle-orm';
-import { queueGDriveDelete } from '../utils/uploadQueue.js';
+import { deleteGDriveFile } from '../utils/googleDriveClient.js';
 
 export const prestasiService = {
     async list(filters: { sekolahId?: number; search?: string; page?: number; limit?: number }) {
@@ -26,14 +26,14 @@ export const prestasiService = {
         // Delete old GDrive sertifikat if being replaced
         if (data.sertifikatPath) {
             const existing = await db.select().from(prestasi).where(eq(prestasi.id, id));
-            if (existing[0]) queueGDriveDelete(existing[0].sertifikatPath);
+            if (existing[0]) deleteGDriveFile(existing[0].sertifikatPath);
         }
         const result = await db.update(prestasi).set({ ...data, updatedAt: new Date() }).where(eq(prestasi.id, id)).returning();
         return result[0];
     },
     async delete(id: number) {
         const existing = await db.select().from(prestasi).where(eq(prestasi.id, id));
-        if (existing[0]) queueGDriveDelete(existing[0].sertifikatPath);
+        if (existing[0]) deleteGDriveFile(existing[0].sertifikatPath);
         await db.delete(prestasi).where(eq(prestasi.id, id));
     },
 
