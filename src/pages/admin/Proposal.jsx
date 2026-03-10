@@ -261,7 +261,7 @@ const Proposal = ({ readOnly = false }) => {
             onClick={() => handleStar(itemId)}>★</span>
     );
 
-    const schoolNames = useMemo(() => sekolahList.map(s => s.nama), []);
+    const schoolNames = useMemo(() => sekolahList.map(s => s.nama), [sekolahList]);
     const renderSchoolOption = (name) => {
         const sch = sekolahList.find(s => s.nama === name);
         return (
