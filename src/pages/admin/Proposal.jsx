@@ -1,6 +1,7 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { Plus, Search, Download, Eye, Edit, Trash2, X, Filter, Star, FileSpreadsheet, FileText, Save, Printer, FileCheck, FilePlus, Archive, AlertOctagon } from 'lucide-react';
 import { useProposalData, useSekolahData, useUsersData } from '../../data/dataProvider';
+import { proposalApi } from '../../api/index';
 import { KECAMATAN, JENJANG, SUB_KEGIATAN, KERANJANG, STATUS_PROPOSAL } from '../../utils/constants';
 import { formatCurrency } from '../../utils/formatters';
 import { exportToExcel, exportToCSV, exportToPDF } from '../../utils/exportUtils';
@@ -51,7 +52,7 @@ const Proposal = ({ readOnly = false }) => {
 
     const { data: sekolahList } = useSekolahData();
     const { data: usersList } = useUsersData();
-    const { data: proposalList, loading: proposalLoading } = useProposalData();
+    const { data: proposalList, loading: proposalLoading, refetch: refetchProposal } = useProposalData();
 
     const [data, setData] = useState([]);
 
@@ -139,31 +140,37 @@ const Proposal = ({ readOnly = false }) => {
         setShowModal(true);
     };
 
-    const handleSave = () => {
-        if (!formData.nilaiPengajuan || parseFloat(formData.nilaiPengajuan) <= 0) { toast.error('Nilai pengajuan harus lebih dari 0'); return; }
-        const payload = { ...formData, nilaiPengajuan: parseFloat(formData.nilaiPengajuan) };
-        if (editItem) {
-            setData(prev => prev.map(d => d.id === editItem.id ? { ...editItem, ...payload } : d));
-            toast.success('Proposal berhasil diperbarui');
-        } else {
-            const sekolah = sekolahList.find(s => s.nama === formSekolah);
-            if (!sekolah) { toast.error('Pilih sekolah terlebih dahulu'); return; }
-            const newItem = {
-                id: Date.now(), ...payload, sekolahId: sekolah.id, namaSekolah: sekolah.nama,
-                npsn: sekolah.npsn, kecamatan: sekolah.kecamatan, jenjang: sekolah.jenjang,
-                bintang: 0, createdAt: new Date().toISOString(),
-            };
-            setData(prev => [newItem, ...prev]);
-            toast.success('Proposal berhasil ditambahkan');
+    const handleSave = async () => {
+        const rawValue = String(formData.nilaiPengajuan).replace(/\./g, '');
+        if (!rawValue || parseFloat(rawValue) <= 0) { toast.error('Nilai pengajuan harus lebih dari 0'); return; }
+        const payload = { ...formData, nilaiPengajuan: parseFloat(rawValue) };
+        try {
+            if (editItem) {
+                await proposalApi.update(editItem.id, payload);
+                toast.success('Proposal berhasil diperbarui');
+            } else {
+                const sekolah = sekolahList.find(s => s.nama === formSekolah);
+                if (!sekolah) { toast.error('Pilih sekolah terlebih dahulu'); return; }
+                await proposalApi.create({ ...payload, sekolahId: sekolah.id });
+                toast.success('Proposal berhasil ditambahkan');
+            }
+            await refetchProposal();
+            setShowModal(false); resetForm();
+        } catch (err) {
+            toast.error(err?.message || 'Gagal menyimpan proposal');
         }
-        setShowModal(false); resetForm();
     };
 
     // ===== UPDATED DELETE HANDLER =====
-    const performDelete = () => {
-        setData(prev => prev.filter(d => d.id !== deleteConfirm.id));
-        toast.success('Proposal berhasil dihapus');
-        setDeleteConfirm(null);
+    const performDelete = async () => {
+        try {
+            await proposalApi.delete(deleteConfirm.id);
+            toast.success('Proposal berhasil dihapus');
+            setDeleteConfirm(null);
+            await refetchProposal();
+        } catch (err) {
+            toast.error(err?.message || 'Gagal menghapus proposal');
+        }
     };
 
     const handleStar = (id) => {
@@ -443,7 +450,7 @@ const Proposal = ({ readOnly = false }) => {
                                 </div>
                             )}
 
-                            <div className="form-row"><div className="form-group"><label className="form-label">Nilai Pengajuan (Rp) *</label><input className="form-input" type="number" value={formData.nilaiPengajuan} onChange={e => setFormData({ ...formData, nilaiPengajuan: e.target.value })} /></div><div className="form-group"><label className="form-label">Target</label><input className="form-input" value={formData.target || ''} onChange={e => setFormData({ ...formData, target: e.target.value })} /></div></div>
+                            <div className="form-row"><div className="form-group"><label className="form-label">Nilai Pengajuan (Rp) *</label><input className="form-input" type="text" inputMode="numeric" value={formData.nilaiPengajuan ? String(formData.nilaiPengajuan).replace(/\./g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.') : ''} onChange={e => { const raw = e.target.value.replace(/\./g, ''); if (/^\d*$/.test(raw)) setFormData({ ...formData, nilaiPengajuan: raw }); }} placeholder="Contoh: 50.000.000" /></div><div className="form-group"><label className="form-label">Target</label><input className="form-input" value={formData.target || ''} onChange={e => setFormData({ ...formData, target: e.target.value })} /></div></div>
                             <div className="form-group"><label className="form-label">Keterangan</label><textarea className="form-input" rows={2} value={formData.keterangan || ''} onChange={e => setFormData({ ...formData, keterangan: e.target.value })}></textarea></div>
                             <div className="form-row"><div className="form-group"><label className="form-label">No Agenda Surat</label><input className="form-input" value={formData.noAgendaSurat || ''} onChange={e => setFormData({ ...formData, noAgendaSurat: e.target.value })} /></div><div className="form-group"><label className="form-label">Tanggal Surat</label><input className="form-input" type="date" value={formData.tanggalSurat || ''} onChange={e => setFormData({ ...formData, tanggalSurat: e.target.value })} /></div></div>
                         </div>
