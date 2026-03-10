@@ -853,7 +853,8 @@ const DataSarpras = ({ readOnly = false }) => {
                                 <div style={{ marginBottom: 20, flex: '1 1 auto', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                                     <div style={{ position: 'relative', borderRadius: 'var(--radius-lg)', overflow: 'hidden', background: '#000', flex: '1 1 auto', minHeight: 300, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                         <img src={viewItem.foto[photoIdx]?.url} alt={`Foto ${photoIdx + 1}`}
-                                            style={{ maxHeight: '100%', maxWidth: '100%', objectFit: 'contain', cursor: 'zoom-in' }}
+                                            onError={(e) => { const f = viewItem.foto[photoIdx]; if (f?.proxyUrl && e.target.src !== f.proxyUrl) e.target.src = f.proxyUrl; }}
+                                            style={{ maxHeight: '100%', maxWidth: '100%', width: '100%', height: '100%', objectFit: 'contain', cursor: 'zoom-in' }}
                                             onClick={() => { setPhotoModal(viewItem); }} />
                                         {viewItem.foto.length > 1 && (
                                             <>
@@ -886,7 +887,7 @@ const DataSarpras = ({ readOnly = false }) => {
                                         {viewItem.foto.map((f, i) => (
                                             <div key={i} onClick={() => setPhotoIdx(i)}
                                                 style={{ width: 56, height: 56, minWidth: 56, borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: i === photoIdx ? '2px solid var(--accent-blue)' : '2px solid transparent', cursor: 'pointer', opacity: i === photoIdx ? 1 : 0.6, transition: 'all 150ms' }}>
-                                                <img src={f.url} alt={f.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                <img src={f.url} alt={f.name} onError={(e) => { if (f.proxyUrl && e.target.src !== f.proxyUrl) e.target.src = f.proxyUrl; }} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                             </div>
                                         ))}
                                     </div>
@@ -998,7 +999,7 @@ const DataSarpras = ({ readOnly = false }) => {
                         <button onClick={() => setPhotoModal(null)} style={{ position: 'absolute', top: 8, right: 8, background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', width: 40, height: 40, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', zIndex: 20, transition: 'background 200ms' }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.35)'} onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}><X size={22} /></button>
 
                         <div style={{ position: 'relative', flex: '1 1 auto', minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                            <img src={photoModal.foto[photoIdx]?.url} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 'var(--radius-md)' }} />
+                            <img src={photoModal.foto[photoIdx]?.url} alt="" onError={(e) => { const f = photoModal.foto[photoIdx]; if (f?.proxyUrl && e.target.src !== f.proxyUrl) e.target.src = f.proxyUrl; }} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain', borderRadius: 'var(--radius-md)' }} />
 
                             {photoModal.foto.length > 1 && (
                                 <>
