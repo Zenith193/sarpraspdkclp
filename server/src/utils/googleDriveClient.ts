@@ -145,49 +145,84 @@ function getDriveClient(): drive_v3.Drive {
 
 const folderCache = new Map<string, string>();
 
+// Lock map to prevent parallel creation of same folder
+const folderLocks = new Map<string, Promise<string>>();
+
 async function findOrCreateFolder(parentId: string, folderName: string): Promise<string> {
     const cacheKey = `${parentId}/${folderName}`;
     if (folderCache.has(cacheKey)) return folderCache.get(cacheKey)!;
 
-    const drive = getDriveClient();
+    // If another call is already creating this folder, wait for it
+    if (folderLocks.has(cacheKey)) return folderLocks.get(cacheKey)!;
 
-    const res = await drive.files.list({
-        q: `'${parentId}' in parents and name='${folderName.replace(/'/g, "\\'")}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
-        fields: 'files(id, name)',
-        pageSize: 1,
-    });
+    // Create a promise that resolves when folder is found/created
+    const promise = (async () => {
+        // Double-check cache after acquiring "lock"
+        if (folderCache.has(cacheKey)) return folderCache.get(cacheKey)!;
 
-    if (res.data.files && res.data.files.length > 0) {
-        const id = res.data.files[0].id!;
+        const drive = getDriveClient();
+
+        const res = await drive.files.list({
+            q: `'${parentId}' in parents and name='${folderName.replace(/'/g, "\\'")}' and mimeType='application/vnd.google-apps.folder' and trashed=false`,
+            fields: 'files(id, name)',
+            pageSize: 1,
+        });
+
+        if (res.data.files && res.data.files.length > 0) {
+            const id = res.data.files[0].id!;
+            folderCache.set(cacheKey, id);
+            return id;
+        }
+
+        const createRes = await drive.files.create({
+            requestBody: {
+                name: folderName,
+                mimeType: 'application/vnd.google-apps.folder',
+                parents: [parentId],
+            },
+            fields: 'id',
+        });
+
+        const id = createRes.data.id!;
         folderCache.set(cacheKey, id);
+        console.log(`[GDrive] Created folder: ${folderName} (${id})`);
         return id;
+    })();
+
+    folderLocks.set(cacheKey, promise);
+    try {
+        const result = await promise;
+        return result;
+    } finally {
+        folderLocks.delete(cacheKey);
     }
-
-    const createRes = await drive.files.create({
-        requestBody: {
-            name: folderName,
-            mimeType: 'application/vnd.google-apps.folder',
-            parents: [parentId],
-        },
-        fields: 'id',
-    });
-
-    const id = createRes.data.id!;
-    folderCache.set(cacheKey, id);
-    console.log(`[GDrive] Created folder: ${folderName} (${id})`);
-    return id;
 }
 
+// Lock for ensureGDrivePath to serialize full path creation
+const pathLocks = new Map<string, Promise<string>>();
+
 async function ensureGDrivePath(folderPath: string): Promise<string> {
-    const cfg = getGDriveConfig();
-    let currentId = cfg.folderId;
+    // Serialize calls for the same path
+    if (pathLocks.has(folderPath)) return pathLocks.get(folderPath)!;
 
-    const parts = folderPath.split('/').filter(Boolean);
-    for (const part of parts) {
-        currentId = await findOrCreateFolder(currentId, part);
+    const promise = (async () => {
+        const cfg = getGDriveConfig();
+        let currentId = cfg.folderId;
+
+        const parts = folderPath.split('/').filter(Boolean);
+        for (const part of parts) {
+            currentId = await findOrCreateFolder(currentId, part);
+        }
+
+        return currentId;
+    })();
+
+    pathLocks.set(folderPath, promise);
+    try {
+        return await promise;
+    } finally {
+        pathLocks.delete(folderPath);
     }
-
-    return currentId;
 }
 
 // ==================== FILE OPERATIONS ====================
