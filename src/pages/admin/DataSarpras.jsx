@@ -442,20 +442,17 @@ const DataSarpras = ({ readOnly = false }) => {
                 if (!npsn) { errors.push(`Baris ${index + 2}: NPSN kosong`); return; }
                 if (!sekolah) { errors.push(`Baris ${index + 2}: NPSN ${npsn} tidak ditemukan`); return; }
 
-                const namaRuang = (row['nama ruang'] || row['namaruang'] || row['ruang'] || '').toString().trim();
-                if (!namaRuang) { errors.push(`Baris ${index + 2}: Nama Ruang kosong`); return; }
-
+                const namaRuang = (row['nama ruang'] || row['namaruang'] || row['ruang'] || row['nama_ruang'] || '').toString().trim() || `Ruang ${index + 1}`;
                 const panjang = parseFloat(row['panjang'] || row['p'] || 0) || 0;
                 const lebar = parseFloat(row['lebar'] || row['l'] || 0) || 0;
-                if (!panjang || !lebar) { errors.push(`Baris ${index + 2}: Panjang/Lebar kosong untuk ${namaRuang}`); return; }
 
                 parsed.push({
                     npsn,
                     sekolahId: sekolah.id,
                     namaSekolah: sekolah.nama,
                     kecamatan: sekolah.kecamatan,
-                    masaBangunan: (row['masa bangunan'] || row['masa'] || row['masabangunan'] || 'A').toString().trim(),
-                    jenisPrasarana: (row['jenis prasarana'] || row['jenisprasarana'] || row['jenis'] || 'Ruang Kelas').toString().trim(),
+                    masaBangunan: (row['masa bangunan'] || row['masa'] || row['masabangunan'] || row['masa_bangunan'] || '').toString().trim() || '',
+                    jenisPrasarana: (row['jenis prasarana'] || row['jenisprasarana'] || row['jenis'] || row['jenis_prasarana'] || '').toString().trim() || 'Ruang Kelas',
                     namaRuang,
                     lantai: parseInt(row['lantai'] || row['lt'] || 1) || 1,
                     panjang,

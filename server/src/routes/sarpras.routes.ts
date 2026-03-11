@@ -149,24 +149,17 @@ router.post('/batch', requireAuth, requireRole('admin', 'sekolah'), async (req, 
         const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
         const finalSekolahId = isSekolah ? req.user!.sekolahId : sekolahId;
 
-        const rows = items.map((item: any) => ({
+        const rows = items.map((item: any, idx: number) => ({
             sekolahId: finalSekolahId,
-            masaBangunan: item.masaBangunan || 'A',
+            masaBangunan: item.masaBangunan || '',
             jenisPrasarana: item.jenisPrasarana || 'Ruang Kelas',
-            namaRuang: item.namaRuang,
+            namaRuang: item.namaRuang || `Ruang ${idx + 1}`,
             lantai: item.lantai || 1,
             panjang: parseFloat(item.panjang) || 0,
             lebar: parseFloat(item.lebar) || 0,
             kondisi: item.kondisi || 'BAIK',
             keterangan: item.keterangan || '',
         }));
-
-        // Validate all rows have namaRuang
-        const invalid = rows.filter((r: any) => !r.namaRuang);
-        if (invalid.length > 0) {
-            res.status(400).json({ error: `${invalid.length} baris belum memiliki Nama Ruang` });
-            return;
-        }
 
         const result = await sarprasService.batchCreate(rows, req.user!.id);
         res.status(201).json({ success: true, count: result.length, data: result });
