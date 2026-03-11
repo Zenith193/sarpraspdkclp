@@ -423,23 +423,6 @@ const DataSarpras = ({ readOnly = false }) => {
         setIsBatchImporting(true);
         toast.loading('Membaca file Excel...', { id: 'batch-import' });
         try {
-            // Fetch SEMUA sekolah (tanpa filter onlyWithUsers) untuk NPSN matching
-            const allSekolahRes = await sekolahApi.list({ limit: 99999 });
-            // Handle berbagai format response: { data: [...] } atau langsung array
-            let allSekolah = [];
-            if (Array.isArray(allSekolahRes)) {
-                allSekolah = allSekolahRes;
-            } else if (allSekolahRes?.data && Array.isArray(allSekolahRes.data)) {
-                allSekolah = allSekolahRes.data;
-            } else if (allSekolahRes?.data?.data && Array.isArray(allSekolahRes.data.data)) {
-                allSekolah = allSekolahRes.data.data;
-            }
-            // Build NPSN Map untuk lookup cepat dan reliable
-            const npsnMap = new Map();
-            allSekolah.forEach(s => { if (s.npsn) npsnMap.set(String(s.npsn).trim(), s); });
-            console.log(`[BatchImport] Total sekolah: ${allSekolah.length}, NPSN Map size: ${npsnMap.size}`);
-            console.log(`[BatchImport] Sample NPSN di DB:`, [...npsnMap.keys()].slice(0, 10));
-
             const data = await file.arrayBuffer();
             const workbook = XLSX.read(data);
             const sheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -450,61 +433,48 @@ const DataSarpras = ({ readOnly = false }) => {
                 return;
             }
 
-            const parsed = [];
-            const errors = [];
-            const npsnNotFound = new Set();
-            const npsnEmpty = { count: 0 };
-            if (jsonData.length > 0) {
-                const firstRow = {};
-                for (const key in jsonData[0]) firstRow[key.toLowerCase().trim()] = jsonData[0][key];
-                console.log(`[BatchImport] First Excel row NPSN: "${firstRow['npsn']}" (type: ${typeof firstRow['npsn']}), exists in map: ${npsnMap.has(String(firstRow['npsn'] || '').trim())}`);
-            }
-            jsonData.forEach((origRow, index) => {
+            // Parse Excel → raw items dengan NPSN (server akan resolve ke sekolahId)
+            const items = jsonData.map((origRow, index) => {
                 const row = {};
                 for (const key in origRow) row[key.toLowerCase().trim()] = origRow[key];
-
-                const npsn = (row['npsn'] || '').toString().trim();
-                const sekolah = npsn ? npsnMap.get(npsn) : null;
-                if (!npsn) { npsnEmpty.count++; errors.push(`Baris ${index + 2}: NPSN kosong`); return; }
-                if (!sekolah) { npsnNotFound.add(npsn); errors.push(`Baris ${index + 2}: NPSN ${npsn} tidak ditemukan`); return; }
-
-                const namaRuang = (row['nama ruang'] || row['namaruang'] || row['ruang'] || row['nama_ruang'] || '').toString().trim().replace(/\//g, '') || `Ruang ${index + 1}`;
-                const panjang = parseFloat(row['panjang'] || row['p'] || 0) || 0;
-                const lebar = parseFloat(row['lebar'] || row['l'] || 0) || 0;
-
-                parsed.push({
-                    npsn,
-                    sekolahId: sekolah.id,
-                    namaSekolah: sekolah.nama,
-                    kecamatan: sekolah.kecamatan,
-                    masaBangunan: (row['masa bangunan'] || row['masa'] || row['masabangunan'] || row['masa_bangunan'] || '').toString().trim() || '',
+                return {
+                    npsn: (row['npsn'] || '').toString().trim(),
+                    masaBangunan: (row['masa bangunan'] || row['masa'] || row['masabangunan'] || row['masa_bangunan'] || '').toString().trim(),
                     jenisPrasarana: (row['jenis prasarana'] || row['jenisprasarana'] || row['jenis'] || row['jenis_prasarana'] || '').toString().trim() || 'Ruang Kelas',
-                    namaRuang,
+                    namaRuang: (row['nama ruang'] || row['namaruang'] || row['ruang'] || row['nama_ruang'] || '').toString().trim().replace(/\//g, '') || `Ruang ${index + 1}`,
                     lantai: parseInt(row['lantai'] || row['lt'] || 1) || 1,
-                    panjang,
-                    lebar,
+                    panjang: parseFloat(row['panjang'] || row['p'] || 0) || 0,
+                    lebar: parseFloat(row['lebar'] || row['l'] || 0) || 0,
                     kondisi: (row['kondisi'] || 'BAIK').toString().trim().toUpperCase(),
                     keterangan: (row['keterangan'] || row['ket'] || '').toString().trim(),
-                });
+                };
             });
 
-            if (errors.length > 0 && parsed.length === 0) {
-                toast.error(`Semua baris gagal diparse:\n${errors.slice(0, 5).join('\n')}`, { id: 'batch-import', duration: 6000 });
-                return;
-            }
-            if (errors.length > 0) {
-                const reasons = [];
-                if (npsnNotFound.size > 0) reasons.push(`NPSN tidak ditemukan (${npsnNotFound.size} sekolah): ${[...npsnNotFound].slice(0, 10).join(', ')}${npsnNotFound.size > 10 ? '...' : ''}`);
-                if (npsnEmpty.count > 0) reasons.push(`${npsnEmpty.count} baris NPSN kosong`);
-                console.warn('Batch import - NPSN tidak ditemukan:', [...npsnNotFound]);
-                console.warn('Batch import warnings:', errors);
-                toast(`${errors.length} baris dilewati. ${parsed.length} baris valid.\n${reasons.join('\n')}`, { id: 'batch-import', icon: '⚠️', duration: 8000 });
-            } else {
-                toast.success(`${parsed.length} baris berhasil dibaca`, { id: 'batch-import' });
+            // Kirim ke server per chunk 500 (server resolve NPSN dari DB)
+            const CHUNK_SIZE = 500;
+            const total = items.length;
+            let totalSaved = 0;
+            let totalSkipped = 0;
+            let allSkippedNpsn = new Set();
+
+            toast.loading(`Menyimpan 0/${total} data...`, { id: 'batch-import' });
+
+            for (let i = 0; i < items.length; i += CHUNK_SIZE) {
+                const chunk = items.slice(i, i + CHUNK_SIZE);
+                const res = await sarprasApi.batchCreateByNpsn({ items: chunk });
+                totalSaved += res.count || 0;
+                totalSkipped += res.skipped || 0;
+                if (res.skippedNpsn) res.skippedNpsn.forEach(n => allSkippedNpsn.add(n));
+                toast.loading(`Menyimpan ${totalSaved}/${total} data...`, { id: 'batch-import' });
             }
 
-            // Langsung simpan tanpa preview
-            await saveBatchRows(parsed);
+            if (totalSkipped > 0) {
+                const npsnList = [...allSkippedNpsn].slice(0, 10).join(', ');
+                toast(`${totalSaved} disimpan, ${totalSkipped} dilewati.\nNPSN tidak ditemukan: ${npsnList}${allSkippedNpsn.size > 10 ? '...' : ''}`, { id: 'batch-import', icon: '⚠️', duration: 8000 });
+            } else {
+                toast.success(`${totalSaved} data sarpras berhasil disimpan`, { id: 'batch-import' });
+            }
+            if (refetchSarpras) refetchSarpras();
         } catch (err) {
             toast.error(err.message || 'Gagal membaca file', { id: 'batch-import' });
         } finally {

@@ -20,6 +20,7 @@ export const sarprasApi = {
     getById: (id) => api.get(`/sarpras/${id}`),
     create: (formData) => api.upload('/sarpras', formData),
     batchCreate: (data) => api.post('/sarpras/batch', data),
+    batchCreateByNpsn: (data) => api.post('/sarpras/batch-by-npsn', data),
     update: (id, data) => api.put(`/sarpras/${id}`, data),
     delete: (id) => api.delete(`/sarpras/${id}`),
     verify: (id) => api.post(`/sarpras/${id}/verify`),

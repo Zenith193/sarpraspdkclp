@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { sarprasService } from '../services/sarpras.service.js';
+import { db } from '../db/index.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { uploadFotos, forwardToNas } from '../middleware/upload.js';
 import { logActivity } from '../middleware/logActivity.js';
@@ -164,6 +165,65 @@ router.post('/batch', requireAuth, requireRole('admin', 'sekolah'), async (req, 
         const result = await sarprasService.batchCreate(rows, req.user!.id);
         res.status(201).json({ success: true, count: result.length, data: result });
         logActivity(req, 'Batch Tambah Sarpras', `Menambahkan ${result.length} data sarpras sekaligus`);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// Batch create sarpras by NPSN (resolves NPSN→sekolahId server-side)
+router.post('/batch-by-npsn', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+        const { items } = req.body;
+        if (!items || !Array.isArray(items) || items.length === 0) {
+            res.status(400).json({ error: 'items (array) harus diisi' });
+            return;
+        }
+
+        // Collect unique NPSNs
+        const npsnSet = new Set<string>();
+        items.forEach((item: any) => { if (item.npsn) npsnSet.add(String(item.npsn).trim()); });
+
+        // Resolve all NPSNs to sekolahIds from DB
+        const { sekolah: sekolahTable } = await import('../db/schema/index.js');
+        const allSekolah = await db.select({ id: sekolahTable.id, npsn: sekolahTable.npsn, nama: sekolahTable.nama }).from(sekolahTable);
+        const npsnMap = new Map<string, number>();
+        allSekolah.forEach(s => { if (s.npsn) npsnMap.set(s.npsn.trim(), s.id); });
+
+        const validRows: any[] = [];
+        const skippedNpsn = new Set<string>();
+        let skippedCount = 0;
+
+        items.forEach((item: any, idx: number) => {
+            const npsn = String(item.npsn || '').trim();
+            if (!npsn) { skippedCount++; return; }
+            const sekolahId = npsnMap.get(npsn);
+            if (!sekolahId) { skippedNpsn.add(npsn); skippedCount++; return; }
+
+            validRows.push({
+                sekolahId,
+                masaBangunan: item.masaBangunan || '',
+                jenisPrasarana: item.jenisPrasarana || 'Ruang Kelas',
+                namaRuang: (item.namaRuang || `Ruang ${idx + 1}`).replace(/\//g, ''),
+                lantai: item.lantai || 1,
+                panjang: parseFloat(item.panjang) || 0,
+                lebar: parseFloat(item.lebar) || 0,
+                kondisi: item.kondisi || 'BAIK',
+                keterangan: item.keterangan || '',
+            });
+        });
+
+        let savedCount = 0;
+        if (validRows.length > 0) {
+            const result = await sarprasService.batchCreate(validRows, req.user!.id);
+            savedCount = result.length;
+        }
+
+        res.status(201).json({
+            success: true,
+            count: savedCount,
+            skipped: skippedCount,
+            skippedNpsn: [...skippedNpsn],
+            totalSekolahInDB: npsnMap.size,
+        });
+        logActivity(req, 'Batch Tambah Sarpras', `Menambahkan ${savedCount} data sarpras (${skippedCount} dilewati)`);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
