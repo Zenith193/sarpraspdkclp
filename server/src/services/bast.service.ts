@@ -38,6 +38,10 @@ export const bastService = {
 
 export const templateService = {
     async list() { return db.select().from(bastTemplate); },
+    async getById(id: number) {
+        const result = await db.select().from(bastTemplate).where(eq(bastTemplate.id, id));
+        return result[0] || null;
+    },
     async create(data: typeof bastTemplate.$inferInsert) {
         const result = await db.insert(bastTemplate).values(data).returning();
         return result[0];

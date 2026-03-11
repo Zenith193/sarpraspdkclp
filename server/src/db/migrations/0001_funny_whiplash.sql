@@ -1,0 +1,1 @@
+ALTER TABLE "bast_template" ADD COLUMN "upload_status" text DEFAULT 'done';

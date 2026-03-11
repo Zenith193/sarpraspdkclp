@@ -112,7 +112,16 @@ const ManajemenTemplate = () => {
     const [templates, setTemplates] = useState([]);
     const [search, setSearch] = useState('');
 
-    useEffect(() => { if (apiData?.data) setTemplates(apiData.data); else if (Array.isArray(apiData)) setTemplates(apiData); }, [apiData]);
+    useEffect(() => {
+        const raw = apiData?.data || (Array.isArray(apiData) ? apiData : []);
+        // Normalize DB field names → frontend field names
+        setTemplates(raw.map(t => ({
+            ...t,
+            name: t.name || t.nama || '',
+            type: t.type || t.jenisCocok || '',
+            lastUpdated: t.lastUpdated || t.updatedAt || t.createdAt || null,
+        })));
+    }, [apiData]);
 
     // ===== STATE PAGINASI =====
     const [perPage, setPerPage] = useState(10);
@@ -164,7 +173,7 @@ const ManajemenTemplate = () => {
     };
 
     const openEditModal = (item) => {
-        setFormData({ name: item.name, type: item.type });
+        setFormData({ name: item.name || item.nama || '', type: item.type || item.jenisCocok || '' });
         setFormFile(null);
         setEditId(item.id);
         setModalType('edit');
@@ -294,7 +303,7 @@ const ManajemenTemplate = () => {
                                         <td>
                                             <div style={{ display: 'flex', gap: 4 }}>
                                                 {t.filePath && (
-                                                    <a href={`/api${t.filePath}`} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Download" style={{ color: 'var(--accent-green)' }}><Download size={16} /></a>
+                                                    <a href={`/api/template/download/${t.id}`} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Download" style={{ color: 'var(--accent-green)' }}><Download size={16} /></a>
                                                 )}
                                                 <button className="btn-icon" onClick={() => openEditModal(t)} title="Edit"><Edit size={16} /></button>
                                                 <button className="btn-icon" onClick={() => setDeleteTarget(t)} style={{ color: 'var(--accent-red)' }} title="Hapus"><Trash2 size={16} /></button>

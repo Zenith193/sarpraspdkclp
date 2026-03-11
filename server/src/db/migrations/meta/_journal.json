@@ -8,6 +8,13 @@
       "when": 1773216610584,
       "tag": "0000_careful_korath",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1773235012852,
+      "tag": "0001_funny_whiplash",
+      "breakpoints": true
     }
   ]
 }

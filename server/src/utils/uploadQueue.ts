@@ -7,7 +7,7 @@
  * 3. Both run in background so user gets instant responses
  */
 import { db } from '../db/index.js';
-import { sarprasFoto, formKerusakan, prestasi, proposal, proposalFoto } from '../db/schema/index.js';
+import { sarprasFoto, formKerusakan, prestasi, proposal, proposalFoto, bastTemplate } from '../db/schema/index.js';
 import { sarpras } from '../db/schema/sarpras.js';
 import { sekolah } from '../db/schema/sekolah.js';
 import { eq } from 'drizzle-orm';
@@ -201,6 +201,26 @@ async function processUploadQueue() {
         } catch (e: any) {
             console.error(`[Queue] Upload proposal_foto #${item.id} failed:`, e.message);
             await db.update(proposalFoto).set({ uploadStatus: 'failed' }).where(eq(proposalFoto.id, item.id));
+        }
+    }
+
+    // 6. bast_template
+    const pendingTemplate = await db.select().from(bastTemplate).where(eq(bastTemplate.uploadStatus, 'uploading')).limit(5);
+    for (const item of pendingTemplate) {
+        if (!item.filePath || !fs.existsSync(item.filePath)) {
+            await db.update(bastTemplate).set({ uploadStatus: 'failed' }).where(eq(bastTemplate.id, item.id));
+            continue;
+        }
+        try {
+            const subPath = 'template';
+            const result = await uploadFileToGDrive(item.filePath, 'template', subPath);
+            const oldPath = item.filePath;
+            await db.update(bastTemplate).set({ filePath: result.path, uploadStatus: 'done' }).where(eq(bastTemplate.id, item.id));
+            try { fs.unlinkSync(oldPath); } catch { }
+            console.log(`[Queue] Upload template #${item.id} → ${subPath} ✅`);
+        } catch (e: any) {
+            console.error(`[Queue] Upload template #${item.id} failed:`, e.message);
+            await db.update(bastTemplate).set({ uploadStatus: 'failed' }).where(eq(bastTemplate.id, item.id));
         }
     }
 }
