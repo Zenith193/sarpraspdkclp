@@ -280,4 +280,46 @@ router.delete('/:id/foto/:fotoId', requireAuth, requireRole('admin', 'sekolah'),
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// ===== DEBUG ENDPOINT: Test GDrive folder detection =====
+router.get('/:id/debug-gdrive', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        const existing = await sarprasService.getById(id);
+        if (!existing) { res.status(404).json({ error: 'Not found' }); return; }
+
+        const kec = existing.sekolahKecamatan;
+        const schNama = existing.sekolahNama;
+        const npsn = existing.sekolahNpsn;
+        const masa = existing.sarpras.masaBangunan;
+        const ruang = existing.sarpras.namaRuang;
+
+        const gdriveEnabled = isGDriveEnabled();
+        const fullPath = buildGDriveSarprasPath(kec || '', schNama || '', npsn || '', masa, ruang);
+        const parts = fullPath.split('/').filter(Boolean);
+
+        const results: any[] = [];
+        if (gdriveEnabled) {
+            // Test each segment
+            let testPath = '';
+            for (const part of parts) {
+                testPath = testPath ? `${testPath}/${part}` : part;
+                const folderId = await findGDriveFolderByPath(testPath);
+                results.push({ path: testPath, found: !!folderId, folderId: folderId || null });
+            }
+        }
+
+        res.json({
+            sarprasId: id,
+            sekolahNama: schNama,
+            sekolahKecamatan: kec,
+            sekolahNpsn: npsn,
+            masaBangunan: masa,
+            namaRuang: ruang,
+            gdriveEnabled,
+            gdriveFullPath: fullPath,
+            folderSegments: results,
+        });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 export default router;
