@@ -463,6 +463,7 @@ const Dashboard = () => {
                                 <th>Nama Pengguna</th>
                                 <th>Jenis Akun</th>
                                 <th>Aktivitas</th>
+                                <th>Keterangan</th>
                                 <th>Waktu</th>
                             </tr>
                         </thead>
@@ -473,6 +474,7 @@ const Dashboard = () => {
                                     <td>{a.namaAkun}</td>
                                     <td><span className="badge badge-disetujui">{a.jenisAkun}</span></td>
                                     <td>{a.aktivitas}</td>
+                                    <td style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', maxWidth: 300 }}>{a.keterangan || '-'}</td>
                                     <td>{formatDateTime(a.createdAt)}</td>
                                 </tr>
                             ))}
