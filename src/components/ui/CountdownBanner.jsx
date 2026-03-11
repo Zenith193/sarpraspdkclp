@@ -13,8 +13,10 @@ const CountdownBanner = () => {
     // Load countdown config from server on mount (so all users see admin's settings)
     useEffect(() => {
         settingsApi.getCountdown().then(serverCfg => {
-            if (serverCfg && serverCfg.value) {
-                updateCountdown(serverCfg.value);
+            // Server returns config directly OR as { value: ... } depending on endpoint
+            const cfg = serverCfg?.value || serverCfg;
+            if (cfg && typeof cfg === 'object' && cfg.enabled !== undefined) {
+                updateCountdown(cfg);
             }
         }).catch(() => { });
     }, []);

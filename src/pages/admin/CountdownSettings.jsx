@@ -19,9 +19,10 @@ const CountdownSettings = () => {
     // Load countdown config from server on mount
     useEffect(() => {
         settingsApi.getCountdown().then(serverCfg => {
-            if (serverCfg && serverCfg.value) {
-                updateCountdown(serverCfg.value);
-                setForm({ ...countdownConfig, ...serverCfg.value });
+            const cfg = serverCfg?.value || serverCfg;
+            if (cfg && typeof cfg === 'object' && cfg.enabled !== undefined) {
+                updateCountdown(cfg);
+                setForm({ ...countdownConfig, ...cfg });
             }
         }).catch(() => { });
     }, []);
