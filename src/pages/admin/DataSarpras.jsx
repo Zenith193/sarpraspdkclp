@@ -614,6 +614,9 @@ const DataSarpras = ({ readOnly = false }) => {
                         )}
                     </div>
                 );
+            case 'panjang': return String(item.panjang ?? 0).replace('.', ',');
+            case 'lebar': return String(item.lebar ?? 0).replace('.', ',');
+            case 'luas': return (Math.ceil((item.luas || (item.panjang || 0) * (item.lebar || 0)) * 100) / 100).toFixed(2).replace('.', ',');
             default: return item[col.key] ?? '-';
         }
     };
@@ -912,7 +915,7 @@ const DataSarpras = ({ readOnly = false }) => {
                                         </div>
                                         <div className="form-group">
                                             <label className="form-label">Luas (m²)</label>
-                                            <input className="form-input" readOnly value={((parseFloat(formData.panjang) || 0) * (parseFloat(formData.lebar) || 0)).toFixed(2)} style={{ background: 'var(--bg-primary)' }} />
+                                            <input className="form-input" readOnly value={(Math.ceil((parseFloat(formData.panjang) || 0) * (parseFloat(formData.lebar) || 0) * 100) / 100).toFixed(2).replace('.', ',')} style={{ background: 'var(--bg-primary)' }} />
                                         </div>
                                     </div>
                                     <div className="form-row">
@@ -1044,7 +1047,7 @@ const DataSarpras = ({ readOnly = false }) => {
                                 <div><div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: 2 }}>Jenis Prasarana</div><div>{viewItem.jenisPrasarana}</div></div>
                                 <div><div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: 2 }}>Nama Ruang</div><div style={{ fontWeight: 500 }}>{viewItem.namaRuang}</div></div>
                                 <div><div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: 2 }}>Lantai</div><div>{viewItem.lantai}</div></div>
-                                <div><div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: 2 }}>Ukuran (P × L)</div><div>{viewItem.panjang} m × {viewItem.lebar} m = <b>{viewItem.luas} m²</b></div></div>
+                                <div><div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: 2 }}>Ukuran (P × L)</div><div>{String(viewItem.panjang).replace('.', ',')} m × {String(viewItem.lebar).replace('.', ',')} m = <b>{(Math.ceil((viewItem.luas || viewItem.panjang * viewItem.lebar) * 100) / 100).toFixed(2).replace('.', ',')} m²</b></div></div>
                                 <div><div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: 2 }}>Kondisi</div>{getConditionBadge(viewItem.kondisi)}</div>
                                 <div style={{ gridColumn: '1 / -1' }}><div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: 2 }}>Keterangan</div><div>{viewItem.keterangan || '-'}</div></div>
                                 {canAccessPriority && (
