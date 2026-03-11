@@ -93,9 +93,13 @@ const ProyeksiAnggaran = () => {
             // Count per jenis prasarana
             sk.prasaranaCount[sp.jenisPrasarana] = (sk.prasaranaCount[sp.jenisPrasarana] || 0) + 1;
 
-            // Group rehab by jenisPrasarana + kondisi
+            // Group rehab by jenisPrasarana + kondisi (ONLY if in SNP acuan)
             if (sp.kondisi === 'RUSAK SEDANG' || sp.kondisi === 'RUSAK BERAT') {
                 const isBerat = sp.kondisi === 'RUSAK BERAT';
+                // Skip if this jenisPrasarana is NOT in SNP for this jenjang
+                const snpMatch = snpData.find(s => s.jenisPrasarana === sp.jenisPrasarana && s.jenjang === sk.jenjang);
+                if (!snpMatch) return;
+
                 const key = `${sp.jenisPrasarana}|${isBerat ? 'berat' : 'sedang'}`;
                 const angg = angData.find(a => a.jenisPrasarana === sp.jenisPrasarana && a.jenjang === sk.jenjang);
                 const costKey = isBerat ? 'rusakBerat' : 'rusakSedang';
