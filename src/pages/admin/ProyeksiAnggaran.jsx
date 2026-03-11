@@ -553,7 +553,7 @@ const ProyeksiAnggaran = () => {
                     Belum Usul
                     {filteredBelumUsulan.length > 0 && (
                         <span style={{ marginLeft: '6px', background: 'var(--accent-red)', color: 'white', borderRadius: '10px', padding: '0 6px', fontSize: '0.7rem', fontWeight: 600 }}>
-                            {filteredBelumUsulan.length}
+                            {filteredBelumUsulan.length > 999 ? '999+' : filteredBelumUsulan.length}
                         </span>
                     )}
                 </button>
@@ -613,19 +613,19 @@ const ProyeksiAnggaran = () => {
                     <div className="stats-grid" style={{ marginBottom: '1.5rem' }}>
                         <div className="stat-card" style={{ borderLeft: '4px solid var(--accent-orange)' }}>
                             <div className="stat-label" style={{ display: 'flex', alignItems: 'center' }}><HardHat size={16} style={{ marginRight: 6, color: 'var(--accent-orange)' }} /> Total Rehab Sedang</div>
-                            <div className="stat-value" style={{ color: 'var(--accent-orange)', fontSize: '1.25rem' }}>{formatCurrency(globalStats.totalRS)}</div>
+                            <div className="stat-value" style={{ color: 'var(--accent-orange)', fontSize: '1rem' }}>{formatCurrency(globalStats.totalRS)}</div>
                         </div>
                         <div className="stat-card" style={{ borderLeft: '4px solid var(--accent-red)' }}>
                             <div className="stat-label" style={{ display: 'flex', alignItems: 'center' }}><Hammer size={16} style={{ marginRight: 6, color: 'var(--accent-red)' }} /> Total Rehab Berat</div>
-                            <div className="stat-value" style={{ color: 'var(--accent-red)', fontSize: '1.25rem' }}>{formatCurrency(globalStats.totalRB)}</div>
+                            <div className="stat-value" style={{ color: 'var(--accent-red)', fontSize: '1rem' }}>{formatCurrency(globalStats.totalRB)}</div>
                         </div>
                         <div className="stat-card" style={{ borderLeft: '4px solid var(--accent-blue)' }}>
                             <div className="stat-label" style={{ display: 'flex', alignItems: 'center' }}><Building2 size={16} style={{ marginRight: 6, color: 'var(--accent-blue)' }} /> Total Pembangunan</div>
-                            <div className="stat-value" style={{ color: 'var(--accent-blue)', fontSize: '1.25rem' }}>{formatCurrency(globalStats.totalBuild)}</div>
+                            <div className="stat-value" style={{ color: 'var(--accent-blue)', fontSize: '1rem' }}>{formatCurrency(globalStats.totalBuild)}</div>
                         </div>
                         <div className="stat-card" style={{ borderLeft: '4px solid var(--accent-green)' }}>
                             <div className="stat-label" style={{ display: 'flex', alignItems: 'center' }}><Wallet size={16} style={{ marginRight: 6, color: 'var(--accent-green)' }} /> Grand Total</div>
-                            <div className="stat-value" style={{ color: 'var(--accent-green)', fontSize: '1.25rem' }}>{formatCurrency(globalStats.grandTotal)}</div>
+                            <div className="stat-value" style={{ color: 'var(--accent-green)', fontSize: '1rem' }}>{formatCurrency(globalStats.grandTotal)}</div>
                         </div>
                     </div>
 
