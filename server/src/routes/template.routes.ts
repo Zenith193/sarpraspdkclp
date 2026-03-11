@@ -12,7 +12,8 @@ router.post('/', requireAuth, requireRole('admin'), uploadTemplate.single('file'
     try {
         const f = req.file as any;
         const data = {
-            ...req.body,
+            nama: req.body.name || req.body.nama,
+            jenisCocok: req.body.type || req.body.jenisCocok,
             ...(req.file ? { filePath: f?.finalPath || req.file.path } : {}),
         };
         res.status(201).json(await templateService.create(data));
@@ -21,10 +22,10 @@ router.post('/', requireAuth, requireRole('admin'), uploadTemplate.single('file'
 router.put('/:id', requireAuth, requireRole('admin'), uploadTemplate.single('file'), forwardToNas('template'), async (req, res) => {
     try {
         const f = req.file as any;
-        const data = {
-            ...req.body,
-            ...(req.file ? { filePath: f?.finalPath || req.file.path } : {}),
-        };
+        const data: any = {};
+        if (req.body.name || req.body.nama) data.nama = req.body.name || req.body.nama;
+        if (req.body.type || req.body.jenisCocok) data.jenisCocok = req.body.type || req.body.jenisCocok;
+        if (req.file) data.filePath = f?.finalPath || req.file.path;
         res.json(await templateService.update(Number(req.params.id), data));
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
