@@ -5,7 +5,7 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 const router = Router();
 
 // ===== ANGGARAN =====
-router.get('/anggaran', requireAuth, requireRole('admin'), async (_req, res) => {
+router.get('/anggaran', requireAuth, requireRole('admin', 'verifikator'), async (_req, res) => {
     try { res.json(await proyeksiService.listAnggaran()); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.post('/anggaran', requireAuth, requireRole('admin'), async (req, res) => {
@@ -19,7 +19,7 @@ router.delete('/anggaran/:id', requireAuth, requireRole('admin'), async (req, re
 });
 
 // ===== SNP =====
-router.get('/snp', requireAuth, requireRole('admin'), async (_req, res) => {
+router.get('/snp', requireAuth, requireRole('admin', 'verifikator'), async (_req, res) => {
     try { res.json(await proyeksiService.listSnp()); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.post('/snp', requireAuth, requireRole('admin'), async (req, res) => {
@@ -33,7 +33,7 @@ router.delete('/snp/:id', requireAuth, requireRole('admin'), async (req, res) =>
 });
 
 // ===== REKAP =====
-router.get('/rekap', requireAuth, requireRole('admin'), async (_req, res) => {
+router.get('/rekap', requireAuth, requireRole('admin', 'verifikator'), async (_req, res) => {
     try { res.json(await proyeksiService.getRekap()); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 

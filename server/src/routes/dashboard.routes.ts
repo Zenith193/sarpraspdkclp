@@ -4,7 +4,7 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 
 const router = Router();
 
-router.get('/admin', requireAuth, requireRole('admin'), async (_req, res) => {
+router.get('/admin', requireAuth, requireRole('admin', 'verifikator'), async (_req, res) => {
     try { res.json(await dashboardService.getAdminStats()); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
