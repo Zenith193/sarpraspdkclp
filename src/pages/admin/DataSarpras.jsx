@@ -496,19 +496,29 @@ const DataSarpras = ({ readOnly = false }) => {
             groups[r.sekolahId].push(r);
         });
 
+        const CHUNK_SIZE = 500;
+        const total = batchRows.length;
+        let totalSaved = 0;
+
         try {
-            toast.loading(`Menyimpan ${batchRows.length} data...`, { id: 'batch-save' });
-            let totalSaved = 0;
+            toast.loading(`Menyimpan 0/${total} data...`, { id: 'batch-save' });
+
             for (const [sekolahId, items] of Object.entries(groups)) {
-                const res = await sarprasApi.batchCreate({ sekolahId: Number(sekolahId), items });
-                totalSaved += res.count || items.length;
+                // Split items into chunks of CHUNK_SIZE
+                for (let i = 0; i < items.length; i += CHUNK_SIZE) {
+                    const chunk = items.slice(i, i + CHUNK_SIZE);
+                    const res = await sarprasApi.batchCreate({ sekolahId: Number(sekolahId), items: chunk });
+                    totalSaved += res.count || chunk.length;
+                    toast.loading(`Menyimpan ${totalSaved}/${total} data...`, { id: 'batch-save' });
+                }
             }
+
             toast.success(`${totalSaved} data sarpras berhasil disimpan`, { id: 'batch-save' });
             setShowBatchModal(false);
             setBatchRows([]);
             if (refetchSarpras) refetchSarpras();
         } catch (e) {
-            toast.error(e.message || 'Gagal menyimpan batch', { id: 'batch-save' });
+            toast.error(`Gagal di ${totalSaved}/${total}: ${e.message}`, { id: 'batch-save', duration: 5000 });
         }
     };
 

@@ -76,7 +76,7 @@ export function useSekolahData() {
 
 // ===== SARPRAS =====
 export function useSarprasData(params = {}) {
-    return useDataFetch(() => sarprasApi.list({ limit: 500, ...params }).then(r => {
+    return useDataFetch(() => sarprasApi.list({ limit: 99999, ...params }).then(r => {
         const items = r.data || r;
         // Flatten nested structure: { sarpras: {...}, sekolahNama, sekolahNpsn, ... } → flat object
         return items.map(item => {
