@@ -249,6 +249,34 @@ const Proposal = ({ readOnly = false }) => {
         w.print();
     };
 
+    const handlePrintSavedChecklist = (item) => {
+        const sch = item.sekolah;
+        const tahun = new Date(item.createdAt).getFullYear();
+        const bulanIndo = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+        const dt = new Date(item.createdAt);
+        const tanggal = `${dt.getDate()} ${bulanIndo[dt.getMonth()]} ${dt.getFullYear()}`;
+        const rows = (item.items || []).map((it, i) =>
+            `<tr><td style="text-align:center;padding:6px;border:1px solid #000">${i + 1}</td><td style="padding:6px;border:1px solid #000">${it.indikator}</td><td style="text-align:center;padding:6px;border:1px solid #000">${it.status === 'Ada' ? '✓' : ''}</td><td style="text-align:center;padding:6px;border:1px solid #000">${it.status === 'Tidak Ada' ? '✓' : ''}</td><td style="padding:6px;border:1px solid #000">${it.keterangan || ''}</td></tr>`
+        ).join('');
+        const verSection = (item.verifikators || []).length > 0
+            ? item.verifikators.map(v =>
+                `<div style="text-align:left;margin-top:60px"><div>Cilacap, ${tanggal}</div><div>Verifikator</div><br/><br/><br/><div style="text-decoration:underline;font-weight:bold">${v.nama || '...........................'}</div><div>NIP. ${v.nip || '...........................'}</div></div>`
+            ).join('')
+            : `<div style="text-align:left;margin-top:60px"><div>Cilacap, ${tanggal}</div><div>Verifikator</div><br/><br/><br/><div style="text-decoration:underline;font-weight:bold">.............................</div><div>NIP. .............................</div></div>`;
+        const html = `<!DOCTYPE html><html><head><title>Instrumen Verifikasi Proposal</title><style>@page{size:A4;margin:2cm}body{font-family:'Times New Roman',serif;font-size:12pt;color:#000}table{width:100%;border-collapse:collapse}th{padding:6px;border:1px solid #000;background:#f0f0f0;font-weight:bold}</style></head><body>
+        <div style="text-align:center;margin-bottom:24px"><h3 style="margin:0">INSTRUMEN VERIFIKASI PROPOSAL</h3><h3 style="margin:4px 0">PENGAJUAN DANA HIBAH TAHUN ${tahun}</h3></div>
+        <div style="margin-bottom:16px"><table style="border:none"><tr><td style="border:none;width:200px">1. Nama Lembaga / Sekolah</td><td style="border:none">: ${sch?.nama || '...........................'}</td></tr><tr><td style="border:none">2. Alamat</td><td style="border:none">: ${sch?.alamat || item.alamat || '...........................'}</td></tr><tr><td style="border:none">3. Jenis Usulan</td><td style="border:none">: ${item.jenisUsulan || '...........................'}</td></tr></table></div>
+        <table><thead><tr><th rowspan="2" style="width:30px">NO</th><th rowspan="2">INDIATOR / URAIAN</th><th colspan="2">HASIL</th><th rowspan="2">KETERANGAN</th></tr><tr><th style="width:60px">ADA</th><th style="width:60px">TIDAK ADA</th></tr></thead><tbody>${rows}</tbody></table>
+        <div style="margin-top:24px"><p><b>Kesimpulan / Catatan :</b></p><p>1. ............................................................................................................</p><p>2. ............................................................................................................</p><p>dst.</p></div>
+        <div style="display:flex;justify-content:flex-end;margin-top:20px">${verSection}</div>
+        </body></html>`;
+        const w = window.open('', '_blank');
+        w.document.write(html);
+        w.document.close();
+        w.focus();
+        w.print();
+    };
+
     const handleOpenRekomendasi = () => { setRekomendasiForm(INITIAL_REKOMENDASI); setShowRekomendasi(true); };
     const handleRekomendasiSchoolChange = (nama) => {
         const sch = sekolahList.find(s => s.nama === nama);
@@ -656,33 +684,49 @@ const Proposal = ({ readOnly = false }) => {
 
                         <div className="modal-body" style={{ overflowY: 'auto', maxHeight: 'calc(90vh - 140px)' }}>
                             {daftarTab === 'rekomendasi' && (
+                                <div style={{ overflowX: 'auto' }}>
                                 <table className="data-table">
                                     <thead>
                                         <tr>
                                             <th>No</th>
-                                            <th>Tanggal</th>
                                             <th>Nama Sekolah</th>
+                                            <th>Kecamatan</th>
+                                            <th>Sub Kegiatan</th>
                                             <th>Perihal</th>
+                                            <th>Jenjang</th>
                                             <th>Nilai</th>
+                                            <th>Target</th>
+                                            <th>No Agenda</th>
+                                            <th>Surat Masuk</th>
+                                            <th>Tanggal Surat</th>
+                                            <th>Nomor Surat</th>
+                                            <th>Kondisi Sebenarnya</th>
                                             <th>Sumber</th>
                                             <th>Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         {rekomendasiList.length === 0 ? (
-                                            <tr><td colSpan={7} style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-secondary)' }}>Belum ada data rekomendasi.</td></tr>
+                                            <tr><td colSpan={15} style={{ textAlign: 'center', padding: '1rem', color: 'var(--text-secondary)' }}>Belum ada data rekomendasi.</td></tr>
                                         ) : (
                                             rekomendasiList.map((item, i) => (
                                                 <tr key={item.id}>
                                                     <td>{i + 1}</td>
-                                                    <td>{new Date(item.createdAt).toLocaleDateString('id-ID')}</td>
                                                     <td>{item.namaSekolah}</td>
+                                                    <td>{item.kecamatan}</td>
+                                                    <td>{item.subKegiatan}</td>
                                                     <td>{item.perihal}</td>
-                                                    <td style={{ textAlign: 'right' }}>{formatCurrency(item.nilai)}</td>
+                                                    <td>{item.jenjang}</td>
+                                                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{formatCurrency(item.nilai)}</td>
+                                                    <td>{item.target}</td>
+                                                    <td>{item.noAgenda}</td>
+                                                    <td>{item.suratMasuk}</td>
+                                                    <td style={{ whiteSpace: 'nowrap' }}>{item.tanggalSurat}</td>
+                                                    <td>{item.nomorSurat}</td>
+                                                    <td>{item.kondisi}</td>
                                                     <td>{item.sumber}</td>
                                                     <td>
                                                         <div style={{ display: 'flex', gap: 4 }}>
-                                                            <button className="btn-icon" title="Lihat"><Eye size={16} /></button>
                                                             <button className="btn-icon" title="Hapus" style={{ color: 'var(--accent-red)' }} onClick={() => setRekomendasiList(prev => prev.filter(d => d.id !== item.id))}><Trash2 size={16} /></button>
                                                         </div>
                                                     </td>
@@ -691,6 +735,7 @@ const Proposal = ({ readOnly = false }) => {
                                         )}
                                     </tbody>
                                 </table>
+                                </div>
                             )}
 
                             {daftarTab === 'checklist' && (
@@ -720,7 +765,7 @@ const Proposal = ({ readOnly = false }) => {
                                                     <td>{item.verifikators?.length || 0} Orang</td>
                                                     <td>
                                                         <div style={{ display: 'flex', gap: 4 }}>
-                                                            <button className="btn-icon" title="Cetak" onClick={() => window.print()}><Printer size={16} /></button>
+                                                            <button className="btn-icon" title="Cetak" onClick={() => handlePrintSavedChecklist(item)}><Printer size={16} /></button>
                                                             <button className="btn-icon" title="Hapus" style={{ color: 'var(--accent-red)' }} onClick={() => setChecklistList(prev => prev.filter(d => d.id !== item.id))}><Trash2 size={16} /></button>
                                                         </div>
                                                     </td>
