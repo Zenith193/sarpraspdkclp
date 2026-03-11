@@ -473,8 +473,8 @@ const DataSarpras = ({ readOnly = false }) => {
                 toast.success(`${parsed.length} baris berhasil dibaca`, { id: 'batch-import' });
             }
 
-            setBatchRows(parsed);
-            setShowBatchModal(true);
+            // Langsung simpan tanpa preview
+            await saveBatchRows(parsed);
         } catch (err) {
             toast.error(err.message || 'Gagal membaca file', { id: 'batch-import' });
         } finally {
@@ -483,25 +483,24 @@ const DataSarpras = ({ readOnly = false }) => {
         }
     };
 
-    const handleBatchSave = async () => {
-        if (batchRows.length === 0) { toast.error('Tidak ada data untuk disimpan'); return; }
+    const saveBatchRows = async (rows) => {
+        if (rows.length === 0) { toast.error('Tidak ada data untuk disimpan'); return; }
 
         // Group by sekolahId
         const groups = {};
-        batchRows.forEach(r => {
+        rows.forEach(r => {
             if (!groups[r.sekolahId]) groups[r.sekolahId] = [];
             groups[r.sekolahId].push(r);
         });
 
         const CHUNK_SIZE = 500;
-        const total = batchRows.length;
+        const total = rows.length;
         let totalSaved = 0;
 
         try {
             toast.loading(`Menyimpan 0/${total} data...`, { id: 'batch-save' });
 
             for (const [sekolahId, items] of Object.entries(groups)) {
-                // Split items into chunks of CHUNK_SIZE
                 for (let i = 0; i < items.length; i += CHUNK_SIZE) {
                     const chunk = items.slice(i, i + CHUNK_SIZE);
                     const res = await sarprasApi.batchCreate({ sekolahId: Number(sekolahId), items: chunk });
@@ -511,8 +510,6 @@ const DataSarpras = ({ readOnly = false }) => {
             }
 
             toast.success(`${totalSaved} data sarpras berhasil disimpan`, { id: 'batch-save' });
-            setShowBatchModal(false);
-            setBatchRows([]);
             if (refetchSarpras) refetchSarpras();
         } catch (e) {
             toast.error(`Gagal di ${totalSaved}/${total}: ${e.message}`, { id: 'batch-save', duration: 5000 });
