@@ -7,7 +7,9 @@ import {
 import { Bar, Pie } from 'react-chartjs-2';
 import { Building2, AlertTriangle, FileText, DollarSign, Download, Search, FileSpreadsheet, FileDown, ChevronDown } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
-import { useSarprasData, useProposalData, useAktivitasData } from '../../data/dataProvider';
+import { useSarprasData, useProposalData, useAktivitasData, useSekolahData, useProyeksiData } from '../../data/dataProvider';
+import { useApi } from '../../api/hooks';
+import { proyeksiApi } from '../../api/index';
 import { formatNumber, formatDateTime, formatShortCurrency, formatCurrency } from '../../utils/formatters';
 import { KECAMATAN, JENJANG } from '../../utils/constants';
 import { exportToExcel, exportToCSV, exportToPDF } from '../../utils/exportUtils';
@@ -32,6 +34,9 @@ const Dashboard = () => {
     const { data: sarprasData } = useSarprasData();
     const { data: proposalData } = useProposalData();
     const { data: aktivitasData } = useAktivitasData();
+    const { data: sekolahList } = useSekolahData();
+    const { data: proyeksiList } = useProyeksiData();
+    const { data: snpApiData } = useApi(() => proyeksiApi.listSnp(), []);
 
     // Close export menus on outside click
     useEffect(() => {
@@ -84,11 +89,48 @@ const Dashboard = () => {
         return { menunggu, disetujui, ditolak, revisi };
     }, [filteredProposal]);
 
-    const estimasiBiaya = useMemo(() => {
-        const rs = filteredSarpras.filter(s => s.kondisi === 'RUSAK SEDANG').length * 75_000_000;
-        const rb = filteredSarpras.filter(s => s.kondisi === 'RUSAK BERAT').length * 100_000_000;
-        return rs + rb;
-    }, [filteredSarpras]);
+    // Rekapitulasi calculation (same logic as ProyeksiAnggaran)
+    const anggaranData = proyeksiList || [];
+    const snpData = (snpApiData?.data) ? snpApiData.data : (Array.isArray(snpApiData) ? snpApiData : []);
+
+    const globalStats = useMemo(() => {
+        const sekolahMap = {};
+        (sekolahList || []).forEach(s => {
+            sekolahMap[s.id] = { ...s, rombel: s.rombel || 0, prasaranaCount: {}, rehabGroup: {}, biayaRS: 0, biayaRB: 0, biayaBuild: 0 };
+        });
+        (sarprasData || []).forEach(sp => {
+            const sk = sekolahMap[sp.sekolahId];
+            if (!sk) return;
+            sk.prasaranaCount[sp.jenisPrasarana] = (sk.prasaranaCount[sp.jenisPrasarana] || 0) + 1;
+            if (sp.kondisi === 'RUSAK SEDANG' || sp.kondisi === 'RUSAK BERAT') {
+                const isBerat = sp.kondisi === 'RUSAK BERAT';
+                const key = `${sp.jenisPrasarana}|${isBerat ? 'berat' : 'sedang'}`;
+                const angg = anggaranData.find(a => a.jenisPrasarana === sp.jenisPrasarana && a.jenjang === sk.jenjang);
+                const unitCost = angg ? angg[isBerat ? 'rusakBerat' : 'rusakSedang'] : (isBerat ? 100_000_000 : 75_000_000);
+                if (!sk.rehabGroup[key]) sk.rehabGroup[key] = { kondisi: isBerat ? 'berat' : 'sedang', count: 0, unitCost };
+                sk.rehabGroup[key].count++;
+            }
+        });
+        let tRS = 0, tRB = 0, tBuild = 0;
+        Object.values(sekolahMap).forEach(sk => {
+            Object.values(sk.rehabGroup).forEach(grp => {
+                const cost = grp.count * grp.unitCost;
+                if (grp.kondisi === 'berat') sk.biayaRB += cost; else sk.biayaRS += cost;
+            });
+            const defKelas = sk.rombel - (sk.prasaranaCount['Ruang Kelas'] || 0);
+            if (defKelas > 0) { const c = (anggaranData.find(a => a.jenisPrasarana === 'Ruang Kelas' && a.jenjang === sk.jenjang)?.pembangunan || 150_000_000); sk.biayaBuild += defKelas * c; }
+            const defToilet = Math.max(0, sk.rombel - 1) - (sk.prasaranaCount['Toilet'] || 0);
+            if (defToilet > 0) { const c = (anggaranData.find(a => a.jenisPrasarana === 'Toilet' && a.jenjang === sk.jenjang)?.pembangunan || 50_000_000); sk.biayaBuild += defToilet * c; }
+            snpData.forEach(snp => {
+                if (snp.jenjang !== sk.jenjang || snp.jenisPrasarana === 'Ruang Kelas' || snp.jenisPrasarana === 'Toilet') return;
+                if ((sk.prasaranaCount[snp.jenisPrasarana] || 0) === 0) {
+                    sk.biayaBuild += (anggaranData.find(a => a.jenisPrasarana === snp.jenisPrasarana && a.jenjang === sk.jenjang)?.pembangunan || 100_000_000);
+                }
+            });
+            tRS += sk.biayaRS; tRB += sk.biayaRB; tBuild += sk.biayaBuild;
+        });
+        return { totalRS: tRS, totalRB: tRB, totalBuild: tBuild, grandTotal: tRS + tRB + tBuild };
+    }, [sarprasData, sekolahList, anggaranData, snpData]);
 
     // ---- EXPORT FUNCTIONS ----
 
@@ -363,8 +405,12 @@ const Dashboard = () => {
                         <div className="summary-card-title">Kebutuhan Anggaran</div>
                         <div className="summary-card-icon" style={{ background: 'rgba(34,197,94,0.1)', color: 'var(--accent-green)' }}><DollarSign size={16} /></div>
                     </div>
-                    <div className="summary-card-value" style={{ color: 'var(--accent-green)', fontSize: 20 }}>{formatShortCurrency(estimasiBiaya)}</div>
-                    <div className="summary-card-desc">Estimasi perbaikan (RS/RB)</div>
+                    <div className="summary-card-value" style={{ color: 'var(--accent-green)', fontSize: 18 }}>{formatShortCurrency(globalStats.grandTotal)}</div>
+                    <ul className="summary-card-list">
+                        <li><span className="dot" style={{ background: 'var(--accent-orange)' }} /> R. Sedang: {formatShortCurrency(globalStats.totalRS)}</li>
+                        <li><span className="dot" style={{ background: 'var(--accent-red)' }} /> R. Berat: {formatShortCurrency(globalStats.totalRB)}</li>
+                        <li><span className="dot" style={{ background: 'var(--accent-blue)' }} /> Pembangunan: {formatShortCurrency(globalStats.totalBuild)}</li>
+                    </ul>
                 </div>
             </div>
 
