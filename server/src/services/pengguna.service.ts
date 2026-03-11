@@ -12,17 +12,32 @@ export const penggunaService = {
         const where = conditions.length > 0 ? sql`${sql.join(conditions, sql` AND `)}` : undefined;
         const offset = (page - 1) * limit;
 
-        const data = await db.select({
-            id: user.id, name: user.name, email: user.email, role: user.role,
-            sekolahId: user.sekolahId, aktif: user.aktif, createdAt: user.createdAt,
-            plainPassword: user.plainPassword,
-            npsn: sekolah.npsn, jenjang: sekolah.jenjang, kecamatan: sekolah.kecamatan,
-            statusSekolah: sekolah.status, alamat: sekolah.alamat, kepsek: sekolah.kepsek,
-            nip: sql<string>`COALESCE(${sekolah.nip}, ${user.nip})`.as('nip'),
-            noRek: sekolah.noRek, namaBank: sekolah.namaBank, rombel: sekolah.rombel
-        }).from(user)
-            .leftJoin(sekolah, eq(user.sekolahId, sekolah.id))
-            .where(where).limit(limit).offset(offset);
+        let data;
+        try {
+            data = await db.select({
+                id: user.id, name: user.name, email: user.email, role: user.role,
+                sekolahId: user.sekolahId, aktif: user.aktif, createdAt: user.createdAt,
+                plainPassword: user.plainPassword,
+                npsn: sekolah.npsn, jenjang: sekolah.jenjang, kecamatan: sekolah.kecamatan,
+                statusSekolah: sekolah.status, alamat: sekolah.alamat, kepsek: sekolah.kepsek,
+                nip: sql<string>`COALESCE(${sekolah.nip}, ${user.nip})`.as('nip'),
+                noRek: sekolah.noRek, namaBank: sekolah.namaBank, rombel: sekolah.rombel
+            }).from(user)
+                .leftJoin(sekolah, eq(user.sekolahId, sekolah.id))
+                .where(where).limit(limit).offset(offset);
+        } catch (_) {
+            // Fallback if plain_password column doesn't exist yet
+            data = await db.select({
+                id: user.id, name: user.name, email: user.email, role: user.role,
+                sekolahId: user.sekolahId, aktif: user.aktif, createdAt: user.createdAt,
+                npsn: sekolah.npsn, jenjang: sekolah.jenjang, kecamatan: sekolah.kecamatan,
+                statusSekolah: sekolah.status, alamat: sekolah.alamat, kepsek: sekolah.kepsek,
+                nip: sql<string>`COALESCE(${sekolah.nip}, ${user.nip})`.as('nip'),
+                noRek: sekolah.noRek, namaBank: sekolah.namaBank, rombel: sekolah.rombel
+            }).from(user)
+                .leftJoin(sekolah, eq(user.sekolahId, sekolah.id))
+                .where(where).limit(limit).offset(offset);
+        }
         const countResult = await db.select({ count: sql<number>`count(*)` }).from(user).where(where);
         return { data, total: Number(countResult[0]?.count || 0), page, limit };
     },
@@ -153,10 +168,17 @@ export const penggunaService = {
                         password: plainPwd,
                         role: u.role || 'Sekolah',
                         sekolahId: sekolahId,
-                        aktif: true,
-                        plainPassword: plainPwd
+                        aktif: true
                     },
                 });
+
+                // Store plain password directly via Drizzle (not through Better Auth)
+                if (signUpResult?.user?.id) {
+                    try {
+                        await db.update(user).set({ plainPassword: plainPwd }).where(eq(user.id, signUpResult.user.id));
+                    } catch (_) { /* column may not exist yet, ignore */ }
+                }
+
                 results.push({ email: u.email, success: true });
             } catch (e: any) {
                 results.push({ email: u.email, success: false, error: e.message || 'Gagal mendaftar' });
