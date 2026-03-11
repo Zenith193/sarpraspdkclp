@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Edit, Save, X, Upload, FileText, CheckCircle } from 'lucide-react';
+import { Edit, Save, X, Upload, FileText, CheckCircle, Eye, EyeOff, Lock } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
+import { penggunaApi } from '../../api/index';
 import toast from 'react-hot-toast';
 
 const ProfilPengguna = () => {
@@ -14,50 +15,68 @@ const ProfilPengguna = () => {
     const [kopFile, setKopFile] = useState(null);
     const [existingKop, setExistingKop] = useState(user?.kopSekolah || null);
 
+    // State untuk ganti password
+    const [showPwSection, setShowPwSection] = useState(false);
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [showNewPw, setShowNewPw] = useState(false);
+    const [showConfirmPw, setShowConfirmPw] = useState(false);
+    const [changingPw, setChangingPw] = useState(false);
+
     const isSekolah = user?.role === 'Sekolah';
 
     const handleFileChange = (e) => {
         const file = e.target.files[0];
         if (!file) return;
-
-        // Validasi Tipe File (Hanya Word)
-        const validTypes = [
-            'application/msword', // .doc
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document' // .docx
-        ];
+        const validTypes = ['application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
         if (!validTypes.includes(file.type)) {
             toast.error('Format file harus Word (.doc atau .docx)');
             return;
         }
-
-        // Validasi Ukuran File (Maks 1MB)
         if (file.size > 1024 * 1024) {
             toast.error('Ukuran file maksimal 1MB');
             return;
         }
-
         setKopFile(file);
         toast.success('File siap diunggah');
     };
 
     const handleSave = () => {
-        // Simulasi upload file: jika ada file baru, gunakan nama file tersebut
         const newKopSekolah = kopFile ? kopFile.name : existingKop;
-        
         updateProfile({ ...form, kopSekolah: newKopSekolah });
-        
-        // Update state lokal untuk tampilan
         setExistingKop(newKopSekolah);
-        setKopFile(null); // Reset input file setelah simpan
-        
+        setKopFile(null);
         setEditing(false);
         toast.success('Profil berhasil diperbarui');
     };
 
     const handleCancel = () => {
         setEditing(false);
-        setForm({ ...user }); // Reset form text
-        setKopFile(null); // Reset file input
+        setForm({ ...user });
+        setKopFile(null);
+    };
+
+    const handleChangePassword = async () => {
+        if (!newPassword || newPassword.length < 6) {
+            toast.error('Password minimal 6 karakter');
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            toast.error('Konfirmasi password tidak cocok');
+            return;
+        }
+        setChangingPw(true);
+        try {
+            await penggunaApi.changePassword(user.id, newPassword);
+            toast.success('Password berhasil diubah');
+            setNewPassword('');
+            setConfirmPassword('');
+            setShowPwSection(false);
+        } catch (e) {
+            toast.error(e.message || 'Gagal mengubah password');
+        } finally {
+            setChangingPw(false);
+        }
     };
 
     const fields = [
@@ -116,15 +135,70 @@ const ProfilPengguna = () => {
                     ))}
                 </div>
 
+                {/* Ganti Password */}
+                <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid var(--border-color)' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: showPwSection ? 16 : 0 }}>
+                        <h3 style={{ fontSize: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+                            <Lock size={16} /> Ganti Password
+                        </h3>
+                        {!showPwSection && (
+                            <button className="btn btn-secondary btn-sm" onClick={() => setShowPwSection(true)}>Ubah Password</button>
+                        )}
+                    </div>
+                    {showPwSection && (
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                            <div className="form-group">
+                                <label className="form-label">Password Baru</label>
+                                <div style={{ position: 'relative' }}>
+                                    <input
+                                        className="form-input"
+                                        type={showNewPw ? 'text' : 'password'}
+                                        value={newPassword}
+                                        onChange={e => setNewPassword(e.target.value)}
+                                        placeholder="Minimal 6 karakter"
+                                        style={{ paddingRight: 40 }}
+                                    />
+                                    <button type="button" onClick={() => setShowNewPw(!showNewPw)} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                                        {showNewPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Konfirmasi Password</label>
+                                <div style={{ position: 'relative' }}>
+                                    <input
+                                        className="form-input"
+                                        type={showConfirmPw ? 'text' : 'password'}
+                                        value={confirmPassword}
+                                        onChange={e => setConfirmPassword(e.target.value)}
+                                        placeholder="Ulangi password baru"
+                                        style={{ paddingRight: 40 }}
+                                    />
+                                    <button type="button" onClick={() => setShowConfirmPw(!showConfirmPw)} style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}>
+                                        {showConfirmPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                                    </button>
+                                </div>
+                            </div>
+                            {newPassword && confirmPassword && newPassword !== confirmPassword && (
+                                <small style={{ color: 'var(--accent-red)' }}>Password tidak cocok</small>
+                            )}
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                <button className="btn btn-ghost btn-sm" onClick={() => { setShowPwSection(false); setNewPassword(''); setConfirmPassword(''); }}>Batal</button>
+                                <button className="btn btn-primary btn-sm" onClick={handleChangePassword} disabled={changingPw || !newPassword || newPassword !== confirmPassword}>
+                                    {changingPw ? 'Menyimpan...' : 'Simpan Password'}
+                                </button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
                 {/* Upload Kop Sekolah (Hanya untuk Role Sekolah) */}
                 {isSekolah && (
                     <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid var(--border-color)' }}>
                         <h3 style={{ fontSize: '1rem', marginBottom: 16, fontWeight: 600 }}>Dokumen Resmi</h3>
                         <div className="form-group">
                             <label className="form-label">Kop Sekolah (Format Word, Maks 1MB)</label>
-                            
                             {!editing ? (
-                                // Mode View
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-color)' }}>
                                     <FileText size={20} style={{ color: 'var(--accent-blue)' }} />
                                     <div style={{ flex: 1 }}>
@@ -136,20 +210,13 @@ const ProfilPengguna = () => {
                                     </div>
                                 </div>
                             ) : (
-                                // Mode Edit
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                                         <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                                             <Upload size={14} />
                                             <span>Pilih File</span>
-                                            <input 
-                                                type="file" 
-                                                accept=".doc,.docx" 
-                                                onChange={handleFileChange} 
-                                                style={{ display: 'none' }} 
-                                            />
+                                            <input type="file" accept=".doc,.docx" onChange={handleFileChange} style={{ display: 'none' }} />
                                         </label>
-                                        
                                         {kopFile ? (
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--accent-green)', fontSize: '0.875rem' }}>
                                                 <CheckCircle size={16} />

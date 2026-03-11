@@ -133,6 +133,7 @@ export const penggunaApi = {
     update: (id, data) => api.put(`/pengguna/${id}`, data),
     toggleActive: (id) => api.put(`/pengguna/${id}/toggle-active`),
     delete: (id) => api.delete(`/pengguna/${id}`),
+    changePassword: (id, newPassword) => api.put(`/pengguna/${id}/change-password`, { newPassword }),
 };
 
 export const aktivitasApi = {

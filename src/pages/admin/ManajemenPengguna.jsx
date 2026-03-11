@@ -290,9 +290,13 @@ const ManajemenPengguna = () => {
                 toast.success("Data pengguna berhasil diperbarui", { id: 'save' });
                 if (refetch) refetch();
             } else if (modalState.type === 'reset') {
-                // Placeholder reset if no backend endpoint exists yet
-                setUsers(prev => prev.map(u => u.id === formData.id ? { ...u, password: formData.password } : u));
-                toast.success("Password berhasil direset (Hanya di UI lokal untuk saat ini)", { id: 'save' });
+                if (!formData.password || formData.password.length < 6) {
+                    toast.error('Password minimal 6 karakter', { id: 'save' });
+                    return;
+                }
+                await penggunaApi.changePassword(formData.id, formData.password);
+                toast.success('Password berhasil direset', { id: 'save' });
+                if (refetch) refetch();
             }
             closeModal();
         } catch (e) {
@@ -462,6 +466,7 @@ const ManajemenPengguna = () => {
                                 <th>Nama Akun</th>
                                 <th>Role</th>
                                 <th>Email / NPSN</th>
+                                <th>Password</th>
                                 <th>Jenjang</th>
                                 <th>Kecamatan</th>
                                 <th>Status</th>
@@ -479,6 +484,11 @@ const ManajemenPengguna = () => {
                                     <td><span className="badge badge-disetujui">{u.role}</span></td>
                                     <td>
                                         <div>{u.npsn || (u.email?.replace('@SARDIKA.cilacapkab.go.id', '') || '-')}</div>
+                                    </td>
+                                    <td>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                                            <span style={{ fontSize: '0.82rem', fontFamily: 'monospace' }}>{u.plainPassword || '********'}</span>
+                                        </div>
                                     </td>
                                     <td>{(u.role === 'Korwil' || u.role === 'Sekolah') ? (u.jenjang || '-') : '-'}</td>
                                     <td>{(u.role === 'Korwil' || u.role === 'Sekolah') ? (u.kecamatan || '-') : '-'}</td>

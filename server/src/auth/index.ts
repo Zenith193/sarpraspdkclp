@@ -34,6 +34,11 @@ export const auth = betterAuth({
                 defaultValue: true,
                 input: true,
             },
+            plainPassword: {
+                type: 'string',
+                required: false,
+                input: true,
+            },
         },
     },
     trustedOrigins: [

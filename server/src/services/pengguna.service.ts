@@ -15,6 +15,7 @@ export const penggunaService = {
         const data = await db.select({
             id: user.id, name: user.name, email: user.email, role: user.role,
             sekolahId: user.sekolahId, aktif: user.aktif, createdAt: user.createdAt,
+            plainPassword: user.plainPassword,
             npsn: sekolah.npsn, jenjang: sekolah.jenjang, kecamatan: sekolah.kecamatan,
             statusSekolah: sekolah.status, alamat: sekolah.alamat, kepsek: sekolah.kepsek,
             nip: sql<string>`COALESCE(${sekolah.nip}, ${user.nip})`.as('nip'),
@@ -143,14 +144,17 @@ export const penggunaService = {
                     validEmail = `${validEmail}@SARDIKA.cilacapkab.go.id`;
                 }
 
-                await auth.api.signUpEmail({
+                const plainPwd = u.password || (u.role?.toLowerCase() === 'sekolah' && u.npsn ? u.npsn : '12345678');
+
+                const signUpResult = await auth.api.signUpEmail({
                     body: {
                         name: u.name,
                         email: validEmail,
-                        password: u.password || (u.role?.toLowerCase() === 'sekolah' && u.npsn ? u.npsn : '12345678'),
+                        password: plainPwd,
                         role: u.role || 'Sekolah',
                         sekolahId: sekolahId,
-                        aktif: true
+                        aktif: true,
+                        plainPassword: plainPwd
                     },
                 });
                 results.push({ email: u.email, success: true });
