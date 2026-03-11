@@ -15,6 +15,13 @@
       "when": 1773235012852,
       "tag": "0001_funny_whiplash",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1773235348724,
+      "tag": "0002_supreme_vermin",
+      "breakpoints": true
     }
   ]
 }

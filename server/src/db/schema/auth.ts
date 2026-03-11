@@ -11,6 +11,7 @@ export const user = pgTable('user', {
     image: text('image'),
     role: text('role').notNull().default('sekolah'),
     sekolahId: integer('sekolah_id'), // FK added after sekolah table
+    nip: text('nip'),
     aktif: boolean('aktif').default(true),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),

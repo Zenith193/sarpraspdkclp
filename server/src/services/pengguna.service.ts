@@ -17,7 +17,8 @@ export const penggunaService = {
             sekolahId: user.sekolahId, aktif: user.aktif, createdAt: user.createdAt,
             npsn: sekolah.npsn, jenjang: sekolah.jenjang, kecamatan: sekolah.kecamatan,
             statusSekolah: sekolah.status, alamat: sekolah.alamat, kepsek: sekolah.kepsek,
-            nip: sekolah.nip, noRek: sekolah.noRek, namaBank: sekolah.namaBank, rombel: sekolah.rombel
+            nip: sql<string>`COALESCE(${sekolah.nip}, ${user.nip})`.as('nip'),
+            noRek: sekolah.noRek, namaBank: sekolah.namaBank, rombel: sekolah.rombel
         }).from(user)
             .leftJoin(sekolah, eq(user.sekolahId, sekolah.id))
             .where(where).limit(limit).offset(offset);
@@ -30,7 +31,8 @@ export const penggunaService = {
             id: user.id, name: user.name, email: user.email, role: user.role, sekolahId: user.sekolahId, aktif: user.aktif, createdAt: user.createdAt,
             npsn: sekolah.npsn, jenjang: sekolah.jenjang, kecamatan: sekolah.kecamatan,
             statusSekolah: sekolah.status, alamat: sekolah.alamat, kepsek: sekolah.kepsek,
-            nip: sekolah.nip, noRek: sekolah.noRek, namaBank: sekolah.namaBank, rombel: sekolah.rombel
+            nip: sql<string>`COALESCE(${sekolah.nip}, ${user.nip})`.as('nip'),
+            noRek: sekolah.noRek, namaBank: sekolah.namaBank, rombel: sekolah.rombel
         })
             .from(user)
             .leftJoin(sekolah, eq(user.sekolahId, sekolah.id))
@@ -50,6 +52,8 @@ export const penggunaService = {
         if (name !== undefined) userUpdate.name = name;
         if (role !== undefined) userUpdate.role = role;
         if (aktif !== undefined) userUpdate.aktif = aktif;
+        // Save NIP on user table too (for non-sekolah accounts)
+        if (sekolahData.nip !== undefined) userUpdate.nip = sekolahData.nip;
 
         const r = await db.update(user).set(userUpdate).where(eq(user.id, id)).returning();
         const updatedUser = r[0];
