@@ -1219,9 +1219,9 @@ const DataSarpras = ({ readOnly = false }) => {
                                                 <td><div style={{ maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.jenisPrasarana}</div></td>
                                                 <td>{row.namaRuang}</td>
                                                 <td style={{ textAlign: 'center' }}>{row.lantai}</td>
-                                                <td style={{ textAlign: 'right' }}>{row.panjang}</td>
-                                                <td style={{ textAlign: 'right' }}>{row.lebar}</td>
-                                                <td style={{ textAlign: 'right' }}>{(row.panjang * row.lebar).toFixed(1)}</td>
+                                                <td style={{ textAlign: 'right' }}>{String(row.panjang).replace('.', ',')}</td>
+                                                <td style={{ textAlign: 'right' }}>{String(row.lebar).replace('.', ',')}</td>
+                                                <td style={{ textAlign: 'right' }}>{(Math.ceil(row.panjang * row.lebar * 100) / 100).toFixed(2).replace('.', ',')}</td>
                                                 <td>{row.kondisi}</td>
                                                 <td><div style={{ maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.keterangan}</div></td>
                                                 <td>
