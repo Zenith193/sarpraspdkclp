@@ -169,3 +169,12 @@ export const dashboardApi = {
 export const queueApi = {
     status: () => api.get('/queue/status'),
 };
+
+export const arsipDokumenApi = {
+    listRekomendasi: () => api.get('/arsip-dokumen/rekomendasi'),
+    createRekomendasi: (data) => api.post('/arsip-dokumen/rekomendasi', data),
+    deleteRekomendasi: (id) => api.delete(`/arsip-dokumen/rekomendasi/${id}`),
+    listChecklist: () => api.get('/arsip-dokumen/checklist'),
+    createChecklist: (data) => api.post('/arsip-dokumen/checklist', data),
+    deleteChecklist: (id) => api.delete(`/arsip-dokumen/checklist/${id}`),
+};

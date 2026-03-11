@@ -32,6 +32,7 @@ import aktivitasRoutes from './routes/aktivitas.routes.js';
 import settingsRoutes from './routes/settings.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
 import iklanRoutes from './routes/iklan.routes.js';
+import arsipDokumenRoutes from './routes/arsipDokumen.routes.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -496,6 +497,7 @@ app.use('/api/aktivitas', aktivitasRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/iklan', iklanRoutes);
+app.use('/api/arsip-dokumen', arsipDokumenRoutes);
 
 // ===== PUBLIC STATS (no auth required for login page) =====
 
