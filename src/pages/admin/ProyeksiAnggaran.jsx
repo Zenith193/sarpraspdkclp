@@ -225,6 +225,41 @@ const ProyeksiAnggaran = () => {
 
 
     // =========================================================================
+    // REKAP SNP: Sekolah yang sudah & belum memenuhi SNP
+    // =========================================================================
+    const snpRekapData = useMemo(() => {
+        if (!snpData.length || !sekolahList.length) return [];
+        return sekolahList.map(sk => {
+            const snpForJenjang = snpData.filter(s => s.jenjang === sk.jenjang);
+            if (!snpForJenjang.length) return null;
+            const items = snpForJenjang.map(snp => {
+                const count = sarprasList.filter(sp => sp.sekolahId === sk.id && sp.jenisPrasarana === snp.jenisPrasarana).length;
+                return { jenisPrasarana: snp.jenisPrasarana, required: true, owned: count, met: count > 0 };
+            });
+            const met = items.filter(i => i.met).length;
+            const total = items.length;
+            const pct = total > 0 ? Math.round((met / total) * 100) : 0;
+            return { ...sk, snpItems: items, snpMet: met, snpTotal: total, snpPct: pct, snpComplete: pct === 100 };
+        }).filter(Boolean);
+    }, [snpData, sekolahList, sarprasList]);
+
+    const [snpRekapFilter, setSnpRekapFilter] = useState('all'); // all | lengkap | belum
+    const filteredSnpRekap = useMemo(() => {
+        return snpRekapData.filter(item => {
+            const matchJenjang = filterJenjang === 'all' || item.jenjang === filterJenjang;
+            const matchSearch = searchQuery === '' || item.nama.toLowerCase().includes(searchQuery.toLowerCase());
+            const matchStatus = snpRekapFilter === 'all' || (snpRekapFilter === 'lengkap' ? item.snpComplete : !item.snpComplete);
+            return matchJenjang && matchSearch && matchStatus;
+        }).sort((a, b) => a.snpPct - b.snpPct);
+    }, [snpRekapData, filterJenjang, searchQuery, snpRekapFilter]);
+
+    const snpRekapStats = useMemo(() => {
+        const total = snpRekapData.length;
+        const lengkap = snpRekapData.filter(s => s.snpComplete).length;
+        return { total, lengkap, belum: total - lengkap };
+    }, [snpRekapData]);
+
+    // =========================================================================
     // PAGINATION COMPUTED DATA
     // =========================================================================
 
@@ -252,13 +287,21 @@ const ProyeksiAnggaran = () => {
         return snpData.slice(start, start + pageSize);
     }, [snpData, currentPage, pageSize]);
 
-    // 4. Belum Usulan (New)
+    // 4. Belum Usulan
     const totalBelumUsul = filteredBelumUsulan.length;
     const totalPagesBelumUsul = Math.ceil(totalBelumUsul / pageSize) || 1;
     const pagedBelumUsulan = useMemo(() => {
         const start = (currentPage - 1) * pageSize;
         return filteredBelumUsulan.slice(start, start + pageSize);
     }, [filteredBelumUsulan, currentPage, pageSize]);
+
+    // 5. Rekap SNP
+    const totalSnpRekap = filteredSnpRekap.length;
+    const totalPagesSnpRekap = Math.ceil(totalSnpRekap / pageSize) || 1;
+    const pagedSnpRekap = useMemo(() => {
+        const start = (currentPage - 1) * pageSize;
+        return filteredSnpRekap.slice(start, start + pageSize);
+    }, [filteredSnpRekap, currentPage, pageSize]);
 
 
     // =========================================================================
@@ -567,6 +610,7 @@ const ProyeksiAnggaran = () => {
                     )}
                 </button>
                 <button className={`keranjang-tab ${tab === 'snp' ? 'active' : ''}`} onClick={() => setTab('snp')}>SNP (Acuan)</button>
+                <button className={`keranjang-tab ${tab === 'rekap-snp' ? 'active' : ''}`} onClick={() => setTab('rekap-snp')}>Rekap SNP</button>
             </div>
 
             {/* TAB 1: ATUR ANGGARAN */}
@@ -745,6 +789,104 @@ const ProyeksiAnggaran = () => {
                         </table>
                     </div>
                     <PaginationControls totalPages={totalPagesSnp} totalItems={totalSnp} tableName="snp" />
+                </div>
+            )}
+
+            {/* TAB 5: REKAP SNP */}
+            {tab === 'rekap-snp' && (
+                <div>
+                    {/* Summary Cards */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
+                        <div className="table-container" style={{ padding: 16, textAlign: 'center', cursor: 'pointer', border: snpRekapFilter === 'all' ? '2px solid var(--accent-blue)' : undefined }} onClick={() => setSnpRekapFilter('all')}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 4 }}>Total Sekolah</div>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>{snpRekapStats.total}</div>
+                        </div>
+                        <div className="table-container" style={{ padding: 16, textAlign: 'center', cursor: 'pointer', border: snpRekapFilter === 'lengkap' ? '2px solid #22c55e' : undefined }} onClick={() => setSnpRekapFilter('lengkap')}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 4 }}>Sudah Lengkap SNP</div>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#22c55e' }}>{snpRekapStats.lengkap}</div>
+                        </div>
+                        <div className="table-container" style={{ padding: 16, textAlign: 'center', cursor: 'pointer', border: snpRekapFilter === 'belum' ? '2px solid var(--accent-red)' : undefined }} onClick={() => setSnpRekapFilter('belum')}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 4 }}>Belum Lengkap SNP</div>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--accent-red)' }}>{snpRekapStats.belum}</div>
+                        </div>
+                    </div>
+
+                    <div className="table-container">
+                        <div className="table-toolbar">
+                            <div className="table-toolbar-left">
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    <span style={{ color: 'var(--text-secondary)' }}>Tampil:</span>
+                                    <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} style={{ padding: '4px 8px', background: 'var(--bg-input)', border: '1px solid var(--border-input)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)' }}>
+                                        <option value="10">10</option><option value="15">15</option><option value="50">50</option><option value="100">100</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div className="table-toolbar-right">
+                                <div className="search-box" style={{ maxWidth: 240 }}>
+                                    <Search size={14} />
+                                    <input placeholder="Cari sekolah..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} />
+                                </div>
+                                <select value={filterJenjang} onChange={(e) => setFilterJenjang(e.target.value)} style={{ padding: '6px 10px', background: 'var(--bg-input)', border: '1px solid var(--border-input)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.82rem' }}>
+                                    <option value="all">Semua Jenjang</option>
+                                    {JENJANG.map(j => <option key={j} value={j}>{j}</option>)}
+                                </select>
+                            </div>
+                        </div>
+                        <div style={{ overflowX: 'auto' }}>
+                            <table className="data-table">
+                                <thead>
+                                    <tr>
+                                        <th style={{ width: 40 }}>No</th>
+                                        <th>Nama Sekolah</th>
+                                        <th>NPSN</th>
+                                        <th>Jenjang</th>
+                                        {snpData.filter((s, i, arr) => arr.findIndex(x => x.jenisPrasarana === s.jenisPrasarana) === i).map(s => (
+                                            <th key={s.jenisPrasarana} style={{ textAlign: 'center', fontSize: '0.72rem', minWidth: 70 }}>{s.jenisPrasarana}</th>
+                                        ))}
+                                        <th style={{ textAlign: 'center' }}>Pemenuhan</th>
+                                        <th style={{ textAlign: 'center' }}>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {pagedSnpRekap.map((sk, i) => (
+                                        <tr key={sk.id}>
+                                            <td>{(currentPage - 1) * pageSize + i + 1}</td>
+                                            <td style={{ fontWeight: 500 }}>{sk.nama}</td>
+                                            <td>{sk.npsn}</td>
+                                            <td><span className="status-badge" style={{ background: 'var(--bg-secondary)' }}>{sk.jenjang}</span></td>
+                                            {snpData.filter((s, idx, arr) => arr.findIndex(x => x.jenisPrasarana === s.jenisPrasarana) === idx).map(snpItem => {
+                                                const match = sk.snpItems?.find(si => si.jenisPrasarana === snpItem.jenisPrasarana);
+                                                const required = snpData.some(s => s.jenisPrasarana === snpItem.jenisPrasarana && s.jenjang === sk.jenjang);
+                                                if (!required) return <td key={snpItem.jenisPrasarana} style={{ textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.75rem' }}>—</td>;
+                                                return (
+                                                    <td key={snpItem.jenisPrasarana} style={{ textAlign: 'center' }}>
+                                                        {match?.met
+                                                            ? <span style={{ color: '#22c55e', fontWeight: 700, fontSize: '0.9rem' }}>✓ {match.owned}</span>
+                                                            : <span style={{ color: 'var(--accent-red)', fontWeight: 700, fontSize: '0.9rem' }}>✗</span>
+                                                        }
+                                                    </td>
+                                                );
+                                            })}
+                                            <td style={{ textAlign: 'center' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 6, justifyContent: 'center' }}>
+                                                    <div style={{ width: 50, height: 6, borderRadius: 4, background: 'var(--bg-secondary)', overflow: 'hidden' }}>
+                                                        <div style={{ width: `${sk.snpPct}%`, height: '100%', borderRadius: 4, background: sk.snpPct === 100 ? '#22c55e' : sk.snpPct >= 50 ? '#f59e0b' : 'var(--accent-red)', transition: '0.3s' }} />
+                                                    </div>
+                                                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: sk.snpPct === 100 ? '#22c55e' : 'var(--text-primary)' }}>{sk.snpPct}%</span>
+                                                </div>
+                                            </td>
+                                            <td style={{ textAlign: 'center' }}>
+                                                <span className="status-badge" style={{ background: sk.snpComplete ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.12)', color: sk.snpComplete ? '#22c55e' : 'var(--accent-red)', fontWeight: 600, fontSize: '0.72rem' }}>
+                                                    {sk.snpComplete ? 'Lengkap' : 'Belum Lengkap'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                        <PaginationControls totalPages={totalPagesSnpRekap} totalItems={totalSnpRekap} tableName="rekap-snp" />
+                    </div>
                 </div>
             )}
 
