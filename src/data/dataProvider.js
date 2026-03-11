@@ -71,7 +71,7 @@ function useDataFetch(fetchFn, defaultValue = [], deps = [], autoRefreshMs = DEF
 
 // ===== SEKOLAH =====
 export function useSekolahData() {
-    return useDataFetch(() => sekolahApi.list({ limit: 999, onlyWithUsers: true }).then(r => r.data || r));
+    return useDataFetch(() => sekolahApi.list({ limit: 99999, onlyWithUsers: true }).then(r => r.data || r));
 }
 
 // ===== SARPRAS =====
@@ -97,7 +97,7 @@ export function useSarprasData(params = {}) {
 
 // ===== PROPOSAL =====
 export function useProposalData(params = {}) {
-    return useDataFetch(() => proposalApi.list({ limit: 500, ...params }).then(r => {
+    return useDataFetch(() => proposalApi.list({ limit: 99999, ...params }).then(r => {
         const items = r.data || r;
         return items.map(item => {
             if (item.proposal) {
@@ -116,22 +116,22 @@ export function useProposalData(params = {}) {
 
 // ===== AKTIVITAS =====
 export function useAktivitasData(params = {}) {
-    return useDataFetch(() => aktivitasApi.list({ limit: 200, ...params }).then(r => r.data || r), [], [JSON.stringify(params)]);
+    return useDataFetch(() => aktivitasApi.list({ limit: 99999, ...params }).then(r => r.data || r), [], [JSON.stringify(params)]);
 }
 
 // ===== USERS =====
 export function useUsersData(params = {}) {
-    return useDataFetch(() => penggunaApi.list({ limit: 999, ...params }).then(r => r.data || r), [], [JSON.stringify(params)]);
+    return useDataFetch(() => penggunaApi.list({ limit: 99999, ...params }).then(r => r.data || r), [], [JSON.stringify(params)]);
 }
 
 // ===== RIWAYAT BANTUAN =====
 export function useRiwayatBantuanData(params = {}) {
-    return useDataFetch(() => riwayatBantuanApi.list({ limit: 500, ...params }).then(r => r.data || r), [], [JSON.stringify(params)]);
+    return useDataFetch(() => riwayatBantuanApi.list({ limit: 99999, ...params }).then(r => r.data || r), [], [JSON.stringify(params)]);
 }
 
 // ===== PRESTASI =====
 export function usePrestasiData(params = {}) {
-    return useDataFetch(() => prestasiApi.list({ limit: 500, ...params }).then(r => {
+    return useDataFetch(() => prestasiApi.list({ limit: 99999, ...params }).then(r => {
         const items = r.data || r;
         return items.map(item => {
             if (item.prestasi) {
@@ -149,7 +149,7 @@ export function usePrestasiData(params = {}) {
 
 // ===== FORM KERUSAKAN =====
 export function useKerusakanData(params = {}) {
-    return useDataFetch(() => kerusakanApi.list({ limit: 500, ...params }).then(r => {
+    return useDataFetch(() => kerusakanApi.list({ limit: 99999, ...params }).then(r => {
         const items = r.data || r;
         return items.map(item => {
             if (item.formKerusakan) {
