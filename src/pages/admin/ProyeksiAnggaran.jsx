@@ -228,19 +228,21 @@ const ProyeksiAnggaran = () => {
     // REKAP SNP: Sekolah yang sudah & belum memenuhi SNP
     // =========================================================================
     const snpRekapData = useMemo(() => {
-        if (!snpData.length || !sekolahList.length) return [];
-        return sekolahList.map(sk => {
-            const snpForJenjang = snpData.filter(s => s.jenjang === sk.jenjang);
-            if (!snpForJenjang.length) return null;
-            const items = snpForJenjang.map(snp => {
-                const count = sarprasList.filter(sp => sp.sekolahId === sk.id && sp.jenisPrasarana === snp.jenisPrasarana).length;
-                return { jenisPrasarana: snp.jenisPrasarana, required: true, owned: count, met: count > 0 };
-            });
-            const met = items.filter(i => i.met).length;
-            const total = items.length;
-            const pct = total > 0 ? Math.round((met / total) * 100) : 0;
-            return { ...sk, snpItems: items, snpMet: met, snpTotal: total, snpPct: pct, snpComplete: pct === 100 };
-        }).filter(Boolean);
+        try {
+            if (!snpData?.length || !sekolahList?.length || !Array.isArray(sarprasList)) return [];
+            return sekolahList.map(sk => {
+                const snpForJenjang = snpData.filter(s => s.jenjang === sk.jenjang);
+                if (!snpForJenjang.length) return null;
+                const items = snpForJenjang.map(snp => {
+                    const count = (sarprasList || []).filter(sp => sp.sekolahId === sk.id && sp.jenisPrasarana === snp.jenisPrasarana).length;
+                    return { jenisPrasarana: snp.jenisPrasarana, required: true, owned: count, met: count > 0 };
+                });
+                const met = items.filter(i => i.met).length;
+                const total = items.length;
+                const pct = total > 0 ? Math.round((met / total) * 100) : 0;
+                return { ...sk, snpItems: items, snpMet: met, snpTotal: total, snpPct: pct, snpComplete: pct === 100 };
+            }).filter(Boolean);
+        } catch (e) { console.error('snpRekapData error:', e); return []; }
     }, [snpData, sekolahList, sarprasList]);
 
     const [snpRekapFilter, setSnpRekapFilter] = useState('all'); // all | lengkap | belum
