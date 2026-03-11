@@ -600,7 +600,7 @@ const ProyeksiAnggaran = () => {
                 <div className="page-header-left"><h1>Proyeksi Anggaran</h1><p>Kalkulasi otomatis kebutuhan anggaran berdasarkan kondisi & SNP</p></div>
             </div>
 
-            <div className="keranjang-tabs" style={{ maxWidth: '35rem', marginBottom: '1.5rem' }}>
+            <div className="keranjang-tabs" style={{ maxWidth: '45rem', marginBottom: '1.5rem' }}>
                 <button className={`keranjang-tab ${tab === 'anggaran' ? 'active' : ''}`} onClick={() => setTab('anggaran')}>Atur Anggaran</button>
                 <button className={`keranjang-tab ${tab === 'rekap' ? 'active' : ''}`} onClick={() => setTab('rekap')}>Rekapitulasi</button>
                 <button className={`keranjang-tab ${tab === 'belum-usul' ? 'active' : ''}`} onClick={() => setTab('belum-usul')}>
