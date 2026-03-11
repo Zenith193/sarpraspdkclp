@@ -3,7 +3,7 @@ import { penggunaService } from '../services/pengguna.service.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { db } from '../db/index.js';
 import { user, account } from '../db/schema/index.js';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { auth } from '../auth/index.js';
 
 const router = Router();
@@ -73,10 +73,10 @@ router.put('/:id/change-password', requireAuth, async (req, res) => {
             .set({ password: hashedPassword, updatedAt: new Date() })
             .where(and(eq(account.userId, targetId), eq(account.providerId, 'credential')));
 
-        // Update plain password in user table
-        await db.update(user)
-            .set({ plainPassword: newPassword, updatedAt: new Date() })
-            .where(eq(user.id, targetId));
+        // Update plain password in user table (raw SQL since column not in Drizzle schema)
+        try {
+            await db.execute(sql`UPDATE "user" SET "plain_password" = ${newPassword}, "updated_at" = NOW() WHERE "id" = ${targetId}`);
+        } catch (_) { /* column may not exist yet */ }
 
         res.json({ success: true, message: 'Password berhasil diubah' });
     } catch (e: any) { res.status(500).json({ error: e.message }); }

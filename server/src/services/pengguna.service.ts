@@ -17,7 +17,7 @@ export const penggunaService = {
             data = await db.select({
                 id: user.id, name: user.name, email: user.email, role: user.role,
                 sekolahId: user.sekolahId, aktif: user.aktif, createdAt: user.createdAt,
-                plainPassword: user.plainPassword,
+                plainPassword: sql<string>`"user"."plain_password"`.as('plain_password'),
                 npsn: sekolah.npsn, jenjang: sekolah.jenjang, kecamatan: sekolah.kecamatan,
                 statusSekolah: sekolah.status, alamat: sekolah.alamat, kepsek: sekolah.kepsek,
                 nip: sql<string>`COALESCE(${sekolah.nip}, ${user.nip})`.as('nip'),
@@ -175,7 +175,7 @@ export const penggunaService = {
                 // Store plain password directly via Drizzle (not through Better Auth)
                 if (signUpResult?.user?.id) {
                     try {
-                        await db.update(user).set({ plainPassword: plainPwd }).where(eq(user.id, signUpResult.user.id));
+                        await db.execute(sql`UPDATE "user" SET "plain_password" = ${plainPwd} WHERE "id" = ${signUpResult.user.id}`);
                     } catch (_) { /* column may not exist yet, ignore */ }
                 }
 
