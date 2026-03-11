@@ -89,6 +89,16 @@ export const sarprasService = {
         return result[0];
     },
 
+    async batchCreate(items: (typeof sarpras.$inferInsert)[], userId: string) {
+        const rows = items.map(item => ({
+            ...item,
+            luas: (item.panjang || 0) * (item.lebar || 0),
+            createdBy: userId,
+        }));
+        const result = await db.insert(sarpras).values(rows).returning();
+        return result;
+    },
+
     async update(id: number, data: Partial<typeof sarpras.$inferInsert>) {
         const luas = (data.panjang && data.lebar) ? data.panjang * data.lebar : undefined;
         const result = await db.update(sarpras)

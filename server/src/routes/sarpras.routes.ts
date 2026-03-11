@@ -138,6 +138,42 @@ router.get('/stats', requireAuth, async (_req, res) => {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// Batch create sarpras (without photos)
+router.post('/batch', requireAuth, requireRole('admin', 'sekolah'), async (req, res) => {
+    try {
+        const { sekolahId, items } = req.body;
+        if (!sekolahId || !items || !Array.isArray(items) || items.length === 0) {
+            res.status(400).json({ error: 'sekolahId dan items (array) harus diisi' });
+            return;
+        }
+        const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
+        const finalSekolahId = isSekolah ? req.user!.sekolahId : sekolahId;
+
+        const rows = items.map((item: any) => ({
+            sekolahId: finalSekolahId,
+            masaBangunan: item.masaBangunan || 'A',
+            jenisPrasarana: item.jenisPrasarana || 'Ruang Kelas',
+            namaRuang: item.namaRuang,
+            lantai: item.lantai || 1,
+            panjang: parseFloat(item.panjang) || 0,
+            lebar: parseFloat(item.lebar) || 0,
+            kondisi: item.kondisi || 'BAIK',
+            keterangan: item.keterangan || '',
+        }));
+
+        // Validate all rows have namaRuang
+        const invalid = rows.filter((r: any) => !r.namaRuang);
+        if (invalid.length > 0) {
+            res.status(400).json({ error: `${invalid.length} baris belum memiliki Nama Ruang` });
+            return;
+        }
+
+        const result = await sarprasService.batchCreate(rows, req.user!.id);
+        res.status(201).json({ success: true, count: result.length, data: result });
+        logActivity(req, 'Batch Tambah Sarpras', `Menambahkan ${result.length} data sarpras sekaligus`);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 router.get('/:id', requireAuth, async (req, res) => {
     try {
         const result = await sarprasService.getById(Number(req.params.id));

@@ -45,6 +45,13 @@ const DataSarpras = ({ readOnly = false }) => {
     const [photoIdx, setPhotoIdx] = useState(0);
     const [photoModal, setPhotoModal] = useState(null);
 
+    // Batch input state
+    const [showBatchModal, setShowBatchModal] = useState(false);
+    const [batchNpsn, setBatchNpsn] = useState('');
+    const [batchSekolah, setBatchSekolah] = useState(null);
+    const EMPTY_BATCH_ROW = { masaBangunan: 'A', jenisPrasarana: JENIS_PRASARANA[0], namaRuang: '', lantai: 1, panjang: '', lebar: '', kondisi: KONDISI[0], keterangan: '' };
+    const [batchRows, setBatchRows] = useState([{ ...EMPTY_BATCH_ROW }]);
+
     // Delete Confirmation State
     const [deleteConfirm, setDeleteConfirm] = useState(null);
     // Track deleted photo IDs during edit (to delete from server on save)
@@ -391,6 +398,34 @@ const DataSarpras = ({ readOnly = false }) => {
         }
     };
 
+    // ===== BATCH HANDLERS =====
+    const handleBatchNpsnSearch = () => {
+        const s = sekolahList.find(x => x.npsn === batchNpsn.trim());
+        if (s) { setBatchSekolah(s); }
+        else { toast.error('NPSN tidak ditemukan'); setBatchSekolah(null); }
+    };
+
+    const handleBatchSave = async () => {
+        if (!batchSekolah) { toast.error('Cari sekolah berdasarkan NPSN terlebih dahulu'); return; }
+        const validRows = batchRows.filter(r => r.namaRuang.trim());
+        if (validRows.length === 0) { toast.error('Isi minimal 1 baris data dengan Nama Ruang'); return; }
+        for (const r of validRows) {
+            const p = parseFloat(r.panjang) || 0;
+            const l = parseFloat(r.lebar) || 0;
+            if (!p || !l) { toast.error(`Panjang dan Lebar harus diisi untuk ${r.namaRuang}`); return; }
+        }
+        try {
+            toast.loading(`Menyimpan ${validRows.length} data...`, { id: 'batch' });
+            await sarprasApi.batchCreate({ sekolahId: batchSekolah.id, items: validRows });
+            toast.success(`${validRows.length} data sarpras berhasil disimpan`, { id: 'batch' });
+            setShowBatchModal(false);
+            setBatchNpsn(''); setBatchSekolah(null); setBatchRows([{ ...EMPTY_BATCH_ROW }]);
+            if (refetchSarpras) refetchSarpras();
+        } catch (e) {
+            toast.error(e.message || 'Gagal menyimpan batch', { id: 'batch' });
+        }
+    };
+
     const handleEdit = (item) => {
         if (!guard('edit')) return;
         setEditItem(item);
@@ -510,10 +545,16 @@ const DataSarpras = ({ readOnly = false }) => {
                 </div>
                 <div className="page-header-right">
                     {!readOnly && (
-                        <button className="btn btn-primary" onClick={() => { if (!guard('tambah')) return; resetForm(); setEditItem(null); setShowAddModal(true); }} disabled={isRestricted('tambah')}
-                            style={isRestricted('tambah') ? { opacity: 0.5, cursor: 'not-allowed' } : {}}>
-                            <Plus size={16} /> Tambah Data
-                        </button>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <button className="btn btn-primary" onClick={() => { if (!guard('tambah')) return; resetForm(); setEditItem(null); setShowAddModal(true); }} disabled={isRestricted('tambah')}
+                                style={isRestricted('tambah') ? { opacity: 0.5, cursor: 'not-allowed' } : {}}>
+                                <Plus size={16} /> Tambah Data
+                            </button>
+                            <button className="btn btn-primary" onClick={() => { if (!guard('tambah')) return; setBatchNpsn(''); setBatchSekolah(null); setBatchRows([{ ...EMPTY_BATCH_ROW }]); setShowBatchModal(true); }} disabled={isRestricted('tambah')}
+                                style={{ ...(isRestricted('tambah') ? { opacity: 0.5, cursor: 'not-allowed' } : {}), background: 'var(--accent-green, #22c55e)' }}>
+                                <FileSpreadsheet size={16} /> Input Batch
+                            </button>
+                        </div>
                     )}
                 </div>
             </div>
@@ -1037,6 +1078,118 @@ const DataSarpras = ({ readOnly = false }) => {
                                     </a>
                                 )}
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ===== BATCH INPUT MODAL ===== */}
+            {showBatchModal && (
+                <div className="modal-overlay" onClick={() => setShowBatchModal(false)}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 1100, width: '95vw' }}>
+                        <div className="modal-header">
+                            <div className="modal-title">Input Batch Data Sarpras</div>
+                            <button className="modal-close" onClick={() => setShowBatchModal(false)}><X size={18} /></button>
+                        </div>
+                        <div className="modal-body" style={{ maxHeight: '75vh', overflowY: 'auto' }}>
+                            {/* NPSN Search */}
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', marginBottom: 16, flexWrap: 'wrap' }}>
+                                <div className="form-group" style={{ marginBottom: 0, flex: '0 0 200px' }}>
+                                    <label className="form-label">NPSN</label>
+                                    <input className="form-input" value={batchNpsn} onChange={e => setBatchNpsn(e.target.value)} placeholder="Masukkan NPSN" onKeyDown={e => e.key === 'Enter' && handleBatchNpsnSearch()} />
+                                </div>
+                                <button className="btn btn-primary" onClick={handleBatchNpsnSearch} style={{ height: 38 }}>
+                                    <Search size={16} /> Cari
+                                </button>
+                                {batchSekolah && (
+                                    <div style={{ display: 'flex', gap: 16, alignItems: 'center', padding: '8px 16px', background: 'var(--bg-success, rgba(34,197,94,0.1))', borderRadius: 'var(--radius-md)', border: '1px solid var(--accent-green, #22c55e)', flex: 1,  minWidth: 200 }}>
+                                        <div><strong>{batchSekolah.nama}</strong></div>
+                                        <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>{batchSekolah.kecamatan} • {batchSekolah.jenjang}</div>
+                                    </div>
+                                )}
+                            </div>
+
+                            {batchSekolah && (
+                                <>
+                                    {/* Batch Table */}
+                                    <div style={{ overflowX: 'auto' }}>
+                                        <table className="data-table" style={{ fontSize: '0.82rem' }}>
+                                            <thead>
+                                                <tr>
+                                                    <th style={{ width: 36 }}>No</th>
+                                                    <th style={{ width: 60 }}>Masa</th>
+                                                    <th style={{ width: 140 }}>Jenis Prasarana</th>
+                                                    <th style={{ width: 140 }}>Nama Ruang</th>
+                                                    <th style={{ width: 50 }}>Lt</th>
+                                                    <th style={{ width: 70 }}>Panjang</th>
+                                                    <th style={{ width: 70 }}>Lebar</th>
+                                                    <th style={{ width: 110 }}>Kondisi</th>
+                                                    <th style={{ width: 120 }}>Keterangan</th>
+                                                    <th style={{ width: 40 }}></th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {batchRows.map((row, idx) => (
+                                                    <tr key={idx}>
+                                                        <td style={{ textAlign: 'center' }}>{idx + 1}</td>
+                                                        <td>
+                                                            <select className="form-input" value={row.masaBangunan} onChange={e => { const v = e.target.value; setBatchRows(prev => prev.map((r, i) => i === idx ? { ...r, masaBangunan: v } : r)); }} style={{ padding: '4px 6px', fontSize: '0.8rem' }}>
+                                                                {MASA_BANGUNAN.map(m => <option key={m} value={m}>{m}</option>)}
+                                                            </select>
+                                                        </td>
+                                                        <td>
+                                                            <select className="form-input" value={row.jenisPrasarana} onChange={e => { const v = e.target.value; setBatchRows(prev => prev.map((r, i) => i === idx ? { ...r, jenisPrasarana: v } : r)); }} style={{ padding: '4px 6px', fontSize: '0.8rem' }}>
+                                                                {JENIS_PRASARANA.map(j => <option key={j} value={j}>{j}</option>)}
+                                                            </select>
+                                                        </td>
+                                                        <td>
+                                                            <input className="form-input" value={row.namaRuang} placeholder="Nama Ruang" onChange={e => { const v = e.target.value; setBatchRows(prev => prev.map((r, i) => i === idx ? { ...r, namaRuang: v } : r)); }} style={{ padding: '4px 6px', fontSize: '0.8rem' }} />
+                                                        </td>
+                                                        <td>
+                                                            <select className="form-input" value={row.lantai} onChange={e => { const v = Number(e.target.value); setBatchRows(prev => prev.map((r, i) => i === idx ? { ...r, lantai: v } : r)); }} style={{ padding: '4px 6px', fontSize: '0.8rem' }}>
+                                                                {LANTAI_OPTIONS.map(l => <option key={l} value={l}>{l}</option>)}
+                                                            </select>
+                                                        </td>
+                                                        <td>
+                                                            <input className="form-input" type="number" step="0.1" value={row.panjang} placeholder="m" onChange={e => { const v = e.target.value; setBatchRows(prev => prev.map((r, i) => i === idx ? { ...r, panjang: v } : r)); }} style={{ padding: '4px 6px', fontSize: '0.8rem' }} />
+                                                        </td>
+                                                        <td>
+                                                            <input className="form-input" type="number" step="0.1" value={row.lebar} placeholder="m" onChange={e => { const v = e.target.value; setBatchRows(prev => prev.map((r, i) => i === idx ? { ...r, lebar: v } : r)); }} style={{ padding: '4px 6px', fontSize: '0.8rem' }} />
+                                                        </td>
+                                                        <td>
+                                                            <select className="form-input" value={row.kondisi} onChange={e => { const v = e.target.value; setBatchRows(prev => prev.map((r, i) => i === idx ? { ...r, kondisi: v } : r)); }} style={{ padding: '4px 6px', fontSize: '0.8rem' }}>
+                                                                {KONDISI.map(k => <option key={k} value={k}>{k}</option>)}
+                                                            </select>
+                                                        </td>
+                                                        <td>
+                                                            <input className="form-input" value={row.keterangan} placeholder="Ket" onChange={e => { const v = e.target.value; setBatchRows(prev => prev.map((r, i) => i === idx ? { ...r, keterangan: v } : r)); }} style={{ padding: '4px 6px', fontSize: '0.8rem' }} />
+                                                        </td>
+                                                        <td>
+                                                            {batchRows.length > 1 && (
+                                                                <button className="btn-icon" onClick={() => setBatchRows(prev => prev.filter((_, i) => i !== idx))} title="Hapus baris" style={{ color: 'var(--accent-red)', padding: 2 }}>
+                                                                    <Trash2 size={14} />
+                                                                </button>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, alignItems: 'center' }}>
+                                        <button className="btn btn-ghost" onClick={() => setBatchRows(prev => [...prev, { ...EMPTY_BATCH_ROW }])}>
+                                            <Plus size={16} /> Tambah Baris
+                                        </button>
+                                        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{batchRows.length} baris • Foto bisa ditambahkan setelah data tersimpan</span>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                        <div className="modal-footer">
+                            <button className="btn btn-ghost" onClick={() => setShowBatchModal(false)}>Batal</button>
+                            <button className="btn btn-primary" onClick={handleBatchSave} disabled={!batchSekolah}>
+                                <Save size={16} /> Simpan Semua ({batchRows.filter(r => r.namaRuang.trim()).length} data)
+                            </button>
                         </div>
                     </div>
                 </div>
