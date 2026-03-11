@@ -425,7 +425,20 @@ const DataSarpras = ({ readOnly = false }) => {
         try {
             // Fetch SEMUA sekolah (tanpa filter onlyWithUsers) untuk NPSN matching
             const allSekolahRes = await sekolahApi.list({ limit: 99999 });
-            const allSekolah = allSekolahRes.data || allSekolahRes || [];
+            // Handle berbagai format response: { data: [...] } atau langsung array
+            let allSekolah = [];
+            if (Array.isArray(allSekolahRes)) {
+                allSekolah = allSekolahRes;
+            } else if (allSekolahRes?.data && Array.isArray(allSekolahRes.data)) {
+                allSekolah = allSekolahRes.data;
+            } else if (allSekolahRes?.data?.data && Array.isArray(allSekolahRes.data.data)) {
+                allSekolah = allSekolahRes.data.data;
+            }
+            // Build NPSN Map untuk lookup cepat dan reliable
+            const npsnMap = new Map();
+            allSekolah.forEach(s => { if (s.npsn) npsnMap.set(String(s.npsn).trim(), s); });
+            console.log(`[BatchImport] Total sekolah: ${allSekolah.length}, NPSN Map size: ${npsnMap.size}`);
+            console.log(`[BatchImport] Sample NPSN di DB:`, [...npsnMap.keys()].slice(0, 10));
 
             const data = await file.arrayBuffer();
             const workbook = XLSX.read(data);
@@ -441,12 +454,17 @@ const DataSarpras = ({ readOnly = false }) => {
             const errors = [];
             const npsnNotFound = new Set();
             const npsnEmpty = { count: 0 };
+            if (jsonData.length > 0) {
+                const firstRow = {};
+                for (const key in jsonData[0]) firstRow[key.toLowerCase().trim()] = jsonData[0][key];
+                console.log(`[BatchImport] First Excel row NPSN: "${firstRow['npsn']}" (type: ${typeof firstRow['npsn']}), exists in map: ${npsnMap.has(String(firstRow['npsn'] || '').trim())}`);
+            }
             jsonData.forEach((origRow, index) => {
                 const row = {};
                 for (const key in origRow) row[key.toLowerCase().trim()] = origRow[key];
 
                 const npsn = (row['npsn'] || '').toString().trim();
-                const sekolah = npsn ? allSekolah.find(s => s.npsn === npsn) : null;
+                const sekolah = npsn ? npsnMap.get(npsn) : null;
                 if (!npsn) { npsnEmpty.count++; errors.push(`Baris ${index + 2}: NPSN kosong`); return; }
                 if (!sekolah) { npsnNotFound.add(npsn); errors.push(`Baris ${index + 2}: NPSN ${npsn} tidak ditemukan`); return; }
 
