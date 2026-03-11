@@ -150,7 +150,7 @@ const ProyeksiAnggaran = () => {
             rekapData: Object.values(sekolahMap),
             globalStats: { totalRS: gTotRS, totalRB: gTotRB, totalBuild: gTotBuild, grandTotal: gTotRS + gTotRB + gTotBuild }
         };
-    }, [anggaranData, snpData]);
+    }, [anggaranData, snpData, sekolahList, sarprasList]);
 
     // =========================================================================
     // FILTER LOGIC
