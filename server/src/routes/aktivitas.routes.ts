@@ -4,7 +4,7 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 
 const router = Router();
 
-router.get('/', requireAuth, requireRole('admin'), async (req, res) => {
+router.get('/', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
     try {
         const result = await aktivitasService.list({
             jenisAkun: req.query.jenisAkun as string,
