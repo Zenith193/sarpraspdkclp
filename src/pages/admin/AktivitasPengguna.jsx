@@ -101,10 +101,15 @@ const AktivitasPengguna = () => {
     // ===== HANDLERS =====
     const requestDelete = (item) => setDeleteTarget(item);
 
-    const executeDelete = () => {
+    const executeDelete = async () => {
         if (deleteTarget) {
-            setData(prev => prev.filter(d => d.id !== deleteTarget.id));
-            toast.success('Log aktivitas dihapus');
+            try {
+                await aktivitasApi.delete(deleteTarget.id);
+                setData(prev => prev.filter(d => d.id !== deleteTarget.id));
+                toast.success('Log aktivitas dihapus');
+            } catch (err) {
+                toast.error(err?.message || 'Gagal menghapus');
+            }
             setDeleteTarget(null);
         }
     };

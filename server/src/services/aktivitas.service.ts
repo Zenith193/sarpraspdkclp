@@ -24,4 +24,8 @@ export const aktivitasService = {
     async log(data: { userId?: string; namaAkun: string; jenisAkun: string; aktivitas: string; keterangan?: string; ipAddress?: string }) {
         return db.insert(aktivitas).values(data).returning();
     },
+
+    async delete(id: number) {
+        await db.delete(aktivitas).where(eq(aktivitas.id, id));
+    },
 };

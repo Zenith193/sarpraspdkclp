@@ -20,4 +20,8 @@ router.get('/my', requireAuth, async (req, res) => {
     try { res.json(await aktivitasService.getByUserId(req.user!.id)); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
+    try { await aktivitasService.delete(Number(req.params.id)); res.json({ success: true }); } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 export default router;

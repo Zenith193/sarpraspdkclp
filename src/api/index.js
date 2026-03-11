@@ -138,6 +138,7 @@ export const penggunaApi = {
 export const aktivitasApi = {
     list: (params = {}) => { const q = new URLSearchParams(params).toString(); return api.get(`/aktivitas?${q}`); },
     my: () => api.get('/aktivitas/my'),
+    delete: (id) => api.delete(`/aktivitas/${id}`),
 };
 
 export const settingsApi = {
