@@ -405,11 +405,11 @@ const Dashboard = () => {
                         <div className="summary-card-title">Kebutuhan Anggaran</div>
                         <div className="summary-card-icon" style={{ background: 'rgba(34,197,94,0.1)', color: 'var(--accent-green)' }}><DollarSign size={16} /></div>
                     </div>
-                    <div className="summary-card-value" style={{ color: 'var(--accent-green)', fontSize: 18 }}>{formatShortCurrency(globalStats.grandTotal)}</div>
+                    <div className="summary-card-value" style={{ color: 'var(--accent-green)', fontSize: 14 }}>{formatCurrency(globalStats.grandTotal)}</div>
                     <ul className="summary-card-list">
-                        <li><span className="dot" style={{ background: 'var(--accent-orange)' }} /> R. Sedang: {formatShortCurrency(globalStats.totalRS)}</li>
-                        <li><span className="dot" style={{ background: 'var(--accent-red)' }} /> R. Berat: {formatShortCurrency(globalStats.totalRB)}</li>
-                        <li><span className="dot" style={{ background: 'var(--accent-blue)' }} /> Pembangunan: {formatShortCurrency(globalStats.totalBuild)}</li>
+                        <li><span className="dot" style={{ background: 'var(--accent-orange)' }} /> R. Sedang: {formatCurrency(globalStats.totalRS)}</li>
+                        <li><span className="dot" style={{ background: 'var(--accent-red)' }} /> R. Berat: {formatCurrency(globalStats.totalRB)}</li>
+                        <li><span className="dot" style={{ background: 'var(--accent-blue)' }} /> Pembangunan: {formatCurrency(globalStats.totalBuild)}</li>
                     </ul>
                 </div>
             </div>
