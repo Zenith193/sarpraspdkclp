@@ -8,7 +8,7 @@ import SearchableSelect from '../../components/ui/SearchableSelect';
 import useAuthStore from '../../store/authStore';
 import { safeStr } from '../../utils/safeStr';
 import useCountdownGuard from '../../hooks/useCountdownGuard';
-import { sarprasApi } from '../../api/index';
+import { sarprasApi, sekolahApi } from '../../api/index';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 
@@ -423,6 +423,10 @@ const DataSarpras = ({ readOnly = false }) => {
         setIsBatchImporting(true);
         toast.loading('Membaca file Excel...', { id: 'batch-import' });
         try {
+            // Fetch SEMUA sekolah (tanpa filter onlyWithUsers) untuk NPSN matching
+            const allSekolahRes = await sekolahApi.list({ limit: 99999 });
+            const allSekolah = allSekolahRes.data || allSekolahRes || [];
+
             const data = await file.arrayBuffer();
             const workbook = XLSX.read(data);
             const sheet = workbook.Sheets[workbook.SheetNames[0]];
@@ -442,7 +446,7 @@ const DataSarpras = ({ readOnly = false }) => {
                 for (const key in origRow) row[key.toLowerCase().trim()] = origRow[key];
 
                 const npsn = (row['npsn'] || '').toString().trim();
-                const sekolah = npsn ? sekolahList.find(s => s.npsn === npsn) : null;
+                const sekolah = npsn ? allSekolah.find(s => s.npsn === npsn) : null;
                 if (!npsn) { npsnEmpty.count++; errors.push(`Baris ${index + 2}: NPSN kosong`); return; }
                 if (!sekolah) { npsnNotFound.add(npsn); errors.push(`Baris ${index + 2}: NPSN ${npsn} tidak ditemukan`); return; }
 
