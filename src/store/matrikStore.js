@@ -226,7 +226,7 @@ const useMatrikStore = create(
             })),
         }),
         {
-            name: 'spidol-matrik',
+            name: 'SARDIKA-matrik',
         }
     )
 );

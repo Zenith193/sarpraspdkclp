@@ -12,7 +12,7 @@ const Topbar = ({ onToggleSidebar }) => {
                 </button>
                 <div className="topbar-title">
                     <School size={18} />
-                    <span>Sistem Pengelolaan Informasi Data Sarana Prasarana Online</span>
+                    <span>Sistem Aplikasi Registrasi Data Infrastruktur dan Kelengkapan Aset Pendidikan</span>
                 </div>
             </div>
             <div className="topbar-right">

@@ -62,7 +62,7 @@ const Login = () => {
                 // Staff login: use Better Auth email/password
                 let loginEmail = email;
                 if (!loginEmail.includes('@')) {
-                    loginEmail = `${loginEmail}@spidol.cilacapkab.go.id`;
+                    loginEmail = `${loginEmail}@SARDIKA.cilacapkab.go.id`;
                 }
                 const user = await authLogin(loginEmail, password);
 
@@ -105,10 +105,10 @@ const Login = () => {
                     <div className="login-logo-icon">
                         <School size={28} />
                     </div>
-                    <h1>SPIDOL</h1>
+                    <h1>SARDIKA</h1>
                 </div>
                 <p className="login-subtitle">
-                    Sistem Pengelolaan Informasi Data Sarana Prasarana Online<br />
+                    Sistem Aplikasi Registrasi Data Infrastruktur dan Kelengkapan Aset Pendidikan<br />
                     Dinas Pendidikan dan Kebudayaan Kabupaten Cilacap
                 </p>
 

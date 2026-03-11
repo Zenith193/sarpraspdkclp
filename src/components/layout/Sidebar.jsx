@@ -124,7 +124,7 @@ const Sidebar = ({ collapsed, onToggle, className = '' }) => {
                 </div>
                 {!collapsed && (
                     <div className="sidebar-brand">
-                        <h2>SPIDOL</h2>
+                        <h2>SARDIKA</h2>
                         <p>Sarpras Online</p>
                     </div>
                 )}

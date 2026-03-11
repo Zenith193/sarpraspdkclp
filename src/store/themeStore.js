@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 const getInitialTheme = () => {
     if (typeof window !== 'undefined') {
-        return localStorage.getItem('spidol-theme') || 'dark';
+        return localStorage.getItem('SARDIKA-theme') || 'dark';
     }
     return 'dark';
 };
@@ -12,13 +12,13 @@ const useThemeStore = create((set) => ({
 
     toggleTheme: () => set((state) => {
         const newTheme = state.theme === 'dark' ? 'light' : 'dark';
-        localStorage.setItem('spidol-theme', newTheme);
+        localStorage.setItem('SARDIKA-theme', newTheme);
         document.documentElement.setAttribute('data-theme', newTheme);
         return { theme: newTheme };
     }),
 
     setTheme: (theme) => {
-        localStorage.setItem('spidol-theme', theme);
+        localStorage.setItem('SARDIKA-theme', theme);
         document.documentElement.setAttribute('data-theme', theme);
         set({ theme });
     },

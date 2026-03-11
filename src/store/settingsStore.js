@@ -199,7 +199,7 @@ const useSettingsStore = create(
             },
         }),
         {
-            name: 'spidol-settings',
+            name: 'SARDIKA-settings',
             merge: (persistedState, currentState) => ({
                 ...currentState,
                 ...persistedState,

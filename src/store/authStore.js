@@ -62,7 +62,7 @@ const useAuthStore = create(
       })),
     }),
     {
-      name: 'spidol-auth',
+      name: 'SARDIKA-auth',
     }
   )
 );

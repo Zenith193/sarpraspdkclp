@@ -28,7 +28,7 @@ import {
  *   NAS_PROTOCOL=https or http
  *   NAS_USERNAME=admin
  *   NAS_PASSWORD=password
- *   NAS_SHARED_FOLDER=/spidol  (shared folder name on NAS)
+ *   NAS_SHARED_FOLDER=/SARDIKA  (shared folder name on NAS)
  */
 
 // ==================== CONFIG ====================
@@ -40,7 +40,7 @@ interface NasConfig {
     protocol: 'http' | 'https';
     username: string;
     password: string;
-    sharedFolder: string;  // e.g. "/spidol"
+    sharedFolder: string;  // e.g. "/SARDIKA"
     quickConnectId?: string; // e.g. "sarpras-NAS"
 }
 
@@ -71,7 +71,7 @@ function getConfig(): NasConfig {
         protocol: runtimeConfig?.protocol ?? ((process.env.NAS_PROTOCOL || 'https') as 'http' | 'https'),
         username: runtimeConfig?.username ?? (process.env.NAS_USERNAME || ''),
         password: runtimeConfig?.password ?? (process.env.NAS_PASSWORD || ''),
-        sharedFolder: runtimeConfig?.sharedFolder ?? (process.env.NAS_SHARED_FOLDER || '/spidol'),
+        sharedFolder: runtimeConfig?.sharedFolder ?? (process.env.NAS_SHARED_FOLDER || '/SARDIKA'),
         quickConnectId: runtimeConfig?.quickConnectId ?? (process.env.NAS_QUICKCONNECT_ID || ''),
     };
 }
@@ -244,7 +244,7 @@ async function logout(): Promise<void> {
 
 /**
  * Create a folder on the NAS.
- * folder_path: e.g. "/spidol/Cilacap_Selatan/SDN_1_12345678/sarpras/2020/R.Kelas_1"
+ * folder_path: e.g. "/SARDIKA/Cilacap_Selatan/SDN_1_12345678/sarpras/2020/R.Kelas_1"
  */
 async function createFolder(folderPath: string, name: string): Promise<boolean> {
     const sid = await getSid();
@@ -276,7 +276,7 @@ async function createFolder(folderPath: string, name: string): Promise<boolean> 
 
 /**
  * Ensure a full path exists on NAS, creating each level as needed.
- * fullPath: e.g. "/spidol/Cilacap_Selatan/SDN_1_12345678/sarpras/2020/R.Kelas_1"
+ * fullPath: e.g. "/SARDIKA/Cilacap_Selatan/SDN_1_12345678/sarpras/2020/R.Kelas_1"
  */
 async function ensureNasDir(fullPath: string): Promise<void> {
     const parts = fullPath.split('/').filter(Boolean);
@@ -291,7 +291,7 @@ async function ensureNasDir(fullPath: string): Promise<void> {
 /**
  * Upload a file to NAS.
  * localFilePath: absolute path to the local temp file
- * nasDestFolder: NAS folder path, e.g. "/spidol/Cilacap/SDN_1/sarpras/2020/R.Kelas"
+ * nasDestFolder: NAS folder path, e.g. "/SARDIKA/Cilacap/SDN_1/sarpras/2020/R.Kelas"
  * nasFilename: target filename on NAS
  */
 async function uploadFile(localFilePath: string, nasDestFolder: string, nasFilename: string): Promise<{ success: boolean; path: string }> {

@@ -140,7 +140,7 @@ export const penggunaService = {
                 // Gunakan email jika ada, jika kosong gunakan npsn, lalu berikan domain default jika diperlukan
                 let validEmail = u.email || u.npsn || `user${Date.now()}`;
                 if (validEmail && !validEmail.includes('@')) {
-                    validEmail = `${validEmail}@spidol.cilacapkab.go.id`;
+                    validEmail = `${validEmail}@SARDIKA.cilacapkab.go.id`;
                 }
 
                 await auth.api.signUpEmail({

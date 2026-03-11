@@ -19,7 +19,7 @@ import { isGDriveEnabled, uploadFileToGDrive } from '../utils/googleDriveClient'
 // ===================================================================
 
 const uploadDir = process.env.UPLOAD_DIR || './uploads';
-const tempDir = path.join(os.tmpdir(), 'spidol-uploads');
+const tempDir = path.join(os.tmpdir(), 'SARDIKA-uploads');
 
 // Ensure directories exist
 [tempDir, uploadDir].forEach(dir => {

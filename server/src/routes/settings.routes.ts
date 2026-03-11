@@ -39,7 +39,7 @@ async function applyNasConfigFromDb() {
                 protocol: saved.protocol || 'https',
                 username: saved.username || '',
                 password: saved.password || '',
-                sharedFolder: saved.sharedFolder || '/spidol',
+                sharedFolder: saved.sharedFolder || '/SARDIKA',
                 quickConnectId: saved.quickConnectId || '',
             });
         }
@@ -65,7 +65,7 @@ router.put('/nas', requireAuth, requireRole('admin'), async (req, res) => {
             protocol: req.body.protocol || 'https',
             username: req.body.username || '',
             password: req.body.password || '',
-            sharedFolder: req.body.sharedFolder || '/spidol',
+            sharedFolder: req.body.sharedFolder || '/SARDIKA',
             quickConnectId: req.body.quickConnectId || '',
         });
         res.json(result);

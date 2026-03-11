@@ -354,7 +354,7 @@ app.post('/api/npsn-login', async (req, res) => {
         }
 
         // Find user by NPSN email
-        const email = `${npsn}@spidol.cilacapkab.go.id`;
+        const email = `${npsn}@SARDIKA.cilacapkab.go.id`;
         const users = await db.select().from(user).where(eq(user.email, email));
         const foundUser = users[0];
 
@@ -565,7 +565,7 @@ app.post('/api/admin/reset-sekolah-passwords', requireAuth, requireRole('admin')
                     continue;
                 }
 
-                const email = `${sch.npsn}@spidol.cilacapkab.go.id`;
+                const email = `${sch.npsn}@SARDIKA.cilacapkab.go.id`;
 
                 // Check if user already exists with this email
                 const existingUsers = await db.select().from(user).where(eq(user.email, email));
@@ -618,7 +618,7 @@ app.post('/api/admin/fix-sekolah-links', requireAuth, requireRole('admin'), asyn
 
         for (const sch of sekolahList) {
             if (!sch.npsn) continue;
-            const email = `${sch.npsn}@spidol.cilacapkab.go.id`;
+            const email = `${sch.npsn}@SARDIKA.cilacapkab.go.id`;
             const result = await db.update(user).set({
                 sekolahId: sch.id,
                 role: 'Sekolah',
@@ -682,7 +682,7 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 
 
 app.listen(PORT, () => {
-    console.log(`🚀 SPIDOL API running at http://localhost:${PORT}`);
+    console.log(`🚀 SARDIKA API running at http://localhost:${PORT}`);
     console.log(`📦 Auth: http://localhost:${PORT}/api/auth`);
     console.log(`💾 Health: http://localhost:${PORT}/api/health`);
     console.log(`🔑 ENV GDRIVE:`, {

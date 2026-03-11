@@ -379,7 +379,7 @@ const PengaturanNAS = () => {
                             <div style={{ display: 'flex', gap: 8 }}>
                                 <input className="form-input" value={form.sharedFolder || ''}
                                     onChange={e => handleChange('sharedFolder', e.target.value)}
-                                    placeholder="/volume1/spidol" style={{ fontFamily: 'monospace', fontSize: '0.82rem' }} />
+                                    placeholder="/volume1/SARDIKA" style={{ fontFamily: 'monospace', fontSize: '0.82rem' }} />
                                 {lastTest?.success && (
                                     <button className="btn btn-secondary btn-sm" onClick={() => { setFolderPickerFor(null); fetchNasFolders('/'); }}
                                         disabled={loadingFolders} style={{ whiteSpace: 'nowrap' }}>
