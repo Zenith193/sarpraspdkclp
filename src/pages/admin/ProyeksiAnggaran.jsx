@@ -71,6 +71,7 @@ const ProyeksiAnggaran = () => {
     // LOGIC: KALKULASI OTOMATIS TOTAL
     // =========================================================================
     const { rekapData, globalStats } = useMemo(() => {
+        const angData = anggaranData.length ? anggaranData : (proyeksiList || []);
         const sekolahMap = {};
 
         sekolahList.forEach(s => {
@@ -96,7 +97,7 @@ const ProyeksiAnggaran = () => {
             if (sp.kondisi === 'RUSAK SEDANG' || sp.kondisi === 'RUSAK BERAT') {
                 const isBerat = sp.kondisi === 'RUSAK BERAT';
                 const key = `${sp.jenisPrasarana}|${isBerat ? 'berat' : 'sedang'}`;
-                const angg = anggaranData.find(a => a.jenisPrasarana === sp.jenisPrasarana && a.jenjang === sk.jenjang);
+                const angg = angData.find(a => a.jenisPrasarana === sp.jenisPrasarana && a.jenjang === sk.jenjang);
                 const costKey = isBerat ? 'rusakBerat' : 'rusakSedang';
                 const defaultCost = isBerat ? 100_000_000 : 75_000_000;
                 const unitCost = angg ? angg[costKey] : defaultCost;
@@ -132,7 +133,7 @@ const ProyeksiAnggaran = () => {
             const jmlKelas = sk.prasaranaCount['Ruang Kelas'] || 0;
             const defKelas = sk.rombel - jmlKelas;
             if (defKelas > 0) {
-                const anggKelas = anggaranData.find(a => a.jenisPrasarana === 'Ruang Kelas' && a.jenjang === sk.jenjang);
+                const anggKelas = angData.find(a => a.jenisPrasarana === 'Ruang Kelas' && a.jenjang === sk.jenjang);
                 const snpKelas = snpData.find(s => s.jenisPrasarana === 'Ruang Kelas' && s.jenjang === sk.jenjang);
                 const unitCost = anggKelas ? anggKelas.pembangunan : 150_000_000;
                 const totalCost = defKelas * unitCost;
@@ -148,7 +149,7 @@ const ProyeksiAnggaran = () => {
             const targetToilet = Math.max(0, sk.rombel - 1);
             const defToilet = targetToilet - jmlToilet;
             if (defToilet > 0) {
-                const anggToilet = anggaranData.find(a => a.jenisPrasarana === 'Toilet' && a.jenjang === sk.jenjang);
+                const anggToilet = angData.find(a => a.jenisPrasarana === 'Toilet' && a.jenjang === sk.jenjang);
                 const snpToilet = snpData.find(s => s.jenisPrasarana === 'Toilet' && s.jenjang === sk.jenjang);
                 const unitCost = anggToilet ? anggToilet.pembangunan : 50_000_000;
                 const totalCost = defToilet * unitCost;
@@ -165,7 +166,7 @@ const ProyeksiAnggaran = () => {
                 if (snp.jenisPrasarana === 'Ruang Kelas' || snp.jenisPrasarana === 'Toilet') return; // sudah dihitung di atas
                 const jml = sk.prasaranaCount[snp.jenisPrasarana] || 0;
                 if (jml === 0) {
-                    const angg = anggaranData.find(a => a.jenisPrasarana === snp.jenisPrasarana && a.jenjang === sk.jenjang);
+                    const angg = angData.find(a => a.jenisPrasarana === snp.jenisPrasarana && a.jenjang === sk.jenjang);
                     const unitCost = angg ? angg.pembangunan : 100_000_000;
                     sk.biayaBuild += unitCost;
                     sk.details.push({
@@ -180,11 +181,15 @@ const ProyeksiAnggaran = () => {
             gTotBuild += sk.biayaBuild;
         });
 
+        const allData = Object.values(sekolahMap);
+        // Sort by total anggaran (largest first)
+        allData.sort((a, b) => (b.biayaRS + b.biayaRB + b.biayaBuild) - (a.biayaRS + a.biayaRB + a.biayaBuild));
+
         return {
-            rekapData: Object.values(sekolahMap),
+            rekapData: allData,
             globalStats: { totalRS: gTotRS, totalRB: gTotRB, totalBuild: gTotBuild, grandTotal: gTotRS + gTotRB + gTotBuild }
         };
-    }, [anggaranData, snpData, sekolahList, sarprasList]);
+    }, [anggaranData, proyeksiList, snpData, sekolahList, sarprasList]);
 
     // =========================================================================
     // FILTER LOGIC
