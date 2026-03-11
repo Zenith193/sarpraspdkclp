@@ -113,7 +113,8 @@ export const requireRole = (...roles: string[]) => {
             return;
         }
 
-        if (!roles.includes(req.user.role)) {
+        const userRole = req.user.role.toLowerCase();
+        if (!roles.some(r => r.toLowerCase() === userRole)) {
             res.status(403).json({ error: 'Forbidden: insufficient role' });
             return;
         }
