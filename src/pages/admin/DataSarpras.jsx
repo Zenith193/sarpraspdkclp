@@ -442,7 +442,7 @@ const DataSarpras = ({ readOnly = false }) => {
                 if (!npsn) { errors.push(`Baris ${index + 2}: NPSN kosong`); return; }
                 if (!sekolah) { errors.push(`Baris ${index + 2}: NPSN ${npsn} tidak ditemukan`); return; }
 
-                const namaRuang = (row['nama ruang'] || row['namaruang'] || row['ruang'] || row['nama_ruang'] || '').toString().trim() || `Ruang ${index + 1}`;
+                const namaRuang = (row['nama ruang'] || row['namaruang'] || row['ruang'] || row['nama_ruang'] || '').toString().trim().replace(/\//g, '') || `Ruang ${index + 1}`;
                 const panjang = parseFloat(row['panjang'] || row['p'] || 0) || 0;
                 const lebar = parseFloat(row['lebar'] || row['l'] || 0) || 0;
 
@@ -902,7 +902,7 @@ const DataSarpras = ({ readOnly = false }) => {
                                     </div>
                                     <div className="form-group">
                                         <label className="form-label">Nama Ruang *</label>
-                                        <input className="form-input" value={formData.namaRuang} onChange={e => setFormData({ ...formData, namaRuang: e.target.value })} placeholder="Contoh: Ruang Kelas 1A" />
+                                        <input className="form-input" value={formData.namaRuang} onChange={e => { const v = e.target.value.replace(/\//g, ''); setFormData({ ...formData, namaRuang: v }); }} placeholder="Contoh: Ruang Kelas 1A" />
                                     </div>
                                     <div className="form-row-3">
                                         <div className="form-group">

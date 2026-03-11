@@ -153,7 +153,7 @@ router.post('/batch', requireAuth, requireRole('admin', 'sekolah'), async (req, 
             sekolahId: finalSekolahId,
             masaBangunan: item.masaBangunan || '',
             jenisPrasarana: item.jenisPrasarana || 'Ruang Kelas',
-            namaRuang: item.namaRuang || `Ruang ${idx + 1}`,
+            namaRuang: (item.namaRuang || `Ruang ${idx + 1}`).replace(/\//g, ''),
             lantai: item.lantai || 1,
             panjang: parseFloat(item.panjang) || 0,
             lebar: parseFloat(item.lebar) || 0,
@@ -182,6 +182,7 @@ router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadFotos.array
             req.body.sekolahId = req.user!.sekolahId;
         }
 
+        if (req.body.namaRuang) req.body.namaRuang = req.body.namaRuang.replace(/\//g, '');
         const item = await sarprasService.create(req.body, req.user!.id);
         // Save uploaded fotos
         if (req.files && Array.isArray(req.files)) {
@@ -223,6 +224,7 @@ router.put('/:id', requireAuth, requireRole('admin', 'sekolah', 'verifikator'), 
             delete req.body.sekolahId;
         }
 
+        if (req.body.namaRuang) req.body.namaRuang = req.body.namaRuang.replace(/\//g, '');
         const result = await sarprasService.update(id, req.body);
         res.json(result);
 
