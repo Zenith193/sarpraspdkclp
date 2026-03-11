@@ -14,12 +14,11 @@ const AktivitasPengguna = () => {
     const currentUser = useAuthStore((state) => state.user);
 
     // Cek role untuk menentukan hak akses
-    const isAdmin = currentUser?.role === 'Admin';
-    const isVerifikator = currentUser?.role === 'Verifikator';
-    // Hanya Admin dan Verifikator yang bisa melihat semua log
-    const canViewAll = isAdmin || isVerifikator;
+    const isAdmin = currentUser?.role?.toLowerCase() === 'admin';
+    // Hanya Admin yang bisa melihat semua log
+    const canViewAll = isAdmin;
 
-    const { data: aktivitasRaw } = useAktivitasData();
+    const { data: aktivitasRaw } = useAktivitasData(isAdmin ? {} : { myOnly: true });
 
     // State Data
     const [data, setData] = useState([]);

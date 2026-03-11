@@ -4,7 +4,7 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 
 const router = Router();
 
-router.get('/', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
+router.get('/', requireAuth, requireRole('admin'), async (req, res) => {
     try {
         const result = await aktivitasService.list({
             jenisAkun: req.query.jenisAkun as string,
@@ -17,7 +17,11 @@ router.get('/', requireAuth, requireRole('admin', 'verifikator'), async (req, re
 });
 
 router.get('/my', requireAuth, async (req, res) => {
-    try { res.json(await aktivitasService.getByUserId(req.user!.id)); } catch (e: any) { res.status(500).json({ error: e.message }); }
+    try {
+        const limit = Number(req.query.limit) || 50;
+        const data = await aktivitasService.getByUserId(req.user!.id, limit);
+        res.json({ data, total: data.length, page: 1, limit });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {

@@ -33,7 +33,8 @@ const Dashboard = () => {
 
     const { data: sarprasData } = useSarprasData();
     const { data: proposalData } = useProposalData();
-    const { data: aktivitasData } = useAktivitasData();
+    const isAdmin = user?.role?.toLowerCase() === 'admin';
+    const { data: aktivitasData } = useAktivitasData(isAdmin ? {} : { myOnly: true });
     const { data: sekolahList } = useSekolahData();
     const { data: proyeksiList } = useProyeksiData();
     const { data: snpApiData } = useApi(() => proyeksiApi.listSnp(), []);

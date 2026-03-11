@@ -116,7 +116,11 @@ export function useProposalData(params = {}) {
 
 // ===== AKTIVITAS =====
 export function useAktivitasData(params = {}) {
-    return useDataFetch(() => aktivitasApi.list({ limit: 99999, ...params }).then(r => r.data || r), [], [JSON.stringify(params)]);
+    const { myOnly, ...rest } = params;
+    const fetchFn = myOnly
+        ? () => aktivitasApi.my().then(r => r.data || r)
+        : () => aktivitasApi.list({ limit: 99999, ...rest }).then(r => r.data || r);
+    return useDataFetch(fetchFn, [], [JSON.stringify(params)]);
 }
 
 // ===== USERS =====
