@@ -433,14 +433,16 @@ const DataSarpras = ({ readOnly = false }) => {
 
             const parsed = [];
             const errors = [];
+            const npsnNotFound = new Set();
+            const npsnEmpty = { count: 0 };
             jsonData.forEach((origRow, index) => {
                 const row = {};
                 for (const key in origRow) row[key.toLowerCase().trim()] = origRow[key];
 
                 const npsn = (row['npsn'] || '').toString().trim();
                 const sekolah = npsn ? sekolahList.find(s => s.npsn === npsn) : null;
-                if (!npsn) { errors.push(`Baris ${index + 2}: NPSN kosong`); return; }
-                if (!sekolah) { errors.push(`Baris ${index + 2}: NPSN ${npsn} tidak ditemukan`); return; }
+                if (!npsn) { npsnEmpty.count++; errors.push(`Baris ${index + 2}: NPSN kosong`); return; }
+                if (!sekolah) { npsnNotFound.add(npsn); errors.push(`Baris ${index + 2}: NPSN ${npsn} tidak ditemukan`); return; }
 
                 const namaRuang = (row['nama ruang'] || row['namaruang'] || row['ruang'] || row['nama_ruang'] || '').toString().trim().replace(/\//g, '') || `Ruang ${index + 1}`;
                 const panjang = parseFloat(row['panjang'] || row['p'] || 0) || 0;
@@ -467,8 +469,12 @@ const DataSarpras = ({ readOnly = false }) => {
                 return;
             }
             if (errors.length > 0) {
+                const reasons = [];
+                if (npsnNotFound.size > 0) reasons.push(`NPSN tidak ditemukan (${npsnNotFound.size} sekolah): ${[...npsnNotFound].slice(0, 10).join(', ')}${npsnNotFound.size > 10 ? '...' : ''}`);
+                if (npsnEmpty.count > 0) reasons.push(`${npsnEmpty.count} baris NPSN kosong`);
+                console.warn('Batch import - NPSN tidak ditemukan:', [...npsnNotFound]);
                 console.warn('Batch import warnings:', errors);
-                toast(`${errors.length} baris dilewati. ${parsed.length} baris valid.`, { id: 'batch-import', icon: '⚠️', duration: 4000 });
+                toast(`${errors.length} baris dilewati. ${parsed.length} baris valid.\n${reasons.join('\n')}`, { id: 'batch-import', icon: '⚠️', duration: 8000 });
             } else {
                 toast.success(`${parsed.length} baris berhasil dibaca`, { id: 'batch-import' });
             }
