@@ -74,76 +74,110 @@ const ProyeksiAnggaran = () => {
         const sekolahMap = {};
 
         sekolahList.forEach(s => {
-            const rombel = s.rombel || Math.floor(Math.random() * 12) + 6;
             sekolahMap[s.id] = {
-                ...s, rombel,
-                jmlRuangKelas: 0, jmlToilet: 0,
-                biayaRS: 0, biayaRB: 0, biayaKelas: 0, biayaToilet: 0,
+                ...s,
+                rombel: s.rombel || 0,
+                prasaranaCount: {},  // { jenisPrasarana: count }
+                rehabGroup: {},      // { "jenisPrasarana|kondisi": { count, unitCost } }
+                biayaRS: 0, biayaRB: 0, biayaBuild: 0,
                 details: []
             };
         });
 
+        // Count sarpras per sekolah & group rehab
         sarprasList.forEach(sp => {
             const sk = sekolahMap[sp.sekolahId];
             if (!sk) return;
 
-            const angg = anggaranData.find(a => a.jenisPrasarana === sp.jenisPrasarana && a.jenjang === sk.jenjang);
-            const snp = snpData.find(s => s.jenisPrasarana === sp.jenisPrasarana && s.jenjang === sk.jenjang);
+            // Count per jenis prasarana
+            sk.prasaranaCount[sp.jenisPrasarana] = (sk.prasaranaCount[sp.jenisPrasarana] || 0) + 1;
 
-            if (sp.jenisPrasarana === 'Ruang Kelas') sk.jmlRuangKelas++;
-            if (sp.jenisPrasarana === 'Toilet') sk.jmlToilet++;
-
+            // Group rehab by jenisPrasarana + kondisi
             if (sp.kondisi === 'RUSAK SEDANG' || sp.kondisi === 'RUSAK BERAT') {
                 const isBerat = sp.kondisi === 'RUSAK BERAT';
+                const key = `${sp.jenisPrasarana}|${isBerat ? 'berat' : 'sedang'}`;
+                const angg = anggaranData.find(a => a.jenisPrasarana === sp.jenisPrasarana && a.jenjang === sk.jenjang);
                 const costKey = isBerat ? 'rusakBerat' : 'rusakSedang';
                 const defaultCost = isBerat ? 100_000_000 : 75_000_000;
-                const cost = angg ? angg[costKey] : defaultCost;
+                const unitCost = angg ? angg[costKey] : defaultCost;
 
-                if (isBerat) sk.biayaRB += cost;
-                else sk.biayaRS += cost;
-
-                sk.details.push({
-                    type: 'rehab', kondisi: isBerat ? 'berat' : 'sedang',
-                    name: `${snp?.judulRehabilitasi || `Rehabilitasi ${sp.jenisPrasarana}`} (${isBerat ? 'Berat' : 'Sedang'})`,
-                    count: 1, unitCost: cost, totalCost: cost
-                });
+                if (!sk.rehabGroup[key]) {
+                    sk.rehabGroup[key] = { jenisPrasarana: sp.jenisPrasarana, kondisi: isBerat ? 'berat' : 'sedang', count: 0, unitCost };
+                }
+                sk.rehabGroup[key].count++;
             }
         });
 
         let gTotRS = 0, gTotRB = 0, gTotBuild = 0;
 
         Object.values(sekolahMap).forEach(sk => {
-            const anggKelas = anggaranData.find(a => a.jenisPrasarana === 'Ruang Kelas' && a.jenjang === sk.jenjang);
-            const anggToilet = anggaranData.find(a => a.jenisPrasarana === 'Toilet' && a.jenjang === sk.jenjang);
-            const snpKelas = snpData.find(s => s.jenisPrasarana === 'Ruang Kelas' && s.jenjang === sk.jenjang);
-            const snpToilet = snpData.find(s => s.jenisPrasarana === 'Toilet' && s.jenjang === sk.jenjang);
+            // === REHAB: grouped ===
+            Object.values(sk.rehabGroup).forEach(grp => {
+                const totalCost = grp.count * grp.unitCost;
+                const snp = snpData.find(s => s.jenisPrasarana === grp.jenisPrasarana && s.jenjang === sk.jenjang);
+                const label = grp.kondisi === 'berat' ? 'Berat' : 'Sedang';
+                const name = `${snp?.judulRehabilitasi || `Rehabilitasi ${grp.jenisPrasarana}`} (${label})`;
 
-            const defKelas = sk.rombel - sk.jmlRuangKelas;
+                if (grp.kondisi === 'berat') sk.biayaRB += totalCost;
+                else sk.biayaRS += totalCost;
+
+                sk.details.push({
+                    type: 'rehab', kondisi: grp.kondisi,
+                    name, count: grp.count, unitCost: grp.unitCost, totalCost
+                });
+            });
+
+            // === PEMBANGUNAN ===
+            // 1. Ruang Kelas: kebutuhan = rombel - jumlah ruang kelas yang ada
+            const jmlKelas = sk.prasaranaCount['Ruang Kelas'] || 0;
+            const defKelas = sk.rombel - jmlKelas;
             if (defKelas > 0) {
+                const anggKelas = anggaranData.find(a => a.jenisPrasarana === 'Ruang Kelas' && a.jenjang === sk.jenjang);
+                const snpKelas = snpData.find(s => s.jenisPrasarana === 'Ruang Kelas' && s.jenjang === sk.jenjang);
                 const unitCost = anggKelas ? anggKelas.pembangunan : 150_000_000;
                 const totalCost = defKelas * unitCost;
-                sk.biayaKelas = totalCost;
+                sk.biayaBuild += totalCost;
                 sk.details.push({
                     type: 'build', name: snpKelas?.judulPembangunan || 'Pembangunan Ruang Kelas Baru',
                     count: defKelas, unitCost, totalCost
                 });
             }
 
-            const targetToilet = Math.max(1, sk.rombel - 1);
-            const defToilet = targetToilet - sk.jmlToilet;
+            // 2. Toilet: kebutuhan = (rombel - 1) - jumlah toilet yang ada
+            const jmlToilet = sk.prasaranaCount['Toilet'] || 0;
+            const targetToilet = Math.max(0, sk.rombel - 1);
+            const defToilet = targetToilet - jmlToilet;
             if (defToilet > 0) {
+                const anggToilet = anggaranData.find(a => a.jenisPrasarana === 'Toilet' && a.jenjang === sk.jenjang);
+                const snpToilet = snpData.find(s => s.jenisPrasarana === 'Toilet' && s.jenjang === sk.jenjang);
                 const unitCost = anggToilet ? anggToilet.pembangunan : 50_000_000;
                 const totalCost = defToilet * unitCost;
-                sk.biayaToilet = totalCost;
+                sk.biayaBuild += totalCost;
                 sk.details.push({
                     type: 'build', name: snpToilet?.judulPembangunan || 'Pembangunan Toilet Baru',
                     count: defToilet, unitCost, totalCost
                 });
             }
 
+            // 3. Prasarana lain dari SNP: jika sekolah tidak punya sama sekali, butuh pembangunan 1 unit
+            snpData.forEach(snp => {
+                if (snp.jenjang !== sk.jenjang) return;
+                if (snp.jenisPrasarana === 'Ruang Kelas' || snp.jenisPrasarana === 'Toilet') return; // sudah dihitung di atas
+                const jml = sk.prasaranaCount[snp.jenisPrasarana] || 0;
+                if (jml === 0) {
+                    const angg = anggaranData.find(a => a.jenisPrasarana === snp.jenisPrasarana && a.jenjang === sk.jenjang);
+                    const unitCost = angg ? angg.pembangunan : 100_000_000;
+                    sk.biayaBuild += unitCost;
+                    sk.details.push({
+                        type: 'build', name: snp.judulPembangunan || `Pembangunan ${snp.jenisPrasarana}`,
+                        count: 1, unitCost, totalCost: unitCost
+                    });
+                }
+            });
+
             gTotRS += sk.biayaRS;
             gTotRB += sk.biayaRB;
-            gTotBuild += (sk.biayaKelas + sk.biayaToilet);
+            gTotBuild += sk.biayaBuild;
         });
 
         return {
@@ -169,7 +203,7 @@ const ProyeksiAnggaran = () => {
     // Kriteria: Total Anggaran > 0 DAN (Keterangan kosong ATAU Keterangan == 'Belum diusulkan')
     const filteredBelumUsulan = useMemo(() => {
         return rekapData.filter(item => {
-            const totalAnggaran = item.biayaRS + item.biayaRB + item.biayaKelas + item.biayaToilet;
+            const totalAnggaran = item.biayaRS + item.biayaRB + item.biayaBuild;
             const keterangan = sekolahKeterangan[item.id];
             const isBelumUsul = !keterangan || keterangan === 'Belum diusulkan';
 
@@ -328,7 +362,7 @@ const ProyeksiAnggaran = () => {
             const isExpanded = expandedRows.includes(s.id);
 
             const totalRehab = s.biayaRS + s.biayaRB;
-            const totalBuild = s.biayaKelas + s.biayaToilet;
+            const totalBuild = s.biayaBuild;
             const totalAnggaran = totalRehab + totalBuild;
 
             return (
