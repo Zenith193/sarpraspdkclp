@@ -22,6 +22,8 @@ const Dashboard = () => {
     const [filterJenjang, setFilterJenjang] = useState('');
     const [chartYear, setChartYear] = useState(String(new Date().getFullYear()));
     const [searchAktivitas, setSearchAktivitas] = useState('');
+    const [aktPageSize, setAktPageSize] = useState(10);
+    const [aktPage, setAktPage] = useState(1);
     const [showExportMenu, setShowExportMenu] = useState(false);
     const [showExportAktivitas, setShowExportAktivitas] = useState(false);
     const exportRef = useRef(null);
@@ -220,6 +222,8 @@ const Dashboard = () => {
         a.namaAkun.toLowerCase().includes(searchAktivitas.toLowerCase()) ||
         a.aktivitas.toLowerCase().includes(searchAktivitas.toLowerCase())
     );
+    const aktTotalPages = Math.ceil(filteredAktivitas.length / aktPageSize) || 1;
+    const pagedAktivitas = filteredAktivitas.slice((aktPage - 1) * aktPageSize, aktPage * aktPageSize);
 
     return (
         <div>
@@ -413,6 +417,16 @@ const Dashboard = () => {
                 <div className="table-toolbar">
                     <div className="table-toolbar-left">
                         <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)' }}>Aktivitas Terkini</h3>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '1rem' }}>
+                            <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Tampil:</span>
+                            <select value={aktPageSize} onChange={(e) => { setAktPageSize(Number(e.target.value)); setAktPage(1); }} style={{ padding: '4px 8px', background: 'var(--bg-input)', border: '1px solid var(--border-input)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.8rem' }}>
+                                <option value="10">10</option>
+                                <option value="20">20</option>
+                                <option value="50">50</option>
+                                <option value="75">75</option>
+                                <option value="100">100</option>
+                            </select>
+                        </div>
                     </div>
                     <div className="table-toolbar-right">
                         <div className="table-search">
@@ -420,7 +434,7 @@ const Dashboard = () => {
                             <input
                                 placeholder="Cari aktivitas..."
                                 value={searchAktivitas}
-                                onChange={e => setSearchAktivitas(e.target.value)}
+                                onChange={e => { setSearchAktivitas(e.target.value); setAktPage(1); }}
                             />
                         </div>
                         <div className="export-dropdown" ref={exportAktRef}>
@@ -468,9 +482,9 @@ const Dashboard = () => {
                             </tr>
                         </thead>
                         <tbody>
-                            {filteredAktivitas.map((a, i) => (
+                            {pagedAktivitas.map((a, i) => (
                                 <tr key={a.id}>
-                                    <td>{i + 1}</td>
+                                    <td>{(aktPage - 1) * aktPageSize + i + 1}</td>
                                     <td>{a.namaAkun}</td>
                                     <td><span className="badge badge-disetujui">{a.jenisAkun}</span></td>
                                     <td>{a.aktivitas}</td>
@@ -480,6 +494,18 @@ const Dashboard = () => {
                             ))}
                         </tbody>
                     </table>
+                </div>
+                <div className="table-pagination">
+                    <div className="table-pagination-info" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                        Menampilkan {filteredAktivitas.length > 0 ? (aktPage - 1) * aktPageSize + 1 : 0}-{Math.min(aktPage * aktPageSize, filteredAktivitas.length)} dari {filteredAktivitas.length} data
+                    </div>
+                    <div className="table-pagination-controls">
+                        <button onClick={() => setAktPage(1)} disabled={aktPage === 1}>«</button>
+                        <button onClick={() => setAktPage(p => Math.max(1, p - 1))} disabled={aktPage === 1}>‹</button>
+                        <span style={{ fontSize: '0.8rem' }}>Hal {aktPage} dari {aktTotalPages}</span>
+                        <button onClick={() => setAktPage(p => Math.min(aktTotalPages, p + 1))} disabled={aktPage === aktTotalPages}>›</button>
+                        <button onClick={() => setAktPage(aktTotalPages)} disabled={aktPage === aktTotalPages}>»</button>
+                    </div>
                 </div>
             </div>
         </div>
