@@ -36,7 +36,7 @@ const DataSarpras = ({ readOnly = false }) => {
     const [perPage, setPerPage] = useState(15);
 
     // Column visibility
-    const defaultCols = ['no', ...(canAccessPriority ? ['bintang'] : []), 'namaSekolah', 'npsn', 'jenjang', 'kecamatan', 'masaBangunan', 'jenisPrasarana', 'namaRuang', 'lantai', 'panjang', 'lebar', 'luas', 'kondisi', 'keterangan', 'foto', 'aksi'];
+    const defaultCols = ['no', ...(canAccessPriority ? ['bintang'] : []), 'namaSekolah', 'npsn', 'jenjang', 'kecamatan', 'masaBangunan', 'jenisPrasarana', 'namaRuang', 'lantai', 'panjang', 'lebar', 'luas', 'kondisi', 'keterangan', 'lastFotoAt', 'foto', 'aksi'];
     const [visibleCols, setVisibleCols] = useState(defaultCols);
     const [showColPicker, setShowColPicker] = useState(false);
     const colPickerRef = useRef(null);
@@ -109,6 +109,7 @@ const DataSarpras = ({ readOnly = false }) => {
         { key: 'luas', label: 'Luas', width: 52 },
         { key: 'kondisi', label: 'Kondisi', filterable: true, filterLabel: 'Kondisi', filterType: 'select', filterOptions: KONDISI, width: 100 },
         { key: 'keterangan', label: 'Keterangan', width: 120 },
+        { key: 'lastFotoAt', label: 'Update Foto', width: 110 },
         { key: 'foto', label: 'Foto', width: 52 },
         { key: 'aksi', label: 'Aksi', alwaysVisible: true, width: 90 },
     ], [canAccessPriority]);
@@ -582,6 +583,7 @@ const DataSarpras = ({ readOnly = false }) => {
             case 'namaSekolah': return <div style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.namaSekolah}</div>;
             case 'kondisi': return getConditionBadge(item.kondisi);
             case 'keterangan': return <div style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.keterangan}</div>;
+            case 'lastFotoAt': return item.lastFotoAt ? <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{new Date(item.lastFotoAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</span> : <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>-</span>;
             case 'jenisPrasarana': return <div style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.jenisPrasarana}</div>;
             case 'bintang':
                 return (

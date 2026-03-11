@@ -41,27 +41,32 @@ export const sarprasService = {
         }
 
         // Map fotos onto sarpras items
-        const dataWithFotos = data.map(d => ({
-            ...d,
-            sarpras: {
-                ...d.sarpras,
-                foto: fotos.filter(f => f.sarprasId === d.sarpras.id).map(f => {
-                    // Always use proxy URL — it reads filePath from DB and serves directly
-                    const proxyUrl = `/api/foto/${f.id}`;
+        const dataWithFotos = data.map(d => {
+            const itemFotos = fotos.filter(f => f.sarprasId === d.sarpras.id);
+            const fotoTimestamps = itemFotos.map(f => f.createdAt ? new Date(f.createdAt).getTime() : 0).filter(t => t > 0);
+            const lastFotoAt = fotoTimestamps.length > 0 ? new Date(Math.max(...fotoTimestamps)).toISOString() : null;
 
-                    return {
-                        id: f.id,
-                        name: f.fileName,
-                        url: proxyUrl,
-                        proxyUrl,
-                        size: f.fileSize || 0,
-                        geo: (f.geoLat && f.geoLng) ? { lat: f.geoLat, lng: f.geoLng } : null,
-                        geoLat: f.geoLat,
-                        geoLng: f.geoLng,
-                    };
-                }),
-            },
-        }));
+            return {
+                ...d,
+                sarpras: {
+                    ...d.sarpras,
+                    lastFotoAt,
+                    foto: itemFotos.map(f => {
+                        const proxyUrl = `/api/foto/${f.id}`;
+                        return {
+                            id: f.id,
+                            name: f.fileName,
+                            url: proxyUrl,
+                            proxyUrl,
+                            size: f.fileSize || 0,
+                            geo: (f.geoLat && f.geoLng) ? { lat: f.geoLat, lng: f.geoLng } : null,
+                            geoLat: f.geoLat,
+                            geoLng: f.geoLng,
+                        };
+                    }),
+                },
+            };
+        });
 
         return { data: dataWithFotos, total: Number(countResult[0]?.count || 0), page, limit };
     },
