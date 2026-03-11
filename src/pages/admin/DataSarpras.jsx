@@ -14,6 +14,8 @@ import * as XLSX from 'xlsx';
 
 const PER_PAGE_OPTIONS = [10, 15, 50, 100];
 const BINTANG_OPTIONS = ['Ya', 'Tidak'];
+// Format luas: ceil 2 desimal, koma, hapus trailing zero
+const fmtLuas = (v) => { const n = Math.ceil(v * 100) / 100; return n % 1 === 0 ? String(n) : n.toFixed(2).replace(/0+$/, '').replace(/\.$/, '').replace('.', ','); };
 
 const DataSarpras = ({ readOnly = false }) => {
     const user = useAuthStore(s => s.user);
@@ -619,7 +621,7 @@ const DataSarpras = ({ readOnly = false }) => {
                 );
             case 'panjang': return String(item.panjang ?? 0).replace('.', ',');
             case 'lebar': return String(item.lebar ?? 0).replace('.', ',');
-            case 'luas': return (Math.ceil((item.luas || (item.panjang || 0) * (item.lebar || 0)) * 100) / 100).toFixed(2).replace('.', ',');
+            case 'luas': return fmtLuas(item.luas || (item.panjang || 0) * (item.lebar || 0));
             default: return item[col.key] ?? '-';
         }
     };
@@ -918,7 +920,7 @@ const DataSarpras = ({ readOnly = false }) => {
                                         </div>
                                         <div className="form-group">
                                             <label className="form-label">Luas (m²)</label>
-                                            <input className="form-input" readOnly value={(Math.ceil((parseFloat(formData.panjang) || 0) * (parseFloat(formData.lebar) || 0) * 100) / 100).toFixed(2).replace('.', ',')} style={{ background: 'var(--bg-primary)' }} />
+                                            <input className="form-input" readOnly value={fmtLuas((parseFloat(formData.panjang) || 0) * (parseFloat(formData.lebar) || 0))} style={{ background: 'var(--bg-primary)' }} />
                                         </div>
                                     </div>
                                     <div className="form-row">
@@ -1050,7 +1052,7 @@ const DataSarpras = ({ readOnly = false }) => {
                                 <div><div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: 2 }}>Jenis Prasarana</div><div>{viewItem.jenisPrasarana}</div></div>
                                 <div><div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: 2 }}>Nama Ruang</div><div style={{ fontWeight: 500 }}>{viewItem.namaRuang}</div></div>
                                 <div><div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: 2 }}>Lantai</div><div>{viewItem.lantai}</div></div>
-                                <div><div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: 2 }}>Ukuran (P × L)</div><div>{String(viewItem.panjang).replace('.', ',')} m × {String(viewItem.lebar).replace('.', ',')} m = <b>{(Math.ceil((viewItem.luas || viewItem.panjang * viewItem.lebar) * 100) / 100).toFixed(2).replace('.', ',')} m²</b></div></div>
+                                <div><div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: 2 }}>Ukuran (P × L)</div><div>{String(viewItem.panjang).replace('.', ',')} m × {String(viewItem.lebar).replace('.', ',')} m = <b>{fmtLuas(viewItem.luas || viewItem.panjang * viewItem.lebar)} m²</b></div></div>
                                 <div><div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: 2 }}>Kondisi</div>{getConditionBadge(viewItem.kondisi)}</div>
                                 <div style={{ gridColumn: '1 / -1' }}><div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: 2 }}>Keterangan</div><div>{viewItem.keterangan || '-'}</div></div>
                                 {canAccessPriority && (
@@ -1227,7 +1229,7 @@ const DataSarpras = ({ readOnly = false }) => {
                                                 <td style={{ textAlign: 'center' }}>{row.lantai}</td>
                                                 <td style={{ textAlign: 'right' }}>{String(row.panjang).replace('.', ',')}</td>
                                                 <td style={{ textAlign: 'right' }}>{String(row.lebar).replace('.', ',')}</td>
-                                                <td style={{ textAlign: 'right' }}>{(Math.ceil(row.panjang * row.lebar * 100) / 100).toFixed(2).replace('.', ',')}</td>
+                                                <td style={{ textAlign: 'right' }}>{fmtLuas(row.panjang * row.lebar)}</td>
                                                 <td>{row.kondisi}</td>
                                                 <td><div style={{ maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{row.keterangan}</div></td>
                                                 <td>
