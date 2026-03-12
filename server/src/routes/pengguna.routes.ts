@@ -129,8 +129,13 @@ router.put('/:id/photo', requireAuth, avatarUpload.single('photo'), async (req, 
         try {
             const { isGDriveEnabled, uploadFileToGDrive } = await import('../utils/googleDriveClient.js');
             if (isGDriveEnabled()) {
-                const userName = existing[0]?.name || 'unknown';
-                const subPath = `profil/${userName}`;
+                // Build folder path matching school structure
+                let subPath = `profil`;
+                if (existing[0]?.sekolahId) {
+                    const { sekolah: sekolahTable } = await import('../db/schema/index.js');
+                    const sch = await db.select().from(sekolahTable).where(eq(sekolahTable.id, existing[0].sekolahId));
+                    if (sch[0]) subPath = `${sch[0].kecamatan || 'unknown'}/${sch[0].nama}_${sch[0].npsn}/profil`;
+                }
                 const result = await uploadFileToGDrive(req.file.path, 'profil', subPath);
                 if (result.stored === 'gdrive') {
                     imageUrl = result.path; // 'gdrive://fileId'

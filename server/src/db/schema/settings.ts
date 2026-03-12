@@ -46,5 +46,8 @@ export const riwayatBantuan = pgTable('riwayat_bantuan', {
     volumePaket: text('volume_paket'),
     bastId: integer('bast_id'),
     tahun: integer('tahun'),
+    fileName: text('file_name'),
+    filePath: text('file_path'),
+    uploadStatus: text('upload_status').default('done'),
     createdAt: timestamp('created_at').defaultNow(),
 });

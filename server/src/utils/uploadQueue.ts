@@ -7,7 +7,7 @@
  * 3. Both run in background so user gets instant responses
  */
 import { db } from '../db/index.js';
-import { sarprasFoto, formKerusakan, prestasi, proposal, proposalFoto, bastTemplate } from '../db/schema/index.js';
+import { sarprasFoto, formKerusakan, prestasi, proposal, proposalFoto, bastTemplate, riwayatBantuan } from '../db/schema/index.js';
 import { sarpras } from '../db/schema/sarpras.js';
 import { sekolah } from '../db/schema/sekolah.js';
 import { eq } from 'drizzle-orm';
@@ -221,6 +221,30 @@ async function processUploadQueue() {
         } catch (e: any) {
             console.error(`[Queue] Upload template #${item.id} failed:`, e.message);
             await db.update(bastTemplate).set({ uploadStatus: 'failed' }).where(eq(bastTemplate.id, item.id));
+        }
+    }
+
+    // 6b. riwayat_bantuan
+    const pendingRiwayat = await db.select().from(riwayatBantuan).where(eq(riwayatBantuan.uploadStatus, 'uploading')).limit(5);
+    for (const item of pendingRiwayat) {
+        if (!item.filePath || !fs.existsSync(item.filePath)) {
+            await db.update(riwayatBantuan).set({ uploadStatus: 'failed' }).where(eq(riwayatBantuan.id, item.id));
+            continue;
+        }
+        try {
+            let subPath = `riwayat-bantuan/${item.sekolahId}`;
+            if (item.sekolahId) {
+                const sch = await db.select().from(sekolah).where(eq(sekolah.id, item.sekolahId));
+                if (sch[0]) subPath = `${sch[0].kecamatan || 'unknown'}/${sch[0].nama}_${sch[0].npsn}/riwayat-bantuan`;
+            }
+            const result = await uploadFileToGDrive(item.filePath, 'riwayat-bantuan', subPath);
+            const oldPath = item.filePath;
+            await db.update(riwayatBantuan).set({ filePath: result.path, uploadStatus: 'done' }).where(eq(riwayatBantuan.id, item.id));
+            try { fs.unlinkSync(oldPath); } catch { }
+            console.log(`[Queue] Upload riwayat_bantuan #${item.id} → ${subPath} ✅`);
+        } catch (e: any) {
+            console.error(`[Queue] Upload riwayat_bantuan #${item.id} failed:`, e.message);
+            await db.update(riwayatBantuan).set({ uploadStatus: 'failed' }).where(eq(riwayatBantuan.id, item.id));
         }
     }
 

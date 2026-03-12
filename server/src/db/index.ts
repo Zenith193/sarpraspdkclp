@@ -36,6 +36,12 @@ export async function ensureIndexes() {
             CREATE INDEX IF NOT EXISTS idx_prestasi_upload ON prestasi (upload_status);
             CREATE INDEX IF NOT EXISTS idx_app_settings_key ON app_settings (key);
         `);
+        // Auto-add riwayat_bantuan file columns if missing
+        await db.execute(sql`ALTER TABLE riwayat_bantuan ADD COLUMN IF NOT EXISTS file_name TEXT`);
+        await db.execute(sql`ALTER TABLE riwayat_bantuan ADD COLUMN IF NOT EXISTS file_path TEXT`);
+        await db.execute(sql`ALTER TABLE riwayat_bantuan ADD COLUMN IF NOT EXISTS upload_status TEXT DEFAULT 'done'`);
+        await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_riwayat_bantuan_sekolah_id ON riwayat_bantuan (sekolah_id)`);
+        await db.execute(sql`CREATE INDEX IF NOT EXISTS idx_riwayat_bantuan_upload ON riwayat_bantuan (upload_status)`);
         console.log('[DB] Performance indexes ensured ✅');
     } catch (e: any) {
         console.error('[DB] Index creation warning:', e.message);
