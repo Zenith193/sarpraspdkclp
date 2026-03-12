@@ -57,11 +57,11 @@ const ManajemenKorwil = () => {
     // ===== HELPER =====
     const availableUsers = useMemo(() => {
         return usersList.filter(u => {
-            if (u.role !== 'Korwil') return false;
-            if (editItem && editItem.userId === u.id) return true;
-            return !assignedKorwils.some(ak => ak.userId === u.id);
+            if ((u.role || '').toLowerCase() !== 'korwil') return false;
+            if (editItem && String(editItem.userId) === String(u.id)) return true;
+            return !assignedKorwils.some(ak => String(ak.userId) === String(u.id));
         });
-    }, [assignedKorwils, editItem]);
+    }, [usersList, assignedKorwils, editItem]);
 
     const getSchoolCount = (kecamatanList, jenjang) => {
         if (!kecamatanList || kecamatanList.length === 0) return 0;
@@ -171,12 +171,12 @@ const ManajemenKorwil = () => {
     };
 
     const renderUserOption = (userId) => {
-        const user = usersList.find(u => u.id === parseInt(userId));
-        if (!user) return null;
+        const u = usersList.find(u => String(u.id) === String(userId));
+        if (!u) return null;
         return (
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, width: '100%' }}>
-                <span style={{ fontWeight: 500 }}>{user.namaAkun}</span>
-                <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{user.email}</span>
+                <span style={{ fontWeight: 500 }}>{u.name || u.namaAkun}</span>
+                <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{u.email}</span>
             </div>
         );
     };
