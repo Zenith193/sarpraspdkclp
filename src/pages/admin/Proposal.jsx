@@ -48,6 +48,7 @@ const Proposal = ({ readOnly = false }) => {
     const user = useAuthStore(s => s.user);
     const { guard, isRestricted } = useCountdownGuard();
     const isAdmin = user?.role === 'Admin';
+    const isAdminOrVerifikator = user?.role === 'Admin' || user?.role === 'Verifikator';
     const canManageKeranjang = user?.role === 'Admin' || user?.role === 'Verifikator';
 
     const { data: sekolahList } = useSekolahData();
@@ -403,7 +404,7 @@ const Proposal = ({ readOnly = false }) => {
                                 <th>Sub Kegiatan</th>
                                 <th>Nilai Pengajuan</th>
                                 <th>Target</th>
-                                <th>Status</th>
+                                {isAdminOrVerifikator && <th>Status</th>}
                                 {isAdmin && <th>Prioritas</th>}
                                 {canManageKeranjang && <th>Keranjang</th>}
                                 <th>Aksi</th>
@@ -419,7 +420,7 @@ const Proposal = ({ readOnly = false }) => {
                                     <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.subKegiatan}</td>
                                     <td style={{ whiteSpace: 'nowrap' }}>{formatCurrency(item.nilaiPengajuan)}</td>
                                     <td>{item.target}</td>
-                                    <td>{getStatusBadge(item.status)}</td>
+                                    {isAdminOrVerifikator && <td>{getStatusBadge(item.status)}</td>}
                                     {isAdmin && <td>{renderPriorityStar(item.bintang === 1, item.id)}</td>}
                                     {canManageKeranjang && (
                                         <td>
@@ -486,7 +487,7 @@ const Proposal = ({ readOnly = false }) => {
 
                             <div className="form-row">
                                 <div className="form-group"><label className="form-label">Sub Kegiatan</label><select className="form-select" value={formData.subKegiatan || ''} onChange={e => setFormData({ ...formData, subKegiatan: e.target.value })}>{SUB_KEGIATAN.filter(s => !selectedSchoolData?.jenjang || s.jenjang === selectedSchoolData.jenjang).map(s => <option key={s.kode} value={s.nama}>{s.nama}</option>)}</select></div>
-                                <div className="form-group"><label className="form-label">Status</label><select className="form-select" value={formData.status || ''} onChange={e => setFormData({ ...formData, status: e.target.value })}>{STATUS_PROPOSAL.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+                                {isAdminOrVerifikator && (<div className="form-group"><label className="form-label">Status</label><select className="form-select" value={formData.status || ''} onChange={e => setFormData({ ...formData, status: e.target.value })}>{STATUS_PROPOSAL.map(s => <option key={s} value={s}>{s}</option>)}</select></div>)}
                             </div>
 
                             {canManageKeranjang && (
@@ -501,7 +502,15 @@ const Proposal = ({ readOnly = false }) => {
 
                             <div className="form-row"><div className="form-group"><label className="form-label">Nilai Pengajuan (Rp) *</label><input className="form-input" type="text" inputMode="numeric" value={formData.nilaiPengajuan ? String(formData.nilaiPengajuan).replace(/\./g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.') : ''} onChange={e => { const raw = e.target.value.replace(/\./g, ''); if (/^\d*$/.test(raw)) setFormData({ ...formData, nilaiPengajuan: raw }); }} placeholder="Contoh: 50.000.000" /></div><div className="form-group"><label className="form-label">Target</label><input className="form-input" value={formData.target || ''} onChange={e => setFormData({ ...formData, target: e.target.value })} /></div></div>
                             <div className="form-group"><label className="form-label">Keterangan</label><textarea className="form-input" rows={2} value={formData.keterangan || ''} onChange={e => setFormData({ ...formData, keterangan: e.target.value })}></textarea></div>
-                            <div className="form-row"><div className="form-group"><label className="form-label">No Agenda Surat</label><input className="form-input" value={formData.noAgendaSurat || ''} onChange={e => setFormData({ ...formData, noAgendaSurat: e.target.value })} /></div><div className="form-group"><label className="form-label">Tanggal Surat</label><input className="form-input" type="date" value={formData.tanggalSurat || ''} onChange={e => setFormData({ ...formData, tanggalSurat: e.target.value })} /></div></div>
+
+                            {/* Upload Soft File Proposal (PDF) */}
+                            <div className="form-group">
+                                <label className="form-label">Upload Proposal (PDF)</label>
+                                <input className="form-input" type="file" accept=".pdf" onChange={e => { const f = e.target.files[0]; if (f && f.size > 10*1024*1024) { toast.error('Maks 10MB'); e.target.value = null; return; } setFormData({ ...formData, proposalFile: f || null }); }} />
+                                <small style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>Format PDF, maksimal 10MB</small>
+                            </div>
+
+                            {isAdminOrVerifikator && (<div className="form-row"><div className="form-group"><label className="form-label">No Agenda Surat</label><input className="form-input" value={formData.noAgendaSurat || ''} onChange={e => setFormData({ ...formData, noAgendaSurat: e.target.value })} /></div><div className="form-group"><label className="form-label">Tanggal Surat</label><input className="form-input" type="date" value={formData.tanggalSurat || ''} onChange={e => setFormData({ ...formData, tanggalSurat: e.target.value })} /></div></div>)}
                         </div>
                         <div className="modal-footer"><button className="btn btn-ghost" onClick={() => { setShowModal(false); resetForm(); }}>Batal</button><button className="btn btn-primary" onClick={handleSave} disabled={!editItem && !formSekolah}><Save size={14} /> Simpan</button></div>
                     </div>
@@ -515,7 +524,7 @@ const Proposal = ({ readOnly = false }) => {
                         <div className="modal-header"><div className="modal-title">Detail Proposal</div><button className="modal-close" onClick={() => setViewItem(null)}><X size={18} /></button></div>
                         <div className="modal-body">
                             <div className="form-row"><div className="form-group"><label className="form-label">Nama Sekolah</label><div style={{ fontWeight: 500 }}>{safeStr(viewItem.namaSekolah)}</div></div><div className="form-group"><label className="form-label">NPSN</label><div>{safeStr(viewItem.npsn)}</div></div></div>
-                            <div className="form-row"><div className="form-group"><label className="form-label">Kecamatan</label><div>{safeStr(viewItem.kecamatan)}</div></div><div className="form-group"><label className="form-label">Status</label><div>{getStatusBadge(viewItem.status)}</div></div></div>
+                            <div className="form-row"><div className="form-group"><label className="form-label">Kecamatan</label><div>{safeStr(viewItem.kecamatan)}</div></div>{isAdminOrVerifikator && <div className="form-group"><label className="form-label">Status</label><div>{getStatusBadge(viewItem.status)}</div></div>}</div>
                             <div className="form-group"><label className="form-label">Sub Kegiatan</label><div>{viewItem.subKegiatan}</div></div>
                             {canManageKeranjang && (<div className="form-group"><label className="form-label">Keranjang</label><div>{viewItem.keranjang || 'Belum Ditetapkan'}</div></div>)}
                             <div className="form-row"><div className="form-group"><label className="form-label">Nilai Pengajuan</label><div style={{ fontWeight: 600, color: 'var(--accent-green)', fontSize: 16 }}>{formatCurrency(viewItem.nilaiPengajuan)}</div></div><div className="form-group"><label className="form-label">Target</label><div>{viewItem.target}</div></div></div>

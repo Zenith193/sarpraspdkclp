@@ -663,10 +663,12 @@ const DataSarpras = ({ readOnly = false }) => {
                     <div className="stat-label"><Building2 size={14} style={{ color: 'var(--accent-blue)' }} /> Total Data</div>
                     <div className="stat-value">{formatNumber(recapStats.total)}</div>
                 </div>
+                {user?.role !== 'Sekolah' && (
                 <div className="stat-card" style={{ borderLeft: '3px solid var(--accent-purple)' }}>
                     <div className="stat-label"><Building2 size={14} style={{ color: 'var(--accent-purple)' }} /> Jumlah Sekolah</div>
                     <div className="stat-value" style={{ color: 'var(--accent-purple)' }}>{formatNumber(recapStats.sekolah)}</div>
                 </div>
+                )}
                 <div className="stat-card baik">
                     <div className="stat-label"><CheckCircle size={14} style={{ color: 'var(--status-baik)' }} /> Baik</div>
                     <div className="stat-value" style={{ color: 'var(--status-baik)' }}>{formatNumber(recapStats.baik)}</div>
