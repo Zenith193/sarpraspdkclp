@@ -1,0 +1,140 @@
+import { formKerusakan } from '../db/schema/index.js';
+export declare const kerusakanService: {
+    list(filters: {
+        sekolahId?: number;
+        search?: string;
+        page?: number;
+        limit?: number;
+    }): Promise<{
+        data: {
+            formKerusakan: {
+                id: number;
+                sekolahId: number;
+                masaBangunan: string | null;
+                fileName: string | null;
+                filePath: string | null;
+                uploadStatus: string | null;
+                status: string | null;
+                alasanPenolakan: string | null;
+                verifiedBy: string | null;
+                uploadedBy: string | null;
+                createdAt: Date | null;
+                updatedAt: Date | null;
+            };
+            sekolahNama: string | null;
+            sekolahNpsn: string | null;
+        }[];
+        total: number;
+        page: number;
+        limit: number;
+    }>;
+    getById(id: number): Promise<{
+        formKerusakan: {
+            id: number;
+            sekolahId: number;
+            masaBangunan: string | null;
+            fileName: string | null;
+            filePath: string | null;
+            uploadStatus: string | null;
+            status: string | null;
+            alasanPenolakan: string | null;
+            verifiedBy: string | null;
+            uploadedBy: string | null;
+            createdAt: Date | null;
+            updatedAt: Date | null;
+        };
+        sekolahNama: string | null;
+        sekolahNpsn: string | null;
+    }>;
+    create(data: typeof formKerusakan.$inferInsert, userId: string): Promise<{
+        id: number;
+        sekolahId: number;
+        createdAt: Date | null;
+        updatedAt: Date | null;
+        status: string | null;
+        masaBangunan: string | null;
+        verifiedBy: string | null;
+        fileName: string | null;
+        filePath: string | null;
+        uploadStatus: string | null;
+        alasanPenolakan: string | null;
+        uploadedBy: string | null;
+    }>;
+    updateFile(id: number, fileName: string, filePath: string, uploadStatus?: string): Promise<{
+        id: number;
+        sekolahId: number;
+        masaBangunan: string | null;
+        fileName: string | null;
+        filePath: string | null;
+        uploadStatus: string | null;
+        status: string | null;
+        alasanPenolakan: string | null;
+        verifiedBy: string | null;
+        uploadedBy: string | null;
+        createdAt: Date | null;
+        updatedAt: Date | null;
+    }[]>;
+    delete(id: number): Promise<void>;
+    verify(id: number, userId: string): Promise<{
+        id: number;
+        sekolahId: number;
+        masaBangunan: string | null;
+        fileName: string | null;
+        filePath: string | null;
+        uploadStatus: string | null;
+        status: string | null;
+        alasanPenolakan: string | null;
+        verifiedBy: string | null;
+        uploadedBy: string | null;
+        createdAt: Date | null;
+        updatedAt: Date | null;
+    }[]>;
+    reject(id: number, userId: string, alasan: string): Promise<{
+        id: number;
+        sekolahId: number;
+        masaBangunan: string | null;
+        fileName: string | null;
+        filePath: string | null;
+        uploadStatus: string | null;
+        status: string | null;
+        alasanPenolakan: string | null;
+        verifiedBy: string | null;
+        uploadedBy: string | null;
+        createdAt: Date | null;
+        updatedAt: Date | null;
+    }[]>;
+    unverify(id: number): Promise<{
+        id: number;
+        sekolahId: number;
+        masaBangunan: string | null;
+        fileName: string | null;
+        filePath: string | null;
+        uploadStatus: string | null;
+        status: string | null;
+        alasanPenolakan: string | null;
+        verifiedBy: string | null;
+        uploadedBy: string | null;
+        createdAt: Date | null;
+        updatedAt: Date | null;
+    }[]>;
+    getMissingSchools(): Promise<{
+        id: number;
+        nama: string;
+        npsn: string;
+        jenjang: string;
+        kecamatan: string;
+        status: string;
+        alamat: string | null;
+        kepsek: string | null;
+        nip: string | null;
+        noRek: string | null;
+        namaBank: string | null;
+        rombel: number | null;
+        kopSekolah: string | null;
+        denahSekolah: string | null;
+        kopUploadStatus: string | null;
+        denahUploadStatus: string | null;
+        createdAt: Date | null;
+        updatedAt: Date | null;
+    }[]>;
+};

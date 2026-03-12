@@ -1,0 +1,155 @@
+import { prestasi, prestasiPointRule } from '../db/schema/index.js';
+export declare const prestasiService: {
+    list(filters: {
+        sekolahId?: number;
+        search?: string;
+        page?: number;
+        limit?: number;
+    }): Promise<{
+        data: {
+            prestasi: {
+                id: number;
+                sekolahId: number;
+                jenisPrestasi: string;
+                siswa: string;
+                kategori: string;
+                tingkat: string;
+                tahun: number | null;
+                capaian: string | null;
+                sertifikatPath: string | null;
+                uploadStatus: string | null;
+                status: string | null;
+                alasanPenolakan: string | null;
+                verifiedBy: string | null;
+                createdBy: string | null;
+                createdAt: Date | null;
+                updatedAt: Date | null;
+            };
+            sekolahNama: string | null;
+            sekolahNpsn: string | null;
+            sekolahKecamatan: string | null;
+        }[];
+        total: number;
+        page: number;
+        limit: number;
+    }>;
+    create(data: typeof prestasi.$inferInsert, userId: string): Promise<{
+        id: number;
+        sekolahId: number;
+        createdAt: Date | null;
+        updatedAt: Date | null;
+        status: string | null;
+        verifiedBy: string | null;
+        createdBy: string | null;
+        uploadStatus: string | null;
+        jenisPrestasi: string;
+        siswa: string;
+        kategori: string;
+        tingkat: string;
+        tahun: number | null;
+        capaian: string | null;
+        sertifikatPath: string | null;
+        alasanPenolakan: string | null;
+    }>;
+    update(id: number, data: Partial<typeof prestasi.$inferInsert>): Promise<{
+        id: number;
+        sekolahId: number;
+        jenisPrestasi: string;
+        siswa: string;
+        kategori: string;
+        tingkat: string;
+        tahun: number | null;
+        capaian: string | null;
+        sertifikatPath: string | null;
+        uploadStatus: string | null;
+        status: string | null;
+        alasanPenolakan: string | null;
+        verifiedBy: string | null;
+        createdBy: string | null;
+        createdAt: Date | null;
+        updatedAt: Date | null;
+    }>;
+    delete(id: number): Promise<void>;
+    verify(id: number, userId: string): Promise<{
+        id: number;
+        sekolahId: number;
+        jenisPrestasi: string;
+        siswa: string;
+        kategori: string;
+        tingkat: string;
+        tahun: number | null;
+        capaian: string | null;
+        sertifikatPath: string | null;
+        uploadStatus: string | null;
+        status: string | null;
+        alasanPenolakan: string | null;
+        verifiedBy: string | null;
+        createdBy: string | null;
+        createdAt: Date | null;
+        updatedAt: Date | null;
+    }[]>;
+    reject(id: number, userId: string, alasan: string): Promise<{
+        id: number;
+        sekolahId: number;
+        jenisPrestasi: string;
+        siswa: string;
+        kategori: string;
+        tingkat: string;
+        tahun: number | null;
+        capaian: string | null;
+        sertifikatPath: string | null;
+        uploadStatus: string | null;
+        status: string | null;
+        alasanPenolakan: string | null;
+        verifiedBy: string | null;
+        createdBy: string | null;
+        createdAt: Date | null;
+        updatedAt: Date | null;
+    }[]>;
+    unverify(id: number): Promise<{
+        id: number;
+        sekolahId: number;
+        jenisPrestasi: string;
+        siswa: string;
+        kategori: string;
+        tingkat: string;
+        tahun: number | null;
+        capaian: string | null;
+        sertifikatPath: string | null;
+        uploadStatus: string | null;
+        status: string | null;
+        alasanPenolakan: string | null;
+        verifiedBy: string | null;
+        createdBy: string | null;
+        createdAt: Date | null;
+        updatedAt: Date | null;
+    }[]>;
+    listPointRules(): Promise<{
+        id: number;
+        tingkat: string;
+        kategori: string;
+        capaian: string;
+        poin: number;
+    }[]>;
+    createPointRule(data: typeof prestasiPointRule.$inferInsert): Promise<{
+        id: number;
+        kategori: string;
+        tingkat: string;
+        capaian: string;
+        poin: number;
+    }>;
+    updatePointRule(id: number, data: Partial<typeof prestasiPointRule.$inferInsert>): Promise<{
+        id: number;
+        tingkat: string;
+        kategori: string;
+        capaian: string;
+        poin: number;
+    }>;
+    deletePointRule(id: number): Promise<void>;
+    getRekap(): Promise<{
+        namaSekolah: string;
+        npsn: string;
+        jumlahPrestasi: number;
+        totalPoin: number;
+    }[]>;
+};

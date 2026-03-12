@@ -1,0 +1,61 @@
+import { arsipRekomendasi, arsipChecklist } from '../db/schema/index.js';
+export declare const arsipDokumenService: {
+    listRekomendasi(limit?: number): Promise<{
+        id: number;
+        namaSekolah: string;
+        kecamatan: string | null;
+        subKegiatan: string | null;
+        perihal: string | null;
+        jenjang: string | null;
+        nilai: string | null;
+        target: string | null;
+        noAgenda: string | null;
+        suratMasuk: string | null;
+        tanggalSurat: string | null;
+        nomorSurat: string | null;
+        kondisi: string | null;
+        sumber: string | null;
+        createdBy: string | null;
+        createdAt: Date | null;
+    }[]>;
+    createRekomendasi(data: typeof arsipRekomendasi.$inferInsert): Promise<{
+        id: number;
+        createdAt: Date | null;
+        jenjang: string | null;
+        kecamatan: string | null;
+        kondisi: string | null;
+        createdBy: string | null;
+        subKegiatan: string | null;
+        target: string | null;
+        tanggalSurat: string | null;
+        namaSekolah: string;
+        perihal: string | null;
+        nilai: string | null;
+        noAgenda: string | null;
+        suratMasuk: string | null;
+        nomorSurat: string | null;
+        sumber: string | null;
+    }>;
+    deleteRekomendasi(id: number): Promise<void>;
+    listChecklist(limit?: number): Promise<{
+        id: number;
+        sekolahNama: string;
+        sekolahAlamat: string | null;
+        jenisUsulan: string | null;
+        items: unknown;
+        verifikators: unknown;
+        createdBy: string | null;
+        createdAt: Date | null;
+    }[]>;
+    createChecklist(data: typeof arsipChecklist.$inferInsert): Promise<{
+        id: number;
+        createdAt: Date | null;
+        createdBy: string | null;
+        sekolahNama: string;
+        sekolahAlamat: string | null;
+        jenisUsulan: string | null;
+        items: unknown;
+        verifikators: unknown;
+    }>;
+    deleteChecklist(id: number): Promise<void>;
+};

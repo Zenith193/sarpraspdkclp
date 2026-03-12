@@ -1,0 +1,54 @@
+import { db } from '../db/index.js';
+import { sekolah, sarpras, proposal, user } from '../db/schema/index.js';
+import { eq, sql, inArray } from 'drizzle-orm';
+export const dashboardService = {
+    async getAdminStats() {
+        const [sekolahCount, sarprasStats, proposalStats, userCount] = await Promise.all([
+            db.select({ count: sql `count(*)` }).from(sekolah),
+            db.select({
+                total: sql `count(*)`,
+                baik: sql `count(*) filter (where ${sarpras.kondisi} = 'BAIK')`,
+                rusakRingan: sql `count(*) filter (where ${sarpras.kondisi} = 'RUSAK RINGAN')`,
+                rusakSedang: sql `count(*) filter (where ${sarpras.kondisi} = 'RUSAK SEDANG')`,
+                rusakBerat: sql `count(*) filter (where ${sarpras.kondisi} = 'RUSAK BERAT')`,
+                verified: sql `count(*) filter (where ${sarpras.verified} = true)`,
+            }).from(sarpras),
+            db.select({
+                total: sql `count(*)`,
+                menunggu: sql `count(*) filter (where ${proposal.status} = 'Menunggu Verifikasi')`,
+                disetujui: sql `count(*) filter (where ${proposal.status} = 'Disetujui')`,
+                ditolak: sql `count(*) filter (where ${proposal.status} = 'Ditolak')`,
+                revisi: sql `count(*) filter (where ${proposal.status} = 'Revisi')`,
+            }).from(proposal),
+            db.select({ count: sql `count(*)` }).from(user),
+        ]);
+        return {
+            totalSekolah: Number(sekolahCount[0]?.count || 0),
+            sarpras: sarprasStats[0],
+            proposal: proposalStats[0],
+            totalUser: Number(userCount[0]?.count || 0),
+        };
+    },
+    async getKorwilStats(kecamatanList) {
+        if (kecamatanList.length === 0)
+            return { totalSekolah: 0, sarpras: { total: 0 }, proposal: { total: 0 } };
+        const schoolsInArea = await db.select().from(sekolah).where(inArray(sekolah.kecamatan, kecamatanList));
+        const schoolIds = schoolsInArea.map(s => s.id);
+        if (schoolIds.length === 0)
+            return { totalSekolah: 0, sarpras: { total: 0 }, proposal: { total: 0 } };
+        const sarprasStats = await db.select({
+            total: sql `count(*)`,
+            verified: sql `count(*) filter (where ${sarpras.verified} = true)`,
+        }).from(sarpras).where(inArray(sarpras.sekolahId, schoolIds));
+        return { totalSekolah: schoolsInArea.length, sarpras: sarprasStats[0] };
+    },
+    async getSekolahStats(sekolahId) {
+        const sarprasStats = await db.select({
+            total: sql `count(*)`,
+            baik: sql `count(*) filter (where ${sarpras.kondisi} = 'BAIK')`,
+            rusak: sql `count(*) filter (where ${sarpras.kondisi} != 'BAIK')`,
+        }).from(sarpras).where(eq(sarpras.sekolahId, sekolahId));
+        const proposalStats = await db.select({ total: sql `count(*)` }).from(proposal).where(eq(proposal.sekolahId, sekolahId));
+        return { sarpras: sarprasStats[0], proposal: proposalStats[0] };
+    },
+};
