@@ -5,12 +5,14 @@ import { queueGDriveDelete } from '../utils/uploadQueue.js';
 
 export const proposalService = {
     async list(filters: { status?: string; keranjang?: string; kecamatan?: string; jenjang?: string; sekolahId?: number; search?: string; page?: number; limit?: number }) {
-        const { status, keranjang, sekolahId, search, page = 1, limit = 50 } = filters;
+        const { status, keranjang, kecamatan, jenjang, sekolahId, search, page = 1, limit = 50 } = filters;
         const conditions = [];
 
         if (sekolahId) conditions.push(eq(proposal.sekolahId, sekolahId));
         if (status) conditions.push(eq(proposal.status, status));
         if (keranjang) conditions.push(eq(proposal.keranjang, keranjang));
+        if (kecamatan) conditions.push(eq(sekolah.kecamatan, kecamatan));
+        if (jenjang) conditions.push(eq(sekolah.jenjang, jenjang));
         if (search) conditions.push(ilike(proposal.subKegiatan, `%${search}%`));
 
         const where = conditions.length > 0 ? and(...conditions) : undefined;
