@@ -116,7 +116,7 @@ async function processUploadQueue() {
             let subPath = `kerusakan/${item.sekolahId}`;
             if (item.sekolahId) {
                 const sch = await db.select().from(sekolah).where(eq(sekolah.id, item.sekolahId));
-                if (sch[0]) subPath = `${sch[0].kecamatan || 'unknown'}/${sch[0].nama}/form kerusakan`;
+                if (sch[0]) subPath = `${sch[0].kecamatan || 'unknown'}/${sch[0].nama}_${sch[0].npsn}/form kerusakan`;
             }
             const result = await uploadFileToGDrive(item.filePath, 'kerusakan', subPath);
             const oldPath = item.filePath;
