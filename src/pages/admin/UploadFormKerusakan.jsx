@@ -86,7 +86,9 @@ const UploadFormKerusakan = () => {
         return source.filter(d => {
             if (search) {
                 const q = search.toLowerCase();
-                return d.namaSekolah.toLowerCase().includes(q) || d.npsn.includes(q);
+                const name = (d.namaSekolah || d.nama || '').toLowerCase();
+                const npsn = (d.npsn || '');
+                return name.includes(q) || npsn.includes(q);
             }
             return true;
         });
