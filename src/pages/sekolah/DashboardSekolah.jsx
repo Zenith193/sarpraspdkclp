@@ -28,17 +28,38 @@ const DashboardSekolah = () => {
 
     // Stats
     const totalSarpras = mySarpras.length;
-    const rusakBerat = mySarpras.filter(s => s.kondisi === 'RUSAK BERAT' || s.kondisi === 'Rusak Berat').length;
-    const rusakSedang = mySarpras.filter(s => s.kondisi === 'RUSAK SEDANG' || s.kondisi === 'Rusak Sedang').length;
+    const baik = mySarpras.filter(s => (s.kondisi || '').toUpperCase() === 'BAIK').length;
+    const rusakRingan = mySarpras.filter(s => (s.kondisi || '').toUpperCase() === 'RUSAK RINGAN').length;
+    const rusakSedang = mySarpras.filter(s => (s.kondisi || '').toUpperCase() === 'RUSAK SEDANG').length;
+    const rusakBerat = mySarpras.filter(s => (s.kondisi || '').toUpperCase() === 'RUSAK BERAT').length;
     const proposalPending = myProposal.filter(p => !p.status || p.status === 'Menunggu Verifikasi' || p.status === 'Pending' || p.status === 'Diajukan').length;
     const proposalDisetujui = myProposal.filter(p => p.status === 'Disetujui' || p.status === 'Diterima').length;
     const totalBantuan = myRiwayat.reduce((sum, r) => sum + (r.nilaiPaket || 0), 0);
 
+    // Recap per jenis prasarana
+    const sarprasRecap = useMemo(() => {
+        const map = {};
+        mySarpras.forEach(s => {
+            const jenis = s.jenisPrasarana || s.namaPrasarana || 'Lainnya';
+            if (!map[jenis]) map[jenis] = { jenis, total: 0, baik: 0, rr: 0, rs: 0, rb: 0 };
+            map[jenis].total++;
+            const k = (s.kondisi || '').toUpperCase();
+            if (k === 'BAIK') map[jenis].baik++;
+            else if (k === 'RUSAK RINGAN') map[jenis].rr++;
+            else if (k === 'RUSAK SEDANG') map[jenis].rs++;
+            else if (k === 'RUSAK BERAT') map[jenis].rb++;
+        });
+        return Object.values(map).sort((a, b) => b.total - a.total);
+    }, [mySarpras]);
+
     const statCards = [
-        { label: 'Total Sarpras', value: totalSarpras, icon: <Database size={20} />, color: '#3b82f6', bg: 'rgba(59,130,246,0.08)' },
-        { label: 'Rusak Berat', value: rusakBerat, icon: <AlertCircle size={20} />, color: '#ef4444', bg: 'rgba(239,68,68,0.08)' },
-        { label: 'Proposal Diajukan', value: proposalPending, icon: <Clock size={20} />, color: '#f59e0b', bg: 'rgba(245,158,11,0.08)' },
-        { label: 'Proposal Disetujui', value: proposalDisetujui, icon: <CheckCircle size={20} />, color: '#22c55e', bg: 'rgba(34,197,94,0.08)' },
+        { label: 'Total Sarpras', value: totalSarpras, icon: <Database size={20} />, color: '#3b82f6' },
+        { label: 'Baik', value: baik, icon: <CheckCircle size={20} />, color: '#22c55e' },
+        { label: 'Rusak Ringan', value: rusakRingan, icon: <AlertCircle size={20} />, color: '#3b82f6' },
+        { label: 'Rusak Sedang', value: rusakSedang, icon: <AlertCircle size={20} />, color: '#f59e0b' },
+        { label: 'Rusak Berat', value: rusakBerat, icon: <AlertCircle size={20} />, color: '#ef4444' },
+        { label: 'Proposal Diajukan', value: proposalPending, icon: <Clock size={20} />, color: '#f59e0b' },
+        { label: 'Proposal Disetujui', value: proposalDisetujui, icon: <CheckCircle size={20} />, color: '#22c55e' },
     ];
 
     const formatRupiah = (n) => n ? `Rp ${n.toLocaleString('id-ID')}` : 'Rp 0';
@@ -121,33 +142,35 @@ const DashboardSekolah = () => {
                                 <thead>
                                     <tr>
                                         <th>Jenis Prasarana</th>
-                                        <th>Kondisi</th>
-                                        <th>Lantai</th>
+                                        <th style={{ textAlign: 'center' }}>Jumlah</th>
+                                        <th style={{ textAlign: 'center' }}>Baik</th>
+                                        <th style={{ textAlign: 'center' }}>R. Ringan</th>
+                                        <th style={{ textAlign: 'center' }}>R. Sedang</th>
+                                        <th style={{ textAlign: 'center' }}>R. Berat</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {mySarpras.slice(0, 8).map(s => (
-                                        <tr key={s.id}>
-                                            <td style={{ fontSize: '0.85rem' }}>{s.jenisPrasarana || s.namaPrasarana}</td>
-                                            <td>
-                                                <span style={{
-                                                    padding: '2px 10px', borderRadius: 10, fontSize: '0.75rem', fontWeight: 600,
-                                                    background: (s.kondisi || '').toUpperCase().includes('BERAT') ? 'rgba(239,68,68,0.1)' : (s.kondisi || '').toUpperCase().includes('SEDANG') ? 'rgba(245,158,11,0.1)' : (s.kondisi || '').toUpperCase().includes('RINGAN') ? 'rgba(34,197,94,0.1)' : 'rgba(59,130,246,0.1)',
-                                                    color: (s.kondisi || '').toUpperCase().includes('BERAT') ? '#ef4444' : (s.kondisi || '').toUpperCase().includes('SEDANG') ? '#f59e0b' : (s.kondisi || '').toUpperCase().includes('RINGAN') ? '#22c55e' : '#3b82f6'
-                                                }}>
-                                                    {s.kondisi}
-                                                </span>
-                                            </td>
-                                            <td style={{ fontSize: '0.85rem' }}>{s.lantai || '-'}</td>
+                                    {sarprasRecap.map(r => (
+                                        <tr key={r.jenis}>
+                                            <td style={{ fontSize: '0.85rem', fontWeight: 500 }}>{r.jenis}</td>
+                                            <td style={{ textAlign: 'center', fontWeight: 600 }}>{r.total}</td>
+                                            <td style={{ textAlign: 'center' }}><span style={{ color: '#22c55e', fontWeight: 600 }}>{r.baik || '-'}</span></td>
+                                            <td style={{ textAlign: 'center' }}><span style={{ color: '#3b82f6', fontWeight: 600 }}>{r.rr || '-'}</span></td>
+                                            <td style={{ textAlign: 'center' }}><span style={{ color: '#f59e0b', fontWeight: 600 }}>{r.rs || '-'}</span></td>
+                                            <td style={{ textAlign: 'center' }}><span style={{ color: '#ef4444', fontWeight: 600 }}>{r.rb || '-'}</span></td>
                                         </tr>
                                     ))}
+                                    {/* Total row */}
+                                    <tr style={{ borderTop: '2px solid var(--border-color)', fontWeight: 700 }}>
+                                        <td>Total</td>
+                                        <td style={{ textAlign: 'center' }}>{totalSarpras}</td>
+                                        <td style={{ textAlign: 'center', color: '#22c55e' }}>{baik}</td>
+                                        <td style={{ textAlign: 'center', color: '#3b82f6' }}>{rusakRingan}</td>
+                                        <td style={{ textAlign: 'center', color: '#f59e0b' }}>{rusakSedang}</td>
+                                        <td style={{ textAlign: 'center', color: '#ef4444' }}>{rusakBerat}</td>
+                                    </tr>
                                 </tbody>
                             </table>
-                            {mySarpras.length > 8 && (
-                                <div style={{ padding: 10, textAlign: 'center', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                                    +{mySarpras.length - 8} data lainnya
-                                </div>
-                            )}
                         </div>
                     )}
                 </div>
