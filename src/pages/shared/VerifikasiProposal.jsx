@@ -7,28 +7,49 @@ import { formatCurrency } from '../../utils/formatters';
 import toast from 'react-hot-toast';
 import { safeStr } from '../../utils/safeStr';
 
+const PER_PAGE_OPTIONS = [15, 30, 50, 100];
+
 const VerifikasiProposal = () => {
     const user = useAuthStore(s => s.user);
+    const role = user?.role || '';
     const wilayah = user?.wilayah || [];
-    const { data: apiData, loading, refetch } = useApi(() => proposalApi.list({ status: 'Menunggu Verifikasi', limit: 200 }), []);
+    const { data: apiData, loading, refetch } = useApi(() => proposalApi.list({ status: 'Menunggu Verifikasi', limit: 9999 }), []);
     const [data, setData] = useState([]);
     const [search, setSearch] = useState('');
     const [detailItem, setDetailItem] = useState(null);
     const [lightboxIdx, setLightboxIdx] = useState(-1);
+    const [perPage, setPerPage] = useState(15);
+    const [currentPage, setCurrentPage] = useState(1);
 
     useEffect(() => { if (apiData?.data) setData(apiData.data); }, [apiData]);
 
     const pending = useMemo(() =>
         data.filter(p => {
             if (p.status !== 'Menunggu Verifikasi') return false;
-            if (wilayah.length && !wilayah.includes(p.kecamatan)) return false;
+
+            // Role-based jenjang scope
+            if (role === 'Korwil') {
+                // Korwil hanya verifikasi SD dari wilayahnya
+                if (p.jenjang !== 'SD') return false;
+                if (wilayah.length && !wilayah.includes(p.kecamatan)) return false;
+            } else if (role === 'Verifikator') {
+                // Verifikator verifikasi semua SMP + SD
+            }
+            // Admin: semua jenjang, semua kecamatan
+
             if (search) {
                 const q = search.toLowerCase();
-                if (!p.namaSekolah.toLowerCase().includes(q) && !p.subKegiatan.toLowerCase().includes(q)) return false;
+                if (!p.namaSekolah?.toLowerCase().includes(q) && !p.subKegiatan?.toLowerCase().includes(q)) return false;
             }
             return true;
         })
-        , [data, search, wilayah]);
+        , [data, search, wilayah, role]);
+
+    // Pagination
+    const totalPages = Math.ceil(pending.length / perPage);
+    const pagedData = pending.slice((currentPage - 1) * perPage, currentPage * perPage);
+
+    useEffect(() => { setCurrentPage(1); }, [search, perPage]);
 
     const handleVerify = async (id, status) => {
         try {
@@ -56,18 +77,24 @@ const VerifikasiProposal = () => {
                     <div className="table-toolbar-left">
                         <div className="table-search"><Search size={16} className="search-icon" /><input placeholder="Cari sekolah atau kegiatan..." value={search} onChange={e => setSearch(e.target.value)} /></div>
                     </div>
+                    <div className="table-toolbar-right">
+                        <select className="form-input" style={{ width: 'auto', minWidth: 80, padding: '6px 10px' }} value={perPage} onChange={e => setPerPage(Number(e.target.value))}>
+                            {PER_PAGE_OPTIONS.map(n => <option key={n} value={n}>{n} / halaman</option>)}
+                        </select>
+                    </div>
                 </div>
                 <div style={{ overflowX: 'auto' }}>
                     <table className="data-table">
                         <thead>
-                            <tr><th>No</th><th>Sekolah</th><th>Kecamatan</th><th>Sub Kegiatan</th><th>Nilai</th><th>Target</th><th>Foto</th><th>Aksi</th></tr>
+                            <tr><th>No</th><th>Sekolah</th><th>Kecamatan</th><th>Jenjang</th><th>Sub Kegiatan</th><th>Nilai</th><th>Target</th><th>Foto</th><th>Aksi</th></tr>
                         </thead>
                         <tbody>
-                            {pending.map((p, i) => (
+                            {pagedData.map((p, i) => (
                                 <tr key={p.id}>
-                                    <td>{i + 1}</td>
+                                    <td>{(currentPage - 1) * perPage + i + 1}</td>
                                     <td>{p.namaSekolah}</td>
                                     <td>{safeStr(p.kecamatan)}</td>
+                                    <td><span className="badge badge-disetujui">{p.jenjang}</span></td>
                                     <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.subKegiatan}</td>
                                     <td>{formatCurrency(p.nilaiPengajuan)}</td>
                                     <td>{p.target}</td>
@@ -85,10 +112,30 @@ const VerifikasiProposal = () => {
                                     </td>
                                 </tr>
                             ))}
-                            {pending.length === 0 && <tr><td colSpan={8} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>Tidak ada proposal menunggu verifikasi</td></tr>}
+                            {pagedData.length === 0 && <tr><td colSpan={9} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>Tidak ada proposal menunggu verifikasi</td></tr>}
                         </tbody>
                     </table>
                 </div>
+                {/* Pagination */}
+                {totalPages > 1 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderTop: '1px solid var(--border-color)' }}>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                            Menampilkan {(currentPage - 1) * perPage + 1}-{Math.min(currentPage * perPage, pending.length)} dari {pending.length}
+                        </span>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                            <button className="btn btn-ghost btn-sm" disabled={currentPage <= 1} onClick={() => setCurrentPage(p => p - 1)}><ChevronLeft size={16} /></button>
+                            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                                let page;
+                                if (totalPages <= 5) page = i + 1;
+                                else if (currentPage <= 3) page = i + 1;
+                                else if (currentPage >= totalPages - 2) page = totalPages - 4 + i;
+                                else page = currentPage - 2 + i;
+                                return <button key={page} className={`btn btn-sm ${page === currentPage ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setCurrentPage(page)}>{page}</button>;
+                            })}
+                            <button className="btn btn-ghost btn-sm" disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => p + 1)}><ChevronRight size={16} /></button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* ===== DETAIL MODAL ===== */}
@@ -100,7 +147,6 @@ const VerifikasiProposal = () => {
                             <button onClick={() => setDetailItem(null)} style={closeBtnStyle}><X size={20} /></button>
                         </div>
                         <div style={modalBodyStyle}>
-                            {/* Info Grid */}
                             <div style={infoGridStyle}>
                                 <div style={infoItemStyle}><span style={labelStyle}>Sekolah</span><span style={valueStyle}>{detailItem.namaSekolah}</span></div>
                                 <div style={infoItemStyle}><span style={labelStyle}>NPSN</span><span style={valueStyle}>{detailItem.npsn}</span></div>
@@ -115,8 +161,6 @@ const VerifikasiProposal = () => {
                                 {detailItem.tanggalSurat && <div style={infoItemStyle}><span style={labelStyle}>Tanggal Surat</span><span style={valueStyle}>{detailItem.tanggalSurat}</span></div>}
                                 <div style={{ ...infoItemStyle, gridColumn: '1 / -1' }}><span style={labelStyle}>Keterangan</span><span style={valueStyle}>{detailItem.keterangan}</span></div>
                             </div>
-
-                            {/* Photo Gallery */}
                             <div style={{ marginTop: 20 }}>
                                 <h3 style={{ margin: '0 0 12px', fontSize: 15, display: 'flex', alignItems: 'center', gap: 6 }}>
                                     <Image size={16} /> Foto Kerusakan ({detailItem.fotoKerusakan?.length || 0})
@@ -126,12 +170,8 @@ const VerifikasiProposal = () => {
                                         {detailItem.fotoKerusakan.map((f, fi) => (
                                             <div key={f.id} style={galleryItemStyle} onClick={() => setLightboxIdx(fi)}>
                                                 <img src={f.url} alt={f.nama} style={thumbStyle} loading="lazy" />
-                                                <div style={thumbOverlay}>
-                                                    <Maximize2 size={18} color="#fff" />
-                                                </div>
-                                                <div style={thumbInfoStyle}>
-                                                    <span style={{ fontSize: 11, fontWeight: 500 }}>{f.nama}</span>
-                                                </div>
+                                                <div style={thumbOverlay}><Maximize2 size={18} color="#fff" /></div>
+                                                <div style={thumbInfoStyle}><span style={{ fontSize: 11, fontWeight: 500 }}>{f.nama}</span></div>
                                             </div>
                                         ))}
                                     </div>
@@ -141,8 +181,6 @@ const VerifikasiProposal = () => {
                                     </div>
                                 )}
                             </div>
-
-                            {/* Action Buttons */}
                             <div style={{ display: 'flex', gap: 8, marginTop: 20, justifyContent: 'flex-end' }}>
                                 <button className="btn btn-success" onClick={() => handleVerify(detailItem.id, 'Disetujui')}><CheckCircle size={16} /> Setujui</button>
                                 <button className="btn btn-danger" onClick={() => handleVerify(detailItem.id, 'Ditolak')}><XCircle size={16} /> Tolak</button>

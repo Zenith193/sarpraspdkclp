@@ -6,18 +6,23 @@ import useAuthStore from '../../store/authStore';
 import toast from 'react-hot-toast';
 import { safeStr } from '../../utils/safeStr';
 
+const PER_PAGE_OPTIONS = [15, 30, 50, 100];
+
 const VerifikasiSarpras = () => {
     const user = useAuthStore(s => s.user);
+    const role = user?.role || '';
     const wilayah = user?.wilayah || [];
-    const { data: apiData, loading, refetch } = useApi(() => sarprasApi.list({ verified: 'false', limit: 200 }), []);
+    const userJenjang = user?.jenjang || '';
+    const { data: apiData, loading, refetch } = useApi(() => sarprasApi.list({ verified: 'false', limit: 9999 }), []);
     const [data, setData] = useState([]);
     const [search, setSearch] = useState('');
     const [detailItem, setDetailItem] = useState(null);
     const [lightboxIdx, setLightboxIdx] = useState(-1);
+    const [perPage, setPerPage] = useState(15);
+    const [currentPage, setCurrentPage] = useState(1);
 
     useEffect(() => {
         if (apiData?.data) {
-            // Flatten nested structure
             const flat = apiData.data.map(item => {
                 if (item.sarpras) {
                     return {
@@ -37,14 +42,30 @@ const VerifikasiSarpras = () => {
 
     const pending = useMemo(() =>
         data.filter(s => {
-            if (wilayah.length && !wilayah.includes(s.kecamatan)) return false;
+            // Role-based jenjang scope
+            if (role === 'Korwil') {
+                // Korwil hanya verifikasi SD dari wilayahnya
+                if (s.jenjang !== 'SD') return false;
+                if (wilayah.length && !wilayah.includes(s.kecamatan)) return false;
+            } else if (role === 'Verifikator') {
+                // Verifikator verifikasi semua SMP + SD
+                // (SD sudah melalui korwil)
+            }
+            // Admin: semua jenjang, semua kecamatan
+
             if (search) {
                 const q = search.toLowerCase();
-                if (!s.namaSekolah.toLowerCase().includes(q) && !s.namaRuang.toLowerCase().includes(q)) return false;
+                if (!s.namaSekolah?.toLowerCase().includes(q) && !s.namaRuang?.toLowerCase().includes(q)) return false;
             }
             return !s.verified;
         })
-        , [data, search, wilayah]);
+        , [data, search, wilayah, role]);
+
+    // Pagination
+    const totalPages = Math.ceil(pending.length / perPage);
+    const pagedData = pending.slice((currentPage - 1) * perPage, currentPage * perPage);
+
+    useEffect(() => { setCurrentPage(1); }, [search, perPage]);
 
     const handleVerify = async (id, approved) => {
         try {
@@ -73,19 +94,25 @@ const VerifikasiSarpras = () => {
                     <div className="table-toolbar-left">
                         <div className="table-search"><Search size={16} className="search-icon" /><input placeholder="Cari sekolah atau ruang..." value={search} onChange={e => setSearch(e.target.value)} /></div>
                     </div>
+                    <div className="table-toolbar-right">
+                        <select className="form-input" style={{ width: 'auto', minWidth: 80, padding: '6px 10px' }} value={perPage} onChange={e => setPerPage(Number(e.target.value))}>
+                            {PER_PAGE_OPTIONS.map(n => <option key={n} value={n}>{n} / halaman</option>)}
+                        </select>
+                    </div>
                 </div>
                 <div style={{ overflowX: 'auto' }}>
                     <table className="data-table">
                         <thead>
-                            <tr><th>No</th><th>Sekolah</th><th>NPSN</th><th>Kecamatan</th><th>Jenis Prasarana</th><th>Nama Ruang</th><th>Kondisi</th><th>Foto</th><th>Aksi</th></tr>
+                            <tr><th>No</th><th>Sekolah</th><th>NPSN</th><th>Kecamatan</th><th>Jenjang</th><th>Jenis Prasarana</th><th>Nama Ruang</th><th>Kondisi</th><th>Foto</th><th>Aksi</th></tr>
                         </thead>
                         <tbody>
-                            {pending.map((item, i) => (
+                            {pagedData.map((item, i) => (
                                 <tr key={item.id}>
-                                    <td>{i + 1}</td>
+                                    <td>{(currentPage - 1) * perPage + i + 1}</td>
                                     <td>{item.namaSekolah}</td>
                                     <td>{safeStr(item.npsn)}</td>
                                     <td>{safeStr(item.kecamatan)}</td>
+                                    <td><span className="badge badge-disetujui">{item.jenjang}</span></td>
                                     <td>{item.jenisPrasarana}</td>
                                     <td>{item.namaRuang}</td>
                                     <td>
@@ -107,10 +134,30 @@ const VerifikasiSarpras = () => {
                                     </td>
                                 </tr>
                             ))}
-                            {pending.length === 0 && <tr><td colSpan={9} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>Tidak ada data menunggu verifikasi</td></tr>}
+                            {pagedData.length === 0 && <tr><td colSpan={10} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>Tidak ada data menunggu verifikasi</td></tr>}
                         </tbody>
                     </table>
                 </div>
+                {/* Pagination */}
+                {totalPages > 1 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', borderTop: '1px solid var(--border-color)' }}>
+                        <span style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                            Menampilkan {(currentPage - 1) * perPage + 1}-{Math.min(currentPage * perPage, pending.length)} dari {pending.length}
+                        </span>
+                        <div style={{ display: 'flex', gap: 4 }}>
+                            <button className="btn btn-ghost btn-sm" disabled={currentPage <= 1} onClick={() => setCurrentPage(p => p - 1)}><ChevronLeft size={16} /></button>
+                            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                                let page;
+                                if (totalPages <= 5) page = i + 1;
+                                else if (currentPage <= 3) page = i + 1;
+                                else if (currentPage >= totalPages - 2) page = totalPages - 4 + i;
+                                else page = currentPage - 2 + i;
+                                return <button key={page} className={`btn btn-sm ${page === currentPage ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setCurrentPage(page)}>{page}</button>;
+                            })}
+                            <button className="btn btn-ghost btn-sm" disabled={currentPage >= totalPages} onClick={() => setCurrentPage(p => p + 1)}><ChevronRight size={16} /></button>
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* ===== DETAIL MODAL ===== */}
@@ -122,7 +169,6 @@ const VerifikasiSarpras = () => {
                             <button onClick={() => setDetailItem(null)} style={closeBtnStyle}><X size={20} /></button>
                         </div>
                         <div style={modalBodyStyle}>
-                            {/* Info Grid */}
                             <div style={infoGridStyle}>
                                 <div style={infoItemStyle}><span style={labelStyle}>Sekolah</span><span style={valueStyle}>{detailItem.namaSekolah}</span></div>
                                 <div style={infoItemStyle}><span style={labelStyle}>NPSN</span><span style={valueStyle}>{detailItem.npsn}</span></div>
@@ -140,8 +186,6 @@ const VerifikasiSarpras = () => {
                                 </div>
                                 <div style={infoItemStyle}><span style={labelStyle}>Keterangan</span><span style={valueStyle}>{detailItem.keterangan}</span></div>
                             </div>
-
-                            {/* Photo Gallery */}
                             <div style={{ marginTop: 20 }}>
                                 <h3 style={{ margin: '0 0 12px', fontSize: 15, display: 'flex', alignItems: 'center', gap: 6 }}>
                                     <Image size={16} /> Foto Dokumentasi ({detailItem.foto?.length || 0})
@@ -151,9 +195,7 @@ const VerifikasiSarpras = () => {
                                         {detailItem.foto.map((f, fi) => (
                                             <div key={f.id} style={galleryItemStyle} onClick={() => setLightboxIdx(fi)}>
                                                 <img src={f.url} alt={f.nama} style={thumbStyle} loading="lazy" />
-                                                <div style={thumbOverlay}>
-                                                    <Maximize2 size={18} color="#fff" />
-                                                </div>
+                                                <div style={thumbOverlay}><Maximize2 size={18} color="#fff" /></div>
                                                 <div style={thumbInfoStyle}>
                                                     <span style={{ fontSize: 11, fontWeight: 500 }}>{f.nama}</span>
                                                     {f.geoLat && <span style={{ fontSize: 10, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 2 }}><MapPin size={10} />{f.geoLat.toFixed(4)}, {f.geoLng.toFixed(4)}</span>}
@@ -167,8 +209,6 @@ const VerifikasiSarpras = () => {
                                     </div>
                                 )}
                             </div>
-
-                            {/* Action Buttons */}
                             <div style={{ display: 'flex', gap: 8, marginTop: 20, justifyContent: 'flex-end' }}>
                                 <button className="btn btn-success" onClick={() => handleVerify(detailItem.id, true)}><CheckCircle size={16} /> Setujui</button>
                                 <button className="btn btn-danger" onClick={() => handleVerify(detailItem.id, false)}><XCircle size={16} /> Tolak</button>
@@ -219,7 +259,7 @@ const valueStyle = { fontSize: 14, color: 'var(--text-primary)', fontWeight: 500
 const galleryGridStyle = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10 };
 const galleryItemStyle = { borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border-color)', cursor: 'pointer', position: 'relative', background: 'var(--bg-secondary)', transition: 'transform 0.15s, box-shadow 0.15s' };
 const thumbStyle = { width: '100%', height: 140, objectFit: 'cover', display: 'block' };
-const thumbOverlay = { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.0)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s', ':hover': { background: 'rgba(0,0,0,0.3)' } };
+const thumbOverlay = { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.0)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' };
 const thumbInfoStyle = { padding: '6px 8px', display: 'flex', flexDirection: 'column', gap: 2 };
 const lightboxOverlayStyle = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.9)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 };
 const navBtnStyle = { position: 'absolute', top: '50%', transform: 'translateY(-50%)', background: 'rgba(255,255,255,0.15)', border: 'none', color: '#fff', cursor: 'pointer', borderRadius: '50%', width: 48, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1002, backdropFilter: 'blur(4px)' };

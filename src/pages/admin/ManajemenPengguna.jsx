@@ -487,7 +487,7 @@ const ManajemenPengguna = () => {
                                     </td>
                                     <td>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                            <span style={{ fontSize: '0.82rem', fontFamily: 'monospace' }}>{u.plainPassword || '********'}</span>
+                                            <span style={{ fontSize: '0.82rem', fontFamily: 'monospace' }}>{u.plainPassword || <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic', fontFamily: 'inherit' }}>-</span>}</span>
                                         </div>
                                     </td>
                                     <td>{(u.role === 'Korwil' || u.role === 'Sekolah') ? (u.jenjang || '-') : '-'}</td>
