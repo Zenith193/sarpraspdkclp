@@ -173,8 +173,12 @@ const Sidebar = ({ collapsed, onToggle, className = '' }) => {
             </nav>
 
             <div className="sidebar-user">
-                <div className="sidebar-user-avatar">
-                    {user?.namaAkun?.charAt(0) || 'U'}
+            <div className="sidebar-user-avatar">
+                    {user?.image ? (
+                        <img src={user.image} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                    ) : (
+                        user?.namaAkun?.charAt(0) || 'U'
+                    )}
                 </div>
                 {!collapsed && (
                     <div className="sidebar-user-info">

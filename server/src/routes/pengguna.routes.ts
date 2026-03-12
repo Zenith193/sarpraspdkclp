@@ -108,14 +108,25 @@ router.put('/:id/photo', requireAuth, avatarUpload.single('photo'), async (req, 
         if (!isAdmin && !isSelf) { res.status(403).json({ error: 'Forbidden' }); return; }
         if (!req.file) { res.status(400).json({ error: 'No file uploaded' }); return; }
 
-        // Delete old avatar if exists
+        // Delete old local avatar if exists
         const existing = await db.select().from(user).where(eq(user.id, targetId));
         if (existing[0]?.image && existing[0].image.startsWith('/api/pengguna/')) {
             const oldFile = path.join(avatarDir, path.basename(existing[0].image.replace('/api/pengguna/photo/', '')));
             if (fs.existsSync(oldFile)) fs.unlinkSync(oldFile);
         }
 
-        const imageUrl = `/api/pengguna/photo/${req.file.filename}`;
+        let imageUrl = `/api/pengguna/photo/${req.file.filename}`;
+
+        // Upload to GDrive if enabled (for backup/storage)
+        try {
+            const { isGDriveEnabled, uploadFileToGDrive } = await import('../utils/googleDriveClient.js');
+            if (isGDriveEnabled()) {
+                await uploadFileToGDrive(req.file.path, 'avatars', req.file.filename);
+            }
+        } catch (gErr) {
+            console.error('GDrive avatar upload error (using local):', gErr);
+        }
+
         await db.update(user).set({ image: imageUrl, updatedAt: new Date() }).where(eq(user.id, targetId));
         res.json({ success: true, imageUrl });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
