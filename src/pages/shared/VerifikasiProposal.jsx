@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Search, CheckCircle, XCircle, Eye, X, ChevronLeft, ChevronRight, Image, Info, Maximize2, MessageSquare } from 'lucide-react';
 import { proposalApi } from '../../api/index';
 import { useApi } from '../../api/hooks';
+import { useKorwilData } from '../../data/dataProvider';
 import useAuthStore from '../../store/authStore';
 import { formatCurrency } from '../../utils/formatters';
 import toast from 'react-hot-toast';
@@ -12,7 +13,7 @@ const PER_PAGE_OPTIONS = [15, 30, 50, 100];
 const VerifikasiProposal = () => {
     const user = useAuthStore(s => s.user);
     const role = user?.role || '';
-    const wilayah = user?.wilayah || [];
+    const { data: korwilList } = useKorwilData();
     const { data: apiData, loading, refetch } = useApi(() => proposalApi.list({ status: 'Menunggu Verifikasi', limit: 9999 }), []);
     const [data, setData] = useState([]);
     const [search, setSearch] = useState('');
@@ -21,21 +22,55 @@ const VerifikasiProposal = () => {
     const [perPage, setPerPage] = useState(15);
     const [currentPage, setCurrentPage] = useState(1);
 
-    useEffect(() => { if (apiData?.data) setData(apiData.data); }, [apiData]);
+    // Get korwil assignment
+    const myAssignment = useMemo(() => {
+        if (role !== 'Korwil' || !korwilList || !user) return null;
+        const myRows = korwilList.filter(row => {
+            const ka = row.korwilAssignment || row;
+            return String(ka.userId) === String(user.id);
+        });
+        if (myRows.length === 0) return null;
+        const kecList = [];
+        let jenj = '';
+        myRows.forEach(row => {
+            const ka = row.korwilAssignment || row;
+            if (ka.kecamatan && !kecList.includes(ka.kecamatan)) kecList.push(ka.kecamatan);
+            if (ka.jenjang) jenj = ka.jenjang;
+        });
+        return { kecamatan: kecList, jenjang: jenj };
+    }, [korwilList, user, role]);
+
+    useEffect(() => {
+        if (apiData?.data) {
+            const flat = apiData.data.map(item => {
+                if (item.proposal) {
+                    return {
+                        ...item.proposal,
+                        namaSekolah: item.sekolahNama || '',
+                        npsn: item.sekolahNpsn || '',
+                        kecamatan: item.sekolahKecamatan || '',
+                        jenjang: item.sekolahJenjang || '',
+                    };
+                }
+                return item;
+            });
+            setData(flat);
+        }
+    }, [apiData]);
 
     const pending = useMemo(() =>
         data.filter(p => {
-            if (p.status !== 'Menunggu Verifikasi') return false;
+            const status = p.status || p.proposal?.status;
+            if (status !== 'Menunggu Verifikasi') return false;
 
-            // Role-based jenjang scope
-            if (role === 'Korwil') {
-                // Korwil hanya verifikasi SD dari wilayahnya
-                if (p.jenjang !== 'SD') return false;
-                if (wilayah.length && !wilayah.includes(p.kecamatan)) return false;
-            } else if (role === 'Verifikator') {
-                // Verifikator verifikasi semua SMP + SD
+            // Role-based filtering
+            if (role === 'Korwil' && myAssignment) {
+                const kec = p.kecamatan || p.sekolahKecamatan || '';
+                const jenj = p.jenjang || p.sekolahJenjang || '';
+                if (myAssignment.jenjang && jenj !== myAssignment.jenjang) return false;
+                if (myAssignment.kecamatan.length && !myAssignment.kecamatan.includes(kec)) return false;
             }
-            // Admin: semua jenjang, semua kecamatan
+            // Verifikator & Admin: all
 
             if (search) {
                 const q = search.toLowerCase();
@@ -43,7 +78,7 @@ const VerifikasiProposal = () => {
             }
             return true;
         })
-        , [data, search, wilayah, role]);
+        , [data, search, myAssignment, role]);
 
     // Pagination
     const totalPages = Math.ceil(pending.length / perPage);

@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Search, CheckCircle, XCircle, Eye, X, ChevronLeft, ChevronRight, MapPin, Image, Info, Maximize2 } from 'lucide-react';
 import { sarprasApi } from '../../api/index';
 import { useApi } from '../../api/hooks';
+import { useKorwilData } from '../../data/dataProvider';
 import useAuthStore from '../../store/authStore';
 import toast from 'react-hot-toast';
 import { safeStr } from '../../utils/safeStr';
@@ -11,8 +12,7 @@ const PER_PAGE_OPTIONS = [15, 30, 50, 100];
 const VerifikasiSarpras = () => {
     const user = useAuthStore(s => s.user);
     const role = user?.role || '';
-    const wilayah = user?.wilayah || [];
-    const userJenjang = user?.jenjang || '';
+    const { data: korwilList } = useKorwilData();
     const { data: apiData, loading, refetch } = useApi(() => sarprasApi.list({ verified: 'false', limit: 9999 }), []);
     const [data, setData] = useState([]);
     const [search, setSearch] = useState('');
@@ -20,6 +20,24 @@ const VerifikasiSarpras = () => {
     const [lightboxIdx, setLightboxIdx] = useState(-1);
     const [perPage, setPerPage] = useState(15);
     const [currentPage, setCurrentPage] = useState(1);
+
+    // Get korwil assignment
+    const myAssignment = useMemo(() => {
+        if (role !== 'Korwil' || !korwilList || !user) return null;
+        const myRows = korwilList.filter(row => {
+            const ka = row.korwilAssignment || row;
+            return String(ka.userId) === String(user.id);
+        });
+        if (myRows.length === 0) return null;
+        const kecList = [];
+        let jenj = '';
+        myRows.forEach(row => {
+            const ka = row.korwilAssignment || row;
+            if (ka.kecamatan && !kecList.includes(ka.kecamatan)) kecList.push(ka.kecamatan);
+            if (ka.jenjang) jenj = ka.jenjang;
+        });
+        return { kecamatan: kecList, jenjang: jenj };
+    }, [korwilList, user, role]);
 
     useEffect(() => {
         if (apiData?.data) {
@@ -42,16 +60,12 @@ const VerifikasiSarpras = () => {
 
     const pending = useMemo(() =>
         data.filter(s => {
-            // Role-based jenjang scope
-            if (role === 'Korwil') {
-                // Korwil hanya verifikasi SD dari wilayahnya
-                if (s.jenjang !== 'SD') return false;
-                if (wilayah.length && !wilayah.includes(s.kecamatan)) return false;
-            } else if (role === 'Verifikator') {
-                // Verifikator verifikasi semua SMP + SD
-                // (SD sudah melalui korwil)
+            // Role-based filtering
+            if (role === 'Korwil' && myAssignment) {
+                if (myAssignment.jenjang && s.jenjang !== myAssignment.jenjang) return false;
+                if (myAssignment.kecamatan.length && !myAssignment.kecamatan.includes(s.kecamatan)) return false;
             }
-            // Admin: semua jenjang, semua kecamatan
+            // Verifikator & Admin: all
 
             if (search) {
                 const q = search.toLowerCase();
@@ -59,7 +73,7 @@ const VerifikasiSarpras = () => {
             }
             return !s.verified;
         })
-        , [data, search, wilayah, role]);
+        , [data, search, myAssignment, role]);
 
     // Pagination
     const totalPages = Math.ceil(pending.length / perPage);
