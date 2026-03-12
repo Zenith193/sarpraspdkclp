@@ -159,6 +159,8 @@ const useSettingsStore = create(
 
             resetAccessConfig: () => set({ accessConfig: { ...DEFAULT_ACCESS } }),
 
+            setAccessConfig: (config) => set({ accessConfig: config }),
+
             // ===== NAS CONFIG =====
             updateNasConfig: (updates) => set((state) => ({
                 nasConfig: { ...state.nasConfig, ...updates }

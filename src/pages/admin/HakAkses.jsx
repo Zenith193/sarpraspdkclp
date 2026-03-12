@@ -1,6 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Shield, Save, RotateCcw, Search, CheckCircle, XCircle, Info } from 'lucide-react';
 import useSettingsStore, { ALL_MENUS } from '../../store/settingsStore';
+import { settingsApi } from '../../api/index';
 import toast from 'react-hot-toast';
 
 const ROLES = ['admin', 'verifikator', 'korwil', 'sekolah'];
@@ -22,10 +23,23 @@ const ALL_UNIQUE_MENUS = (() => {
 })();
 
 const HakAkses = () => {
-    const { accessConfig, toggleMenuAccess, resetAccessConfig } = useSettingsStore();
+    const { accessConfig, toggleMenuAccess, resetAccessConfig, setAccessConfig } = useSettingsStore();
     const [search, setSearch] = useState('');
     const [activeTab, setActiveTab] = useState('matrix');
     const [hasChanges, setHasChanges] = useState(false);
+    const [saving, setSaving] = useState(false);
+
+    // Load from server on mount
+    useEffect(() => {
+        settingsApi.getAccess().then(res => {
+            if (res && res.value) {
+                const serverConfig = typeof res.value === 'string' ? JSON.parse(res.value) : res.value;
+                if (serverConfig && typeof serverConfig === 'object' && Object.keys(serverConfig).length > 0) {
+                    setAccessConfig(serverConfig);
+                }
+            }
+        }).catch(() => { /* use local defaults */ });
+    }, []);
 
     const filteredMenus = useMemo(() => {
         if (!search) return ALL_UNIQUE_MENUS;
@@ -43,15 +57,23 @@ const HakAkses = () => {
         setHasChanges(true);
     };
 
-    const handleReset = () => {
-        resetAccessConfig();
-        setHasChanges(false);
-        toast.success('Konfigurasi akses direset ke default');
+    const handleReset = async () => {
+        try {
+            await settingsApi.resetAccess();
+            resetAccessConfig();
+            setHasChanges(false);
+            toast.success('Konfigurasi akses direset ke default');
+        } catch { toast.error('Gagal reset'); }
     };
 
-    const handleSave = () => {
-        setHasChanges(false);
-        toast.success('Konfigurasi akses berhasil disimpan');
+    const handleSave = async () => {
+        setSaving(true);
+        try {
+            await settingsApi.saveAccess(accessConfig);
+            setHasChanges(false);
+            toast.success('Konfigurasi akses berhasil disimpan');
+        } catch { toast.error('Gagal menyimpan'); }
+        setSaving(false);
     };
 
     // Stats per role
@@ -70,8 +92,8 @@ const HakAkses = () => {
                 </div>
                 <div className="page-header-right" style={{ gap: 8 }}>
                     <button className="btn btn-ghost" onClick={handleReset}><RotateCcw size={14} /> Reset Default</button>
-                    <button className="btn btn-primary" onClick={handleSave} disabled={!hasChanges}>
-                        <Save size={14} /> Simpan Perubahan
+                    <button className="btn btn-primary" onClick={handleSave} disabled={!hasChanges || saving}>
+                        <Save size={14} /> {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
                     </button>
                 </div>
             </div>

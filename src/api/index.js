@@ -202,3 +202,9 @@ export const arsipDokumenApi = {
     createChecklist: (data) => api.post('/arsip-dokumen/checklist', data),
     deleteChecklist: (id) => api.delete(`/arsip-dokumen/checklist/${id}`),
 };
+
+export const settingsApi = {
+    getAccess: () => api.get('/settings/access'),
+    saveAccess: (config) => api.put('/settings/access', config),
+    resetAccess: () => api.post('/settings/access/reset'),
+};
