@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { Plus, Search, Download, Eye, Edit, Trash2, X, Filter, Star, FileSpreadsheet, FileText, Save, Printer, FileCheck, FilePlus, Archive, AlertOctagon } from 'lucide-react';
-import { useProposalData, useSekolahData, useUsersData } from '../../data/dataProvider';
+import { useProposalData, useSekolahData, useUsersData, useKorwilData } from '../../data/dataProvider';
 import { proposalApi, arsipDokumenApi } from '../../api/index';
 import { KECAMATAN, JENJANG, SUB_KEGIATAN, KERANJANG, STATUS_PROPOSAL } from '../../utils/constants';
 import { formatCurrency } from '../../utils/formatters';
@@ -54,12 +54,42 @@ const Proposal = ({ readOnly = false }) => {
     const { data: sekolahList } = useSekolahData();
     const { data: usersList } = useUsersData();
     const { data: proposalList, loading: proposalLoading, refetch: refetchProposal } = useProposalData();
+    const { data: korwilList } = useKorwilData();
+    const isKorwil = (user?.role || '').toLowerCase() === 'korwil';
+
+    // Get korwil assignment (kecamatan + jenjang)
+    const myKorwilAssignment = useMemo(() => {
+        if (!isKorwil || !korwilList || !user) return null;
+        const myRows = korwilList.filter(row => {
+            const ka = row.korwilAssignment || row;
+            return String(ka.userId) === String(user.id);
+        });
+        if (myRows.length === 0) return null;
+        const kecList = [];
+        let jenj = '';
+        myRows.forEach(row => {
+            const ka = row.korwilAssignment || row;
+            if (ka.kecamatan && !kecList.includes(ka.kecamatan)) kecList.push(ka.kecamatan);
+            if (ka.jenjang) jenj = ka.jenjang;
+        });
+        return { kecamatan: kecList, jenjang: jenj };
+    }, [isKorwil, korwilList, user]);
 
     const [data, setData] = useState([]);
 
     useEffect(() => {
-        if (proposalList.length) setData(proposalList.map(d => ({ ...d, bintang: d.bintang || 0 })));
-    }, [proposalList]);
+        if (proposalList.length) {
+            let list = proposalList.map(d => ({ ...d, bintang: d.bintang || 0 }));
+            // For korwil: filter by assigned kecamatan + jenjang
+            if (isKorwil && myKorwilAssignment) {
+                list = list.filter(p =>
+                    myKorwilAssignment.kecamatan.includes(p.kecamatan) &&
+                    p.jenjang === myKorwilAssignment.jenjang
+                );
+            }
+            setData(list);
+        }
+    }, [proposalList, isKorwil, myKorwilAssignment]);
 
     // State untuk Rekomendasi & Checklist
     const [rekomendasiList, setRekomendasiList] = useState([]);

@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { Plus, Search, Download, Eye, Edit, Trash2, X, Star, ChevronLeft, ChevronRight, Upload, Columns, FileSpreadsheet, FileText, FileDown, ChevronDown, Save, Image, MapPin, Building2, AlertTriangle, CheckCircle, Filter, AlertOctagon, UploadCloud } from 'lucide-react';
-import { useSarprasData, useSekolahData } from '../../data/dataProvider';
+import { useSarprasData, useSekolahData, useKorwilData } from '../../data/dataProvider';
 import { KECAMATAN, JENJANG, KONDISI, JENIS_PRASARANA, MASA_BANGUNAN, LANTAI_OPTIONS } from '../../utils/constants';
 import { formatNumber } from '../../utils/formatters';
 import { exportToExcel, exportToCSV, exportToPDF } from '../../utils/exportUtils';
@@ -24,12 +24,42 @@ const DataSarpras = ({ readOnly = false }) => {
 
     const { data: sekolahList } = useSekolahData();
     const { data: sarprasList, loading: sarprasLoading, refetch: refetchSarpras } = useSarprasData();
+    const { data: korwilList } = useKorwilData();
+    const isKorwil = (user?.role || '').toLowerCase() === 'korwil';
+
+    // Get korwil assignment (kecamatan + jenjang)
+    const myKorwilAssignment = useMemo(() => {
+        if (!isKorwil || !korwilList || !user) return null;
+        const myRows = korwilList.filter(row => {
+            const ka = row.korwilAssignment || row;
+            return String(ka.userId) === String(user.id);
+        });
+        if (myRows.length === 0) return null;
+        const kecList = [];
+        let jenj = '';
+        myRows.forEach(row => {
+            const ka = row.korwilAssignment || row;
+            if (ka.kecamatan && !kecList.includes(ka.kecamatan)) kecList.push(ka.kecamatan);
+            if (ka.jenjang) jenj = ka.jenjang;
+        });
+        return { kecamatan: kecList, jenjang: jenj };
+    }, [isKorwil, korwilList, user]);
 
     const [data, setData] = useState([]);
 
     useEffect(() => {
-        if (sarprasList.length) setData(sarprasList.map(d => ({ ...d, bintang: d.bintang || 0, foto: d.foto || [] })));
-    }, [sarprasList]);
+        if (sarprasList.length) {
+            let list = sarprasList.map(d => ({ ...d, bintang: d.bintang || 0, foto: d.foto || [] }));
+            // For korwil: filter by assigned kecamatan + jenjang
+            if (isKorwil && myKorwilAssignment) {
+                list = list.filter(s =>
+                    myKorwilAssignment.kecamatan.includes(s.kecamatan) &&
+                    s.jenjang === myKorwilAssignment.jenjang
+                );
+            }
+            setData(list);
+        }
+    }, [sarprasList, isKorwil, myKorwilAssignment]);
     const [search, setSearch] = useState('');
     const [headerFilters, setHeaderFilters] = useState({ jenjang: '', kecamatan: '', kondisi: '', jenisPrasarana: '', bintang: '' });
     const [page, setPage] = useState(1);
