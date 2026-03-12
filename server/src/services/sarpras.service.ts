@@ -32,7 +32,7 @@ export const sarprasService = {
                 .where(where)
                 .limit(limit)
                 .offset(offset),
-            db.select({ count: sql<number>`count(*)` }).from(sarpras).where(where),
+            db.select({ count: sql<number>`count(*)` }).from(sarpras).leftJoin(sekolah, eq(sarpras.sekolahId, sekolah.id)).where(where),
         ]);
 
         // Load fotos for all sarpras in batch

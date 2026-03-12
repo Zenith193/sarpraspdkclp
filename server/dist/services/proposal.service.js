@@ -23,7 +23,7 @@ export const proposalService = {
         const [data, countResult] = await Promise.all([
             db.select({ proposal, sekolahNama: sekolah.nama, sekolahNpsn: sekolah.npsn, sekolahKecamatan: sekolah.kecamatan, sekolahJenjang: sekolah.jenjang })
                 .from(proposal).leftJoin(sekolah, eq(proposal.sekolahId, sekolah.id)).where(where).limit(limit).offset(offset),
-            db.select({ count: sql `count(*)` }).from(proposal).where(where),
+            db.select({ count: sql `count(*)` }).from(proposal).leftJoin(sekolah, eq(proposal.sekolahId, sekolah.id)).where(where),
         ]);
         return { data, total: Number(countResult[0]?.count || 0), page, limit };
     },
