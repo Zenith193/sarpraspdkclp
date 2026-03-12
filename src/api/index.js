@@ -129,7 +129,7 @@ export const kerusakanApi = {
 
 export const rankingApi = {
     getLock: () => api.get('/settings/ranking/lock'),
-    setLock: (locked) => api.put('/settings/ranking/lock', { locked }),
+    setLock: (key, locked) => api.put('/settings/ranking/lock', { key, locked }),
     getData: (kecamatan, jenjang) => {
         const q = new URLSearchParams({ kecamatan: kecamatan || 'all', jenjang: jenjang || 'all' }).toString();
         return api.get(`/settings/ranking/data?${q}`);

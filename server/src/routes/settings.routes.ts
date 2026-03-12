@@ -245,15 +245,26 @@ router.post('/gdrive/setup', async (req, res) => {
 });
 
 // ===== RANKING PRIORITAS (stored per kecamatan-jenjang) =====
+// Lock is stored as a map: { locks: { "all": true, "SD": true, "Adipala": true, "SD_Adipala": true, ... } }
 router.get('/ranking/lock', requireAuth, async (_req, res) => {
     try {
         const val = await settingsService.get('ranking_lock');
-        res.json(val || { locked: false });
+        res.json(val || { locks: {} });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.put('/ranking/lock', requireAuth, requireRole('admin'), async (req, res) => {
     try {
-        res.json(await settingsService.set('ranking_lock', { locked: !!req.body.locked }));
+        // Load existing locks
+        const existing = await settingsService.get('ranking_lock') || { locks: {} };
+        const locks = existing.locks || {};
+        // req.body: { key: "all"|"SD"|"Adipala"|"SD_Adipala", locked: true/false }
+        const key = req.body.key || 'all';
+        if (req.body.locked) {
+            locks[key] = true;
+        } else {
+            delete locks[key];
+        }
+        res.json(await settingsService.set('ranking_lock', { locks }));
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 

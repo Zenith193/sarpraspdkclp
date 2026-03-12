@@ -1,9 +1,20 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { GripVertical, Save, Search, Lock, Unlock, Filter } from 'lucide-react';
+import { GripVertical, Save, Search, Lock, Unlock } from 'lucide-react';
 import { sekolahApi, korwilApi, rankingApi } from '../../api/index';
 import { KECAMATAN, JENJANG } from '../../utils/constants';
 import useAuthStore from '../../store/authStore';
 import toast from 'react-hot-toast';
+
+// Check if a specific kecamatan+jenjang combo is locked
+// Cascade: specific combo → jenjang only → kecamatan only → all
+function isLockedFor(locks, kecamatan, jenjang) {
+    if (!locks || !Object.keys(locks).length) return false;
+    if (locks['all']) return true;
+    if (jenjang && locks[jenjang]) return true;
+    if (kecamatan && locks[kecamatan]) return true;
+    if (kecamatan && jenjang && locks[`${jenjang}_${kecamatan}`]) return true;
+    return false;
+}
 
 const RankingPrioritas = () => {
     const user = useAuthStore(s => s.user);
@@ -14,7 +25,7 @@ const RankingPrioritas = () => {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [saving, setSaving] = useState(false);
-    const [locked, setLocked] = useState(false);
+    const [locks, setLocks] = useState({});
     const [wilayahInfo, setWilayahInfo] = useState('');
     const [myKecamatan, setMyKecamatan] = useState('');
     const [myJenjang, setMyJenjang] = useState('');
@@ -28,9 +39,14 @@ const RankingPrioritas = () => {
     // Load lock status from server
     useEffect(() => {
         rankingApi.getLock()
-            .then(res => { if (res?.locked) setLocked(true); })
+            .then(res => { if (res?.locks) setLocks(res.locks); })
             .catch(() => {});
     }, []);
+
+    // Determine current lock state
+    const activeKec = isAdmin ? filterKecamatan : myKecamatan;
+    const activeJen = isAdmin ? filterJenjang : myJenjang;
+    const currentlyLocked = isLockedFor(locks, activeKec, activeJen);
 
     // Fetch schools and ranking data
     const fetchData = useCallback(async () => {
@@ -54,14 +70,13 @@ const RankingPrioritas = () => {
                         kecamatan = ka.kecamatan || '';
                         jenjang = ka.jenjang || '';
                     }
-                } catch (e) { console.error('Failed to get korwil assignment:', e); }
+                } catch (e) { console.error('Korwil assignment error:', e); }
             }
 
             setMyKecamatan(kecamatan);
             setMyJenjang(jenjang);
             setWilayahInfo(`${kecamatan || 'Semua Kecamatan'} — ${jenjang || 'Semua Jenjang'}`);
 
-            // Fetch schools
             const params = { limit: 9999 };
             if (kecamatan) params.kecamatan = kecamatan;
             if (jenjang) params.jenjang = jenjang;
@@ -89,14 +104,13 @@ const RankingPrioritas = () => {
                         }
                     });
                 }
-            } catch { /* no saved ranking yet */ }
+            } catch { /* no saved ranking */ }
 
-            // Sort and re-number
             list.sort((a, b) => a.rank - b.rank);
             list.forEach((s, i) => { s.rank = i + 1; });
             setSchools(list);
         } catch (e) {
-            console.error('Failed to fetch:', e);
+            console.error('Fetch error:', e);
             toast.error('Gagal memuat data sekolah');
         } finally { setLoading(false); }
     }, [role, user?.id, isAdmin, isKorwil, filterKecamatan, filterJenjang]);
@@ -107,7 +121,8 @@ const RankingPrioritas = () => {
     const handleDragStart = (idx) => { dragItem.current = idx; };
     const handleDragEnter = (idx) => { dragOverItem.current = idx; };
     const handleDragEnd = () => {
-        if (locked || dragItem.current === null || dragOverItem.current === null) return;
+        if (currentlyLocked && !isAdmin) return;
+        if (dragItem.current === null || dragOverItem.current === null) return;
         const arr = [...schools];
         const dragged = arr.splice(dragItem.current, 1)[0];
         arr.splice(dragOverItem.current, 0, dragged);
@@ -118,7 +133,7 @@ const RankingPrioritas = () => {
     };
 
     const handleRankInput = (id, newRank) => {
-        if (locked) return;
+        if (currentlyLocked && !isAdmin) return;
         const num = parseInt(newRank);
         if (isNaN(num) || num < 1 || num > schools.length) return;
         const arr = [...schools];
@@ -131,11 +146,10 @@ const RankingPrioritas = () => {
     };
 
     const handleAlasanChange = (id, value) => {
-        if (locked) return;
+        if (currentlyLocked && !isAdmin) return;
         setSchools(prev => prev.map(s => s.id === id ? { ...s, alasan: value } : s));
     };
 
-    // Save to server
     const handleSave = async () => {
         setSaving(true);
         try {
@@ -143,28 +157,40 @@ const RankingPrioritas = () => {
             const kec = isAdmin ? (filterKecamatan || '') : myKecamatan;
             const jen = isAdmin ? (filterJenjang || '') : myJenjang;
             await rankingApi.saveData(kec, jen, items);
-            toast.success('Ranking berhasil disimpan ke server');
-        } catch (e) {
-            toast.error('Gagal menyimpan ranking');
-        } finally { setSaving(false); }
+            toast.success('Ranking berhasil disimpan');
+        } catch { toast.error('Gagal menyimpan ranking'); }
+        finally { setSaving(false); }
     };
 
-    // Lock/Unlock (admin only)
-    const handleToggleLock = async () => {
-        const newLocked = !locked;
+    // Lock toggle (admin) — granular options
+    const handleLock = async (key, label) => {
+        const isCurrentlyLocked = !!locks[key];
         try {
-            await rankingApi.setLock(newLocked);
-            setLocked(newLocked);
-            toast.success(newLocked ? 'Ranking dikunci — Korwil tidak bisa mengedit' : 'Ranking dibuka — Korwil bisa mengedit');
-        } catch { toast.error('Gagal mengubah status kunci'); }
+            await rankingApi.setLock(key, !isCurrentlyLocked);
+            setLocks(prev => {
+                const next = { ...prev };
+                if (isCurrentlyLocked) delete next[key];
+                else next[key] = true;
+                return next;
+            });
+            toast.success(isCurrentlyLocked ? `🔓 ${label} dibuka` : `🔒 ${label} dikunci`);
+        } catch { toast.error('Gagal mengubah kunci'); }
     };
 
-    // Search filter
+    // Build lock options based on current filter
+    const lockOptions = [];
+    if (isAdmin) {
+        lockOptions.push({ key: 'all', label: 'Semua' });
+        if (filterJenjang) lockOptions.push({ key: filterJenjang, label: `Jenjang ${filterJenjang}` });
+        if (filterKecamatan) lockOptions.push({ key: filterKecamatan, label: `Kec. ${filterKecamatan}` });
+        if (filterKecamatan && filterJenjang) lockOptions.push({ key: `${filterJenjang}_${filterKecamatan}`, label: `${filterJenjang} ${filterKecamatan}` });
+    }
+
     const filtered = search
         ? schools.filter(s => s.nama.toLowerCase().includes(search.toLowerCase()) || s.npsn.includes(search))
         : schools;
 
-    const canEdit = !locked || isAdmin;
+    const canEdit = isAdmin || !currentlyLocked;
 
     return (
         <div>
@@ -172,22 +198,13 @@ const RankingPrioritas = () => {
                 <div className="page-header-left">
                     <h1>Ranking Prioritas</h1>
                     <p>
-                        {isAdmin ? 'Kelola ranking prioritas seluruh sekolah' : `Wilayah: ${wilayahInfo}`}
+                        {isAdmin ? 'Kelola ranking prioritas' : `Wilayah: ${wilayahInfo}`}
                         {' — '}{schools.length} sekolah
-                        {locked && <span style={{ color: '#ef4444', fontWeight: 600 }}> 🔒 Terkunci</span>}
+                        {currentlyLocked && !isAdmin && <span style={{ color: '#ef4444', fontWeight: 600 }}> 🔒 Terkunci</span>}
                     </p>
                 </div>
                 <div className="page-header-right" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {isAdmin && (
-                        <button
-                            className={`btn ${locked ? 'btn-danger' : 'btn-secondary'}`}
-                            onClick={handleToggleLock}
-                        >
-                            {locked ? <Lock size={16} /> : <Unlock size={16} />}
-                            {locked ? ' Buka Kunci' : ' Kunci Ranking'}
-                        </button>
-                    )}
-                    {(isAdmin || !locked) && (
+                    {(canEdit) && (
                         <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
                             <Save size={16} /> {saving ? 'Menyimpan...' : 'Simpan Ranking'}
                         </button>
@@ -231,6 +248,21 @@ const RankingPrioritas = () => {
                             </>
                         )}
                     </div>
+                    {isAdmin && (
+                        <div className="table-toolbar-right" style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                            {lockOptions.map(opt => (
+                                <button
+                                    key={opt.key}
+                                    className={`btn btn-sm ${locks[opt.key] ? 'btn-danger' : 'btn-secondary'}`}
+                                    onClick={() => handleLock(opt.key, opt.label)}
+                                    style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}
+                                >
+                                    {locks[opt.key] ? <Lock size={12} /> : <Unlock size={12} />}
+                                    {locks[opt.key] ? `🔒 ${opt.label}` : `Kunci ${opt.label}`}
+                                </button>
+                            ))}
+                        </div>
+                    )}
                 </div>
 
                 <div style={{ overflowX: 'auto' }}>
@@ -255,7 +287,8 @@ const RankingPrioritas = () => {
                                     {search ? 'Tidak ditemukan' : 'Belum ada data sekolah'}
                                 </td></tr>
                             ) : filtered.map((s) => {
-                                const editable = canEdit || (isAdmin && !locked);
+                                const rowLocked = isLockedFor(locks, s.kecamatan, s.jenjang);
+                                const editable = isAdmin || !rowLocked;
                                 return (
                                     <tr
                                         key={s.id}
@@ -267,7 +300,7 @@ const RankingPrioritas = () => {
                                         style={{
                                             cursor: editable && !search ? 'grab' : 'default',
                                             transition: 'background 0.15s',
-                                            opacity: locked && !isAdmin ? 0.7 : 1,
+                                            opacity: rowLocked && !isAdmin ? 0.7 : 1,
                                         }}
                                     >
                                         <td style={{ cursor: editable ? 'grab' : 'default', color: 'var(--text-secondary)', textAlign: 'center' }}>
@@ -283,7 +316,7 @@ const RankingPrioritas = () => {
                                                 type="text"
                                                 value={s.alasan}
                                                 onChange={e => handleAlasanChange(s.id, e.target.value)}
-                                                placeholder={isAdmin && locked ? '(dari korwil)' : 'Tulis alasan prioritas...'}
+                                                placeholder="Tulis alasan prioritas..."
                                                 disabled={!editable}
                                                 style={{
                                                     width: '100%', padding: '6px 10px', fontSize: 13,
