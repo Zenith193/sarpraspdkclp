@@ -90,7 +90,7 @@ const UploadFormKerusakan = () => {
         const file = e.target.files[0];
         if (file) {
             if (file.type !== 'application/pdf') { toast.error('Hanya file PDF!'); return; }
-            if (file.size > 2 * 1024 * 1024) { toast.error('Maks 2MB!'); return; }
+            if (file.size > 1 * 1024 * 1024) { toast.error('Maks 1MB!'); return; }
             setFormFile(file);
             toast.success('File siap');
         }
@@ -120,7 +120,7 @@ const UploadFormKerusakan = () => {
         if (!file) return;
         e.target.value = null;
         if (file.type !== 'application/pdf') { toast.error('Hanya PDF!'); return; }
-        if (file.size > 2 * 1024 * 1024) { toast.error('Maks 2MB!'); return; }
+        if (file.size > 1 * 1024 * 1024) { toast.error('Maks 1MB!'); return; }
 
         try {
             const fd = new FormData();
