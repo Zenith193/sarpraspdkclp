@@ -2,6 +2,7 @@ import { useState, useMemo, useEffect } from 'react';
 import { Plus, Edit, Trash2, Search, X, Save, AlertTriangle, Map, User, ChevronLeft, ChevronRight } from 'lucide-react';
 import { KECAMATAN, JENJANG } from '../../utils/constants';
 import { useSekolahData, useKorwilData, useUsersData } from '../../data/dataProvider';
+import { korwilApi } from '../../api/index';
 import toast from 'react-hot-toast';
 import SearchableSelect from '../../components/ui/SearchableSelect';
 
@@ -12,16 +13,27 @@ const ManajemenKorwil = () => {
     const { data: usersList } = useUsersData();
     const { data: korwilList, loading: korwilLoading, refetch: refetchKorwil } = useKorwilData();
 
-    // Inisialisasi data dari API
+    // Group korwil API data by userId (API returns one row per kecamatan)
     useEffect(() => {
         if (korwilList && Array.isArray(korwilList)) {
-            setAssignedKorwils(korwilList.map(k => ({
-                userId: k.userId,
-                namaAkun: k.namaAkun || k.userName || '',
-                email: k.email || '',
-                kecamatan: k.kecamatan || [],
-                jenjang: k.jenjang || 'SD'
-            })));
+            const grouped = {};
+            korwilList.forEach(row => {
+                const ka = row.korwilAssignment || row;
+                const uid = ka.userId;
+                if (!grouped[uid]) {
+                    grouped[uid] = {
+                        userId: uid,
+                        namaAkun: row.userName || ka.namaAkun || '',
+                        email: row.userEmail || ka.email || '',
+                        jenjang: ka.jenjang || 'SD',
+                        kecamatan: []
+                    };
+                }
+                if (ka.kecamatan && !grouped[uid].kecamatan.includes(ka.kecamatan)) {
+                    grouped[uid].kecamatan.push(ka.kecamatan);
+                }
+            });
+            setAssignedKorwils(Object.values(grouped));
         }
     }, [korwilList]);
 
@@ -108,39 +120,40 @@ const ManajemenKorwil = () => {
         setFormData(prev => ({ ...prev, userId: userId }));
     };
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!formData.userId) { toast.error('Pilih akun pengguna terlebih dahulu'); return; }
         if (formData.kecamatan.length === 0) { toast.error('Pilih minimal satu wilayah kecamatan'); return; }
 
-        if (editItem) {
-            setAssignedKorwils(prev => prev.map(d =>
-                d.userId === editItem.userId
-                    ? { ...d, kecamatan: formData.kecamatan, jenjang: formData.jenjang }
-                    : d
-            ));
-            toast.success('Assignment wilayah berhasil diperbarui');
-        } else {
-            const selectedUser = usersList.find(u => u.id === parseInt(formData.userId));
-            if (!selectedUser) { toast.error('User tidak ditemukan'); return; }
-
-            const newUserAssignment = {
-                userId: parseInt(formData.userId),
-                namaAkun: selectedUser.namaAkun,
-                email: selectedUser.email,
-                jenjang: formData.jenjang,
-                kecamatan: formData.kecamatan
+        try {
+            const payload = {
+                userId: String(formData.userId),
+                kecamatanList: formData.kecamatan,
+                jenjang: formData.jenjang
             };
-            setAssignedKorwils(prev => [...prev, newUserAssignment]);
-            toast.success('Wilayah berhasil ditambahkan ke akun Korwil');
+            if (editItem) {
+                await korwilApi.update(formData.userId, payload);
+                toast.success('Assignment wilayah berhasil diperbarui');
+            } else {
+                await korwilApi.assign(payload);
+                toast.success('Wilayah berhasil ditambahkan ke akun Korwil');
+            }
+            await refetchKorwil();
+        } catch (err) {
+            toast.error(err?.message || 'Gagal menyimpan assignment');
         }
         setShowModal(false);
         resetForm();
     };
 
-    const executeDelete = () => {
+    const executeDelete = async () => {
         if (deleteTarget) {
-            setAssignedKorwils(prev => prev.filter(d => d.userId !== deleteTarget.userId));
-            toast.success('Data wilayah Korwil berhasil dihapus');
+            try {
+                await korwilApi.delete(deleteTarget.userId);
+                toast.success('Data wilayah Korwil berhasil dihapus');
+                await refetchKorwil();
+            } catch (err) {
+                toast.error(err?.message || 'Gagal menghapus assignment');
+            }
             setDeleteTarget(null);
         }
     };
