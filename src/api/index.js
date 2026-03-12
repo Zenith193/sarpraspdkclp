@@ -167,6 +167,7 @@ export const aktivitasApi = {
 export const settingsApi = {
     getAccess: () => api.get('/settings/access'),
     setAccess: (config) => api.put('/settings/access', config),
+    saveAccess: (config) => api.put('/settings/access', config),
     resetAccess: () => api.post('/settings/access/reset'),
     getCountdown: () => api.get('/settings/countdown'),
     setCountdown: (config) => api.put('/settings/countdown', config),
@@ -203,8 +204,4 @@ export const arsipDokumenApi = {
     deleteChecklist: (id) => api.delete(`/arsip-dokumen/checklist/${id}`),
 };
 
-export const settingsApi = {
-    getAccess: () => api.get('/settings/access'),
-    saveAccess: (config) => api.put('/settings/access', config),
-    resetAccess: () => api.post('/settings/access/reset'),
-};
+
