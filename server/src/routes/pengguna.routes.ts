@@ -108,20 +108,33 @@ router.put('/:id/photo', requireAuth, avatarUpload.single('photo'), async (req, 
         if (!isAdmin && !isSelf) { res.status(403).json({ error: 'Forbidden' }); return; }
         if (!req.file) { res.status(400).json({ error: 'No file uploaded' }); return; }
 
-        // Delete old local avatar if exists
+        // Delete old avatar (local or GDrive)
         const existing = await db.select().from(user).where(eq(user.id, targetId));
-        if (existing[0]?.image && existing[0].image.startsWith('/api/pengguna/')) {
-            const oldFile = path.join(avatarDir, path.basename(existing[0].image.replace('/api/pengguna/photo/', '')));
-            if (fs.existsSync(oldFile)) fs.unlinkSync(oldFile);
+        if (existing[0]?.image) {
+            if (existing[0].image.startsWith('gdrive://')) {
+                // Queue old GDrive file for deletion
+                try {
+                    const { queueGDriveDelete } = await import('../utils/uploadQueue.js');
+                    queueGDriveDelete(existing[0].image);
+                } catch { /* ignore */ }
+            } else if (existing[0].image.startsWith('/api/pengguna/')) {
+                const oldFile = path.join(avatarDir, path.basename(existing[0].image.replace('/api/pengguna/photo/', '')));
+                if (fs.existsSync(oldFile)) fs.unlinkSync(oldFile);
+            }
         }
 
         let imageUrl = `/api/pengguna/photo/${req.file.filename}`;
 
-        // Upload to GDrive if enabled (for backup/storage)
+        // Upload to GDrive if enabled
         try {
             const { isGDriveEnabled, uploadFileToGDrive } = await import('../utils/googleDriveClient.js');
             if (isGDriveEnabled()) {
-                await uploadFileToGDrive(req.file.path, 'avatars', req.file.filename);
+                const userName = existing[0]?.name || 'unknown';
+                const subPath = `profil/${userName}`;
+                const result = await uploadFileToGDrive(req.file.path, 'profil', subPath);
+                if (result.stored === 'gdrive') {
+                    imageUrl = result.path; // 'gdrive://fileId'
+                }
             }
         } catch (gErr) {
             console.error('GDrive avatar upload error (using local):', gErr);
