@@ -347,20 +347,42 @@ app.post('/api/npsn-login', async (req, res) => {
             return;
         }
 
-        // Verify password matches NPSN
-        if (password !== npsn) {
-            res.status(401).json({ error: 'Password salah' });
-            return;
-        }
-
-        // Find user by NPSN email
-        const email = `${npsn}@SARDIKA.cilacapkab.go.id`;
-        const users = await db.select().from(user).where(eq(user.email, email));
+        // Find user by NPSN email (try both possible domains)
+        const email1 = `${npsn}@SARDIKA.cilacapkab.go.id`;
+        const email2 = `${npsn}@spidol.cilacapkab.go.id`;
+        let users = await db.select().from(user).where(eq(user.email, email1));
+        if (!users.length) users = await db.select().from(user).where(eq(user.email, email2));
+        // Fallback: search by NPSN prefix in email
+        if (!users.length) users = await db.select().from(user).where(sql`"email" LIKE ${npsn + '@%'}`);
         const foundUser = users[0];
 
         if (!foundUser) {
             res.status(401).json({ error: 'NPSN tidak ditemukan' });
             return;
+        }
+
+        // Verify password against hashed password via Better Auth
+        const accounts = await db.select().from(account).where(eq(account.userId, foundUser.id));
+        const cred = accounts.find(a => a.providerId === 'credential');
+        if (cred?.password) {
+            try {
+                const signInResult = await auth.api.signInEmail({
+                    body: { email: foundUser.email, password },
+                });
+                if (!signInResult?.user) {
+                    res.status(401).json({ error: 'Password salah' });
+                    return;
+                }
+            } catch (signInErr) {
+                res.status(401).json({ error: 'Password salah' });
+                return;
+            }
+        } else {
+            // No hashed password — fallback to NPSN check
+            if (password !== npsn) {
+                res.status(401).json({ error: 'Password salah' });
+                return;
+            }
         }
 
         if (!foundUser.aktif) {
@@ -700,10 +722,10 @@ async function autoMigrate() {
     // Populate plain_password for existing Sekolah users (NPSN = default password)
     try {
         const result = await db.execute(sql`
-            UPDATE "user" SET "plain_password" = REPLACE("email", '@spidol.cilacapkab.go.id', '')
+            UPDATE "user" SET "plain_password" = SPLIT_PART("email", '@', 1)
             WHERE "plain_password" IS NULL 
             AND "role" = 'Sekolah'
-            AND "email" LIKE '%@spidol.cilacapkab.go.id'
+            AND "email" LIKE '%@%'
         `);
         const count = (result as any).rowCount || 0;
         if (count > 0) console.log(`[AutoMigrate] Populated ${count} Sekolah passwords from NPSN`);
