@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Search, CheckCircle, XCircle, Eye, X, ChevronLeft, ChevronRight, MapPin, Image, Info, Maximize2 } from 'lucide-react';
+import { Search, CheckCircle, XCircle, Eye, X, ChevronLeft, ChevronRight, MapPin, Image, Info, Maximize2, CheckCheck } from 'lucide-react';
 import { sarprasApi, korwilApi } from '../../api/index';
 import useAuthStore from '../../store/authStore';
 import toast from 'react-hot-toast';
@@ -95,6 +95,17 @@ const VerifikasiSarpras = () => {
 
     const openDetail = (item) => { setDetailItem(item); setLightboxIdx(-1); };
 
+    const handleBatchVerify = async () => {
+        if (!pending.length) return;
+        if (!window.confirm(`Setujui semua ${pending.length} data sarpras sekaligus?`)) return;
+        try {
+            const ids = pending.map(s => s.id);
+            const result = await sarprasApi.batchVerify(ids);
+            toast.success(`${result?.verified || ids.length} data sarpras berhasil disetujui`);
+            setData([]);
+        } catch (e) { toast.error('Gagal batch verifikasi'); }
+    };
+
     return (
         <div>
             <div className="page-header">
@@ -102,6 +113,13 @@ const VerifikasiSarpras = () => {
                     <h1>Verifikasi Sarpras</h1>
                     <p>{pending.length} data menunggu verifikasi</p>
                 </div>
+                {role === 'admin' && pending.length > 0 && (
+                    <div className="page-header-right">
+                        <button className="btn btn-success" onClick={handleBatchVerify}>
+                            <CheckCheck size={16} /> Setujui Semua ({pending.length})
+                        </button>
+                    </div>
+                )}
             </div>
             <div className="table-container">
                 <div className="table-toolbar">

@@ -325,6 +325,18 @@ router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+router.post('/batch-verify', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+        const ids = req.body.ids || [];
+        if (!Array.isArray(ids) || ids.length === 0) { res.status(400).json({ error: 'ids array required' }); return; }
+        let count = 0;
+        for (const id of ids) {
+            try { await sarprasService.verify(Number(id), req.user!.id); count++; } catch { /* skip failed */ }
+        }
+        res.json({ success: true, verified: count });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 router.post('/:id/verify', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
     try {
         const result = await sarprasService.verify(Number(req.params.id), req.user!.id);

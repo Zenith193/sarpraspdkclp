@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Search, CheckCircle, XCircle, Eye, X, ChevronLeft, ChevronRight, Image, Info, Maximize2, MessageSquare } from 'lucide-react';
+import { Search, CheckCircle, XCircle, Eye, X, ChevronLeft, ChevronRight, Image, Info, Maximize2, MessageSquare, CheckCheck } from 'lucide-react';
 import { proposalApi, korwilApi } from '../../api/index';
 import useAuthStore from '../../store/authStore';
 import { formatCurrency } from '../../utils/formatters';
@@ -97,6 +97,17 @@ const VerifikasiProposal = () => {
 
     const openDetail = (item) => { setDetailItem(item); setLightboxIdx(-1); };
 
+    const handleBatchApprove = async () => {
+        if (!pending.length) return;
+        if (!window.confirm(`Setujui semua ${pending.length} proposal sekaligus?`)) return;
+        try {
+            const ids = pending.map(p => p.id);
+            const result = await proposalApi.batchApprove(ids);
+            toast.success(`${result?.approved || ids.length} proposal berhasil disetujui`);
+            setData([]);
+        } catch (e) { toast.error('Gagal batch approve'); }
+    };
+
     return (
         <div>
             <div className="page-header">
@@ -104,6 +115,13 @@ const VerifikasiProposal = () => {
                     <h1>Verifikasi Proposal</h1>
                     <p>{pending.length} proposal menunggu verifikasi</p>
                 </div>
+                {role === 'admin' && pending.length > 0 && (
+                    <div className="page-header-right">
+                        <button className="btn btn-success" onClick={handleBatchApprove}>
+                            <CheckCheck size={16} /> Setujui Semua ({pending.length})
+                        </button>
+                    </div>
+                )}
             </div>
             <div className="table-container">
                 <div className="table-toolbar">

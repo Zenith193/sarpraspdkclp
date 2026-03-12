@@ -244,6 +244,41 @@ router.post('/gdrive/setup', async (req, res) => {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// ===== RANKING PRIORITAS (stored per kecamatan-jenjang) =====
+router.get('/ranking/lock', requireAuth, async (_req, res) => {
+    try {
+        const val = await settingsService.get('ranking_lock');
+        res.json(val || { locked: false });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+router.put('/ranking/lock', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+        res.json(await settingsService.set('ranking_lock', { locked: !!req.body.locked }));
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// Get ranking for a specific kecamatan+jenjang combo
+router.get('/ranking/data', requireAuth, async (req, res) => {
+    try {
+        const kec = (req.query.kecamatan as string) || 'all';
+        const jen = (req.query.jenjang as string) || 'all';
+        const key = `ranking_${kec}_${jen}`;
+        const val = await settingsService.get(key);
+        res.json(val || { items: [] });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// Save ranking for a specific kecamatan+jenjang combo
+router.put('/ranking/data', requireAuth, async (req, res) => {
+    try {
+        const kec = (req.query.kecamatan as string) || req.body.kecamatan || 'all';
+        const jen = (req.query.jenjang as string) || req.body.jenjang || 'all';
+        const key = `ranking_${kec}_${jen}`;
+        const data = { items: req.body.items || [], updatedBy: req.user?.id, updatedAt: new Date().toISOString() };
+        res.json(await settingsService.set(key, data));
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 // Load configs from DB on module init
 applyNasConfigFromDb().catch(() => { });
 applyGDriveConfigFromDb().catch(() => { });

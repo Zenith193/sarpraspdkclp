@@ -31,6 +31,7 @@ export const sarprasApi = {
     delete: (id) => api.delete(`/sarpras/${id}`),
     verify: (id) => api.post(`/sarpras/${id}/verify`),
     unverify: (id) => api.post(`/sarpras/${id}/unverify`),
+    batchVerify: (ids) => api.post('/sarpras/batch-verify', { ids }),
     addFoto: (id, formData) => api.upload(`/sarpras/${id}/foto`, formData),
     removeFoto: (sarprasId, fotoId) => api.delete(`/sarpras/${sarprasId}/foto/${fotoId}`),
     stats: () => api.get('/sarpras/stats'),
@@ -45,6 +46,7 @@ export const proposalApi = {
     updateStatus: (id, status) => api.put(`/proposal/${id}/status`, { status }),
     updateKeranjang: (id, keranjang) => api.put(`/proposal/${id}/keranjang`, { keranjang }),
     updateRanking: (id, data) => api.put(`/proposal/${id}/ranking`, data),
+    batchApprove: (ids) => api.post('/proposal/batch-approve', { ids }),
 };
 
 export const proyeksiApi = {
@@ -123,6 +125,19 @@ export const kerusakanApi = {
     reject: (id, alasan) => api.post(`/form-kerusakan/${id}/reject`, { alasan }),
     unverify: (id) => api.post(`/form-kerusakan/${id}/unverify`),
     missing: () => api.get('/form-kerusakan/missing'),
+};
+
+export const rankingApi = {
+    getLock: () => api.get('/settings/ranking/lock'),
+    setLock: (locked) => api.put('/settings/ranking/lock', { locked }),
+    getData: (kecamatan, jenjang) => {
+        const q = new URLSearchParams({ kecamatan: kecamatan || 'all', jenjang: jenjang || 'all' }).toString();
+        return api.get(`/settings/ranking/data?${q}`);
+    },
+    saveData: (kecamatan, jenjang, items) => {
+        const q = new URLSearchParams({ kecamatan: kecamatan || 'all', jenjang: jenjang || 'all' }).toString();
+        return api.put(`/settings/ranking/data?${q}`, { items, kecamatan, jenjang });
+    },
 };
 
 export const korwilApi = {

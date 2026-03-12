@@ -78,6 +78,18 @@ router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+router.post('/batch-approve', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+        const ids = req.body.ids || [];
+        if (!Array.isArray(ids) || ids.length === 0) { res.status(400).json({ error: 'ids array required' }); return; }
+        let count = 0;
+        for (const id of ids) {
+            try { await proposalService.updateStatus(Number(id), 'Disetujui', req.user!.id); count++; } catch { /* skip */ }
+        }
+        res.json({ success: true, approved: count });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 router.put('/:id/status', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
     try {
         const result = await proposalService.updateStatus(Number(req.params.id), req.body.status, req.user!.id);

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { GripVertical, Save, Search, Lock, Unlock, Filter } from 'lucide-react';
-import { sekolahApi, korwilApi } from '../../api/index';
+import { sekolahApi, korwilApi, rankingApi } from '../../api/index';
 import { KECAMATAN, JENJANG } from '../../utils/constants';
 import useAuthStore from '../../store/authStore';
 import toast from 'react-hot-toast';
@@ -9,12 +9,15 @@ const RankingPrioritas = () => {
     const user = useAuthStore(s => s.user);
     const role = (user?.role || '').toLowerCase();
     const isAdmin = role === 'admin' || role === 'verifikator';
+    const isKorwil = role === 'korwil';
     const [schools, setSchools] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [saving, setSaving] = useState(false);
     const [locked, setLocked] = useState(false);
     const [wilayahInfo, setWilayahInfo] = useState('');
+    const [myKecamatan, setMyKecamatan] = useState('');
+    const [myJenjang, setMyJenjang] = useState('');
     const dragItem = useRef(null);
     const dragOverItem = useRef(null);
 
@@ -22,14 +25,14 @@ const RankingPrioritas = () => {
     const [filterJenjang, setFilterJenjang] = useState('');
     const [filterKecamatan, setFilterKecamatan] = useState('');
 
-    // Load lock status from localStorage
+    // Load lock status from server
     useEffect(() => {
-        const lockKey = isAdmin ? 'ranking-lock-admin' : `ranking-lock-${user?.id}`;
-        const lockStatus = localStorage.getItem(lockKey);
-        if (lockStatus === 'true') setLocked(true);
-    }, [isAdmin, user?.id]);
+        rankingApi.getLock()
+            .then(res => { if (res?.locked) setLocked(true); })
+            .catch(() => {});
+    }, []);
 
-    // Fetch schools filtered by korwil assignment or admin filters
+    // Fetch schools and ranking data
     const fetchData = useCallback(async () => {
         setLoading(true);
         try {
@@ -37,11 +40,9 @@ const RankingPrioritas = () => {
             let jenjang = '';
 
             if (isAdmin) {
-                // Admin: use filter dropdowns
                 kecamatan = filterKecamatan;
                 jenjang = filterJenjang;
-            } else if (role === 'korwil' && user?.id) {
-                // Korwil: use assignment
+            } else if (isKorwil && user?.id) {
                 try {
                     const korwilList = await korwilApi.list();
                     const myRows = (korwilList || []).filter(row => {
@@ -54,14 +55,13 @@ const RankingPrioritas = () => {
                         jenjang = ka.jenjang || '';
                     }
                 } catch (e) { console.error('Failed to get korwil assignment:', e); }
-
-                // Check if admin has locked the ranking
-                const adminLock = localStorage.getItem('ranking-lock-admin');
-                if (adminLock === 'true') setLocked(true);
             }
 
+            setMyKecamatan(kecamatan);
+            setMyJenjang(jenjang);
             setWilayahInfo(`${kecamatan || 'Semua Kecamatan'} — ${jenjang || 'Semua Jenjang'}`);
 
+            // Fetch schools
             const params = { limit: 9999 };
             if (kecamatan) params.kecamatan = kecamatan;
             if (jenjang) params.jenjang = jenjang;
@@ -73,38 +73,33 @@ const RankingPrioritas = () => {
                 npsn: s.npsn || '',
                 kecamatan: s.kecamatan || '',
                 jenjang: s.jenjang || '',
-                alasan: s.rankAlasan || '',
-                rank: s.rankUrutan || (i + 1),
+                alasan: '',
+                rank: i + 1,
             }));
 
-            list.sort((a, b) => (a.rank || 999) - (b.rank || 999));
-            list.forEach((s, i) => { s.rank = i + 1; });
-
-            // Load saved rankings
-            const storageKey = isAdmin
-                ? `ranking-admin-${filterKecamatan || 'all'}-${filterJenjang || 'all'}`
-                : `ranking-${user?.id}`;
+            // Load saved ranking from server
             try {
-                const saved = JSON.parse(localStorage.getItem(storageKey) || '[]');
-                if (saved.length > 0) {
-                    saved.forEach(s => {
-                        const found = list.find(u => u.id === s.id);
+                const savedRanking = await rankingApi.getData(kecamatan, jenjang);
+                if (savedRanking?.items?.length > 0) {
+                    savedRanking.items.forEach(saved => {
+                        const found = list.find(s => s.id === saved.id);
                         if (found) {
-                            found.rank = s.rank;
-                            found.alasan = s.alasan || '';
+                            found.rank = saved.rank;
+                            found.alasan = saved.alasan || '';
                         }
                     });
-                    list.sort((a, b) => a.rank - b.rank);
-                    list.forEach((s, i) => { s.rank = i + 1; });
                 }
-            } catch { /* ignore */ }
+            } catch { /* no saved ranking yet */ }
 
+            // Sort and re-number
+            list.sort((a, b) => a.rank - b.rank);
+            list.forEach((s, i) => { s.rank = i + 1; });
             setSchools(list);
         } catch (e) {
-            console.error('Failed to fetch schools:', e);
+            console.error('Failed to fetch:', e);
             toast.error('Gagal memuat data sekolah');
         } finally { setLoading(false); }
-    }, [role, user?.id, isAdmin, filterKecamatan, filterJenjang]);
+    }, [role, user?.id, isAdmin, isKorwil, filterKecamatan, filterJenjang]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -122,7 +117,6 @@ const RankingPrioritas = () => {
         dragOverItem.current = null;
     };
 
-    // Direct rank input
     const handleRankInput = (id, newRank) => {
         if (locked) return;
         const num = parseInt(newRank);
@@ -136,43 +130,41 @@ const RankingPrioritas = () => {
         setSchools(arr);
     };
 
-    // Update alasan/keterangan
     const handleAlasanChange = (id, value) => {
         if (locked) return;
         setSchools(prev => prev.map(s => s.id === id ? { ...s, alasan: value } : s));
     };
 
-    // Save rankings
+    // Save to server
     const handleSave = async () => {
         setSaving(true);
         try {
-            const rankData = schools.map(s => ({ id: s.id, rank: s.rank, alasan: s.alasan }));
-            const storageKey = isAdmin
-                ? `ranking-admin-${filterKecamatan || 'all'}-${filterJenjang || 'all'}`
-                : `ranking-${user?.id}`;
-            localStorage.setItem(storageKey, JSON.stringify(rankData));
-            toast.success('Ranking prioritas berhasil disimpan');
+            const items = schools.map(s => ({ id: s.id, rank: s.rank, alasan: s.alasan }));
+            const kec = isAdmin ? (filterKecamatan || '') : myKecamatan;
+            const jen = isAdmin ? (filterJenjang || '') : myJenjang;
+            await rankingApi.saveData(kec, jen, items);
+            toast.success('Ranking berhasil disimpan ke server');
         } catch (e) {
             toast.error('Gagal menyimpan ranking');
         } finally { setSaving(false); }
     };
 
-    // Lock/Unlock ranking (admin only)
-    const handleToggleLock = () => {
+    // Lock/Unlock (admin only)
+    const handleToggleLock = async () => {
         const newLocked = !locked;
-        setLocked(newLocked);
-        localStorage.setItem('ranking-lock-admin', String(newLocked));
-        toast.success(newLocked ? 'Ranking dikunci — Korwil tidak bisa mengedit' : 'Ranking dibuka — Korwil bisa mengedit kembali', {
-            style: { background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }
-        });
+        try {
+            await rankingApi.setLock(newLocked);
+            setLocked(newLocked);
+            toast.success(newLocked ? 'Ranking dikunci — Korwil tidak bisa mengedit' : 'Ranking dibuka — Korwil bisa mengedit');
+        } catch { toast.error('Gagal mengubah status kunci'); }
     };
 
-    // Filtered schools by search
+    // Search filter
     const filtered = search
         ? schools.filter(s => s.nama.toLowerCase().includes(search.toLowerCase()) || s.npsn.includes(search))
         : schools;
 
-    const canEdit = !locked;
+    const canEdit = !locked || isAdmin;
 
     return (
         <div>
@@ -190,15 +182,16 @@ const RankingPrioritas = () => {
                         <button
                             className={`btn ${locked ? 'btn-danger' : 'btn-secondary'}`}
                             onClick={handleToggleLock}
-                            style={{ display: 'flex', alignItems: 'center', gap: 6 }}
                         >
                             {locked ? <Lock size={16} /> : <Unlock size={16} />}
-                            {locked ? 'Buka Kunci' : 'Kunci Ranking'}
+                            {locked ? ' Buka Kunci' : ' Kunci Ranking'}
                         </button>
                     )}
-                    <button className="btn btn-primary" onClick={handleSave} disabled={saving || locked}>
-                        <Save size={16} /> {saving ? 'Menyimpan...' : 'Simpan Ranking'}
-                    </button>
+                    {(isAdmin || !locked) && (
+                        <button className="btn btn-primary" onClick={handleSave} disabled={saving}>
+                            <Save size={16} /> {saving ? 'Menyimpan...' : 'Simpan Ranking'}
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -209,7 +202,6 @@ const RankingPrioritas = () => {
                             <Search size={16} className="search-icon" />
                             <input placeholder="Cari sekolah..." value={search} onChange={e => setSearch(e.target.value)} />
                         </div>
-
                         {isAdmin && (
                             <>
                                 <select
@@ -262,63 +254,66 @@ const RankingPrioritas = () => {
                                 <tr><td colSpan={isAdmin ? 8 : 6} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>
                                     {search ? 'Tidak ditemukan' : 'Belum ada data sekolah'}
                                 </td></tr>
-                            ) : filtered.map((s) => (
-                                <tr
-                                    key={s.id}
-                                    draggable={canEdit && !search}
-                                    onDragStart={() => handleDragStart(schools.indexOf(s))}
-                                    onDragEnter={() => handleDragEnter(schools.indexOf(s))}
-                                    onDragEnd={handleDragEnd}
-                                    onDragOver={e => e.preventDefault()}
-                                    style={{
-                                        cursor: canEdit && !search ? 'grab' : 'default',
-                                        transition: 'background 0.15s',
-                                        opacity: locked ? 0.8 : 1,
-                                    }}
-                                >
-                                    <td style={{ cursor: canEdit ? 'grab' : 'default', color: 'var(--text-secondary)', textAlign: 'center' }}>
-                                        {canEdit ? <GripVertical size={16} /> : <Lock size={14} style={{ opacity: 0.4 }} />}
-                                    </td>
-                                    <td style={{ fontWeight: 700, color: 'var(--accent-blue)', textAlign: 'center' }}>{s.rank}</td>
-                                    <td style={{ fontWeight: 500 }}>{s.nama}</td>
-                                    <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{s.npsn}</td>
-                                    {isAdmin && <td><span className="badge badge-disetujui">{s.kecamatan}</span></td>}
-                                    {isAdmin && <td><span className="badge badge-baik">{s.jenjang}</span></td>}
-                                    <td>
-                                        <input
-                                            type="text"
-                                            value={s.alasan}
-                                            onChange={e => handleAlasanChange(s.id, e.target.value)}
-                                            placeholder="Tulis alasan prioritas..."
-                                            disabled={locked}
-                                            style={{
-                                                width: '100%', padding: '6px 10px', fontSize: 13,
-                                                background: locked ? 'var(--bg-primary)' : 'var(--bg-secondary)',
-                                                border: '1px solid var(--border-color)',
-                                                borderRadius: 6, color: 'var(--text-primary)', outline: 'none',
-                                                opacity: locked ? 0.6 : 1,
-                                            }}
-                                        />
-                                    </td>
-                                    <td style={{ textAlign: 'center' }}>
-                                        <input
-                                            type="number"
-                                            min={1}
-                                            max={schools.length}
-                                            value={s.rank}
-                                            onChange={e => handleRankInput(s.id, e.target.value)}
-                                            disabled={locked}
-                                            style={{
-                                                width: 60, padding: '6px 8px', fontSize: 14, fontWeight: 700,
-                                                background: locked ? 'var(--bg-primary)' : 'var(--bg-secondary)',
-                                                border: '1px solid var(--border-color)',
-                                                borderRadius: 6, color: 'var(--accent-blue)', textAlign: 'center',
-                                                outline: 'none', opacity: locked ? 0.6 : 1,
-                                            }}
-                                        />
-                                    </td>
-                                </tr>
-                            ))}
+                            ) : filtered.map((s) => {
+                                const editable = canEdit || (isAdmin && !locked);
+                                return (
+                                    <tr
+                                        key={s.id}
+                                        draggable={editable && !search}
+                                        onDragStart={() => handleDragStart(schools.indexOf(s))}
+                                        onDragEnter={() => handleDragEnter(schools.indexOf(s))}
+                                        onDragEnd={handleDragEnd}
+                                        onDragOver={e => e.preventDefault()}
+                                        style={{
+                                            cursor: editable && !search ? 'grab' : 'default',
+                                            transition: 'background 0.15s',
+                                            opacity: locked && !isAdmin ? 0.7 : 1,
+                                        }}
+                                    >
+                                        <td style={{ cursor: editable ? 'grab' : 'default', color: 'var(--text-secondary)', textAlign: 'center' }}>
+                                            {editable ? <GripVertical size={16} /> : <Lock size={14} style={{ opacity: 0.4 }} />}
+                                        </td>
+                                        <td style={{ fontWeight: 700, color: 'var(--accent-blue)', textAlign: 'center' }}>{s.rank}</td>
+                                        <td style={{ fontWeight: 500 }}>{s.nama}</td>
+                                        <td style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{s.npsn}</td>
+                                        {isAdmin && <td><span className="badge badge-disetujui">{s.kecamatan}</span></td>}
+                                        {isAdmin && <td><span className="badge badge-baik">{s.jenjang}</span></td>}
+                                        <td>
+                                            <input
+                                                type="text"
+                                                value={s.alasan}
+                                                onChange={e => handleAlasanChange(s.id, e.target.value)}
+                                                placeholder={isAdmin && locked ? '(dari korwil)' : 'Tulis alasan prioritas...'}
+                                                disabled={!editable}
+                                                style={{
+                                                    width: '100%', padding: '6px 10px', fontSize: 13,
+                                                    background: !editable ? 'var(--bg-primary)' : 'var(--bg-secondary)',
+                                                    border: '1px solid var(--border-color)',
+                                                    borderRadius: 6, color: 'var(--text-primary)', outline: 'none',
+                                                    opacity: !editable ? 0.6 : 1,
+                                                }}
+                                            />
+                                        </td>
+                                        <td style={{ textAlign: 'center' }}>
+                                            <input
+                                                type="number"
+                                                min={1}
+                                                max={schools.length}
+                                                value={s.rank}
+                                                onChange={e => handleRankInput(s.id, e.target.value)}
+                                                disabled={!editable}
+                                                style={{
+                                                    width: 60, padding: '6px 8px', fontSize: 14, fontWeight: 700,
+                                                    background: !editable ? 'var(--bg-primary)' : 'var(--bg-secondary)',
+                                                    border: '1px solid var(--border-color)',
+                                                    borderRadius: 6, color: 'var(--accent-blue)', textAlign: 'center',
+                                                    outline: 'none', opacity: !editable ? 0.6 : 1,
+                                                }}
+                                            />
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>
