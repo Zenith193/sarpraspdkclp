@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { Search, CheckCircle, XCircle, Star, Lock } from 'lucide-react';
-import { useProposalData } from '../../data/dataProvider';
+import { useProposalData, useKorwilData } from '../../data/dataProvider';
 import useAuthStore from '../../store/authStore';
 import { formatCurrency } from '../../utils/formatters';
 import toast from 'react-hot-toast';
@@ -9,12 +9,41 @@ import { safeStr } from '../../utils/safeStr';
 const RankingPrioritas = ({ lockable = false }) => {
     const user = useAuthStore(s => s.user);
     const { data: proposalList } = useProposalData();
+    const { data: korwilList } = useKorwilData();
+    const isKorwil = (user?.role || '').toLowerCase() === 'korwil';
     const [proposals, setProposals] = useState([]);
     const [locked, setLocked] = useState(false);
 
+    // Get korwil assignment
+    const myKorwilAssignment = useMemo(() => {
+        if (!isKorwil || !korwilList || !user) return null;
+        const myRows = korwilList.filter(row => {
+            const ka = row.korwilAssignment || row;
+            return String(ka.userId) === String(user.id);
+        });
+        if (myRows.length === 0) return null;
+        const kecList = [];
+        let jenj = '';
+        myRows.forEach(row => {
+            const ka = row.korwilAssignment || row;
+            if (ka.kecamatan && !kecList.includes(ka.kecamatan)) kecList.push(ka.kecamatan);
+            if (ka.jenjang) jenj = ka.jenjang;
+        });
+        return { kecamatan: kecList, jenjang: jenj };
+    }, [isKorwil, korwilList, user]);
+
     useEffect(() => {
-        if (proposalList.length) setProposals([...proposalList].sort((a, b) => (b.bintang || 0) - (a.bintang || 0)));
-    }, [proposalList]);
+        if (proposalList.length) {
+            let list = [...proposalList];
+            if (isKorwil && myKorwilAssignment) {
+                list = list.filter(p =>
+                    myKorwilAssignment.kecamatan.includes(p.kecamatan) &&
+                    p.jenjang === myKorwilAssignment.jenjang
+                );
+            }
+            setProposals(list.sort((a, b) => (b.bintang || 0) - (a.bintang || 0)));
+        }
+    }, [proposalList, isKorwil, myKorwilAssignment]);
 
     const handleRank = (id, dir) => {
         if (locked) return;

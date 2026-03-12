@@ -9,6 +9,8 @@ export const sarprasService = {
         const conditions = [];
 
         if (sekolahId) conditions.push(eq(sarpras.sekolahId, sekolahId));
+        if (kecamatan) conditions.push(eq(sekolah.kecamatan, kecamatan));
+        if (jenjang) conditions.push(eq(sekolah.jenjang, jenjang));
         if (kondisi) conditions.push(eq(sarpras.kondisi, kondisi));
         if (verified === 'true') conditions.push(eq(sarpras.verified, true));
         if (verified === 'false') conditions.push(eq(sarpras.verified, false));
