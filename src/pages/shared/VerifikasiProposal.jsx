@@ -115,7 +115,7 @@ const VerifikasiProposal = () => {
                     <h1>Verifikasi Proposal</h1>
                     <p>{pending.length} proposal menunggu verifikasi</p>
                 </div>
-                {role === 'admin' && pending.length > 0 && (
+                {role.toLowerCase() === 'admin' && pending.length > 0 && (
                     <div className="page-header-right">
                         <button className="btn btn-success" onClick={handleBatchApprove}>
                             <CheckCheck size={16} /> Setujui Semua ({pending.length})
