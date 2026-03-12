@@ -5,7 +5,7 @@ import { JENIS_AKUN, KECAMATAN, JENJANG } from '../../utils/constants';
 import { exportToExcel, exportToPDF } from '../../utils/exportUtils';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
-import { penggunaApi } from '../../api/index';
+import { penggunaApi, sekolahApi } from '../../api/index';
 
 const ManajemenPengguna = () => {
     const { data: usersFromApi, loading: usersLoading, refetch } = useUsersData();
@@ -193,6 +193,16 @@ const ManajemenPengguna = () => {
             });
         } else {
             setFormData({ ...user });
+            // Fetch sekolah data for document paths (kop, denah)
+            if (type === 'view' && user?.sekolahId) {
+                sekolahApi.getById(user.sekolahId).then(sch => {
+                    setFormData(prev => ({
+                        ...prev,
+                        kopSekolahPath: sch?.kopSekolah || null,
+                        denahSekolahPath: sch?.denahSekolah || null,
+                    }));
+                }).catch(() => {});
+            }
         }
         setModalState({ type, data: user });
         setShowPassword(false);
@@ -587,20 +597,26 @@ const ManajemenPengguna = () => {
                                         {/* FILE KOP SEKOLAH - VIEW */}
                                         <div className="form-group">
                                             <label className="form-label">Kop Sekolah (Word)</label>
-                                            {formData.kopSekolah ? (
+                                            {formData.kopSekolahPath ? (
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.5rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
-                                                    <FileText size={18} style={{ color: 'var(--accent-blue)' }} />
-                                                    <span style={{ flex: 1, fontSize: '0.875rem' }}>{formData.kopSekolah.name}</span>
-                                                    <button
-                                                        className="btn btn-secondary btn-sm"
-                                                        style={{ padding: '2px 8px', fontSize: '0.75rem' }}
-                                                        onClick={() => {
-                                                            // Simulasi download
-                                                            toast.success(`Mengunduh ${formData.kopSekolah.name}...`);
-                                                            // Jika ingin membuka file sementara di tab baru (hanya untuk demo preview object URL):
-                                                            // if(formData.kopSekolah.file) window.open(URL.createObjectURL(formData.kopSekolah.file), '_blank');
-                                                        }}
-                                                    >
+                                                    <FileText size={18} style={{ color: 'var(--accent-green)' }} />
+                                                    <span style={{ flex: 1, fontSize: '0.875rem', color: 'var(--accent-green)' }}>File sudah diupload</span>
+                                                    <button className="btn btn-secondary btn-sm" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={async () => { try { const blob = await sekolahApi.downloadKop(formData.sekolahId); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'kop_sekolah'; a.click(); URL.revokeObjectURL(url); } catch { toast.error('Gagal download'); } }}>
+                                                        <FileDown size={12} style={{ marginRight: 4 }} /> Unduh
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div style={{ color: 'var(--text-secondary)', fontStyle: 'italic' }}>Belum ada file diunggah</div>
+                                            )}
+                                        </div>
+                                        {/* FILE DENAH SEKOLAH - VIEW */}
+                                        <div className="form-group">
+                                            <label className="form-label">Denah Sekolah (PDF)</label>
+                                            {formData.denahSekolahPath ? (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.5rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
+                                                    <FileText size={18} style={{ color: 'var(--accent-green)' }} />
+                                                    <span style={{ flex: 1, fontSize: '0.875rem', color: 'var(--accent-green)' }}>File sudah diupload</span>
+                                                    <button className="btn btn-secondary btn-sm" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={async () => { try { const blob = await sekolahApi.downloadDenah(formData.sekolahId); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'denah_sekolah'; a.click(); URL.revokeObjectURL(url); } catch { toast.error('Gagal download'); } }}>
                                                         <FileDown size={12} style={{ marginRight: 4 }} /> Unduh
                                                     </button>
                                                 </div>
@@ -624,7 +640,7 @@ const ManajemenPengguna = () => {
                                             <label className="form-label">Password</label>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-secondary)', padding: '0.5rem 0.75rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
                                                 <span style={{ fontFamily: 'monospace', letterSpacing: 2 }}>
-                                                    {showPassword ? formData.password : '••••••••••'}
+                                                    {showPassword ? (formData.plainPassword || formData.npsn || '-') : '••••••••••'}
                                                 </span>
                                                 <button className="btn-icon" onClick={() => setShowPassword(!showPassword)} style={{ marginLeft: 'auto' }}>
                                                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
