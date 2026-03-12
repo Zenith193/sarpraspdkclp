@@ -43,6 +43,7 @@ import VerifikasiProposal from './pages/shared/VerifikasiProposal';
 import FormKerusakan from './pages/shared/FormKerusakan';
 import Iklan from './pages/shared/Iklan';
 import QueueStatus from './components/ui/QueueStatus';
+import AdScriptInjector from './components/AdScriptInjector';
 
 // Route guard
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -65,6 +66,7 @@ function App() {
     <BrowserRouter>
       <Toaster position="top-right" />
       <QueueStatus />
+      <AdScriptInjector />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<Navigate to="/login" replace />} />

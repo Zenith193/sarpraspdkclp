@@ -1,25 +1,16 @@
-import { pgTable, serial, text, real, integer, timestamp, date } from 'drizzle-orm/pg-core';
+import { pgTable, serial, text, boolean, integer, timestamp } from 'drizzle-orm/pg-core';
 
 // ============================================================
-// IKLAN / ADS TABLE
+// IKLAN / ADS - Script Injection Model
+// Admin inputs script tags (e.g. Google AdSense), system injects into <head>
 // ============================================================
 export const iklan = pgTable('iklan', {
     id: serial('id').primaryKey(),
-    judul: text('judul').notNull(),
-    deskripsi: text('deskripsi'),
-    tipeIklan: text('tipe_iklan').notNull().default('banner'), // banner, sidebar, popup, native
-    gambarUrl: text('gambar_url'),
-    targetUrl: text('target_url'),
-    advertiser: text('advertiser').notNull(),
-    biayaPerKlik: real('biaya_per_klik').default(0),    // CPC
-    biayaPerTayang: real('biaya_per_tayang').default(0), // CPM (per 1000)
-    budgetTotal: real('budget_total').default(0),
-    budgetTerpakai: real('budget_terpakai').default(0),
-    totalTayang: integer('total_tayang').default(0),
-    totalKlik: integer('total_klik').default(0),
-    status: text('status').notNull().default('aktif'), // aktif, nonaktif, habis, dijadwalkan
-    tanggalMulai: date('tanggal_mulai'),
-    tanggalSelesai: date('tanggal_selesai'),
+    judul: text('judul').notNull(),           // Label/name for identification
+    deskripsi: text('deskripsi'),             // Optional description
+    scriptCode: text('script_code').notNull(), // The script tag to inject (e.g. Google AdSense)
+    posisi: text('posisi').default('head'),    // head | body | sidebar
+    aktif: boolean('aktif').default(true),
     prioritas: integer('prioritas').default(0),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),

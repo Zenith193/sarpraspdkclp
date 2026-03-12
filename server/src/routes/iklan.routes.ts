@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { requireAuth, requireRole } from '../middleware/auth';
-import { iklanService } from '../services/iklan.service';
+import { requireAuth, requireRole } from '../middleware/auth.js';
+import { iklanService } from '../services/iklan.service.js';
 
 const router = Router();
 
@@ -15,11 +15,11 @@ router.get('/', requireAuth, async (req, res) => {
     }
 });
 
-// GET /api/iklan/stats — admin stats
-router.get('/stats', requireAuth, requireRole('admin'), async (_req, res) => {
+// GET /api/iklan/scripts — PUBLIC: get active scripts for injection (no auth needed)
+router.get('/scripts', async (_req, res) => {
     try {
-        const stats = await iklanService.getStats();
-        res.json(stats);
+        const scripts = await iklanService.getActiveScripts();
+        res.json(scripts);
     } catch (err: any) {
         res.status(500).json({ error: err.message });
     }
@@ -29,7 +29,7 @@ router.get('/stats', requireAuth, requireRole('admin'), async (_req, res) => {
 router.get('/:id', requireAuth, async (req, res) => {
     try {
         const item = await iklanService.getById(Number(req.params.id));
-        if (!item) return res.status(404).json({ error: 'Iklan tidak ditemukan' });
+        if (!item) { res.status(404).json({ error: 'Iklan tidak ditemukan' }); return; }
         res.json(item);
     } catch (err: any) {
         res.status(500).json({ error: err.message });
@@ -50,7 +50,7 @@ router.post('/', requireAuth, requireRole('admin'), async (req, res) => {
 router.put('/:id', requireAuth, requireRole('admin'), async (req, res) => {
     try {
         const item = await iklanService.update(Number(req.params.id), req.body);
-        if (!item) return res.status(404).json({ error: 'Iklan tidak ditemukan' });
+        if (!item) { res.status(404).json({ error: 'Iklan tidak ditemukan' }); return; }
         res.json(item);
     } catch (err: any) {
         res.status(500).json({ error: err.message });
@@ -62,26 +62,6 @@ router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
     try {
         await iklanService.delete(Number(req.params.id));
         res.status(204).end();
-    } catch (err: any) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// POST /api/iklan/:id/klik — record click
-router.post('/:id/klik', requireAuth, async (req, res) => {
-    try {
-        const result = await iklanService.recordKlik(Number(req.params.id));
-        res.json(result || { ok: true });
-    } catch (err: any) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-// POST /api/iklan/:id/tayang — record impression
-router.post('/:id/tayang', requireAuth, async (req, res) => {
-    try {
-        const result = await iklanService.recordTayang(Number(req.params.id));
-        res.json(result || { ok: true });
     } catch (err: any) {
         res.status(500).json({ error: err.message });
     }
