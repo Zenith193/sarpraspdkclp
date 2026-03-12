@@ -744,6 +744,8 @@ app.listen(PORT, () => {
     });
     // Auto-migrate DB columns
     autoMigrate().catch(e => console.error('[AutoMigrate] Error:', e.message));
+    // Ensure performance indexes
+    import('./db/index.js').then(({ ensureIndexes }) => ensureIndexes()).catch(e => console.error('[Indexes] Error:', e.message));
     // Start background GDrive upload queue
     import('./utils/uploadQueue.js').then(({ startUploadQueue }) => startUploadQueue());
 });
