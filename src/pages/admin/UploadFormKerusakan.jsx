@@ -115,24 +115,21 @@ const UploadFormKerusakan = () => {
         }
     };
 
-    const handleDirectUpload = (e, item) => {
+    const handleDirectUpload = async (e, item) => {
         const file = e.target.files[0];
-        if (file) {
-            if (file.type !== 'application/pdf') { toast.error('Hanya PDF!'); return; }
-            if (file.size > 2 * 1024 * 1024) { toast.error('Maks 2MB!'); return; }
+        if (!file) return;
+        e.target.value = null;
+        if (file.type !== 'application/pdf') { toast.error('Hanya PDF!'); return; }
+        if (file.size > 2 * 1024 * 1024) { toast.error('Maks 2MB!'); return; }
 
-            const fileUrl = URL.createObjectURL(file);
-            const newStatus = isSekolah ? 'Menunggu Verifikasi' : item.status;
-            const newVerified = isSekolah ? false : item.verified;
-
-            setData(prev => prev.map(d =>
-                d.id === item.id
-                    ? { ...d, fileName: file.name, fileUrl: fileUrl, status: newStatus, verified: newVerified }
-                    : d
-            ));
-
-            if (isSekolah) toast.success('File berhasil diunggah, menunggu verifikasi Admin');
-            else toast.success('File diperbarui');
+        try {
+            const fd = new FormData();
+            fd.append('file', file);
+            await kerusakanApi.uploadFile(item.id, fd);
+            toast.success('File berhasil diunggah');
+            refetch();
+        } catch (err) {
+            toast.error(err.message || 'Gagal upload file');
         }
     };
 

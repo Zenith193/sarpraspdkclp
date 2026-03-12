@@ -24,6 +24,7 @@ const ProfilPengguna = () => {
     const [sekolahData, setSekolahData] = useState(null);
     const [uploadingKop, setUploadingKop] = useState(false);
     const [uploadingDenah, setUploadingDenah] = useState(false);
+    const [uploadingPhoto, setUploadingPhoto] = useState(false);
 
     const isSekolah = user?.role === 'Sekolah';
     const sekolahId = user?.sekolahId;
@@ -44,6 +45,7 @@ const ProfilPengguna = () => {
                     rombel: data.rombel || 0,
                     jenjang: data.jenjang || '',
                     kecamatan: data.kecamatan || '',
+                    image: data.image || user?.image || '',
                 };
                 setProfileData(profile);
                 setForm(profile);
@@ -60,6 +62,24 @@ const ProfilPengguna = () => {
             sekolahApi.getById(sekolahId).then(setSekolahData).catch(() => {});
         }
     }, [sekolahId]);
+
+    // Handle photo upload
+    const handlePhotoUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        e.target.value = null;
+        if (!/^image\/(jpeg|png|webp|gif)$/.test(file.type)) { toast.error('Hanya file gambar (jpg, png, webp)'); return; }
+        if (file.size > 2 * 1024 * 1024) { toast.error('Ukuran foto maksimal 2MB'); return; }
+        setUploadingPhoto(true);
+        try {
+            const result = await penggunaApi.uploadPhoto(user.id, file);
+            const imageUrl = result.imageUrl;
+            updateProfile({ image: imageUrl });
+            setProfileData(prev => ({ ...prev, image: imageUrl }));
+            toast.success('Foto profil berhasil diperbarui');
+        } catch (err) { toast.error(err.message || 'Gagal upload foto'); }
+        finally { setUploadingPhoto(false); }
+    };
 
     // Helper: extract NPSN from email
     const getNpsn = () => {
@@ -238,15 +258,26 @@ const ProfilPengguna = () => {
             </div>
 
             <div className="card" style={{ maxWidth: 700 }}>
-                {/* Header Profil */}
+                {/* Header Profil with Photo Upload */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 32 }}>
-                    <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 28, fontWeight: 700 }}>
-                        {p.namaAkun?.charAt(0) || p.name?.charAt(0) || 'U'}
-                    </div>
+                    <label style={{ position: 'relative', cursor: uploadingPhoto ? 'wait' : 'pointer', flexShrink: 0 }} title="Klik untuk ganti foto">
+                        {p.image ? (
+                            <img src={p.image} alt="Foto Profil" style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--border-color)' }} />
+                        ) : (
+                            <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 28, fontWeight: 700 }}>
+                                {p.namaAkun?.charAt(0) || p.name?.charAt(0) || 'U'}
+                            </div>
+                        )}
+                        <div style={{ position: 'absolute', bottom: 0, right: 0, width: 24, height: 24, borderRadius: '50%', background: 'var(--accent-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--bg-card)' }}>
+                            <Upload size={12} style={{ color: '#fff' }} />
+                        </div>
+                        <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={handlePhotoUpload} style={{ display: 'none' }} disabled={uploadingPhoto} />
+                    </label>
                     <div>
                         <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)' }}>{p.namaAkun || p.name}</div>
                         <div style={{ fontSize: 13, color: 'var(--text-secondary)', textTransform: 'capitalize' }}>{p.role}</div>
                         {isSekolah && <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>NPSN: {getNpsn()}</div>}
+                        <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>Klik foto untuk mengganti • Maks 2MB (jpg, png, webp)</div>
                     </div>
                 </div>
 

@@ -140,6 +140,7 @@ export const penggunaApi = {
     toggleActive: (id) => api.put(`/pengguna/${id}/toggle-active`),
     delete: (id) => api.delete(`/pengguna/${id}`),
     changePassword: (id, newPassword) => api.put(`/pengguna/${id}/change-password`, { newPassword }),
+    uploadPhoto: (id, file) => { const fd = new FormData(); fd.append('photo', file); return api.upload(`/pengguna/${id}/photo`, fd, 'PUT'); },
 };
 
 export const aktivitasApi = {

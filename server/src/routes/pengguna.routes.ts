@@ -5,6 +5,23 @@ import { db } from '../db/index.js';
 import { user, account } from '../db/schema/index.js';
 import { eq, and, sql } from 'drizzle-orm';
 import { auth } from '../auth/index.js';
+import multer from 'multer';
+import path from 'path';
+import fs from 'fs';
+
+const avatarDir = path.join(process.env.UPLOAD_DIR || './uploads', 'avatars');
+if (!fs.existsSync(avatarDir)) fs.mkdirSync(avatarDir, { recursive: true });
+const avatarUpload = multer({
+    storage: multer.diskStorage({
+        destination: (_req, _file, cb) => cb(null, avatarDir),
+        filename: (req, file, cb) => cb(null, `${req.params.id}_${Date.now()}${path.extname(file.originalname)}`),
+    }),
+    limits: { fileSize: 2 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+        if (/^image\/(jpeg|png|webp|gif)$/.test(file.mimetype)) cb(null, true);
+        else cb(new Error('Hanya file gambar (jpg, png, webp)'));
+    },
+});
 
 const router = Router();
 
@@ -80,6 +97,35 @@ router.put('/:id/change-password', requireAuth, async (req, res) => {
 
         res.json({ success: true, message: 'Password berhasil diubah' });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ===== UPLOAD PROFILE PHOTO =====
+router.put('/:id/photo', requireAuth, avatarUpload.single('photo'), async (req, res) => {
+    try {
+        const targetId = req.params.id as string;
+        const isAdmin = req.user!.role.toLowerCase() === 'admin';
+        const isSelf = req.user!.id === targetId;
+        if (!isAdmin && !isSelf) { res.status(403).json({ error: 'Forbidden' }); return; }
+        if (!req.file) { res.status(400).json({ error: 'No file uploaded' }); return; }
+
+        // Delete old avatar if exists
+        const existing = await db.select().from(user).where(eq(user.id, targetId));
+        if (existing[0]?.image && existing[0].image.startsWith('/api/pengguna/')) {
+            const oldFile = path.join(avatarDir, path.basename(existing[0].image.replace('/api/pengguna/photo/', '')));
+            if (fs.existsSync(oldFile)) fs.unlinkSync(oldFile);
+        }
+
+        const imageUrl = `/api/pengguna/photo/${req.file.filename}`;
+        await db.update(user).set({ image: imageUrl, updatedAt: new Date() }).where(eq(user.id, targetId));
+        res.json({ success: true, imageUrl });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ===== SERVE PROFILE PHOTO =====
+router.get('/photo/:filename', async (req, res) => {
+    const filePath = path.join(avatarDir, req.params.filename);
+    if (!fs.existsSync(filePath)) { res.status(404).json({ error: 'Not found' }); return; }
+    res.sendFile(path.resolve(filePath));
 });
 
 export default router;
