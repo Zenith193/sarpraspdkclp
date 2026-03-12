@@ -4,7 +4,7 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 
 const router = Router();
 
-router.get('/', requireAuth, requireRole('admin'), async (_req, res) => {
+router.get('/', requireAuth, requireRole('admin', 'korwil'), async (_req, res) => {
     try { res.json(await korwilService.list()); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.post('/', requireAuth, requireRole('admin'), async (req, res) => {
