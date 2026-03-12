@@ -97,10 +97,17 @@ export function getPrestasiPath(sekolah: SekolahInfo): string {
 }
 
 /**
- * Kop Sekolah: /{root}/{Kecamatan}/{Sekolah}/kop-sekolah/
+ * Kop Sekolah: /{root}/{Kecamatan}/{Sekolah}/dokumen/
  */
 export function getKopSekolahPath(sekolah: SekolahInfo): string {
-    return path.join(getSekolahBasePath(sekolah), 'kop-sekolah');
+    return path.join(getSekolahBasePath(sekolah), 'dokumen');
+}
+
+/**
+ * Denah Sekolah: /{root}/{Kecamatan}/{Sekolah}/dokumen/
+ */
+export function getDenahSekolahPath(sekolah: SekolahInfo): string {
+    return path.join(getSekolahBasePath(sekolah), 'dokumen');
 }
 
 /**

@@ -223,6 +223,46 @@ async function processUploadQueue() {
             await db.update(bastTemplate).set({ uploadStatus: 'failed' }).where(eq(bastTemplate.id, item.id));
         }
     }
+
+    // 7. kop_sekolah
+    const pendingKop = await db.select().from(sekolah).where(eq(sekolah.kopUploadStatus, 'uploading')).limit(5);
+    for (const item of pendingKop) {
+        if (!item.kopSekolah || !fs.existsSync(item.kopSekolah)) {
+            await db.update(sekolah).set({ kopUploadStatus: 'failed' }).where(eq(sekolah.id, item.id));
+            continue;
+        }
+        try {
+            const subPath = `${item.kecamatan || 'unknown'}/${item.nama}_${item.npsn}/dokumen`;
+            const result = await uploadFileToGDrive(item.kopSekolah, 'kop-sekolah', subPath);
+            const oldPath = item.kopSekolah;
+            await db.update(sekolah).set({ kopSekolah: result.path, kopUploadStatus: 'done' }).where(eq(sekolah.id, item.id));
+            try { fs.unlinkSync(oldPath); } catch { }
+            console.log(`[Queue] Upload kop sekolah #${item.id} → ${subPath} ✅`);
+        } catch (e: any) {
+            console.error(`[Queue] Upload kop sekolah #${item.id} failed:`, e.message);
+            await db.update(sekolah).set({ kopUploadStatus: 'failed' }).where(eq(sekolah.id, item.id));
+        }
+    }
+
+    // 8. denah_sekolah
+    const pendingDenah = await db.select().from(sekolah).where(eq(sekolah.denahUploadStatus, 'uploading')).limit(5);
+    for (const item of pendingDenah) {
+        if (!item.denahSekolah || !fs.existsSync(item.denahSekolah)) {
+            await db.update(sekolah).set({ denahUploadStatus: 'failed' }).where(eq(sekolah.id, item.id));
+            continue;
+        }
+        try {
+            const subPath = `${item.kecamatan || 'unknown'}/${item.nama}_${item.npsn}/dokumen`;
+            const result = await uploadFileToGDrive(item.denahSekolah, 'denah-sekolah', subPath);
+            const oldPath = item.denahSekolah;
+            await db.update(sekolah).set({ denahSekolah: result.path, denahUploadStatus: 'done' }).where(eq(sekolah.id, item.id));
+            try { fs.unlinkSync(oldPath); } catch { }
+            console.log(`[Queue] Upload denah sekolah #${item.id} → ${subPath} ✅`);
+        } catch (e: any) {
+            console.error(`[Queue] Upload denah sekolah #${item.id} failed:`, e.message);
+            await db.update(sekolah).set({ denahUploadStatus: 'failed' }).where(eq(sekolah.id, item.id));
+        }
+    }
 }
 
 // ==================== MAIN LOOP ====================

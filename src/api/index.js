@@ -13,6 +13,12 @@ export const sekolahApi = {
     create: (data) => api.post('/sekolah', data),
     update: (id, data) => api.put(`/sekolah/${id}`, data),
     delete: (id) => api.delete(`/sekolah/${id}`),
+    uploadKop: (id, file) => { const fd = new FormData(); fd.append('file', file); return api.upload(`/sekolah/${id}/upload-kop`, fd); },
+    uploadDenah: (id, file) => { const fd = new FormData(); fd.append('file', file); return api.upload(`/sekolah/${id}/upload-denah`, fd); },
+    downloadKop: (id) => fetch(`/api/sekolah/${id}/download-kop`, { credentials: 'include' }).then(r => { if (!r.ok) throw new Error('File tidak ditemukan'); return r.blob(); }),
+    downloadDenah: (id) => fetch(`/api/sekolah/${id}/download-denah`, { credentials: 'include' }).then(r => { if (!r.ok) throw new Error('File tidak ditemukan'); return r.blob(); }),
+    deleteKop: (id) => api.delete(`/sekolah/${id}/kop`),
+    deleteDenah: (id) => api.delete(`/sekolah/${id}/denah`),
 };
 
 export const sarprasApi = {

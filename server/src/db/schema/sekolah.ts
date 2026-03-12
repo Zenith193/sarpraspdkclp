@@ -16,6 +16,10 @@ export const sekolah = pgTable('sekolah', {
     noRek: text('no_rek'),
     namaBank: text('nama_bank'),
     rombel: integer('rombel').default(0),
+    kopSekolah: text('kop_sekolah'),
+    denahSekolah: text('denah_sekolah'),
+    kopUploadStatus: text('kop_upload_status').default('done'),
+    denahUploadStatus: text('denah_upload_status').default('done'),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
 });
