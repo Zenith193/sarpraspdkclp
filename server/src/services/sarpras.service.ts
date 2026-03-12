@@ -1,6 +1,6 @@
 import { db } from '../db/index.js';
 import { sarpras, sarprasFoto, sekolah } from '../db/schema/index.js';
-import { eq, ilike, and, sql } from 'drizzle-orm';
+import { eq, ilike, and, sql, asc } from 'drizzle-orm';
 import { queueGDriveDelete } from '../utils/uploadQueue.js';
 
 export const sarprasService = {
@@ -30,6 +30,7 @@ export const sarprasService = {
                 .from(sarpras)
                 .leftJoin(sekolah, eq(sarpras.sekolahId, sekolah.id))
                 .where(where)
+                .orderBy(asc(sekolah.kecamatan), asc(sekolah.npsn))
                 .limit(limit)
                 .offset(offset),
             db.select({ count: sql<number>`count(*)` }).from(sarpras).leftJoin(sekolah, eq(sarpras.sekolahId, sekolah.id)).where(where),
