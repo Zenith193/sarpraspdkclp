@@ -5,28 +5,32 @@ import { useSarprasData, useProposalData, useRiwayatBantuanData, useSekolahData 
 
 const DashboardSekolah = () => {
     const user = useAuthStore(s => s.user);
-    const npsn = user?.npsn || user?.email; // sekolah login uses NPSN as email
+    // Extract NPSN from email (e.g. '20300544@spidol...' -> '20300544')
+    const email = user?.email || '';
+    const npsn = user?.npsn || email.split('@')[0] || '';
+    const sekolahId = user?.sekolahId;
     const { data: sekolahList } = useSekolahData();
-    const sekolah = sekolahList.find(s => s.npsn === npsn);
+    const sekolah = sekolahList.find(s => s.id === sekolahId || s.npsn === npsn);
     const namaSekolah = sekolah?.nama || user?.namaAkun || user?.name || 'Sekolah';
+    const matchNpsn = sekolah?.npsn || npsn;
 
     const { data: sarprasData } = useSarprasData();
     const { data: proposalData } = useProposalData();
     const { data: riwayatData } = useRiwayatBantuanData();
 
-    // Filter data for this school
+    // Filter data for this school - match by sekolahId or NPSN
     const mySarpras = useMemo(() =>
-        (sarprasData || []).filter(s => s.npsn === npsn), [sarprasData, npsn]);
+        (sarprasData || []).filter(s => s.sekolahId === sekolahId || s.npsn === matchNpsn), [sarprasData, sekolahId, matchNpsn]);
     const myProposal = useMemo(() =>
-        (proposalData || []).filter(p => p.npsn === npsn), [proposalData, npsn]);
+        (proposalData || []).filter(p => p.sekolahId === sekolahId || p.npsn === matchNpsn), [proposalData, sekolahId, matchNpsn]);
     const myRiwayat = useMemo(() =>
-        (riwayatData || []).filter(r => r.npsn === npsn), [riwayatData, npsn]);
+        (riwayatData || []).filter(r => r.sekolahId === sekolahId || r.npsn === matchNpsn), [riwayatData, sekolahId, matchNpsn]);
 
     // Stats
     const totalSarpras = mySarpras.length;
-    const rusakBerat = mySarpras.filter(s => s.kondisi === 'Rusak Berat').length;
-    const rusakSedang = mySarpras.filter(s => s.kondisi === 'Rusak Sedang').length;
-    const proposalPending = myProposal.filter(p => !p.status || p.status === 'Pending' || p.status === 'Diajukan').length;
+    const rusakBerat = mySarpras.filter(s => s.kondisi === 'RUSAK BERAT' || s.kondisi === 'Rusak Berat').length;
+    const rusakSedang = mySarpras.filter(s => s.kondisi === 'RUSAK SEDANG' || s.kondisi === 'Rusak Sedang').length;
+    const proposalPending = myProposal.filter(p => !p.status || p.status === 'Menunggu Verifikasi' || p.status === 'Pending' || p.status === 'Diajukan').length;
     const proposalDisetujui = myProposal.filter(p => p.status === 'Disetujui' || p.status === 'Diterima').length;
     const totalBantuan = myRiwayat.reduce((sum, r) => sum + (r.nilaiPaket || 0), 0);
 
@@ -128,8 +132,8 @@ const DashboardSekolah = () => {
                                             <td>
                                                 <span style={{
                                                     padding: '2px 10px', borderRadius: 10, fontSize: '0.75rem', fontWeight: 600,
-                                                    background: s.kondisi === 'Rusak Berat' ? 'rgba(239,68,68,0.1)' : s.kondisi === 'Rusak Sedang' ? 'rgba(245,158,11,0.1)' : s.kondisi === 'Rusak Ringan' ? 'rgba(34,197,94,0.1)' : 'rgba(59,130,246,0.1)',
-                                                    color: s.kondisi === 'Rusak Berat' ? '#ef4444' : s.kondisi === 'Rusak Sedang' ? '#f59e0b' : s.kondisi === 'Rusak Ringan' ? '#22c55e' : '#3b82f6'
+                                                    background: (s.kondisi || '').toUpperCase().includes('BERAT') ? 'rgba(239,68,68,0.1)' : (s.kondisi || '').toUpperCase().includes('SEDANG') ? 'rgba(245,158,11,0.1)' : (s.kondisi || '').toUpperCase().includes('RINGAN') ? 'rgba(34,197,94,0.1)' : 'rgba(59,130,246,0.1)',
+                                                    color: (s.kondisi || '').toUpperCase().includes('BERAT') ? '#ef4444' : (s.kondisi || '').toUpperCase().includes('SEDANG') ? '#f59e0b' : (s.kondisi || '').toUpperCase().includes('RINGAN') ? '#22c55e' : '#3b82f6'
                                                 }}>
                                                     {s.kondisi}
                                                 </span>

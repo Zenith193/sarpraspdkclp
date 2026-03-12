@@ -506,8 +506,8 @@ const Proposal = ({ readOnly = false }) => {
                             {/* Upload Soft File Proposal (PDF) */}
                             <div className="form-group">
                                 <label className="form-label">Upload Proposal (PDF)</label>
-                                <input className="form-input" type="file" accept=".pdf" onChange={e => { const f = e.target.files[0]; if (f && f.size > 10*1024*1024) { toast.error('Maks 10MB'); e.target.value = null; return; } setFormData({ ...formData, proposalFile: f || null }); }} />
-                                <small style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>Format PDF, maksimal 10MB</small>
+                                <input className="form-input" type="file" accept=".pdf" onChange={e => { const f = e.target.files[0]; if (f && f.size > 5*1024*1024) { toast.error('Maks 5MB'); e.target.value = null; return; } setFormData({ ...formData, proposalFile: f || null }); }} />
+                                <small style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>Format PDF, maksimal 5MB</small>
                             </div>
 
                             {isAdminOrVerifikator && (<div className="form-row"><div className="form-group"><label className="form-label">No Agenda Surat</label><input className="form-input" value={formData.noAgendaSurat || ''} onChange={e => setFormData({ ...formData, noAgendaSurat: e.target.value })} /></div><div className="form-group"><label className="form-label">Tanggal Surat</label><input className="form-input" type="date" value={formData.tanggalSurat || ''} onChange={e => setFormData({ ...formData, tanggalSurat: e.target.value })} /></div></div>)}
