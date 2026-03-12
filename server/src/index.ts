@@ -681,6 +681,35 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 
 
 
+// ===== AUTO-MIGRATION: ensure columns exist =====
+async function autoMigrate() {
+    const migrations = [
+        `ALTER TABLE "user" ADD COLUMN IF NOT EXISTS "plain_password" TEXT`,
+        `ALTER TABLE sekolah ADD COLUMN IF NOT EXISTS kop_sekolah TEXT`,
+        `ALTER TABLE sekolah ADD COLUMN IF NOT EXISTS denah_sekolah TEXT`,
+        `ALTER TABLE sekolah ADD COLUMN IF NOT EXISTS kop_upload_status TEXT DEFAULT 'done'`,
+        `ALTER TABLE sekolah ADD COLUMN IF NOT EXISTS denah_upload_status TEXT DEFAULT 'done'`,
+    ];
+    for (const m of migrations) {
+        try { await db.execute(sql.raw(m)); } catch (e: any) {
+            console.warn(`[AutoMigrate] Skipped:`, e.message?.substring(0, 80));
+        }
+    }
+    console.log('[AutoMigrate] Column check complete');
+
+    // Populate plain_password for existing Sekolah users (NPSN = default password)
+    try {
+        const result = await db.execute(sql`
+            UPDATE "user" SET "plain_password" = REPLACE("email", '@spidol.cilacapkab.go.id', '')
+            WHERE "plain_password" IS NULL 
+            AND "role" = 'Sekolah'
+            AND "email" LIKE '%@spidol.cilacapkab.go.id'
+        `);
+        const count = (result as any).rowCount || 0;
+        if (count > 0) console.log(`[AutoMigrate] Populated ${count} Sekolah passwords from NPSN`);
+    } catch (_) { /* ignore */ }
+}
+
 app.listen(PORT, () => {
     console.log(`🚀 SARDIKA API running at http://localhost:${PORT}`);
     console.log(`📦 Auth: http://localhost:${PORT}/api/auth`);
@@ -691,6 +720,8 @@ app.listen(PORT, () => {
         RT: process.env.GDRIVE_REFRESH_TOKEN ? 'SET' : 'EMPTY',
         FID: process.env.GDRIVE_FOLDER_ID ? 'SET' : 'EMPTY',
     });
+    // Auto-migrate DB columns
+    autoMigrate().catch(e => console.error('[AutoMigrate] Error:', e.message));
     // Start background GDrive upload queue
     import('./utils/uploadQueue.js').then(({ startUploadQueue }) => startUploadQueue());
 });
