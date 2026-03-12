@@ -8,8 +8,9 @@ const ProfilPengguna = () => {
     const user = useAuthStore(s => s.user);
     const updateProfile = useAuthStore(s => s.updateProfile);
     
+    const [profileData, setProfileData] = useState(null);
     const [editing, setEditing] = useState(false);
-    const [form, setForm] = useState({ ...user });
+    const [form, setForm] = useState({});
 
     // State untuk ganti password
     const [showPwSection, setShowPwSection] = useState(false);
@@ -27,6 +28,32 @@ const ProfilPengguna = () => {
     const isSekolah = user?.role === 'Sekolah';
     const sekolahId = user?.sekolahId;
 
+    // Fetch full user profile from API
+    useEffect(() => {
+        if (user?.id) {
+            penggunaApi.getById(user.id).then(data => {
+                const profile = {
+                    ...user,
+                    ...data,
+                    namaAkun: data.name || data.namaAkun || user.namaAkun || user.name,
+                    npsn: data.npsn || '',
+                    kepsek: data.kepsek || '',
+                    nip: data.nip || '',
+                    noRek: data.noRek || '',
+                    namaBank: data.namaBank || '',
+                    rombel: data.rombel || 0,
+                    jenjang: data.jenjang || '',
+                    kecamatan: data.kecamatan || '',
+                };
+                setProfileData(profile);
+                setForm(profile);
+            }).catch(() => {
+                setProfileData({ ...user });
+                setForm({ ...user });
+            });
+        }
+    }, [user?.id]);
+
     // Fetch sekolah data to get upload status
     useEffect(() => {
         if (sekolahId) {
@@ -34,15 +61,26 @@ const ProfilPengguna = () => {
         }
     }, [sekolahId]);
 
+    // Helper: extract NPSN from email
+    const getNpsn = () => {
+        if (profileData?.npsn) return profileData.npsn;
+        const email = profileData?.email || user?.email || '';
+        const match = email.match(/^(\d+)@/);
+        return match ? match[1] : email;
+    };
+
+    const p = profileData || user || {};
+
     const handleSave = () => {
         updateProfile({ ...form });
+        setProfileData({ ...form });
         setEditing(false);
         toast.success('Profil berhasil diperbarui');
     };
 
     const handleCancel = () => {
         setEditing(false);
-        setForm({ ...user });
+        setForm({ ...profileData });
     };
 
     const handleChangePassword = async () => {
@@ -73,71 +111,42 @@ const ProfilPengguna = () => {
         const file = e.target.files[0];
         if (!file) return;
         e.target.value = null;
-
         const ext = file.name.split('.').pop().toLowerCase();
-        if (!['doc', 'docx'].includes(ext)) {
-            toast.error('Format file harus Word (.doc atau .docx)');
-            return;
-        }
-        if (file.size > 1 * 1024 * 1024) {
-            toast.error('Ukuran file maksimal 1MB');
-            return;
-        }
-
+        if (!['doc', 'docx'].includes(ext)) { toast.error('Format file harus Word (.doc atau .docx)'); return; }
+        if (file.size > 1 * 1024 * 1024) { toast.error('Ukuran file maksimal 1MB'); return; }
         setUploadingKop(true);
         try {
             await sekolahApi.uploadKop(sekolahId, file);
             toast.success('Kop sekolah berhasil diupload');
             const updated = await sekolahApi.getById(sekolahId);
             setSekolahData(updated);
-        } catch (err) {
-            toast.error(err.message || 'Gagal upload kop sekolah');
-        } finally {
-            setUploadingKop(false);
-        }
+        } catch (err) { toast.error(err.message || 'Gagal upload kop sekolah'); }
+        finally { setUploadingKop(false); }
     };
 
     const handleUploadDenah = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
         e.target.value = null;
-
-        if (file.type !== 'application/pdf') {
-            toast.error('Format file harus PDF');
-            return;
-        }
-        if (file.size > 5 * 1024 * 1024) {
-            toast.error('Ukuran file maksimal 5MB');
-            return;
-        }
-
+        if (file.type !== 'application/pdf') { toast.error('Format file harus PDF'); return; }
+        if (file.size > 5 * 1024 * 1024) { toast.error('Ukuran file maksimal 5MB'); return; }
         setUploadingDenah(true);
         try {
             await sekolahApi.uploadDenah(sekolahId, file);
             toast.success('Denah sekolah berhasil diupload');
             const updated = await sekolahApi.getById(sekolahId);
             setSekolahData(updated);
-        } catch (err) {
-            toast.error(err.message || 'Gagal upload denah sekolah');
-        } finally {
-            setUploadingDenah(false);
-        }
+        } catch (err) { toast.error(err.message || 'Gagal upload denah sekolah'); }
+        finally { setUploadingDenah(false); }
     };
 
     const handleDownload = async (type) => {
         try {
-            const blob = type === 'kop' 
-                ? await sekolahApi.downloadKop(sekolahId)
-                : await sekolahApi.downloadDenah(sekolahId);
+            const blob = type === 'kop' ? await sekolahApi.downloadKop(sekolahId) : await sekolahApi.downloadDenah(sekolahId);
             const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = type === 'kop' ? 'kop_sekolah' : 'denah_sekolah';
-            a.click();
+            const a = document.createElement('a'); a.href = url; a.download = type === 'kop' ? 'kop_sekolah' : 'denah_sekolah'; a.click();
             URL.revokeObjectURL(url);
-        } catch (err) {
-            toast.error(err.message || 'Gagal download file');
-        }
+        } catch (err) { toast.error(err.message || 'Gagal download file'); }
     };
 
     const handleDeleteFile = async (type) => {
@@ -148,21 +157,31 @@ const ProfilPengguna = () => {
             toast.success('File berhasil dihapus');
             const updated = await sekolahApi.getById(sekolahId);
             setSekolahData(updated);
-        } catch (err) {
-            toast.error(err.message || 'Gagal menghapus file');
-        }
+        } catch (err) { toast.error(err.message || 'Gagal menghapus file'); }
     };
 
-    const fields = [
+    // Build display fields based on role
+    const fields = isSekolah ? [
         { label: 'Nama Akun', key: 'namaAkun' },
         { label: 'Role', key: 'role', readOnly: true },
-        { label: 'Email / NPSN', key: 'email' },
+        { label: 'NPSN', key: '_npsn', readOnly: true },
+        { label: 'Jenjang', key: 'jenjang', readOnly: true },
+        { label: 'Kecamatan', key: 'kecamatan', readOnly: true },
         { label: 'Nama Kepala Sekolah', key: 'kepsek' },
         { label: 'NIP', key: 'nip' },
         { label: 'No Rekening', key: 'noRek' },
         { label: 'Nama Bank', key: 'namaBank' },
-        { label: 'Jumlah Rombel', key: 'rombel' },
+        { label: 'Jumlah Rombel', key: 'rombel', readOnly: true },
+    ] : [
+        { label: 'Nama Akun', key: 'namaAkun' },
+        { label: 'Role', key: 'role', readOnly: true },
+        { label: 'Email', key: 'email' },
     ];
+
+    const getFieldValue = (f) => {
+        if (f.key === '_npsn') return getNpsn();
+        return p[f.key] || '-';
+    };
 
     const renderFileSection = (type, label, accept, maxSize, uploading, hasFile) => (
         <div className="form-group" style={{ marginBottom: 16 }}>
@@ -181,12 +200,8 @@ const ProfilPengguna = () => {
                 <div style={{ display: 'flex', gap: 6 }}>
                     {hasFile && (
                         <>
-                            <button className="btn-icon" onClick={() => handleDownload(type)} title="Download" style={{ color: 'var(--accent-blue)' }}>
-                                <Download size={16} />
-                            </button>
-                            <button className="btn-icon" onClick={() => handleDeleteFile(type)} title="Hapus" style={{ color: 'var(--accent-red)' }}>
-                                <Trash2 size={16} />
-                            </button>
+                            <button className="btn-icon" onClick={() => handleDownload(type)} title="Download" style={{ color: 'var(--accent-blue)' }}><Download size={16} /></button>
+                            <button className="btn-icon" onClick={() => handleDeleteFile(type)} title="Hapus" style={{ color: 'var(--accent-red)' }}><Trash2 size={16} /></button>
                         </>
                     )}
                     <label className="btn btn-secondary btn-sm" style={{ cursor: uploading ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, opacity: uploading ? 0.6 : 1 }}>
@@ -226,11 +241,12 @@ const ProfilPengguna = () => {
                 {/* Header Profil */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 32 }}>
                     <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 28, fontWeight: 700 }}>
-                        {user?.namaAkun?.charAt(0) || 'U'}
+                        {p.namaAkun?.charAt(0) || p.name?.charAt(0) || 'U'}
                     </div>
                     <div>
-                        <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)' }}>{user?.namaAkun}</div>
-                        <div style={{ fontSize: 13, color: 'var(--text-secondary)', textTransform: 'capitalize' }}>{user?.role}</div>
+                        <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)' }}>{p.namaAkun || p.name}</div>
+                        <div style={{ fontSize: 13, color: 'var(--text-secondary)', textTransform: 'capitalize' }}>{p.role}</div>
+                        {isSekolah && <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>NPSN: {getNpsn()}</div>}
                     </div>
                 </div>
 
@@ -242,7 +258,7 @@ const ProfilPengguna = () => {
                             {editing && !f.readOnly ? (
                                 <input className="form-input" value={form[f.key] || ''} onChange={e => setForm({ ...form, [f.key]: e.target.value })} />
                             ) : (
-                                <div style={{ padding: '10px 0', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color)' }}>{user?.[f.key] || '-'}</div>
+                                <div style={{ padding: '10px 0', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color)' }}>{getFieldValue(f)}</div>
                             )}
                         </div>
                     ))}
