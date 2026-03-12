@@ -43,8 +43,9 @@ router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadFormKerusak
             }
         }
 
-        const data = {
-            ...req.body,
+        const data: any = {
+            sekolahId: Number(req.body.sekolahId),
+            masaBangunan: req.body.masaBangunan || null,
             fileName: req.file?.originalname || null,
             filePath,
             uploadStatus,
