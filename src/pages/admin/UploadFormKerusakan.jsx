@@ -20,7 +20,29 @@ const UploadFormKerusakan = () => {
     const { data: apiData, loading, refetch } = useApi(() => kerusakanApi.list(), []);
     const [data, setData] = useState([]);
 
-    useEffect(() => { if (apiData?.data) setData(apiData.data); else if (Array.isArray(apiData)) setData(apiData); }, [apiData]);
+    useEffect(() => {
+        const raw = apiData?.data || (Array.isArray(apiData) ? apiData : []);
+        // Flatten nested { formKerusakan: {...}, sekolahNama, sekolahNpsn } into flat objects
+        const flat = raw.map(row => {
+            if (row.formKerusakan) {
+                const fk = row.formKerusakan;
+                return {
+                    ...fk,
+                    id: fk.id,
+                    npsn: row.sekolahNpsn || fk.npsn || '',
+                    namaSekolah: row.sekolahNama || fk.namaSekolah || '',
+                    kecamatan: row.sekolahKecamatan || fk.kecamatan || '',
+                    fileName: fk.fileName || fk.file_name || null,
+                    filePath: fk.filePath || fk.file_path || null,
+                    masaBangunan: fk.masaBangunan || fk.masa_bangunan || '',
+                    status: fk.status || 'Belum Upload',
+                    fileUrl: fk.filePath ? `/api/file/kerusakan/${fk.id}` : null,
+                };
+            }
+            return row;
+        });
+        setData(flat);
+    }, [apiData]);
 
     // ===== UI STATE =====
     const [activeTab, setActiveTab] = useState('data');
