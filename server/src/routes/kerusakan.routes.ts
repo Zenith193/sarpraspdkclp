@@ -3,7 +3,6 @@ import { kerusakanService } from '../services/kerusakan.service.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { uploadFormKerusakan } from '../middleware/upload.js';
 import { isGDriveEnabled, uploadFileToGDrive } from '../utils/googleDriveClient.js';
-import fs from 'fs';
 
 const router = Router();
 
@@ -15,7 +14,7 @@ router.get('/', requireAuth, async (req, res) => {
         const result = await kerusakanService.list({
             sekolahId: isSekolah ? req.user!.sekolahId : rawSekolahId,
             search: req.query.search as string,
-            page: Number(req.query.page) || 1, limit: Number(req.query.limit) || 50,
+            page: Number(req.query.page) || 1, limit: Number(req.query.limit) || 9999,
         });
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
@@ -30,17 +29,15 @@ router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadFormKerusak
         // Direct GDrive upload
         if (req.file && isGDriveEnabled()) {
             try {
-                const gDrivePath = `form-kerusakan/${req.body.namaSekolah || 'unknown'}_${req.body.npsn || ''}`;
-                const gdriveResult = await uploadFileToGDrive(req.file.path, gDrivePath, req.file.originalname);
-                if (gdriveResult?.id) {
-                    filePath = `gdrive://${gdriveResult.id}`;
-                    uploadStatus = 'done';
-                    // Clean up temp file
-                    try { fs.unlinkSync(req.file.path); } catch { /* ignore */ }
-                }
+                const namaSekolah = req.body.namaSekolah || 'unknown';
+                const npsn = req.body.npsn || '';
+                const kecamatan = req.body.kecamatan || 'unknown';
+                const subPath = `${kecamatan}/${namaSekolah}_${npsn}/kerusakan`;
+                const result = await uploadFileToGDrive(req.file.path, 'kerusakan', subPath);
+                filePath = result.path; // 'gdrive://id' or local path
+                uploadStatus = 'done';
             } catch (e) {
-                console.error('GDrive upload error:', e);
-                // Fallback to local
+                console.error('[Kerusakan] GDrive upload error:', e);
                 filePath = req.file.path;
                 uploadStatus = 'done';
             }
@@ -80,15 +77,17 @@ router.put('/:id/upload', requireAuth, requireRole('admin', 'sekolah'), uploadFo
         // Direct GDrive upload
         if (isGDriveEnabled()) {
             try {
-                const gDrivePath = `form-kerusakan/${req.body.namaSekolah || 'upload'}_${Date.now()}`;
-                const gdriveResult = await uploadFileToGDrive(req.file.path, gDrivePath, req.file.originalname);
-                if (gdriveResult?.id) {
-                    filePath = `gdrive://${gdriveResult.id}`;
-                    uploadStatus = 'done';
-                    try { fs.unlinkSync(req.file.path); } catch { /* ignore */ }
+                // Try to get sekolah info for folder path
+                const existing = await kerusakanService.getById(id);
+                let subPath = `kerusakan/${id}`;
+                if (existing) {
+                    subPath = `${existing.sekolahKecamatan || 'unknown'}/${existing.sekolahNama || 'unknown'}_${existing.sekolahNpsn || ''}/kerusakan`;
                 }
+                const result = await uploadFileToGDrive(req.file.path, 'kerusakan', subPath);
+                filePath = result.path; // 'gdrive://id' or local path
+                uploadStatus = 'done';
             } catch (e) {
-                console.error('GDrive upload error:', e);
+                console.error('[Kerusakan] GDrive upload error:', e);
                 filePath = req.file.path;
             }
         }

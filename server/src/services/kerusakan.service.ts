@@ -10,13 +10,13 @@ export const kerusakanService = {
         if (sekolahId) conditions.push(eq(formKerusakan.sekolahId, sekolahId));
         const where = conditions.length > 0 ? and(...conditions) : undefined;
         const offset = (page - 1) * limit;
-        const data = await db.select({ formKerusakan, sekolahNama: sekolah.nama, sekolahNpsn: sekolah.npsn })
+        const data = await db.select({ formKerusakan, sekolahNama: sekolah.nama, sekolahNpsn: sekolah.npsn, sekolahKecamatan: sekolah.kecamatan })
             .from(formKerusakan).leftJoin(sekolah, eq(formKerusakan.sekolahId, sekolah.id)).where(where).limit(limit).offset(offset);
         const countResult = await db.select({ count: sql<number>`count(*)` }).from(formKerusakan).where(where);
         return { data, total: Number(countResult[0]?.count || 0), page, limit };
     },
     async getById(id: number) {
-        const result = await db.select({ formKerusakan, sekolahNama: sekolah.nama, sekolahNpsn: sekolah.npsn })
+        const result = await db.select({ formKerusakan, sekolahNama: sekolah.nama, sekolahNpsn: sekolah.npsn, sekolahKecamatan: sekolah.kecamatan })
             .from(formKerusakan).leftJoin(sekolah, eq(formKerusakan.sekolahId, sekolah.id)).where(eq(formKerusakan.id, id));
         return result[0] || null;
     },
