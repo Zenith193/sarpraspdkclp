@@ -32,11 +32,14 @@ const HakAkses = () => {
     // Load from server on mount
     useEffect(() => {
         settingsApi.getAccess().then(res => {
+            // API returns config directly: { admin: [...], verifikator: [...], ... }
+            // or wrapped: { value: { admin: [...], ... } }
+            let serverConfig = res;
             if (res && res.value) {
-                const serverConfig = typeof res.value === 'string' ? JSON.parse(res.value) : res.value;
-                if (serverConfig && typeof serverConfig === 'object' && Object.keys(serverConfig).length > 0) {
-                    setAccessConfig(serverConfig);
-                }
+                serverConfig = typeof res.value === 'string' ? JSON.parse(res.value) : res.value;
+            }
+            if (serverConfig && typeof serverConfig === 'object' && (serverConfig.admin || serverConfig.verifikator)) {
+                setAccessConfig(serverConfig);
             }
         }).catch(() => { /* use local defaults */ });
     }, []);
