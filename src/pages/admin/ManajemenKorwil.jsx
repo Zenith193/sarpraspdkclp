@@ -244,9 +244,17 @@ const ManajemenKorwil = () => {
                                     <td>{(currentPage - 1) * pageSize + i + 1}</td>
                                     <td>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                            <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                <User size={16} style={{ color: 'var(--text-secondary)' }} />
-                                            </div>
+                                            {(() => {
+                                                const u = usersList.find(u => String(u.id) === String(d.userId));
+                                                const img = u?.image;
+                                                return img ? (
+                                                    <img src={img} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover' }} />
+                                                ) : (
+                                                    <div style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                        <User size={16} style={{ color: 'var(--text-secondary)' }} />
+                                                    </div>
+                                                );
+                                            })()}
                                             <span style={{ fontWeight: 500 }}>{d.namaAkun}</span>
                                         </div>
                                     </td>

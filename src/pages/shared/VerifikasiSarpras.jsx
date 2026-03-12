@@ -1,8 +1,6 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { Search, CheckCircle, XCircle, Eye, X, ChevronLeft, ChevronRight, MapPin, Image, Info, Maximize2 } from 'lucide-react';
-import { sarprasApi } from '../../api/index';
-import { useApi } from '../../api/hooks';
-import { useKorwilData } from '../../data/dataProvider';
+import { sarprasApi, korwilApi } from '../../api/index';
 import useAuthStore from '../../store/authStore';
 import toast from 'react-hot-toast';
 import { safeStr } from '../../utils/safeStr';
@@ -12,68 +10,70 @@ const PER_PAGE_OPTIONS = [15, 30, 50, 100];
 const VerifikasiSarpras = () => {
     const user = useAuthStore(s => s.user);
     const role = user?.role || '';
-    const { data: korwilList } = useKorwilData();
-    const { data: apiData, loading, refetch } = useApi(() => sarprasApi.list({ verified: 'false', limit: 9999 }), []);
     const [data, setData] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [detailItem, setDetailItem] = useState(null);
     const [lightboxIdx, setLightboxIdx] = useState(-1);
     const [perPage, setPerPage] = useState(15);
     const [currentPage, setCurrentPage] = useState(1);
 
-    // Get korwil assignment
-    const myAssignment = useMemo(() => {
-        if (role !== 'Korwil' || !korwilList || !user) return null;
-        const myRows = korwilList.filter(row => {
-            const ka = row.korwilAssignment || row;
-            return String(ka.userId) === String(user.id);
-        });
-        if (myRows.length === 0) return null;
-        const kecList = [];
-        let jenj = '';
-        myRows.forEach(row => {
-            const ka = row.korwilAssignment || row;
-            if (ka.kecamatan && !kecList.includes(ka.kecamatan)) kecList.push(ka.kecamatan);
-            if (ka.jenjang) jenj = ka.jenjang;
-        });
-        return { kecamatan: kecList, jenjang: jenj };
-    }, [korwilList, user, role]);
+    // Fetch data with proper server-side filtering for korwil
+    const fetchData = useCallback(async () => {
+        setLoading(true);
+        try {
+            const params = { verified: 'false', limit: 9999 };
 
-    useEffect(() => {
-        if (apiData?.data) {
-            const flat = apiData.data.map(item => {
-                if (item.sarpras) {
-                    return {
-                        ...item.sarpras,
-                        namaSekolah: item.sekolahNama || '',
-                        npsn: item.sekolahNpsn || '',
-                        kecamatan: item.sekolahKecamatan || '',
-                        jenjang: item.sekolahJenjang || '',
-                        foto: item.sarpras.foto || [],
-                    };
-                }
-                return item;
-            });
-            setData(flat);
-        }
-    }, [apiData]);
+            // For korwil: get assignment first, then filter server-side
+            if (role === 'Korwil' && user?.id) {
+                try {
+                    const korwilList = await korwilApi.list();
+                    const myRows = (korwilList || []).filter(row => {
+                        const ka = row.korwilAssignment || row;
+                        return String(ka.userId) === String(user.id);
+                    });
+                    if (myRows.length > 0) {
+                        const ka = myRows[0].korwilAssignment || myRows[0];
+                        if (ka.kecamatan) params.kecamatan = ka.kecamatan;
+                        if (ka.jenjang) params.jenjang = ka.jenjang;
+                    }
+                } catch (e) { console.error('Failed to get korwil assignment:', e); }
+            }
+
+            const apiData = await sarprasApi.list(params);
+            if (apiData?.data) {
+                const flat = apiData.data.map(item => {
+                    if (item.sarpras) {
+                        return {
+                            ...item.sarpras,
+                            namaSekolah: item.sekolahNama || '',
+                            npsn: item.sekolahNpsn || '',
+                            kecamatan: item.sekolahKecamatan || '',
+                            jenjang: item.sekolahJenjang || '',
+                            foto: item.sarpras.foto || [],
+                        };
+                    }
+                    return item;
+                });
+                setData(flat);
+            }
+        } catch (e) { console.error('Failed to fetch sarpras:', e); }
+        finally { setLoading(false); }
+    }, [role, user?.id]);
+
+    useEffect(() => { fetchData(); }, [fetchData]);
+
+    const refetch = fetchData;
 
     const pending = useMemo(() =>
         data.filter(s => {
-            // Role-based filtering
-            if (role === 'Korwil' && myAssignment) {
-                if (myAssignment.jenjang && s.jenjang !== myAssignment.jenjang) return false;
-                if (myAssignment.kecamatan.length && !myAssignment.kecamatan.includes(s.kecamatan)) return false;
-            }
-            // Verifikator & Admin: all
-
             if (search) {
                 const q = search.toLowerCase();
                 if (!s.namaSekolah?.toLowerCase().includes(q) && !s.namaRuang?.toLowerCase().includes(q)) return false;
             }
             return !s.verified;
         })
-        , [data, search, myAssignment, role]);
+        , [data, search]);
 
     // Pagination
     const totalPages = Math.ceil(pending.length / perPage);
