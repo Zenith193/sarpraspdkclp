@@ -238,53 +238,243 @@ const Iklan = () => {
             {/* ===== ADD/EDIT MODAL ===== */}
             {showModal && (
                 <div className="modal-overlay" onClick={() => setShowModal(false)}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 640 }}>
-                        <div className="modal-header">
-                            <h3>{editItem ? 'Edit Iklan' : 'Tambah Iklan Baru'}</h3>
-                            <button className="btn-icon" onClick={() => setShowModal(false)}><X size={18} /></button>
+                    <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 680, borderRadius: 16, overflow: 'hidden', border: 'none' }}>
+                        
+                        {/* Gradient Header */}
+                        <div style={{
+                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            padding: '28px 28px 24px', position: 'relative', overflow: 'hidden'
+                        }}>
+                            {/* Background decoration */}
+                            <div style={{ position: 'absolute', top: -30, right: -30, width: 120, height: 120, borderRadius: '50%', background: 'rgba(255,255,255,0.08)' }} />
+                            <div style={{ position: 'absolute', bottom: -20, right: 60, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.05)' }} />
+                            
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', position: 'relative' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                                    <div style={{
+                                        width: 48, height: 48, borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                        background: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.15)'
+                                    }}>
+                                        <Code size={24} style={{ color: '#fff' }} />
+                                    </div>
+                                    <div>
+                                        <h3 style={{ color: '#fff', margin: 0, fontSize: 18, fontWeight: 700 }}>
+                                            {editItem ? 'Edit Script Iklan' : 'Tambah Script Iklan'}
+                                        </h3>
+                                        <p style={{ color: 'rgba(255,255,255,0.7)', margin: '4px 0 0', fontSize: 13 }}>
+                                            Pasang script iklan ke aplikasi
+                                        </p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setShowModal(false)} style={{
+                                    background: 'rgba(255,255,255,0.15)', border: 'none', borderRadius: 10, width: 36, height: 36,
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer',
+                                    color: '#fff', transition: 'background 0.2s'
+                                }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
+                                   onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}>
+                                    <X size={18} />
+                                </button>
+                            </div>
                         </div>
-                        <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-                            <div style={{ display: 'grid', gap: 16 }}>
-                                <div className="form-group">
-                                    <label className="form-label">Judul / Label *</label>
-                                    <input className="form-input" value={formData.judul} onChange={e => setFormData(p => ({ ...p, judul: e.target.value }))} placeholder="Contoh: Google AdSense Banner" />
+
+                        {/* Body */}
+                        <div style={{ padding: '24px 28px', maxHeight: '60vh', overflowY: 'auto' }}>
+                            
+                            {/* Section 1: Info */}
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 24 }}>
+                                <div style={{
+                                    width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                                    background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    color: '#fff', fontSize: 13, fontWeight: 700
+                                }}>1</div>
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 12, color: 'var(--text-primary)' }}>Informasi Iklan</div>
+                                    <div style={{ display: 'grid', gap: 12 }}>
+                                        <div>
+                                            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                                Judul / Label <span style={{ color: '#ef4444' }}>*</span>
+                                            </label>
+                                            <input className="form-input" value={formData.judul}
+                                                onChange={e => setFormData(p => ({ ...p, judul: e.target.value }))}
+                                                placeholder="Contoh: Google AdSense Banner"
+                                                style={{ borderRadius: 10, padding: '10px 14px', fontSize: 14 }} />
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                                Deskripsi <span style={{ fontSize: 10, fontWeight: 400 }}>(opsional)</span>
+                                            </label>
+                                            <input className="form-input" value={formData.deskripsi}
+                                                onChange={e => setFormData(p => ({ ...p, deskripsi: e.target.value }))}
+                                                placeholder="Catatan untuk referensi internal"
+                                                style={{ borderRadius: 10, padding: '10px 14px', fontSize: 14 }} />
+                                        </div>
+                                    </div>
                                 </div>
-                                <div className="form-group">
-                                    <label className="form-label">Deskripsi (opsional)</label>
-                                    <input className="form-input" value={formData.deskripsi} onChange={e => setFormData(p => ({ ...p, deskripsi: e.target.value }))} placeholder="Catatan untuk referensi" />
-                                </div>
-                                <div className="form-group">
-                                    <label className="form-label">Script Code *</label>
-                                    <textarea className="form-input" rows={6} value={formData.scriptCode} onChange={e => setFormData(p => ({ ...p, scriptCode: e.target.value }))}
-                                        placeholder={'<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-xxxxxxxx" crossorigin="anonymous"></script>'}
-                                        style={{ fontFamily: 'monospace', fontSize: 12 }} />
-                                    <p style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>
-                                        Paste kode script iklan lengkap termasuk tag &lt;script&gt;
+                            </div>
+
+                            {/* Divider */}
+                            <div style={{ height: 1, background: 'var(--border-color)', margin: '0 0 24px 42px' }} />
+
+                            {/* Section 2: Script Code */}
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14, marginBottom: 24 }}>
+                                <div style={{
+                                    width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                                    background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    color: '#fff', fontSize: 13, fontWeight: 700
+                                }}>2</div>
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 4, color: 'var(--text-primary)' }}>Script Code</div>
+                                    <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginBottom: 12, lineHeight: 1.5 }}>
+                                        Paste kode script iklan lengkap. Contoh: Google AdSense, Facebook Pixel, Analytics, dll.
                                     </p>
-                                </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                                    <div className="form-group">
-                                        <label className="form-label">Posisi</label>
-                                        <select className="form-select" value={formData.posisi} onChange={e => setFormData(p => ({ ...p, posisi: e.target.value }))}>
-                                            {POSISI_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                                        </select>
+                                    
+                                    {/* Code editor style */}
+                                    <div style={{
+                                        borderRadius: 12, overflow: 'hidden',
+                                        border: '1px solid var(--border-color)',
+                                        background: 'var(--bg-primary)'
+                                    }}>
+                                        {/* Editor toolbar */}
+                                        <div style={{
+                                            padding: '8px 14px', background: 'var(--bg-secondary)',
+                                            borderBottom: '1px solid var(--border-color)',
+                                            display: 'flex', alignItems: 'center', gap: 8
+                                        }}>
+                                            <div style={{ display: 'flex', gap: 5 }}>
+                                                <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#ef4444' }} />
+                                                <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#f59e0b' }} />
+                                                <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#22c55e' }} />
+                                            </div>
+                                            <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontFamily: 'monospace', marginLeft: 8 }}>
+                                                script.html
+                                            </span>
+                                        </div>
+                                        
+                                        <textarea
+                                            value={formData.scriptCode}
+                                            onChange={e => setFormData(p => ({ ...p, scriptCode: e.target.value }))}
+                                            placeholder={'<script async\n  src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-xxxxxxxx"\n  crossorigin="anonymous">\n</script>'}
+                                            rows={8}
+                                            style={{
+                                                width: '100%', border: 'none', outline: 'none', resize: 'vertical',
+                                                padding: '14px 16px', fontFamily: "'Fira Code', 'Cascadia Code', 'Consolas', monospace",
+                                                fontSize: 13, lineHeight: 1.7, background: 'transparent',
+                                                color: 'var(--text-primary)', boxSizing: 'border-box',
+                                                minHeight: 160
+                                            }}
+                                        />
                                     </div>
-                                    <div className="form-group">
-                                        <label className="form-label">Prioritas</label>
-                                        <input className="form-input" type="number" value={formData.prioritas} onChange={e => setFormData(p => ({ ...p, prioritas: e.target.value }))} placeholder="0" />
+
+                                    {/* Hint */}
+                                    <div style={{
+                                        marginTop: 10, padding: '8px 12px', borderRadius: 8,
+                                        background: 'rgba(102,126,234,0.08)', border: '1px solid rgba(102,126,234,0.15)',
+                                        fontSize: 12, color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 8
+                                    }}>
+                                        <Code size={14} style={{ color: '#667eea', flexShrink: 0 }} />
+                                        Script akan di-inject ke <code style={{ background: 'var(--bg-hover)', padding: '1px 5px', borderRadius: 3, fontWeight: 600, fontSize: 11 }}>&lt;head&gt;</code> saat halaman dimuat
                                     </div>
                                 </div>
-                                <div className="form-group">
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
-                                        <input type="checkbox" checked={formData.aktif} onChange={e => setFormData(p => ({ ...p, aktif: e.target.checked }))} style={{ width: 16, height: 16 }} />
-                                        <span style={{ fontSize: 14 }}>Aktifkan iklan ini</span>
-                                    </label>
+                            </div>
+
+                            {/* Divider */}
+                            <div style={{ height: 1, background: 'var(--border-color)', margin: '0 0 24px 42px' }} />
+
+                            {/* Section 3: Settings */}
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+                                <div style={{
+                                    width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                                    background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    color: '#fff', fontSize: 13, fontWeight: 700
+                                }}>3</div>
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 12, color: 'var(--text-primary)' }}>Pengaturan</div>
+                                    
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                                        {/* Posisi */}
+                                        <div>
+                                            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>Posisi Inject</label>
+                                            <div style={{ display: 'flex', gap: 8 }}>
+                                                {POSISI_OPTIONS.map(o => (
+                                                    <button key={o.value} onClick={() => setFormData(p => ({ ...p, posisi: o.value }))}
+                                                        style={{
+                                                            flex: 1, padding: '8px 12px', borderRadius: 10, cursor: 'pointer',
+                                                            border: formData.posisi === o.value ? '2px solid #667eea' : '2px solid var(--border-color)',
+                                                            background: formData.posisi === o.value ? 'rgba(102,126,234,0.1)' : 'transparent',
+                                                            color: formData.posisi === o.value ? '#667eea' : 'var(--text-secondary)',
+                                                            fontSize: 12, fontWeight: 600, transition: 'all 0.2s',
+                                                            fontFamily: 'monospace'
+                                                        }}>
+                                                        &lt;{o.value}&gt;
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Prioritas */}
+                                        <div>
+                                            <label style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>Prioritas</label>
+                                            <input className="form-input" type="number" value={formData.prioritas}
+                                                onChange={e => setFormData(p => ({ ...p, prioritas: e.target.value }))}
+                                                placeholder="0 (default)"
+                                                style={{ borderRadius: 10, padding: '8px 14px', fontSize: 14 }} />
+                                        </div>
+                                    </div>
+
+                                    {/* Active toggle */}
+                                    <div style={{
+                                        padding: '14px 18px', borderRadius: 12, 
+                                        background: formData.aktif ? 'rgba(34,197,94,0.06)' : 'var(--bg-secondary)',
+                                        border: `1px solid ${formData.aktif ? 'rgba(34,197,94,0.2)' : 'var(--border-color)'}`,
+                                        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                        cursor: 'pointer', transition: 'all 0.2s'
+                                    }} onClick={() => setFormData(p => ({ ...p, aktif: !p.aktif }))}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                            {formData.aktif ? <Power size={18} style={{ color: '#22c55e' }} /> : <PowerOff size={18} style={{ color: '#6b7280' }} />}
+                                            <div>
+                                                <div style={{ fontWeight: 600, fontSize: 13, color: formData.aktif ? '#22c55e' : 'var(--text-secondary)' }}>
+                                                    {formData.aktif ? 'Iklan Aktif' : 'Iklan Nonaktif'}
+                                                </div>
+                                                <div style={{ fontSize: 11, color: 'var(--text-secondary)' }}>
+                                                    {formData.aktif ? 'Script akan di-inject ke halaman' : 'Script tidak akan dimuat'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        {/* Toggle switch */}
+                                        <div style={{
+                                            width: 44, height: 24, borderRadius: 12, padding: 3,
+                                            background: formData.aktif ? '#22c55e' : '#6b7280',
+                                            transition: 'background 0.3s', position: 'relative'
+                                        }}>
+                                            <div style={{
+                                                width: 18, height: 18, borderRadius: '50%', background: '#fff',
+                                                transition: 'transform 0.3s',
+                                                transform: formData.aktif ? 'translateX(20px)' : 'translateX(0)'
+                                            }} />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <div className="modal-footer">
-                            <button className="btn btn-secondary" onClick={() => setShowModal(false)}>Batal</button>
-                            <button className="btn btn-primary" onClick={handleSave}><Save size={14} /> {editItem ? 'Simpan Perubahan' : 'Tambah Iklan'}</button>
+
+                        {/* Footer */}
+                        <div style={{
+                            padding: '18px 28px', borderTop: '1px solid var(--border-color)',
+                            display: 'flex', justifyContent: 'flex-end', gap: 10
+                        }}>
+                            <button className="btn btn-ghost" onClick={() => setShowModal(false)} style={{ borderRadius: 10, padding: '10px 20px' }}>
+                                Batal
+                            </button>
+                            <button className="btn btn-primary" onClick={handleSave} style={{
+                                borderRadius: 10, padding: '10px 24px',
+                                background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                                border: 'none', fontWeight: 600
+                            }}>
+                                <Save size={15} /> {editItem ? 'Simpan Perubahan' : 'Tambah Iklan'}
+                            </button>
                         </div>
                     </div>
                 </div>
