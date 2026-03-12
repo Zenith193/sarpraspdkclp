@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { kerusakanService } from '../services/kerusakan.service.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { uploadFormKerusakan } from '../middleware/upload.js';
-import { isGDriveEnabled, uploadFileToGDrive } from '../utils/googleDriveClient.js';
+import { isGDriveEnabled } from '../utils/googleDriveClient.js';
 
 const router = Router();
 
@@ -20,35 +20,18 @@ router.get('/', requireAuth, async (req, res) => {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// CREATE: save data + file to temp, GDrive upload happens in background queue
 router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadFormKerusakan.single('file'), async (req, res) => {
     try {
         const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
-        let filePath = req.file?.path || null;
-        let uploadStatus = 'done';
-
-        // Direct GDrive upload
-        if (req.file && isGDriveEnabled()) {
-            try {
-                const namaSekolah = req.body.namaSekolah || 'unknown';
-                const npsn = req.body.npsn || '';
-                const kecamatan = req.body.kecamatan || 'unknown';
-                const subPath = `${kecamatan}/${namaSekolah}_${npsn}/kerusakan`;
-                const result = await uploadFileToGDrive(req.file.path, 'kerusakan', subPath);
-                filePath = result.path; // 'gdrive://id' or local path
-                uploadStatus = 'done';
-            } catch (e) {
-                console.error('[Kerusakan] GDrive upload error:', e);
-                filePath = req.file.path;
-                uploadStatus = 'done';
-            }
-        }
 
         const data: any = {
             sekolahId: Number(req.body.sekolahId),
             masaBangunan: req.body.masaBangunan || null,
             fileName: req.file?.originalname || null,
-            filePath,
-            uploadStatus,
+            filePath: req.file?.path || null,
+            // If GDrive enabled, mark as 'uploading' so background queue picks it up
+            uploadStatus: req.file && isGDriveEnabled() ? 'uploading' : 'done',
             status: req.file ? 'Menunggu Verifikasi' : 'Belum Upload',
         };
         if (isSekolah) {
@@ -58,6 +41,7 @@ router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadFormKerusak
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// UPLOAD/REPLACE FILE: save to temp, GDrive upload in background
 router.put('/:id/upload', requireAuth, requireRole('admin', 'sekolah'), uploadFormKerusakan.single('file'), async (req, res) => {
     try {
         const id = Number(req.params.id);
@@ -72,28 +56,8 @@ router.put('/:id/upload', requireAuth, requireRole('admin', 'sekolah'), uploadFo
             }
         }
 
-        let filePath = req.file.path;
-        let uploadStatus = 'done';
-
-        // Direct GDrive upload
-        if (isGDriveEnabled()) {
-            try {
-                // Try to get sekolah info for folder path
-                const existing = await kerusakanService.getById(id);
-                let subPath = `kerusakan/${id}`;
-                if (existing) {
-                    subPath = `${existing.sekolahKecamatan || 'unknown'}/${existing.sekolahNama || 'unknown'}_${existing.sekolahNpsn || ''}/kerusakan`;
-                }
-                const result = await uploadFileToGDrive(req.file.path, 'kerusakan', subPath);
-                filePath = result.path; // 'gdrive://id' or local path
-                uploadStatus = 'done';
-            } catch (e) {
-                console.error('[Kerusakan] GDrive upload error:', e);
-                filePath = req.file.path;
-            }
-        }
-
-        res.json(await kerusakanService.updateFile(id, req.file.originalname, filePath, uploadStatus));
+        const uploadStatus = isGDriveEnabled() ? 'uploading' : 'done';
+        res.json(await kerusakanService.updateFile(id, req.file.originalname, req.file.path, uploadStatus));
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
