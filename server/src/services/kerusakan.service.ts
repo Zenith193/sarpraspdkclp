@@ -4,10 +4,17 @@ import { eq, and, sql, notInArray, isNotNull } from 'drizzle-orm';
 import { queueGDriveDelete } from '../utils/uploadQueue.js';
 
 export const kerusakanService = {
-    async list(filters: { sekolahId?: number; search?: string; page?: number; limit?: number }) {
-        const { sekolahId, search, page = 1, limit = 50 } = filters;
+    async list(filters: { sekolahId?: number; sekolahIds?: number[]; search?: string; page?: number; limit?: number }) {
+        const { sekolahId, sekolahIds, search, page = 1, limit = 50 } = filters;
         const conditions = [];
         if (sekolahId) conditions.push(eq(formKerusakan.sekolahId, sekolahId));
+        else if (sekolahIds && sekolahIds.length > 0) {
+            const { inArray } = await import('drizzle-orm');
+            conditions.push(inArray(formKerusakan.sekolahId, sekolahIds));
+        } else if (sekolahIds && sekolahIds.length === 0) {
+            // Korwil with no assignments → return empty
+            return { data: [], total: 0, page, limit };
+        }
         const where = conditions.length > 0 ? and(...conditions) : undefined;
         const offset = (page - 1) * limit;
         const data = await db.select({ formKerusakan, sekolahNama: sekolah.nama, sekolahNpsn: sekolah.npsn, sekolahKecamatan: sekolah.kecamatan })

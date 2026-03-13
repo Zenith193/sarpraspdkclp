@@ -191,20 +191,31 @@ const Proposal = ({ readOnly = false }) => {
         if (!formData.target?.trim()) { toast.error('Target wajib diisi'); return; }
         if (!formData.keterangan?.trim()) { toast.error('Keterangan wajib diisi'); return; }
         if (!editItem && !formData.proposalFile) { toast.error('Upload Proposal (PDF) wajib diisi'); return; }
+        const pdfFile = formData.proposalFile;
         const payload = { ...formData, nilaiPengajuan: parseFloat(rawValue) };
         // Convert empty date strings to null to avoid PostgreSQL error
         if (!payload.tanggalSurat) payload.tanggalSurat = null;
-        // Remove file from JSON payload (uploaded separately if needed)
+        // Remove file from JSON payload (uploaded separately)
         delete payload.proposalFile;
         try {
+            let proposalId;
             if (editItem) {
                 await proposalApi.update(editItem.id, payload);
+                proposalId = editItem.id;
                 toast.success('Proposal berhasil diperbarui');
             } else {
                 const sekolah = sekolahList.find(s => s.nama === formSekolah);
                 if (!sekolah) { toast.error('Pilih sekolah terlebih dahulu'); return; }
-                await proposalApi.create({ ...payload, sekolahId: sekolah.id });
+                const result = await proposalApi.create({ ...payload, sekolahId: sekolah.id });
+                proposalId = result?.id;
                 toast.success('Proposal berhasil ditambahkan');
+            }
+            // Upload PDF file if selected
+            if (pdfFile && proposalId) {
+                const fd = new FormData();
+                fd.append('file', pdfFile);
+                await proposalApi.uploadPdf(proposalId, fd);
+                toast.success('PDF berhasil diupload (sinkronisasi GDrive sedang berjalan)');
             }
             await refetchProposal();
             setShowModal(false); resetForm();

@@ -43,10 +43,11 @@ export const proposalApi = {
     create: (data) => api.post('/proposal', data),
     update: (id, data) => api.put(`/proposal/${id}`, data),
     delete: (id) => api.delete(`/proposal/${id}`),
-    updateStatus: (id, status) => api.put(`/proposal/${id}/status`, { status }),
+    updateStatus: (id, status, alasan) => api.put(`/proposal/${id}/status`, { status, alasan }),
     updateKeranjang: (id, keranjang) => api.put(`/proposal/${id}/keranjang`, { keranjang }),
     updateRanking: (id, data) => api.put(`/proposal/${id}/ranking`, data),
     batchApprove: (ids) => api.post('/proposal/batch-approve', { ids }),
+    uploadPdf: (id, formData) => api.upload(`/proposal/${id}/upload`, formData, 'PUT'),
 };
 
 export const proyeksiApi = {
