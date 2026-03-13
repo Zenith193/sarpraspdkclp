@@ -235,7 +235,7 @@ const AktivitasPengguna = () => {
                                 <th>Jenis Akun</th>
                                 <th style={{ minWidth: 400 }}>Keterangan Detail</th>
                                 <th style={{ width: 160 }}>Waktu</th>
-                                <th style={{ width: 90 }}>Aksi</th>
+                                {isAdmin && <th style={{ width: 90 }}>Aksi</th>}
                             </tr>
                         </thead>
                         <tbody>
@@ -252,16 +252,18 @@ const AktivitasPengguna = () => {
                                         <span style={{ fontWeight: 600, color: 'var(--accent-blue)' }}>[{a.aktivitas}]</span> {a.keterangan}
                                     </td>
                                     <td style={{ whiteSpace: 'nowrap', fontSize: '0.8125rem' }}>{formatDateTime(a.createdAt)}</td>
+                                    {isAdmin && (
                                     <td>
                                         <div style={{ display: 'flex', gap: 4 }}>
                                             <button className="btn-icon" onClick={() => handleOpenEdit(a)} title="Edit"><Edit size={16} /></button>
                                             <button className="btn-icon" onClick={() => requestDelete(a)} title="Hapus" style={{ color: 'var(--accent-red)' }}><Trash2 size={16} /></button>
                                         </div>
                                     </td>
+                                    )}
                                 </tr>
                             ))}
                             {paged.length === 0 && (
-                                <tr><td colSpan={canViewAll ? 6 : 5} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>Tidak ada data ditemukan</td></tr>
+                                <tr><td colSpan={isAdmin ? (canViewAll ? 6 : 5) : (canViewAll ? 5 : 4)} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>Tidak ada data ditemukan</td></tr>
                             )}
                         </tbody>
                     </table>
