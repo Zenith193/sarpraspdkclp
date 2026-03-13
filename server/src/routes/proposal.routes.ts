@@ -48,8 +48,9 @@ router.post('/', requireAuth, requireRole('admin', 'sekolah'), async (req, res) 
         if (isSekolah) {
             req.body.sekolahId = req.user!.sekolahId;
         }
-        // Sanitize empty date strings to null
+        // Sanitize empty date strings to null, convert string to Date for Drizzle
         if (req.body.tanggalSurat === '') req.body.tanggalSurat = null;
+        else if (req.body.tanggalSurat && typeof req.body.tanggalSurat === 'string') req.body.tanggalSurat = new Date(req.body.tanggalSurat);
         const result = await proposalService.create(req.body, req.user!.id);
         logActivity(req, 'Tambah Proposal', `Mengajukan proposal baru`);
         res.status(201).json(result);
@@ -70,8 +71,9 @@ router.put('/:id', requireAuth, requireRole('admin', 'sekolah'), async (req, res
             delete req.body.sekolahId;
         }
 
-        // Sanitize empty date strings to null
+        // Sanitize empty date strings to null, convert string to Date for Drizzle
         if (req.body.tanggalSurat === '') req.body.tanggalSurat = null;
+        else if (req.body.tanggalSurat && typeof req.body.tanggalSurat === 'string') req.body.tanggalSurat = new Date(req.body.tanggalSurat);
         const result = await proposalService.update(id, req.body);
         logActivity(req, 'Edit Proposal', `Mengubah proposal #${id}`);
         res.json(result);
