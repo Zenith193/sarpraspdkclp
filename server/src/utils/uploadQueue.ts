@@ -88,7 +88,7 @@ async function processUploadQueue() {
                 const sekolahRow = await db.select().from(sekolah).where(eq(sekolah.id, s.sekolahId));
                 const sch = sekolahRow[0];
                 if (sch) {
-                    subPath = `${sch.kecamatan || 'unknown'}/${sch.nama}_${sch.npsn}/sarpras`;
+                    subPath = `${sch.kecamatan || 'unknown'}/${sch.nama}_${sch.npsn}/data sarpras`;
                 }
                 if (s.masaBangunan) subPath += `/${s.masaBangunan}`;
                 if (s.namaRuang) subPath += `/${s.namaRuang}`;
@@ -212,7 +212,7 @@ async function processUploadQueue() {
             continue;
         }
         try {
-            const subPath = 'template';
+            const subPath = 'admin';
             const result = await uploadFileToGDrive(item.filePath, 'template', subPath);
             const oldPath = item.filePath;
             await db.update(bastTemplate).set({ filePath: result.path, uploadStatus: 'done' }).where(eq(bastTemplate.id, item.id));
@@ -235,7 +235,7 @@ async function processUploadQueue() {
             let subPath = `riwayat-bantuan/${item.sekolahId}`;
             if (item.sekolahId) {
                 const sch = await db.select().from(sekolah).where(eq(sekolah.id, item.sekolahId));
-                if (sch[0]) subPath = `${sch[0].kecamatan || 'unknown'}/${sch[0].nama}_${sch[0].npsn}/riwayat-bantuan`;
+                if (sch[0]) subPath = `${sch[0].kecamatan || 'unknown'}/${sch[0].nama}_${sch[0].npsn}/riwayat bantuan`;
             }
             const result = await uploadFileToGDrive(item.filePath, 'riwayat-bantuan', subPath);
             const oldPath = item.filePath;
@@ -256,7 +256,7 @@ async function processUploadQueue() {
             continue;
         }
         try {
-            const subPath = `${item.kecamatan || 'unknown'}/${item.nama}_${item.npsn}/dokumen`;
+            const subPath = `${item.kecamatan || 'unknown'}/${item.nama}_${item.npsn}/profil`;
             const result = await uploadFileToGDrive(item.kopSekolah, 'kop-sekolah', subPath);
             const oldPath = item.kopSekolah;
             await db.update(sekolah).set({ kopSekolah: result.path, kopUploadStatus: 'done' }).where(eq(sekolah.id, item.id));
@@ -276,7 +276,7 @@ async function processUploadQueue() {
             continue;
         }
         try {
-            const subPath = `${item.kecamatan || 'unknown'}/${item.nama}_${item.npsn}/dokumen`;
+            const subPath = `${item.kecamatan || 'unknown'}/${item.nama}_${item.npsn}/profil`;
             const result = await uploadFileToGDrive(item.denahSekolah, 'denah-sekolah', subPath);
             const oldPath = item.denahSekolah;
             await db.update(sekolah).set({ denahSekolah: result.path, denahUploadStatus: 'done' }).where(eq(sekolah.id, item.id));

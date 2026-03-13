@@ -91,6 +91,27 @@ const DataSarpras = ({ readOnly = false }) => {
     // Track deleted photo IDs during edit (to delete from server on save)
     const [deletedPhotoIds, setDeletedPhotoIds] = useState([]);
 
+    // Fetch sarpras detail with photos
+    const handleViewDetail = async (item) => {
+        try {
+            const detail = await sarprasApi.getById(item.id || item.sarpras?.id);
+            const s = detail?.sarpras || detail;
+            const fotos = (detail?.fotos || []).map(f => ({
+                id: f.id,
+                name: f.fileName || f.name || 'foto',
+                url: `/api/foto/${f.id}`,
+                proxyUrl: `/api/foto/${f.id}`,
+                geo: (f.geoLat && f.geoLng) ? { lat: f.geoLat, lng: f.geoLng } : null,
+            }));
+            setViewItem({ ...item, foto: fotos });
+            setPhotoIdx(0);
+        } catch {
+            // Fallback: show without photos
+            setViewItem(item);
+            setPhotoIdx(0);
+        }
+    };
+
     // Export & Filter panel
     const [showExport, setShowExport] = useState(false);
     const exportRef = useRef(null);
@@ -628,7 +649,7 @@ const DataSarpras = ({ readOnly = false }) => {
             case 'aksi':
                 return (
                     <div style={{ display: 'flex', gap: 4 }}>
-                        <button className="btn-icon" onClick={() => { setViewItem(item); setPhotoIdx(0); }} title="Lihat"><Eye size={16} /></button>
+                        <button className="btn-icon" onClick={() => handleViewDetail(item)} title="Lihat"><Eye size={16} /></button>
                         {!readOnly && <button className="btn-icon" onClick={() => handleEdit(item)} title="Edit"><Edit size={16} /></button>}
                         {!readOnly && (
                             <button

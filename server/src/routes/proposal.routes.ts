@@ -5,6 +5,7 @@ import { db } from '../db/index.js';
 import { proposal, sekolah } from '../db/schema/index.js';
 import { eq } from 'drizzle-orm';
 import { uploadFotos, uploadProposal, forwardToNas } from '../middleware/upload.js';
+import { isGDriveEnabled } from '../utils/googleDriveClient.js';
 import { logActivity } from '../middleware/logActivity.js';
 
 const router = Router();
@@ -81,6 +82,33 @@ router.put('/:id', requireAuth, requireRole('admin', 'sekolah'), async (req, res
         const result = await proposalService.update(id, req.body);
         logActivity(req, 'Edit Proposal', `Mengubah proposal #${id}`);
         res.json(result);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// UPLOAD/REPLACE PROPOSAL PDF
+router.put('/:id/upload', requireAuth, requireRole('admin', 'sekolah'), uploadProposal.single('file'), forwardToNas('proposal'), async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
+        if (!req.file) { res.status(400).json({ error: 'No file' }); return; }
+
+        if (isSekolah) {
+            const existing = await proposalService.getById(id);
+            if (!existing || existing.proposal.sekolahId !== req.user!.sekolahId) {
+                res.status(403).json({ error: 'Forbidden' }); return;
+            }
+        }
+
+        const finalPath = (req.file as any).finalPath || req.file.path;
+        const uploadPending = (req.file as any).uploadPending === true;
+
+        await proposalService.update(id, {
+            fileName: req.file.originalname,
+            filePath: finalPath,
+            uploadStatus: uploadPending ? 'uploading' : 'done',
+        });
+        logActivity(req, 'Upload Proposal PDF', `Upload PDF proposal #${id}: ${req.file.originalname}`);
+        res.json({ success: true, fileName: req.file.originalname });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 

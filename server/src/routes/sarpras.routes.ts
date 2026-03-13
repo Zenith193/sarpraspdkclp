@@ -21,7 +21,7 @@ const uploadRoot = process.env.UPLOAD_DIR || './uploads';
  * masaBangunan and namaRuang are only appended if truthy.
  */
 function buildGDriveSarprasPath(kecamatan: string, namaSekolah: string, npsn: string, masaBangunan?: string | null, namaRuang?: string | null): string {
-    let p = `${kecamatan || 'unknown'}/${namaSekolah}_${npsn}/sarpras`;
+    let p = `${kecamatan || 'unknown'}/${namaSekolah}_${npsn}/data sarpras`;
     if (masaBangunan) p += `/${masaBangunan}`;
     if (namaRuang) p += `/${namaRuang}`;
     return p;
