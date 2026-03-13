@@ -601,9 +601,35 @@ const Proposal = ({ readOnly = false }) => {
                             {canManageKeranjang && (<div className="form-group"><label className="form-label">Keranjang</label><div>{viewItem.keranjang || 'Belum Ditetapkan'}</div></div>)}
                             <div className="form-row"><div className="form-group"><label className="form-label">Nilai Pengajuan</label><div style={{ fontWeight: 600, color: 'var(--accent-green)', fontSize: 16 }}>{formatCurrency(viewItem.nilaiPengajuan)}</div></div><div className="form-group"><label className="form-label">Target</label><div>{viewItem.target}</div></div></div>
                             <div className="form-group"><label className="form-label">Keterangan</label><div>{viewItem.keterangan || '-'}</div></div>
+                            {/* File Proposal PDF */}
+                            <div className="form-group">
+                                <label className="form-label">File Proposal</label>
+                                {viewItem.fileName ? (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <FileText size={16} style={{ color: 'var(--accent-blue)', flexShrink: 0 }} />
+                                        <a
+                                            href={`/api/file/proposal/${viewItem.id}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style={{ color: 'var(--accent-green)', textDecoration: 'underline', cursor: 'pointer', fontSize: 14 }}
+                                        >
+                                            {viewItem.fileName}
+                                        </a>
+                                    </div>
+                                ) : (
+                                    <div style={{ color: 'var(--text-secondary)', fontSize: 13 }}>Belum ada file</div>
+                                )}
+                            </div>
+                            {/* Tanggal Pengajuan */}
+                            <div className="form-group">
+                                <label className="form-label">Tanggal Pengajuan</label>
+                                <div style={{ fontSize: 13 }}>
+                                    {viewItem.createdAt ? new Date(viewItem.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) + ' pukul ' + new Date(viewItem.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-'}
+                                </div>
+                            </div>
                             {isAdmin && <div className="form-group"><label className="form-label">Prioritas</label><div>{renderPriorityStar(viewItem.bintang === 1, viewItem.id)}</div></div>}
                         </div>
-                        <div className="modal-footer"><button className="btn btn-ghost" onClick={() => setViewItem(null)}>Tutup</button>{!readOnly && <button className="btn btn-primary" onClick={() => { setViewItem(null); handleOpenModal(viewItem); }}><Edit size={14} /> Edit Data</button>}</div>
+                        <div className="modal-footer"><button className="btn btn-ghost" onClick={() => setViewItem(null)}>Tutup</button>{!readOnly && !isSekolah && <button className="btn btn-primary" onClick={() => { setViewItem(null); handleOpenModal(viewItem); }}><Edit size={14} /> Edit Data</button>}</div>
                     </div>
                 </div>
             )}
