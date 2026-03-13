@@ -9,8 +9,9 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 
-const avatarDir = path.join(process.env.UPLOAD_DIR || './uploads', 'avatars');
+const avatarDir = path.resolve(process.env.UPLOAD_DIR || './uploads', 'avatars');
 if (!fs.existsSync(avatarDir)) fs.mkdirSync(avatarDir, { recursive: true });
+console.log('[Avatar] Dir:', avatarDir);
 const avatarUpload = multer({
     storage: multer.diskStorage({
         destination: (_req, _file, cb) => cb(null, avatarDir),
@@ -145,6 +146,7 @@ router.put('/:id/photo', requireAuth, avatarUpload.single('photo'), async (req, 
         }
 
         await db.update(user).set({ image: imageUrl, updatedAt: new Date() }).where(eq(user.id, targetId));
+        console.log('[Avatar Upload] Saved:', req.file.path, '→ URL:', imageUrl);
         res.json({ success: true, imageUrl });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
@@ -152,7 +154,13 @@ router.put('/:id/photo', requireAuth, avatarUpload.single('photo'), async (req, 
 // ===== SERVE PROFILE PHOTO =====
 router.get('/photo/:filename', async (req, res) => {
     const filePath = path.join(avatarDir, req.params.filename);
-    if (!fs.existsSync(filePath)) { res.status(404).json({ error: 'Not found' }); return; }
+    console.log('[Avatar Serve]', filePath, 'exists:', fs.existsSync(filePath));
+    if (!fs.existsSync(filePath)) {
+        // Try listing the directory to see what files are there
+        try { console.log('[Avatar Serve] Files in dir:', fs.readdirSync(avatarDir).slice(0, 10)); } catch(e) {}
+        res.status(404).json({ error: 'Not found', path: filePath });
+        return;
+    }
     res.sendFile(path.resolve(filePath));
 });
 
