@@ -608,7 +608,7 @@ const Proposal = ({ readOnly = false }) => {
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                         <FileText size={16} style={{ color: 'var(--accent-blue)', flexShrink: 0 }} />
                                         <a
-                                            href={`/api/file/proposal/${viewItem.id}`}
+                                            href={`/api/file/proposal-doc/${viewItem.id}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             style={{ color: 'var(--accent-green)', textDecoration: 'underline', cursor: 'pointer', fontSize: 14 }}
