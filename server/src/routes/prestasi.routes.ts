@@ -24,14 +24,16 @@ router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadSertifikat.
         const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
         const f = req.file as any;
         const data: any = {
-            ...req.body,
             sekolahId: Number(req.body.sekolahId),
+            jenisPrestasi: req.body.jenisPrestasi,
+            siswa: req.body.siswa,
+            kategori: req.body.kategori,
+            tingkat: req.body.tingkat,
             tahun: req.body.tahun ? Number(req.body.tahun) : null,
             capaian: req.body.keterangan || req.body.capaian || null,
             sertifikatPath: f?.finalPath || req.file?.path || null,
             uploadStatus: f?.uploadPending ? 'uploading' : 'done',
         };
-        delete data.keterangan; // remove non-schema field
         if (isSekolah) {
             data.sekolahId = req.user!.sekolahId;
         }
@@ -67,7 +69,16 @@ router.put('/:id', requireAuth, requireRole('admin', 'sekolah'), async (req, res
             delete req.body.sekolahId;
         }
 
-        res.json(await prestasiService.update(id, req.body));
+        // Map keterangan → capaian and strip non-schema fields
+        const updateData: any = {
+            jenisPrestasi: req.body.jenisPrestasi,
+            siswa: req.body.siswa,
+            kategori: req.body.kategori,
+            tingkat: req.body.tingkat,
+            tahun: req.body.tahun ? Number(req.body.tahun) : null,
+            capaian: req.body.keterangan || req.body.capaian || null,
+        };
+        res.json(await prestasiService.update(id, updateData));
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
