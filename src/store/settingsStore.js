@@ -217,15 +217,7 @@ const useSettingsStore = create(
                         ...(persistedState?.nasConfig?.folders || {}),
                     },
                 },
-                accessConfig: Object.fromEntries(
-                    Object.entries(DEFAULT_ACCESS).map(([role, defaultMenus]) => {
-                        const persisted = persistedState?.accessConfig?.[role];
-                        if (!persisted) return [role, defaultMenus];
-                        // Add any new default items not present in persisted
-                        const merged = [...persisted, ...defaultMenus.filter(m => !persisted.includes(m))];
-                        return [role, merged];
-                    })
-                ),
+                accessConfig: persistedState?.accessConfig || { ...DEFAULT_ACCESS },
             }),
         }
     )

@@ -145,6 +145,22 @@ const Sidebar = ({ collapsed, onToggle, className = '' }) => {
                 )}
             </div>
 
+            <div className="sidebar-user" style={{ marginBottom: 8 }}>
+                <div className="sidebar-user-avatar">
+                    {user?.image ? (
+                        <img src={user.image} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
+                    ) : (
+                        user?.namaAkun?.charAt(0) || 'U'
+                    )}
+                </div>
+                {!collapsed && (
+                    <div className="sidebar-user-info">
+                        <div className="sidebar-user-name">{user?.namaAkun}</div>
+                        <div className="sidebar-user-role">{user?.role}</div>
+                    </div>
+                )}
+            </div>
+
             <nav className="sidebar-nav">
                 {!collapsed && <div className="sidebar-section-title">Menu Utama</div>}
                 {menu.map(item => (
@@ -187,21 +203,7 @@ const Sidebar = ({ collapsed, onToggle, className = '' }) => {
                 ))}
             </nav>
 
-            <div className="sidebar-user">
-            <div className="sidebar-user-avatar">
-                    {user?.image ? (
-                        <img src={user.image} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} />
-                    ) : (
-                        user?.namaAkun?.charAt(0) || 'U'
-                    )}
-                </div>
-                {!collapsed && (
-                    <div className="sidebar-user-info">
-                        <div className="sidebar-user-name">{user?.namaAkun}</div>
-                        <div className="sidebar-user-role">{user?.role}</div>
-                    </div>
-                )}
-            </div>
+
 
             <button className="sidebar-logout" onClick={handleLogout}>
                 <LogOut size={18} />
