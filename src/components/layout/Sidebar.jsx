@@ -146,11 +146,9 @@ const Sidebar = ({ collapsed, onToggle, className = '' }) => {
 
             <div className="sidebar-user" style={{ marginBottom: 8 }}>
                 <div className="sidebar-user-avatar">
-                    {user?.image && !user.image.startsWith('gdrive://') ? (
-                        <img src={user.image} alt="" style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none'; }} />
-                    ) : null}
-                    {(!user?.image || user.image.startsWith('gdrive://')) && (
-                        <span>{user?.namaAkun?.charAt(0) || 'U'}</span>
+                    <span>{user?.namaAkun?.charAt(0) || 'U'}</span>
+                    {user?.image && !user.image.startsWith('gdrive://') && (
+                        <img src={user.image} alt="" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none'; }} />
                     )}
                 </div>
                 {!collapsed && (

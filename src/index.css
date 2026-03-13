@@ -687,6 +687,8 @@ textarea {
   color: #fff;
   font-weight: 600;
   font-size: 14px;
+  position: relative;
+  overflow: hidden;
 }
 
 .sidebar-user-info {
