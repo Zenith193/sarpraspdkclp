@@ -126,7 +126,7 @@ function App() {
           <Route path="data-sarpras" element={<DataSarpras readOnly />} />
           <Route path="proposal" element={<Proposal readOnly />} />
           <Route path="riwayat-bantuan" element={<RiwayatBantuan readOnly />} />
-          <Route path="form-kerusakan" element={<FormKerusakan />} />
+          <Route path="form-kerusakan" element={<UploadFormKerusakan />} />
           <Route path="iklan" element={<Iklan />} />
           <Route path="profil" element={<ProfilPengguna />} />
           <Route path="aktivitas" element={<AktivitasPengguna />} />
@@ -139,7 +139,7 @@ function App() {
           <Route path="proposal" element={<Proposal />} />
           <Route path="riwayat-bantuan" element={<RiwayatBantuan readOnly />} />
           <Route path="prestasi" element={<Prestasi />} />
-          <Route path="form-kerusakan" element={<FormKerusakan />} />
+          <Route path="form-kerusakan" element={<UploadFormKerusakan />} />
           <Route path="iklan" element={<Iklan />} />
           <Route path="profil" element={<ProfilPengguna />} />
           <Route path="aktivitas" element={<AktivitasPengguna />} />
