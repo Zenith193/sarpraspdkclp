@@ -492,7 +492,7 @@ const Proposal = ({ readOnly = false }) => {
                                     <td>
                                         <div style={{ display: 'flex', gap: 4 }}>
                                             <button className="btn-icon" onClick={() => setViewItem(item)} title="Lihat"><Eye size={16} /></button>
-                                            {!readOnly && (
+                                            {!readOnly && !isSekolah && (
                                                 <>
                                                     <button className="btn-icon" onClick={() => handleOpenModal(item)} title="Edit"><Edit size={16} /></button>
                                                     {/* Tombol Hapus diubah untuk membuka modal konfirmasi */}
