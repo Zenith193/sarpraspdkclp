@@ -332,7 +332,7 @@ const UploadFormKerusakan = () => {
                                     <th>Masa Bangunan</th>
                                     <th>Form Kerusakan</th>
                                     <th>Status</th>
-                                    <th>Aksi</th>
+                                    {!isSekolah && <th>Aksi</th>}
                                 </tr>
                             </thead>
                             <tbody>
@@ -356,6 +356,7 @@ const UploadFormKerusakan = () => {
                                             )}
                                         </td>
                                         <td>{renderStatusBadge(d.status)}</td>
+                                        {!isSekolah && (
                                         <td>
                                             <div style={{ position: 'relative' }} ref={openActionId === d.id ? actionDropdownRef : null}>
                                                 <button className="btn-icon" onClick={() => setOpenActionId(openActionId === d.id ? null : d.id)} title="Aksi">
@@ -373,7 +374,7 @@ const UploadFormKerusakan = () => {
                                                                 </button>
                                                             </>
                                                         )}
-                                                        {(isAdmin || (isSekolah && d.npsn === user.npsn)) && (
+                                                        {isAdmin && (
                                                             <label className="dropdown-item" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                                                                 <Upload size={14} style={{ marginRight: 8, color: 'var(--accent-blue)' }} /> {d.fileName ? 'Update File' : 'Upload File'}
                                                                 <input type="file" accept="application/pdf" style={{ display: 'none' }} onChange={(e) => { handleDirectUpload(e, d); setOpenActionId(null); }} />
@@ -394,7 +395,7 @@ const UploadFormKerusakan = () => {
                                                                 <ShieldOff size={14} style={{ marginRight: 8, color: 'var(--accent-orange)' }} /> Batalkan Verifikasi
                                                             </button>
                                                         )}
-                                                        {(isAdmin || (isSekolah && d.npsn === user.npsn && !d.verified)) && (
+                                                        {isAdmin && (
                                                             <button className="dropdown-item" onClick={() => { setDeleteTarget(d); setOpenActionId(null); }} style={{ color: 'var(--accent-red)' }}>
                                                                 <Trash2 size={14} style={{ marginRight: 8 }} /> Hapus
                                                             </button>
@@ -403,6 +404,7 @@ const UploadFormKerusakan = () => {
                                                 )}
                                             </div>
                                         </td>
+                                        )}
                                     </tr>
                                 ))}
                                 {pagedData.length === 0 && (
