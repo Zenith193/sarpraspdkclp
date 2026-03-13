@@ -675,6 +675,8 @@ const DataSarpras = ({ readOnly = false }) => {
                                 style={isRestricted('tambah') ? { opacity: 0.5, cursor: 'not-allowed' } : {}}>
                                 <Plus size={16} /> Tambah Data
                             </button>
+                            {user?.role !== 'Sekolah' && (
+                            <>
                             <button className="btn btn-outline" onClick={handleBatchDownloadTemplate} title="Unduh Template Excel">
                                 <FileDown size={16} /> Template Excel
                             </button>
@@ -682,6 +684,8 @@ const DataSarpras = ({ readOnly = false }) => {
                                 <UploadCloud size={16} /> {isBatchImporting ? 'Membaca...' : 'Import Batch'}
                             </button>
                             <input type="file" ref={batchFileRef} onChange={handleBatchFileImport} accept=".xlsx, .xls, .csv" style={{ display: 'none' }} />
+                            </>
+                            )}
                         </div>
                     )}
                 </div>

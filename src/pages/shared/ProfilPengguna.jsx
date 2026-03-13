@@ -233,7 +233,6 @@ const ProfilPengguna = () => {
             </div>
             <small style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: 4, display: 'block' }}>
                 {type === 'kop' ? '* Format Word (.doc, .docx), Maks 1MB' : '* Format PDF, Maks 5MB'}
-                {' — Otomatis tersimpan ke Google Drive'}
             </small>
         </div>
     );
