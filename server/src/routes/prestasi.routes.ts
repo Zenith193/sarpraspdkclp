@@ -28,7 +28,6 @@ router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadSertifikat.
             sekolahId: Number(req.body.sekolahId),
             tahun: req.body.tahun ? Number(req.body.tahun) : null,
             sertifikatPath: f?.finalPath || req.file?.path || null,
-            sertifikat: req.file?.originalname || null,
             uploadStatus: f?.uploadPending ? 'uploading' : 'done',
         };
         if (isSekolah) {
@@ -46,7 +45,6 @@ router.put('/:id/sertifikat', requireAuth, requireRole('admin', 'sekolah'), uplo
         const f = req.file as any;
         const updateData: any = {
             sertifikatPath: f?.finalPath || req.file?.path || null,
-            sertifikat: req.file.originalname,
             uploadStatus: f?.uploadPending ? 'uploading' : 'done',
         };
         res.json(await prestasiService.update(id, updateData));

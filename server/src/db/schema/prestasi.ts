@@ -14,7 +14,6 @@ export const prestasi = pgTable('prestasi', {
     tingkat: text('tingkat').notNull(),           // Kecamatan | Kabupaten/Kota | Provinsi | Nasional | Internasional
     tahun: integer('tahun'),
     capaian: text('capaian'),                     // Juara 1, 2, 3, etc.
-    sertifikat: text('sertifikat'),                // original filename
     sertifikatPath: text('sertifikat_path'),
     uploadStatus: text('upload_status').default('done'), // 'uploading' | 'done' | 'failed'
     status: text('status').default('Menunggu Verifikasi'),

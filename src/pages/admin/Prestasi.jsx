@@ -41,11 +41,13 @@ const Prestasi = () => {
         // Flatten nested { prestasi: {...}, sekolahNama, sekolahNpsn, sekolahKecamatan } into flat objects
         const flat = raw.map(row => {
             if (row.prestasi) {
+                const p = row.prestasi;
                 return {
-                    ...row.prestasi,
-                    namaSekolah: row.sekolahNama || row.prestasi.namaSekolah || '',
-                    npsn: row.sekolahNpsn || row.prestasi.npsn || '',
-                    kecamatan: row.sekolahKecamatan || row.prestasi.kecamatan || '',
+                    ...p,
+                    namaSekolah: row.sekolahNama || p.namaSekolah || '',
+                    npsn: row.sekolahNpsn || p.npsn || '',
+                    kecamatan: row.sekolahKecamatan || p.kecamatan || '',
+                    sertifikat: p.sertifikat || (p.sertifikatPath ? p.sertifikatPath.split('/').pop().split('\\').pop() : null),
                 };
             }
             return row;
