@@ -13,7 +13,9 @@ const UploadFormKerusakan = () => {
     // ===== AUTHORIZATION =====
     const user = useAuthStore(s => s.user);
     const isAdmin = user?.role === 'Admin';
+    const isVerifikator = user?.role === 'Verifikator';
     const isSekolah = user?.role === 'Sekolah';
+    const canSeeMissing = isAdmin || isVerifikator;
     const { data: sekolahList } = useSekolahData();
 
     // ===== STATE DATA (from API) =====
@@ -66,12 +68,11 @@ const UploadFormKerusakan = () => {
     const [formMasa, setFormMasa] = useState(MASA_BANGUNAN[0]);
     const [formFile, setFormFile] = useState(null);
 
-    // ===== COMPUTED DATA: REKAP SEKOLAH BELUM UPLOAD (Hanya Admin) =====
     const missingSchools = useMemo(() => {
-        if (!isAdmin) return [];
+        if (!canSeeMissing) return [];
         const uploadedNPSN = new Set(data.filter(d => d.fileName).map(d => d.npsn));
         return sekolahList.filter(s => !uploadedNPSN.has(s.npsn));
-    }, [data, isAdmin]);
+    }, [data, canSeeMissing, sekolahList]);
 
     // ===== FILTERING (Role-Based) =====
     const filtered = useMemo(() => {
@@ -243,7 +244,7 @@ const UploadFormKerusakan = () => {
             <div className="page-header">
                 <div className="page-header-left">
                     <h1>Upload Form Kerusakan</h1>
-                    <p>{isAdmin ? "Kelola dan verifikasi form kerusakan" : "Upload dan kelola form kerusakan sekolah Anda"}</p>
+                    <p>{canSeeMissing ? "Kelola dan verifikasi form kerusakan" : "Upload dan kelola form kerusakan sekolah Anda"}</p>
                 </div>
                 <div className="page-header-right">
                     <button className="btn btn-primary" onClick={() => handleOpenModal()}>
@@ -261,7 +262,7 @@ const UploadFormKerusakan = () => {
                     <FileText size={14} style={{ marginRight: 6 }} /> Data {isAdmin ? "Upload" : "Saya"}
                 </button>
 
-                {isAdmin && (
+                {canSeeMissing && (
                     <button
                         className={`keranjang-tab ${activeTab === 'missing' ? 'active' : ''}`}
                         onClick={() => { setActiveTab('missing'); setSearch(''); }}

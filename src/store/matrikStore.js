@@ -153,8 +153,8 @@ const DEFAULT_TEMPLATES = [
 const useMatrikStore = create(
     persist(
         (set, get) => ({
-            matrikData: generateSeedData(),
-            pencairanMap: generatePencairanSeed(),
+            matrikData: [],
+            pencairanMap: {},
             bastData: [],
             bastTemplates: DEFAULT_TEMPLATES,
             _nextId: 100,
@@ -227,6 +227,7 @@ const useMatrikStore = create(
         }),
         {
             name: 'SARDIKA-matrik',
+            version: 2,
         }
     )
 );

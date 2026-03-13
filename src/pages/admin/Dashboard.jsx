@@ -22,7 +22,7 @@ const Dashboard = () => {
     const user = useAuthStore(s => s.user);
     const [filterKec, setFilterKec] = useState('');
     const [filterJenjang, setFilterJenjang] = useState('');
-    const [chartYear, setChartYear] = useState(String(new Date().getFullYear()));
+    const [chartYear, setChartYear] = useState('');
     const [searchAktivitas, setSearchAktivitas] = useState('');
     const [aktPageSize, setAktPageSize] = useState(10);
     const [aktPage, setAktPage] = useState(1);
