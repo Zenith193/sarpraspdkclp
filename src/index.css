@@ -199,6 +199,129 @@ textarea {
   }
 }
 
+/* ===== CONSTRUCTION ANIMATION ===== */
+.login-construction-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.login-construction-bg svg {
+  width: 100%;
+  height: 100%;
+}
+
+/* Buildings rise up */
+.construction-building {
+  animation: buildingRise 2s ease-out both;
+}
+.construction-building-1 { animation-delay: 0.2s; }
+.construction-building-2 { animation-delay: 0.6s; }
+.construction-building-3 { animation-delay: 1s; }
+.construction-building-4 { animation-delay: 1.4s; }
+
+@keyframes buildingRise {
+  0% {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Window glow flicker */
+.construction-window {
+  animation: windowGlow 3s ease-in-out infinite alternate;
+}
+
+@keyframes windowGlow {
+  0% { opacity: 0.3; }
+  50% { opacity: 1; }
+  100% { opacity: 0.5; }
+}
+
+/* Crane hook sway */
+.construction-hook {
+  transform-origin: 230px 43px;
+  animation: hookSway 4s ease-in-out infinite alternate;
+}
+
+@keyframes hookSway {
+  0% { transform: rotate(-3deg); }
+  100% { transform: rotate(3deg); }
+}
+
+/* Bricks appear */
+.construction-brick {
+  animation: brickAppear 2s ease-out both;
+}
+
+@keyframes brickAppear {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Floating particles */
+.construction-particle {
+  animation: particleFloat 6s ease-in-out infinite alternate;
+}
+
+@keyframes particleFloat {
+  0% {
+    opacity: 0.1;
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: translate(10px, -20px) scale(1.3);
+  }
+  100% {
+    opacity: 0.1;
+    transform: translate(-5px, -10px) scale(0.8);
+  }
+}
+
+/* Welding sparkle */
+.construction-spark {
+  animation: sparkFlash 3s ease-in-out infinite;
+}
+
+@keyframes sparkFlash {
+  0%, 100% { opacity: 0; transform: scale(0.5); }
+  10% { opacity: 1; transform: scale(1.2); }
+  20% { opacity: 0.8; transform: scale(1); }
+  30% { opacity: 0; transform: scale(0.5); }
+}
+
+/* Crane entrance */
+.construction-crane {
+  animation: craneAppear 1.5s ease-out 0.5s both;
+}
+
+@keyframes craneAppear {
+  0% {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .login-left {
   flex: 1;
   display: flex;
