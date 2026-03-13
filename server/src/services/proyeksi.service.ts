@@ -1,5 +1,5 @@
 import { db } from '../db/index.js';
-import { proyeksiAnggaran, snpAcuan, sarpras, sekolah } from '../db/schema/index.js';
+import { proyeksiAnggaran, snpAcuan, sarpras, sekolah, appSettings } from '../db/schema/index.js';
 import { eq, sql } from 'drizzle-orm';
 
 export const proyeksiService = {
@@ -94,5 +94,27 @@ export const proyeksiService = {
             schools: Object.values(sekolahMap),
             globalStats: { totalRS, totalRB, totalBuild, grandTotal: totalRS + totalRB + totalBuild },
         };
+    },
+
+    // ===== KETERANGAN / USULAN =====
+    async getKeterangan() {
+        const row = await db.select().from(appSettings).where(eq(appSettings.key, 'proyeksi_keterangan'));
+        if (row.length === 0) return {};
+        return row[0].value || {};
+    },
+
+    async saveKeterangan(data: Record<string, string>) {
+        // Merge with existing data
+        const existing = await db.select().from(appSettings).where(eq(appSettings.key, 'proyeksi_keterangan'));
+        let merged = { ...(existing[0]?.value as any || {}), ...data };
+        // Remove empty values
+        Object.keys(merged).forEach(k => { if (!merged[k]) delete merged[k]; });
+
+        if (existing.length === 0) {
+            await db.insert(appSettings).values({ key: 'proyeksi_keterangan', value: merged });
+        } else {
+            await db.update(appSettings).set({ value: merged, updatedAt: new Date() }).where(eq(appSettings.key, 'proyeksi_keterangan'));
+        }
+        return merged;
     },
 };

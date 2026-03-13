@@ -60,6 +60,8 @@ export const proyeksiApi = {
     updateSnp: (id, data) => api.put(`/proyeksi/snp/${id}`, data),
     deleteSnp: (id) => api.delete(`/proyeksi/snp/${id}`),
     rekap: () => api.get('/proyeksi/rekap'),
+    getKeterangan: () => api.get('/proyeksi/keterangan'),
+    saveKeterangan: (data) => api.put('/proyeksi/keterangan', data),
 };
 
 export const matrikApi = {

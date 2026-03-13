@@ -37,4 +37,12 @@ router.get('/rekap', requireAuth, requireRole('admin', 'verifikator'), async (_r
     try { res.json(await proyeksiService.getRekap()); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// ===== KETERANGAN / USULAN (persisted in appSettings) =====
+router.get('/keterangan', requireAuth, requireRole('admin', 'verifikator'), async (_req, res) => {
+    try { res.json(await proyeksiService.getKeterangan()); } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+router.put('/keterangan', requireAuth, requireRole('admin'), async (req, res) => {
+    try { res.json(await proyeksiService.saveKeterangan(req.body)); } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 export default router;

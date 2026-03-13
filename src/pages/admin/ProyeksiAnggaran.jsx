@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Plus, Search, Download, Edit, Trash2, Save, X, ChevronDown, ChevronUp, Building2, Hammer, HardHat, Wallet, ChevronLeft, ChevronRight, Maximize2, Minimize2, MessageSquareText, Filter, AlertCircle } from 'lucide-react';
 import { useProyeksiData, useSarprasData, useSekolahData } from '../../data/dataProvider';
 import { JENIS_PRASARANA, JENJANG } from '../../utils/constants';
@@ -46,6 +46,13 @@ const ProyeksiAnggaran = () => {
 
     // ===== STATE UNTUK KETERANGAN MANUAL =====
     const [sekolahKeterangan, setSekolahKeterangan] = useState({});
+
+    // Load keterangan from backend on mount
+    useEffect(() => {
+        proyeksiApi.getKeterangan().then(data => {
+            if (data && typeof data === 'object') setSekolahKeterangan(data);
+        }).catch(() => {});
+    }, []);
 
     // ===== STATE FILTER =====
     const [filterJenjang, setFilterJenjang] = useState('all');
@@ -319,15 +326,19 @@ const ProyeksiAnggaran = () => {
         else setExpandedRows(dataset.map(d => d.id));
     };
 
+    const keteranganTimerRef = useRef(null);
     const handleKeteranganChange = (sekolahId, value) => {
         setSekolahKeterangan(prev => ({
             ...prev,
             [sekolahId]: value
         }));
-        // Optional: Toast notification when status changes from 'Belum Diusulkan' to something else
-        if (value !== 'Belum diusulkan' && value !== '') {
-            // toast.success(`Status sekolah diperbarui`);
-        }
+        // Auto-save to API with debounce
+        if (keteranganTimerRef.current) clearTimeout(keteranganTimerRef.current);
+        keteranganTimerRef.current = setTimeout(() => {
+            proyeksiApi.saveKeterangan({ [sekolahId]: value }).catch(() => {
+                toast.error('Gagal menyimpan keterangan');
+            });
+        }, 600);
     };
 
     const openModal = (type, item = null) => {
