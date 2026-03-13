@@ -36,7 +36,23 @@ const Prestasi = () => {
     const { data: apiPointData, refetch: refetchPoints } = useApi(() => prestasiApi.listPointRules(), []);
     const [pointSettings, setPointSettings] = useState([]);
 
-    useEffect(() => { if (apiData?.data) setData(apiData.data); else if (Array.isArray(apiData)) setData(apiData); }, [apiData]);
+    useEffect(() => {
+        const raw = apiData?.data || (Array.isArray(apiData) ? apiData : []);
+        // Flatten nested { prestasi: {...}, sekolahNama, sekolahNpsn, sekolahKecamatan } into flat objects
+        const flat = raw.map(row => {
+            if (row.prestasi) {
+                return {
+                    ...row.prestasi,
+                    namaSekolah: row.sekolahNama || row.prestasi.namaSekolah || '',
+                    npsn: row.sekolahNpsn || row.prestasi.npsn || '',
+                    kecamatan: row.sekolahKecamatan || row.prestasi.kecamatan || '',
+                };
+            }
+            return row;
+        });
+        setData(flat);
+    }, [apiData]);
+
     useEffect(() => { if (apiPointData?.data) setPointSettings(apiPointData.data); else if (Array.isArray(apiPointData)) setPointSettings(apiPointData); }, [apiPointData]);
 
     // UI State
@@ -74,23 +90,17 @@ const Prestasi = () => {
     // ===== COMPUTED DATA & FILTERING =====
 
     // 1. Filter Data berdasarkan Role (Hak Akses)
+    // Backend already filters by sekolahId for Sekolah role, no additional client filter needed
     const roleFilteredData = useMemo(() => {
         if (!user) return [];
-
         // Admin & Verifikator: Lihat Semua
         if (isAdmin || isVerifikator) return data;
-
         // Korwil: Lihat berdasarkan kecamatan pengguna
-        // Asumsi: user.kecamatan tersedia di state auth
         if (isKorwil && user.kecamatan) {
             return data.filter(d => d.kecamatan === user.kecamatan);
         }
-
-        // Sekolah: Lihat data milik sendiri (berdasarkan namaSekolah == namaAkun)
-        if (isSekolah && user.namaAkun) {
-            return data.filter(d => d.namaSekolah === user.namaAkun);
-        }
-
+        // Sekolah: Backend sudah filter by sekolahId, tampilkan semua
+        if (isSekolah) return data;
         return [];
     }, [data, user, isAdmin, isVerifikator, isKorwil, isSekolah]);
 
