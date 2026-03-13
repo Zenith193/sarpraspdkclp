@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { Upload, Search, Download, Eye, Plus, Trash2, X, Save, AlertTriangle, FileText, FileSpreadsheet, FileDown, ChevronDown, CheckCircle, XCircle, RefreshCw, ShieldOff, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Upload, Search, Download, Eye, Plus, Trash2, X, Save, AlertTriangle, FileText, FileSpreadsheet, FileDown, ChevronDown, CheckCircle, XCircle, RefreshCw, ShieldOff, ChevronLeft, ChevronRight, MoreVertical } from 'lucide-react';
 import { useSekolahData } from '../../data/dataProvider';
 import { MASA_BANGUNAN } from '../../utils/constants';
 import { exportToExcel, exportToCSV, exportToPDF } from '../../utils/exportUtils';
@@ -16,7 +16,20 @@ const UploadFormKerusakan = () => {
     const isVerifikator = user?.role === 'Verifikator';
     const isSekolah = user?.role === 'Sekolah';
     const canSeeMissing = isAdmin || isVerifikator;
+    const canVerify = isAdmin || isVerifikator;
     const { data: sekolahList } = useSekolahData();
+
+    // ===== ACTION DROPDOWN =====
+    const [openActionId, setOpenActionId] = useState(null);
+    const actionDropdownRef = useRef(null);
+
+    useEffect(() => {
+        const handler = (e) => {
+            if (actionDropdownRef.current && !actionDropdownRef.current.contains(e.target)) setOpenActionId(null);
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
 
     // ===== STATE DATA (from API) =====
     const { data: apiData, loading, refetch } = useApi(() => kerusakanApi.list(), []);
@@ -346,31 +359,44 @@ const UploadFormKerusakan = () => {
                                         </td>
                                         <td>{renderStatusBadge(d.status)}</td>
                                         <td>
-                                            <div style={{ display: 'flex', gap: 4 }}>
-                                                {(isAdmin || (isSekolah && d.npsn === user.npsn)) && (
-                                                    <label className="btn-icon" title={d.fileName ? "Update File" : "Upload File"} style={{ cursor: 'pointer' }}>
-                                                        <Upload size={16} />
-                                                        <input type="file" accept="application/pdf" style={{ display: 'none' }} onChange={(e) => handleDirectUpload(e, d)} />
-                                                    </label>
-                                                )}
-
-                                                {d.fileUrl && (
-                                                    <button className="btn-icon" onClick={() => setPreviewItem(d)} title="Lihat" style={{ color: 'var(--accent-blue)' }}><Eye size={16} /></button>
-                                                )}
-
-                                                {isAdmin && d.status === 'Menunggu Verifikasi' && (
-                                                    <>
-                                                        <button className="btn-icon" onClick={() => handleVerify(d.id)} title="Verifikasi" style={{ color: 'var(--accent-green)' }}><CheckCircle size={16} /></button>
-                                                        <button className="btn-icon" onClick={() => openRejectModal(d)} title="Tolak" style={{ color: 'var(--accent-red)' }}><XCircle size={16} /></button>
-                                                    </>
-                                                )}
-
-                                                {isAdmin && d.status === 'Diverifikasi' && (
-                                                    <button className="btn-icon" onClick={() => openUnverifyModal(d)} title="Unverifikasi" style={{ color: 'var(--accent-orange)' }}><ShieldOff size={16} /></button>
-                                                )}
-
-                                                {(isAdmin || (isSekolah && d.npsn === user.npsn && !d.verified)) && (
-                                                    <button className="btn-icon" onClick={() => setDeleteTarget(d)} title="Hapus" style={{ color: 'var(--accent-red)' }}><Trash2 size={16} /></button>
+                                            <div style={{ position: 'relative' }} ref={openActionId === d.id ? actionDropdownRef : null}>
+                                                <button className="btn-icon" onClick={() => setOpenActionId(openActionId === d.id ? null : d.id)} title="Aksi">
+                                                    <MoreVertical size={16} />
+                                                </button>
+                                                {openActionId === d.id && (
+                                                    <div className="dropdown-menu" style={{ right: 0, left: 'auto', top: '100%', marginTop: 4, minWidth: 180, zIndex: 50 }}>
+                                                        {d.fileUrl && (
+                                                            <button className="dropdown-item" onClick={() => { setPreviewItem(d); setOpenActionId(null); }}>
+                                                                <Eye size={14} style={{ marginRight: 8, color: 'var(--accent-blue)' }} /> Lihat File
+                                                            </button>
+                                                        )}
+                                                        {(isAdmin || (isSekolah && d.npsn === user.npsn)) && (
+                                                            <label className="dropdown-item" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                                                                <Upload size={14} style={{ marginRight: 8, color: 'var(--accent-blue)' }} /> {d.fileName ? 'Update File' : 'Upload File'}
+                                                                <input type="file" accept="application/pdf" style={{ display: 'none' }} onChange={(e) => { handleDirectUpload(e, d); setOpenActionId(null); }} />
+                                                            </label>
+                                                        )}
+                                                        {canVerify && d.status === 'Menunggu Verifikasi' && (
+                                                            <>
+                                                                <button className="dropdown-item" onClick={() => { handleVerify(d.id); setOpenActionId(null); }}>
+                                                                    <CheckCircle size={14} style={{ marginRight: 8, color: 'var(--accent-green)' }} /> Verifikasi
+                                                                </button>
+                                                                <button className="dropdown-item" onClick={() => { openRejectModal(d); setOpenActionId(null); }}>
+                                                                    <XCircle size={14} style={{ marginRight: 8, color: 'var(--accent-red)' }} /> Tolak
+                                                                </button>
+                                                            </>
+                                                        )}
+                                                        {canVerify && d.status === 'Diverifikasi' && (
+                                                            <button className="dropdown-item" onClick={() => { openUnverifyModal(d); setOpenActionId(null); }}>
+                                                                <ShieldOff size={14} style={{ marginRight: 8, color: 'var(--accent-orange)' }} /> Batalkan Verifikasi
+                                                            </button>
+                                                        )}
+                                                        {(isAdmin || (isSekolah && d.npsn === user.npsn && !d.verified)) && (
+                                                            <button className="dropdown-item" onClick={() => { setDeleteTarget(d); setOpenActionId(null); }} style={{ color: 'var(--accent-red)' }}>
+                                                                <Trash2 size={14} style={{ marginRight: 8 }} /> Hapus
+                                                            </button>
+                                                        )}
+                                                    </div>
                                                 )}
                                             </div>
                                         </td>
@@ -386,7 +412,7 @@ const UploadFormKerusakan = () => {
                     )}
 
                     {/* ===== TABEL 2: REKAP BELUM UPLOAD (Hanya Admin) ===== */}
-                    {activeTab === 'missing' && isAdmin && (
+                    {activeTab === 'missing' && canSeeMissing && (
                         <table className="data-table">
                             <thead>
                                 <tr>
