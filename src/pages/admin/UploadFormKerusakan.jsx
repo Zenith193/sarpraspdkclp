@@ -272,7 +272,7 @@ const UploadFormKerusakan = () => {
                     className={`keranjang-tab ${activeTab === 'data' ? 'active' : ''}`}
                     onClick={() => { setActiveTab('data'); setSearch(''); }}
                 >
-                    <FileText size={14} style={{ marginRight: 6 }} /> Data {isAdmin ? "Upload" : "Saya"}
+                    <FileText size={14} style={{ marginRight: 6 }} /> Data {canSeeMissing ? "Upload" : "Saya"}
                 </button>
 
                 {canSeeMissing && (
