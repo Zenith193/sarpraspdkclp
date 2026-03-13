@@ -6,7 +6,7 @@ import { testNasConnection, isNasEnabled, listNasSharedFolders, setRuntimeConfig
 const router = Router();
 
 // ===== ACCESS CONFIG =====
-router.get('/access', requireAuth, requireRole('admin'), async (_req, res) => {
+router.get('/access', requireAuth, async (_req, res) => {
     try { res.json(await settingsService.get('access_config')); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.put('/access', requireAuth, requireRole('admin'), async (req, res) => {
