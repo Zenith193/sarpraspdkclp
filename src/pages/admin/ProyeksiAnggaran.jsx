@@ -210,10 +210,11 @@ const ProyeksiAnggaran = () => {
     const filteredRekapData = useMemo(() => {
         return rekapData.filter(item => {
             const matchJenjang = filterJenjang === 'all' || item.jenjang === filterJenjang;
-            const matchSearch = searchQuery === '' || item.nama.toLowerCase().includes(searchQuery.toLowerCase());
+            const q = searchQuery.toLowerCase();
+            const matchSearch = searchQuery === '' || item.nama.toLowerCase().includes(q) || (sekolahKeterangan[item.id] || '').toLowerCase().includes(q);
             return matchJenjang && matchSearch;
         });
-    }, [rekapData, filterJenjang, searchQuery]);
+    }, [rekapData, filterJenjang, searchQuery, sekolahKeterangan]);
 
     // Filter untuk Tab Baru: Belum Masuk Usulan
     // Kriteria: Total Anggaran > 0 DAN (Keterangan kosong ATAU Keterangan == 'Belum diusulkan')
