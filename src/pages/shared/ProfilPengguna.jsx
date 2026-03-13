@@ -86,11 +86,21 @@ const ProfilPengguna = () => {
         setUploadingPhoto(true);
         try {
             const result = await penggunaApi.uploadPhoto(user.id, pendingPhotoFile);
-            const imageUrl = result.imageUrl;
-            updateProfile({ image: imageUrl });
-            setProfileData(prev => ({ ...prev, image: imageUrl }));
-            toast.success('Foto profil berhasil diperbarui');
-        } catch (err) { toast.error(err.message || 'Gagal upload foto'); }
+            console.log('[Photo Upload] Result:', result);
+            // Add cache-busting timestamp to force browser to reload
+            const imageUrl = result.imageUrl ? `${result.imageUrl}?t=${Date.now()}` : result.image;
+            if (imageUrl) {
+                updateProfile({ image: imageUrl });
+                setProfileData(prev => ({ ...prev, image: imageUrl }));
+                toast.success('Foto profil berhasil diperbarui');
+            } else {
+                toast.error('Upload berhasil tapi URL foto tidak ditemukan');
+                console.error('[Photo Upload] No imageUrl in response:', result);
+            }
+        } catch (err) {
+            console.error('[Photo Upload] Error:', err);
+            toast.error(err.message || 'Gagal upload foto');
+        }
         finally {
             setUploadingPhoto(false);
             setPhotoPreview(null);
