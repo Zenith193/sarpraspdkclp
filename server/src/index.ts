@@ -456,6 +456,25 @@ app.get('/api/check-session', async (req, res) => {
             headers: fromNodeHeaders(req.headers),
         });
         if (session?.user) {
+            // Re-fetch from DB to get latest image and custom fields
+            const freshUser = await db.select().from(user).where(eq(user.id, session.user.id));
+            const u = freshUser[0];
+            if (u) {
+                res.json({
+                    user: {
+                        id: u.id,
+                        name: u.name,
+                        email: u.email,
+                        image: u.image,
+                        role: u.role,
+                        sekolahId: u.sekolahId,
+                        aktif: u.aktif,
+                        kecamatan: (u as any).kecamatan,
+                    },
+                    session: session.session,
+                });
+                return;
+            }
             res.json({ user: session.user, session: session.session });
             return;
         }
