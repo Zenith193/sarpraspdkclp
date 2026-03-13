@@ -19,6 +19,7 @@ const DashboardKorwil = () => {
     // Direct API data states
     const [sarprasData, setSarprasData] = useState([]);
     const [proposalData, setProposalData] = useState([]);
+    const [allProposalsTop5, setAllProposalsTop5] = useState([]);
     const [loading, setLoading] = useState(true);
 
     // Get this korwil's assignment from korwil_assignment table
@@ -89,6 +90,20 @@ const DashboardKorwil = () => {
         return () => { cancelled = true; };
     }, [wilayah, jenjang]);
 
+    // Fetch top 5 proposals from ALL data (no filter) for Top 5 Prioritas
+    useEffect(() => {
+        proposalApi.list({ limit: 99999 }).then(res => {
+            const items = (res.data || res || []).map(item => {
+                if (item.proposal) {
+                    return { ...item.proposal, namaSekolah: item.sekolahNama || '', npsn: item.sekolahNpsn || '', kecamatan: item.sekolahKecamatan || '' };
+                }
+                return item;
+            });
+            const sorted = items.sort((a, b) => (b.bintang || 0) - (a.bintang || 0) || (Number(b.nilaiPengajuan) || 0) - (Number(a.nilaiPengajuan) || 0));
+            setAllProposalsTop5(sorted.slice(0, 5));
+        }).catch(() => {});
+    }, []);
+
     const jumlahSekolah = useMemo(() =>
         sekolahList.filter(s => wilayah.includes(s.kecamatan) && s.jenjang === jenjang).length
     , [sekolahList, wilayah, jenjang]);
@@ -139,7 +154,7 @@ const DashboardKorwil = () => {
     };
     const pieOptions = { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 11 }, padding: 12, usePointStyle: true, pointStyleWidth: 8 } } } };
 
-    const topProposals = [...proposalData].sort((a, b) => (b.bintang || 0) - (a.bintang || 0)).slice(0, 5);
+    const topProposals = allProposalsTop5;
 
     return (
         <div>
