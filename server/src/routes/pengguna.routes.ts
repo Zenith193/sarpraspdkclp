@@ -112,7 +112,6 @@ router.put('/:id/photo', requireAuth, avatarUpload.single('photo'), async (req, 
         const existing = await db.select().from(user).where(eq(user.id, targetId));
         if (existing[0]?.image) {
             if (existing[0].image.startsWith('gdrive://')) {
-                // Queue old GDrive file for deletion
                 try {
                     const { queueGDriveDelete } = await import('../utils/uploadQueue.js');
                     queueGDriveDelete(existing[0].image);
@@ -123,26 +122,26 @@ router.put('/:id/photo', requireAuth, avatarUpload.single('photo'), async (req, 
             }
         }
 
-        let imageUrl = `/api/pengguna/photo/${req.file.filename}`;
+        // Always use the local API URL for serving the photo
+        const imageUrl = `/api/pengguna/photo/${req.file.filename}`;
 
-        // Upload to GDrive if enabled
+        // Upload to GDrive in background (keep local copy for serving)
         try {
             const { isGDriveEnabled, uploadFileToGDrive } = await import('../utils/googleDriveClient.js');
             if (isGDriveEnabled()) {
-                // Build folder path matching school structure
                 let subPath = `profil`;
                 if (existing[0]?.sekolahId) {
                     const { sekolah: sekolahTable } = await import('../db/schema/index.js');
                     const sch = await db.select().from(sekolahTable).where(eq(sekolahTable.id, existing[0].sekolahId));
                     if (sch[0]) subPath = `${sch[0].kecamatan || 'unknown'}/${sch[0].nama}_${sch[0].npsn}/profil`;
                 }
-                const result = await uploadFileToGDrive(req.file.path, 'profil', subPath);
-                if (result.stored === 'gdrive') {
-                    imageUrl = result.path; // 'gdrive://fileId'
-                }
+                // Upload to GDrive as backup but DON'T change imageUrl
+                uploadFileToGDrive(req.file.path, 'profil', subPath).catch((e: any) =>
+                    console.error('GDrive avatar upload error:', e.message)
+                );
             }
         } catch (gErr) {
-            console.error('GDrive avatar upload error (using local):', gErr);
+            console.error('GDrive avatar check error:', gErr);
         }
 
         await db.update(user).set({ image: imageUrl, updatedAt: new Date() }).where(eq(user.id, targetId));

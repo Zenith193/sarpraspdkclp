@@ -269,8 +269,8 @@ const ProfilPengguna = () => {
                 {/* Header Profil with Photo Upload */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 32 }}>
                     <label style={{ position: 'relative', cursor: uploadingPhoto ? 'wait' : 'pointer', flexShrink: 0 }} title="Klik untuk ganti foto">
-                        {p.image ? (
-                            <img src={p.image} alt="Foto Profil" style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--border-color)' }} />
+                        {p.image && !p.image.startsWith('gdrive://') ? (
+                            <img src={p.image} alt="Foto Profil" style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--border-color)' }} onError={e => { e.target.style.display = 'none'; e.target.nextSibling && (e.target.nextSibling.style.display = 'flex'); }} />
                         ) : (
                             <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 28, fontWeight: 700 }}>
                                 {p.namaAkun?.charAt(0) || p.name?.charAt(0) || 'U'}
