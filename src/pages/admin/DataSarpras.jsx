@@ -22,12 +22,12 @@ const DataSarpras = ({ readOnly = false }) => {
     const { guard, isRestricted } = useCountdownGuard();
     const canAccessPriority = user?.role === 'Admin' || user?.role === 'Verifikator';
     const isSekolah = user?.role === 'Sekolah';
+    const isKorwil = (user?.role || '').toLowerCase() === 'korwil';
     const isSekolahOrKorwil = user?.role === 'Sekolah' || isKorwil;
 
     const { data: sekolahList } = useSekolahData();
     const { data: sarprasList, loading: sarprasLoading, refetch: refetchSarpras } = useSarprasData();
     const { data: korwilList } = useKorwilData();
-    const isKorwil = (user?.role || '').toLowerCase() === 'korwil';
 
     // Get korwil assignment (kecamatan + jenjang)
     const myKorwilAssignment = useMemo(() => {
