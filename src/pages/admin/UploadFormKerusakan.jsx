@@ -6,7 +6,7 @@ import { exportToExcel, exportToCSV, exportToPDF } from '../../utils/exportUtils
 import SearchableSelect from '../../components/ui/SearchableSelect';
 import useAuthStore from '../../store/authStore';
 import toast from 'react-hot-toast';
-import { kerusakanApi } from '../../api/index';
+import { kerusakanApi, sarprasApi } from '../../api/index';
 import { useApi } from '../../api/hooks';
 
 const UploadFormKerusakan = () => {
@@ -80,6 +80,8 @@ const UploadFormKerusakan = () => {
     const [formSekolah, setFormSekolah] = useState('');
     const [formMasa, setFormMasa] = useState(MASA_BANGUNAN[0]);
     const [formFile, setFormFile] = useState(null);
+    const [masaBangunanOptions, setMasaBangunanOptions] = useState(MASA_BANGUNAN);
+    const [loadingMasa, setLoadingMasa] = useState(false);
 
     const missingSchools = useMemo(() => {
         if (!canSeeMissing) return [];
@@ -221,17 +223,52 @@ const UploadFormKerusakan = () => {
     };
 
     const handleOpenModal = (preSelectedSchool = null) => {
-        if (isSekolah) setFormSekolah(user.namaAkun || '');
-        else setFormSekolah(preSelectedSchool || '');
-        setFormMasa(MASA_BANGUNAN[0]);
+        if (isSekolah) {
+            setFormSekolah(user.namaAkun || '');
+            fetchMasaBangunan(user.namaAkun || '');
+        } else {
+            setFormSekolah(preSelectedSchool || '');
+            if (preSelectedSchool) fetchMasaBangunan(preSelectedSchool);
+            else setMasaBangunanOptions(MASA_BANGUNAN);
+        }
+        setFormMasa('');
         setFormFile(null);
         setShowAddModal(true);
+    };
+
+    const fetchMasaBangunan = async (schoolName) => {
+        try {
+            setLoadingMasa(true);
+            const sch = sekolahList.find(s => s.nama === schoolName);
+            if (!sch) { setMasaBangunanOptions(MASA_BANGUNAN); return; }
+            const res = await sarprasApi.list({ sekolahId: sch.id, limit: 9999 });
+            const items = res?.data || (Array.isArray(res) ? res : []);
+            const masaSet = new Set();
+            items.forEach(item => {
+                const s = item.sarpras || item;
+                if (s.masaBangunan) masaSet.add(s.masaBangunan);
+            });
+            const sorted = [...masaSet].sort();
+            setMasaBangunanOptions(sorted.length > 0 ? sorted : MASA_BANGUNAN);
+            if (sorted.length > 0) setFormMasa(sorted[0]);
+        } catch {
+            setMasaBangunanOptions(MASA_BANGUNAN);
+        } finally {
+            setLoadingMasa(false);
+        }
+    };
+
+    const handleSchoolChange = (val) => {
+        setFormSekolah(val);
+        if (val) fetchMasaBangunan(val);
+        else setMasaBangunanOptions(MASA_BANGUNAN);
     };
 
     const handleCloseModal = () => {
         setShowAddModal(false);
         setFormSekolah('');
-        setFormMasa(MASA_BANGUNAN[0]);
+        setFormMasa('');
+        setMasaBangunanOptions(MASA_BANGUNAN);
         setFormFile(null);
     };
 
@@ -487,13 +524,19 @@ const UploadFormKerusakan = () => {
                                 {isSekolah ? (
                                     <input className="form-input" value={user.namaAkun} disabled />
                                 ) : (
-                                    <SearchableSelect options={sekolahList.map(s => s.nama)} value={formSekolah} onChange={setFormSekolah} placeholder="-- Cari Sekolah --" />
+                                    <SearchableSelect options={sekolahList.map(s => s.nama)} value={formSekolah} onChange={handleSchoolChange} placeholder="-- Cari Sekolah --" />
                                 )}
                             </div>
                             <div className="form-group">
                                 <label className="form-label">Masa Bangunan</label>
-                                <select className="form-select" value={formMasa} onChange={e => setFormMasa(e.target.value)}>
-                                    {MASA_BANGUNAN.map(m => <option key={m} value={m}>Bangunan {m}</option>)}
+                                <select className="form-select" value={formMasa} onChange={e => setFormMasa(e.target.value)} disabled={loadingMasa}>
+                                    {loadingMasa ? (
+                                        <option>Memuat...</option>
+                                    ) : masaBangunanOptions.length > 0 ? (
+                                        masaBangunanOptions.map(m => <option key={m} value={m}>Bangunan {m}</option>)
+                                    ) : (
+                                        <option value="">Tidak ada data</option>
+                                    )}
                                 </select>
                             </div>
                             <div className="form-group">
