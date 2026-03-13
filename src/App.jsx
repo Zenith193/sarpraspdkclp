@@ -55,8 +55,25 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   return children;
 };
 
+// Smart root redirect: go to dashboard if authenticated, login if not
+const HomeRedirect = () => {
+  const { isAuthenticated, user, checkSession } = useAuthStore();
+
+  useEffect(() => { checkSession(); }, []);
+
+  if (isAuthenticated && user?.role) {
+    const role = user.role.toLowerCase();
+    return <Navigate to={`/${role}/dashboard`} replace />;
+  }
+  return <Navigate to="/login" replace />;
+};
+
 function App() {
   const theme = useThemeStore(s => s.theme);
+  const checkSession = useAuthStore(s => s.checkSession);
+
+  // Revalidate server session on mount (handles new tabs)
+  useEffect(() => { checkSession(); }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -69,7 +86,7 @@ function App() {
       <AdScriptInjector />
       <Routes>
         <Route path="/login" element={<Login />} />
-        <Route path="/" element={<Navigate to="/login" replace />} />
+        <Route path="/" element={<HomeRedirect />} />
 
         {/* Admin Routes */}
         <Route path="/admin" element={<ProtectedRoute allowedRoles={['admin']}><AppLayout /></ProtectedRoute>}>
