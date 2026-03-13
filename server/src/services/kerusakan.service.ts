@@ -44,7 +44,14 @@ export const kerusakanService = {
     },
     async verify(id: number, userId: string) { return db.update(formKerusakan).set({ status: 'Diverifikasi', verifiedBy: userId, updatedAt: new Date() }).where(eq(formKerusakan.id, id)).returning(); },
     async reject(id: number, userId: string, alasan: string) { return db.update(formKerusakan).set({ status: 'Ditolak', verifiedBy: userId, alasanPenolakan: alasan, updatedAt: new Date() }).where(eq(formKerusakan.id, id)).returning(); },
+    async revise(id: number, userId: string, alasan: string) { return db.update(formKerusakan).set({ status: 'Revisi', verifiedBy: userId, alasanPenolakan: alasan, updatedAt: new Date() }).where(eq(formKerusakan.id, id)).returning(); },
     async unverify(id: number) { return db.update(formKerusakan).set({ status: 'Menunggu Verifikasi', verifiedBy: null, updatedAt: new Date() }).where(eq(formKerusakan.id, id)).returning(); },
+    async checkDuplicate(sekolahId: number, masaBangunan: string, excludeId?: number) {
+        const conditions = [eq(formKerusakan.sekolahId, sekolahId), eq(formKerusakan.masaBangunan, masaBangunan)];
+        const rows = await db.select().from(formKerusakan).where(and(...conditions));
+        if (excludeId) return rows.filter(r => r.id !== excludeId).length > 0;
+        return rows.length > 0;
+    },
     async getMissingSchools() {
         const uploaded = await db.select({ sekolahId: formKerusakan.sekolahId }).from(formKerusakan).where(isNotNull(formKerusakan.fileName));
         const uploadedIds = uploaded.map(u => u.sekolahId);

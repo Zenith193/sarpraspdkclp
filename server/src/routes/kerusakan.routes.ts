@@ -53,21 +53,25 @@ router.get('/', requireAuth, async (req, res) => {
 router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadFormKerusakan.single('file'), forwardToNas('kerusakan'), async (req, res) => {
     try {
         const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
+        const sekolahId = isSekolah ? req.user!.sekolahId! : Number(req.body.sekolahId);
+        const masaBangunan = req.body.masaBangunan || null;
+
+        // Check duplicate: 1 form per masa bangunan per school
+        if (masaBangunan) {
+            const isDup = await kerusakanService.checkDuplicate(sekolahId, masaBangunan);
+            if (isDup) { res.status(400).json({ error: `Masa bangunan "${masaBangunan}" sudah memiliki form kerusakan untuk sekolah ini` }); return; }
+        }
 
         const data: any = {
-            sekolahId: Number(req.body.sekolahId),
-            masaBangunan: req.body.masaBangunan || null,
+            sekolahId,
+            masaBangunan,
             fileName: req.file?.originalname || null,
             filePath: req.file?.path || null,
-            // If GDrive enabled, mark as 'uploading' so background queue picks it up
             uploadStatus: req.file && isGDriveEnabled() ? 'uploading' : 'done',
             status: req.file ? 'Menunggu Verifikasi' : 'Belum Upload',
         };
-        if (isSekolah) {
-            data.sekolahId = req.user!.sekolahId;
-        }
         const result = await kerusakanService.create(data, req.user!.id);
-        logActivity(req, 'Tambah Form Kerusakan', `Menambahkan form kerusakan bangunan ${req.body.masaBangunan || 'N/A'}`);
+        logActivity(req, 'Tambah Form Kerusakan', `Menambahkan form kerusakan bangunan ${masaBangunan || 'N/A'}`);
         res.status(201).json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
@@ -94,7 +98,7 @@ router.put('/:id/upload', requireAuth, requireRole('admin', 'sekolah'), uploadFo
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
+router.delete('/:id', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
     try { await kerusakanService.delete(Number(req.params.id)); logActivity(req, 'Hapus Form Kerusakan', `Menghapus form kerusakan #${req.params.id}`); res.json({ success: true }); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.post('/:id/verify', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
@@ -105,6 +109,17 @@ router.post('/:id/reject', requireAuth, requireRole('admin', 'verifikator'), asy
 });
 router.post('/:id/unverify', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
     try { res.json(await kerusakanService.unverify(Number(req.params.id))); } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+router.post('/:id/revise', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
+    try { const r = await kerusakanService.revise(Number(req.params.id), req.user!.id, req.body.alasan); logActivity(req, 'Revisi Kerusakan', `Merevisi form kerusakan #${req.params.id}`); res.json(r); } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+// Get submitted masa bangunan for a school (for duplicate prevention)
+router.get('/submitted-masa/:sekolahId', requireAuth, async (req, res) => {
+    try {
+        const { formKerusakan: fk } = await import('../db/schema/index.js');
+        const rows = await db.select({ masaBangunan: fk.masaBangunan }).from(fk).where(eq(fk.sekolahId, Number(req.params.sekolahId)));
+        res.json(rows.map(r => r.masaBangunan).filter(Boolean));
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.get('/missing', requireAuth, requireRole('admin'), async (_req, res) => {
     try { res.json(await kerusakanService.getMissingSchools()); } catch (e: any) { res.status(500).json({ error: e.message }); }

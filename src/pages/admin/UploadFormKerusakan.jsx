@@ -17,6 +17,7 @@ const UploadFormKerusakan = () => {
     const isSekolah = user?.role === 'Sekolah';
     const canSeeMissing = isAdmin || isVerifikator;
     const canVerify = isAdmin || isVerifikator;
+    const canDelete = isAdmin || isVerifikator;
     const { data: sekolahList } = useSekolahData();
 
     // ===== ACTION DROPDOWN =====
@@ -207,6 +208,10 @@ const UploadFormKerusakan = () => {
                 if (!rejectionReason.trim()) { toast.error("Alasan wajib diisi!"); return; }
                 await kerusakanApi.reject(item.id, rejectionReason);
                 toast.error("Data ditolak");
+            } else if (type === 'revise') {
+                if (!rejectionReason.trim()) { toast.error("Alasan revisi wajib diisi!"); return; }
+                await kerusakanApi.revise(item.id, rejectionReason);
+                toast.success("Data dikembalikan untuk revisi");
             } else if (type === 'unverify') {
                 await kerusakanApi.unverify(item.id);
                 toast.success("Verifikasi dibatalkan");
@@ -241,6 +246,7 @@ const UploadFormKerusakan = () => {
             setLoadingMasa(true);
             const sch = sekolahList.find(s => s.nama === schoolName);
             if (!sch) { setMasaBangunanOptions(MASA_BANGUNAN); return; }
+            // Get sarpras masa bangunan for this school
             const res = await sarprasApi.list({ sekolahId: sch.id, limit: 9999 });
             const items = res?.data || (Array.isArray(res) ? res : []);
             const masaSet = new Set();
@@ -248,9 +254,15 @@ const UploadFormKerusakan = () => {
                 const s = item.sarpras || item;
                 if (s.masaBangunan) masaSet.add(s.masaBangunan);
             });
-            const sorted = [...masaSet].sort();
-            setMasaBangunanOptions(sorted.length > 0 ? sorted : MASA_BANGUNAN);
-            if (sorted.length > 0) setFormMasa(sorted[0]);
+            // Get already submitted masa bangunan to filter out
+            let submittedMasa = [];
+            try {
+                submittedMasa = await kerusakanApi.getSubmittedMasa(sch.id) || [];
+            } catch { /* ignore */ }
+            const available = [...masaSet].filter(m => !submittedMasa.includes(m)).sort();
+            setMasaBangunanOptions(available.length > 0 ? available : []);
+            if (available.length > 0) setFormMasa(available[0]);
+            else setFormMasa('');
         } catch {
             setMasaBangunanOptions(MASA_BANGUNAN);
         } finally {
@@ -273,16 +285,17 @@ const UploadFormKerusakan = () => {
     };
 
     // ===== HELPERS =====
-    const renderStatusBadge = (status) => {
+    const renderStatusBadge = (status, alasan) => {
         const styles = {
             'Menunggu Verifikasi': { bg: 'rgba(234, 179, 8, 0.1)', color: '#eab308', icon: RefreshCw },
             'Diverifikasi': { bg: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', icon: CheckCircle },
             'Ditolak': { bg: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', icon: XCircle },
+            'Revisi': { bg: 'rgba(249, 115, 22, 0.1)', color: '#f97316', icon: RefreshCw },
             'Belum Upload': { bg: 'rgba(107, 114, 128, 0.1)', color: '#6b7280', icon: AlertTriangle }
         };
         const style = styles[status] || styles['Belum Upload'];
         const Icon = style.icon;
-        return (<span className="badge" style={{ background: style.bg, color: style.color, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon size={12} /> {status}</span>);
+        return (<span className="badge" style={{ background: style.bg, color: style.color, display: 'inline-flex', alignItems: 'center', gap: 4, cursor: alasan ? 'help' : 'default' }} title={alasan ? `Alasan: ${alasan}` : ''}><Icon size={12} /> {status}</span>);
     };
 
     return (
@@ -369,7 +382,7 @@ const UploadFormKerusakan = () => {
                                     <th>Masa Bangunan</th>
                                     <th>Form Kerusakan</th>
                                     <th>Status</th>
-                                    {!isSekolah && <th>Aksi</th>}
+                                    <th>Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -392,8 +405,7 @@ const UploadFormKerusakan = () => {
                                                 <span className="badge badge-ditolak">Belum Upload</span>
                                             )}
                                         </td>
-                                        <td>{renderStatusBadge(d.status)}</td>
-                                        {!isSekolah && (
+                                        <td>{renderStatusBadge(d.status, d.alasanPenolakan)}</td>
                                         <td>
                                             <div style={{ position: 'relative' }} ref={openActionId === d.id ? actionDropdownRef : null}>
                                                 <button className="btn-icon" onClick={() => setOpenActionId(openActionId === d.id ? null : d.id)} title="Aksi">
@@ -411,7 +423,15 @@ const UploadFormKerusakan = () => {
                                                                 </button>
                                                             </>
                                                         )}
-                                                        {isAdmin && (
+                                                        {/* Sekolah: re-upload when Ditolak/Revisi */}
+                                                        {isSekolah && (d.status === 'Ditolak' || d.status === 'Revisi' || d.status === 'Belum Upload') && (
+                                                            <label className="dropdown-item" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                                                                <Upload size={14} style={{ marginRight: 8, color: 'var(--accent-blue)' }} /> {d.fileName ? 'Upload Ulang' : 'Upload File'}
+                                                                <input type="file" accept="application/pdf" style={{ display: 'none' }} onChange={(e) => { handleDirectUpload(e, d); setOpenActionId(null); }} />
+                                                            </label>
+                                                        )}
+                                                        {/* Admin/Verifikator: upload/update file */}
+                                                        {canVerify && (
                                                             <label className="dropdown-item" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                                                                 <Upload size={14} style={{ marginRight: 8, color: 'var(--accent-blue)' }} /> {d.fileName ? 'Update File' : 'Upload File'}
                                                                 <input type="file" accept="application/pdf" style={{ display: 'none' }} onChange={(e) => { handleDirectUpload(e, d); setOpenActionId(null); }} />
@@ -425,6 +445,9 @@ const UploadFormKerusakan = () => {
                                                                 <button className="dropdown-item" onClick={() => { openRejectModal(d); setOpenActionId(null); }}>
                                                                     <XCircle size={14} style={{ marginRight: 8, color: 'var(--accent-red)' }} /> Tolak
                                                                 </button>
+                                                                <button className="dropdown-item" onClick={() => { setRejectionReason(''); setStatusModal({ isOpen: true, type: 'revise', data: d }); setOpenActionId(null); }}>
+                                                                    <RefreshCw size={14} style={{ marginRight: 8, color: 'var(--accent-orange)' }} /> Revisi
+                                                                </button>
                                                             </>
                                                         )}
                                                         {canVerify && d.status === 'Diverifikasi' && (
@@ -432,7 +455,7 @@ const UploadFormKerusakan = () => {
                                                                 <ShieldOff size={14} style={{ marginRight: 8, color: 'var(--accent-orange)' }} /> Batalkan Verifikasi
                                                             </button>
                                                         )}
-                                                        {isAdmin && (
+                                                        {canDelete && (
                                                             <button className="dropdown-item" onClick={() => { setDeleteTarget(d); setOpenActionId(null); }} style={{ color: 'var(--accent-red)' }}>
                                                                 <Trash2 size={14} style={{ marginRight: 8 }} /> Hapus
                                                             </button>
@@ -441,7 +464,6 @@ const UploadFormKerusakan = () => {
                                                 )}
                                             </div>
                                         </td>
-                                        )}
                                     </tr>
                                 ))}
                                 {pagedData.length === 0 && (
@@ -535,7 +557,7 @@ const UploadFormKerusakan = () => {
                                     ) : masaBangunanOptions.length > 0 ? (
                                         masaBangunanOptions.map(m => <option key={m} value={m}>Bangunan {m}</option>)
                                     ) : (
-                                        <option value="">Tidak ada data</option>
+                                        <option value="">Semua masa bangunan sudah terisi</option>
                                     )}
                                 </select>
                             </div>
@@ -552,7 +574,7 @@ const UploadFormKerusakan = () => {
                         </div>
                         <div className="modal-footer">
                             <button className="btn btn-ghost" onClick={handleCloseModal}>Batal</button>
-                            <button className="btn btn-primary" onClick={handleSaveData}><Save size={14} /> Simpan</button>
+                            <button className="btn btn-primary" onClick={handleSaveData} disabled={!formMasa}><Save size={14} /> Simpan</button>
                         </div>
                     </div>
                 </div>
@@ -565,11 +587,11 @@ const UploadFormKerusakan = () => {
                             <div style={{ width: 64, height: 64, borderRadius: '50%', background: statusModal.type === 'reject' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(249, 115, 22, 0.1)', color: statusModal.type === 'reject' ? 'var(--accent-red)' : 'var(--accent-orange)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
                                 {statusModal.type === 'reject' ? <XCircle size={32} /> : <ShieldOff size={32} />}
                             </div>
-                            <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>{statusModal.type === 'reject' ? 'Tolak Data Form?' : 'Batalkan Verifikasi?'}</h3>
+                            <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 8 }}>{statusModal.type === 'reject' ? 'Tolak Data Form?' : statusModal.type === 'revise' ? 'Revisi Data Form?' : 'Batalkan Verifikasi?'}</h3>
                             <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 20, lineHeight: 1.5 }}>
-                                {statusModal.type === 'reject' ? `Data form dari "${statusModal.data?.namaSekolah}" akan ditolak.` : `Verifikasi akan dibatalkan.`}
+                                {statusModal.type === 'reject' ? `Data form dari "${statusModal.data?.namaSekolah}" akan ditolak.` : statusModal.type === 'revise' ? `Data form dari "${statusModal.data?.namaSekolah}" akan dikembalikan untuk revisi.` : `Verifikasi akan dibatalkan.`}
                             </p>
-                            {statusModal.type === 'reject' && (
+                            {(statusModal.type === 'reject' || statusModal.type === 'revise') && (
                                 <div style={{ textAlign: 'left', marginBottom: 24 }}>
                                     <label className="form-label" style={{ fontSize: 12, fontWeight: 600, marginBottom: 6, display: 'block' }}>Alasan Penolakan <span style={{ color: 'var(--accent-red)' }}>*</span></label>
                                     <textarea className="form-input" rows={3} value={rejectionReason} onChange={(e) => setRejectionReason(e.target.value)} placeholder="Tulis alasan penolakan..." />
@@ -578,7 +600,7 @@ const UploadFormKerusakan = () => {
                             <div style={{ display: 'flex', gap: 12, justifyContent: 'center' }}>
                                 <button className="btn btn-ghost" onClick={() => setStatusModal({ isOpen: false, type: '', data: null })}>Batal</button>
                                 <button className="btn btn-primary" onClick={executeStatusAction} style={{ background: statusModal.type === 'reject' ? 'var(--accent-red)' : 'var(--accent-orange)', borderColor: statusModal.type === 'reject' ? 'var(--accent-red)' : 'var(--accent-orange)' }}>
-                                    {statusModal.type === 'reject' ? 'Ya, Tolak' : 'Ya, Batalkan'}
+                                    {statusModal.type === 'reject' ? 'Ya, Tolak' : statusModal.type === 'revise' ? 'Ya, Revisi' : 'Ya, Batalkan'}
                                 </button>
                             </div>
                         </div>

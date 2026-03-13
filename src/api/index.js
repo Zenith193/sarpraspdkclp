@@ -128,8 +128,10 @@ export const kerusakanApi = {
     delete: (id) => api.delete(`/form-kerusakan/${id}`),
     verify: (id) => api.post(`/form-kerusakan/${id}/verify`),
     reject: (id, alasan) => api.post(`/form-kerusakan/${id}/reject`, { alasan }),
+    revise: (id, alasan) => api.post(`/form-kerusakan/${id}/revise`, { alasan }),
     unverify: (id) => api.post(`/form-kerusakan/${id}/unverify`),
     missing: () => api.get('/form-kerusakan/missing'),
+    getSubmittedMasa: (sekolahId) => api.get(`/form-kerusakan/submitted-masa/${sekolahId}`),
 };
 
 export const rankingApi = {
