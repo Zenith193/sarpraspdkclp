@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { proposalService } from '../services/proposal.service.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { uploadFotos, uploadProposal, forwardToNas } from '../middleware/upload.js';
+import { logActivity } from '../middleware/logActivity.js';
 
 const router = Router();
 
@@ -50,6 +51,7 @@ router.post('/', requireAuth, requireRole('admin', 'sekolah'), async (req, res) 
         // Sanitize empty date strings to null
         if (req.body.tanggalSurat === '') req.body.tanggalSurat = null;
         const result = await proposalService.create(req.body, req.user!.id);
+        logActivity(req, 'Tambah Proposal', `Mengajukan proposal baru`);
         res.status(201).json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
@@ -71,6 +73,7 @@ router.put('/:id', requireAuth, requireRole('admin', 'sekolah'), async (req, res
         // Sanitize empty date strings to null
         if (req.body.tanggalSurat === '') req.body.tanggalSurat = null;
         const result = await proposalService.update(id, req.body);
+        logActivity(req, 'Edit Proposal', `Mengubah proposal #${id}`);
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
@@ -78,6 +81,7 @@ router.put('/:id', requireAuth, requireRole('admin', 'sekolah'), async (req, res
 router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
     try {
         await proposalService.delete(Number(req.params.id));
+        logActivity(req, 'Hapus Proposal', `Menghapus proposal #${req.params.id}`);
         res.json({ success: true });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
@@ -90,6 +94,7 @@ router.post('/batch-approve', requireAuth, requireRole('admin'), async (req, res
         for (const id of ids) {
             try { await proposalService.updateStatus(Number(id), 'Disetujui', req.user!.id); count++; } catch { /* skip */ }
         }
+        logActivity(req, 'Batch Approve Proposal', `Menyetujui ${count} proposal sekaligus`);
         res.json({ success: true, approved: count });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
@@ -97,6 +102,7 @@ router.post('/batch-approve', requireAuth, requireRole('admin'), async (req, res
 router.put('/:id/status', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
     try {
         const result = await proposalService.updateStatus(Number(req.params.id), req.body.status, req.user!.id);
+        logActivity(req, 'Ubah Status Proposal', `Mengubah status proposal #${req.params.id} menjadi ${req.body.status}`);
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
@@ -126,6 +132,7 @@ router.put('/:id/upload', requireAuth, requireRole('admin', 'sekolah'), uploadPr
             filePath: f.finalPath || req.file.path,
             uploadStatus: f.uploadPending ? 'uploading' : 'done',
         });
+        logActivity(req, 'Upload File Proposal', `Upload file proposal #${id}: ${req.file.originalname}`);
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });

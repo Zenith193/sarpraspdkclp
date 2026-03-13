@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { iklanService } from '../services/iklan.service.js';
+import { logActivity } from '../middleware/logActivity.js';
 
 const router = Router();
 
@@ -40,6 +41,7 @@ router.get('/:id', requireAuth, async (req, res) => {
 router.post('/', requireAuth, requireRole('admin'), async (req, res) => {
     try {
         const item = await iklanService.create(req.body);
+        logActivity(req, 'Tambah Iklan', `Menambahkan iklan: ${req.body.nama || req.body.judul || 'N/A'}`);
         res.status(201).json(item);
     } catch (err: any) {
         res.status(500).json({ error: err.message });
@@ -51,6 +53,7 @@ router.put('/:id', requireAuth, requireRole('admin'), async (req, res) => {
     try {
         const item = await iklanService.update(Number(req.params.id), req.body);
         if (!item) { res.status(404).json({ error: 'Iklan tidak ditemukan' }); return; }
+        logActivity(req, 'Edit Iklan', `Mengubah iklan #${req.params.id}`);
         res.json(item);
     } catch (err: any) {
         res.status(500).json({ error: err.message });
@@ -61,6 +64,7 @@ router.put('/:id', requireAuth, requireRole('admin'), async (req, res) => {
 router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
     try {
         await iklanService.delete(Number(req.params.id));
+        logActivity(req, 'Hapus Iklan', `Menghapus iklan #${req.params.id}`);
         res.status(204).end();
     } catch (err: any) {
         res.status(500).json({ error: err.message });

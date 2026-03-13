@@ -3,6 +3,7 @@ import { riwayatBantuanService } from '../services/riwayatBantuan.service.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { uploadFormKerusakan } from '../middleware/upload.js';
 import { isGDriveEnabled } from '../utils/googleDriveClient.js';
+import { logActivity } from '../middleware/logActivity.js';
 
 const router = Router();
 
@@ -32,11 +33,13 @@ router.post('/', requireAuth, requireRole('admin'), uploadFormKerusakan.single('
             filePath: req.file?.path || null,
             uploadStatus: req.file && isGDriveEnabled() ? 'uploading' : 'done',
         };
-        res.status(201).json(await riwayatBantuanService.create(data));
+        const result = await riwayatBantuanService.create(data);
+        logActivity(req, 'Tambah Riwayat Bantuan', `Menambahkan riwayat bantuan: ${req.body.namaPaket || 'N/A'}`);
+        res.status(201).json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.put('/:id', requireAuth, requireRole('admin'), async (req, res) => {
-    try { res.json(await riwayatBantuanService.update(Number(req.params.id), req.body)); } catch (e: any) { res.status(500).json({ error: e.message }); }
+    try { const r = await riwayatBantuanService.update(Number(req.params.id), req.body); logActivity(req, 'Edit Riwayat Bantuan', `Mengubah riwayat bantuan #${req.params.id}`); res.json(r); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 // Upload/replace file for existing riwayat bantuan
@@ -55,7 +58,7 @@ router.put('/:id/upload', requireAuth, requireRole('admin'), uploadFormKerusakan
 });
 
 router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
-    try { await riwayatBantuanService.delete(Number(req.params.id)); res.json({ success: true }); } catch (e: any) { res.status(500).json({ error: e.message }); }
+    try { await riwayatBantuanService.delete(Number(req.params.id)); logActivity(req, 'Hapus Riwayat Bantuan', `Menghapus riwayat bantuan #${req.params.id}`); res.json({ success: true }); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 export default router;

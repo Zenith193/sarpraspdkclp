@@ -6,6 +6,7 @@ import { isGDriveEnabled } from '../utils/googleDriveClient.js';
 import { db } from '../db/index.js';
 import { korwilAssignment } from '../db/schema/index.js';
 import { eq } from 'drizzle-orm';
+import { logActivity } from '../middleware/logActivity.js';
 
 const router = Router();
 
@@ -65,7 +66,9 @@ router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadFormKerusak
         if (isSekolah) {
             data.sekolahId = req.user!.sekolahId;
         }
-        res.status(201).json(await kerusakanService.create(data, req.user!.id));
+        const result = await kerusakanService.create(data, req.user!.id);
+        logActivity(req, 'Tambah Form Kerusakan', `Menambahkan form kerusakan bangunan ${req.body.masaBangunan || 'N/A'}`);
+        res.status(201).json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
@@ -85,18 +88,20 @@ router.put('/:id/upload', requireAuth, requireRole('admin', 'sekolah'), uploadFo
         }
 
         const uploadStatus = isGDriveEnabled() ? 'uploading' : 'done';
-        res.json(await kerusakanService.updateFile(id, req.file.originalname, req.file.path, uploadStatus));
+        const result = await kerusakanService.updateFile(id, req.file.originalname, req.file.path, uploadStatus);
+        logActivity(req, 'Upload File Kerusakan', `Upload file kerusakan #${id}: ${req.file.originalname}`);
+        res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
-    try { await kerusakanService.delete(Number(req.params.id)); res.json({ success: true }); } catch (e: any) { res.status(500).json({ error: e.message }); }
+    try { await kerusakanService.delete(Number(req.params.id)); logActivity(req, 'Hapus Form Kerusakan', `Menghapus form kerusakan #${req.params.id}`); res.json({ success: true }); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.post('/:id/verify', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
-    try { res.json(await kerusakanService.verify(Number(req.params.id), req.user!.id)); } catch (e: any) { res.status(500).json({ error: e.message }); }
+    try { const r = await kerusakanService.verify(Number(req.params.id), req.user!.id); logActivity(req, 'Verifikasi Kerusakan', `Memverifikasi form kerusakan #${req.params.id}`); res.json(r); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.post('/:id/reject', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
-    try { res.json(await kerusakanService.reject(Number(req.params.id), req.user!.id, req.body.alasan)); } catch (e: any) { res.status(500).json({ error: e.message }); }
+    try { const r = await kerusakanService.reject(Number(req.params.id), req.user!.id, req.body.alasan); logActivity(req, 'Tolak Kerusakan', `Menolak form kerusakan #${req.params.id}`); res.json(r); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.post('/:id/unverify', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
     try { res.json(await kerusakanService.unverify(Number(req.params.id))); } catch (e: any) { res.status(500).json({ error: e.message }); }

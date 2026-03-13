@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { prestasiService } from '../services/prestasi.service.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { uploadSertifikat, forwardToNas } from '../middleware/upload.js';
+import { logActivity } from '../middleware/logActivity.js';
 
 const router = Router();
 
@@ -37,7 +38,9 @@ router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadSertifikat.
         if (isSekolah) {
             data.sekolahId = req.user!.sekolahId;
         }
-        res.status(201).json(await prestasiService.create(data, req.user!.id));
+        const result = await prestasiService.create(data, req.user!.id);
+        logActivity(req, 'Tambah Prestasi', `Menambahkan data prestasi: ${req.body.jenisPrestasi || 'N/A'}`);
+        res.status(201).json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
@@ -78,18 +81,20 @@ router.put('/:id', requireAuth, requireRole('admin', 'sekolah'), async (req, res
             tahun: req.body.tahun ? Number(req.body.tahun) : null,
             capaian: req.body.keterangan || req.body.capaian || null,
         };
-        res.json(await prestasiService.update(id, updateData));
+        const result = await prestasiService.update(id, updateData);
+        logActivity(req, 'Edit Prestasi', `Mengubah data prestasi #${id}`);
+        res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
-    try { await prestasiService.delete(Number(req.params.id)); res.json({ success: true }); } catch (e: any) { res.status(500).json({ error: e.message }); }
+    try { await prestasiService.delete(Number(req.params.id)); logActivity(req, 'Hapus Prestasi', `Menghapus data prestasi #${req.params.id}`); res.json({ success: true }); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 router.post('/:id/verify', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
-    try { res.json(await prestasiService.verify(Number(req.params.id), req.user!.id)); } catch (e: any) { res.status(500).json({ error: e.message }); }
+    try { const r = await prestasiService.verify(Number(req.params.id), req.user!.id); logActivity(req, 'Verifikasi Prestasi', `Memverifikasi prestasi #${req.params.id}`); res.json(r); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.post('/:id/reject', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
-    try { res.json(await prestasiService.reject(Number(req.params.id), req.user!.id, req.body.alasan)); } catch (e: any) { res.status(500).json({ error: e.message }); }
+    try { const r = await prestasiService.reject(Number(req.params.id), req.user!.id, req.body.alasan); logActivity(req, 'Tolak Prestasi', `Menolak prestasi #${req.params.id}: ${req.body.alasan || ''}`); res.json(r); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.post('/:id/unverify', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
     try { res.json(await prestasiService.unverify(Number(req.params.id))); } catch (e: any) { res.status(500).json({ error: e.message }); }

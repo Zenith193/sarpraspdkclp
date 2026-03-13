@@ -8,6 +8,7 @@ import { auth } from '../auth/index.js';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import { logActivity } from '../middleware/logActivity.js';
 
 const avatarDir = path.resolve(process.env.UPLOAD_DIR || './uploads', 'avatars');
 if (!fs.existsSync(avatarDir)) fs.mkdirSync(avatarDir, { recursive: true });
@@ -149,6 +150,7 @@ router.put('/:id/photo', requireAuth, avatarUpload.single('photo'), async (req, 
 
         await db.update(user).set({ image: imageUrl, updatedAt: new Date() }).where(eq(user.id, targetId));
         console.log('[Avatar Upload] Saved:', req.file.path, '→ URL:', imageUrl);
+        logActivity(req, 'Upload Foto Profil', `Mengubah foto profil`);
         res.json({ success: true, imageUrl });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
