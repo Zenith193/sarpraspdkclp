@@ -50,6 +50,7 @@ const Proposal = ({ readOnly = false }) => {
     const isAdmin = user?.role === 'Admin';
     const isAdminOrVerifikator = user?.role === 'Admin' || user?.role === 'Verifikator';
     const canManageKeranjang = user?.role === 'Admin' || user?.role === 'Verifikator';
+    const isSekolahOrKorwil = user?.role === 'Sekolah' || (user?.role || '').toLowerCase() === 'korwil';
 
     const { data: sekolahList } = useSekolahData();
     const { data: usersList } = useUsersData();
@@ -185,7 +186,11 @@ const Proposal = ({ readOnly = false }) => {
 
     const handleSave = async () => {
         const rawValue = String(formData.nilaiPengajuan).replace(/\./g, '');
+        if (!formData.subKegiatan) { toast.error('Sub Kegiatan wajib diisi'); return; }
         if (!rawValue || parseFloat(rawValue) <= 0) { toast.error('Nilai pengajuan harus lebih dari 0'); return; }
+        if (!formData.target?.trim()) { toast.error('Target wajib diisi'); return; }
+        if (!formData.keterangan?.trim()) { toast.error('Keterangan wajib diisi'); return; }
+        if (!editItem && !formData.proposalFile) { toast.error('Upload Proposal (PDF) wajib diisi'); return; }
         const payload = { ...formData, nilaiPengajuan: parseFloat(rawValue) };
         // Convert empty date strings to null to avoid PostgreSQL error
         if (!payload.tanggalSurat) payload.tanggalSurat = null;
@@ -408,10 +413,12 @@ const Proposal = ({ readOnly = false }) => {
                             data
                         </div>
 
+                        {!isSekolahOrKorwil && (
                         <div style={{ position: 'relative' }} ref={filterPanelRef}>
                             <button className={`btn ${activeFilterCount > 0 ? 'btn-primary' : 'btn-ghost'} btn-sm`} onClick={() => setShowFilterPanel(!showFilterPanel)}><Filter size={14} /> Filter {activeFilterCount > 0 && <span style={{ background: '#fff', color: 'var(--accent-blue)', borderRadius: 'var(--radius-full)', width: 18, height: 18, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, marginLeft: 2 }}>{activeFilterCount}</span>}</button>
                             {showFilterPanel && (<div className="dropdown-menu" style={{ left: 0, top: '100%', marginTop: 4, minWidth: 500, padding: 16, zIndex: 50 }}><div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}><div><label style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Kecamatan</label><SearchableSelect options={KECAMATAN} value={headerFilters.kecamatan} onChange={v => { setHeaderFilters(prev => ({ ...prev, kecamatan: v })); setPage(1); }} placeholder="Semua" /></div><div><label style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Jenjang</label><select className="form-select" value={headerFilters.jenjang} onChange={e => { setHeaderFilters(prev => ({ ...prev, jenjang: e.target.value })); setPage(1); }}><option value="">Semua</option>{JENJANG.map(j => <option key={j} value={j}>{j}</option>)}</select></div>{isAdmin && (<div><label style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Prioritas</label><select className="form-select" value={headerFilters.bintang} onChange={e => { setHeaderFilters(prev => ({ ...prev, bintang: e.target.value })); setPage(1); }}><option value="">Semua</option><option value="Ya">Berbintang</option></select></div>)}</div></div>)}
                         </div>
+                        )}
                     </div>
                     <div className="table-toolbar-right">
                         {isAdminOrVerifikator && (
@@ -520,7 +527,7 @@ const Proposal = ({ readOnly = false }) => {
                             {selectedSchoolData && (<div style={{ padding: '10px 14px', background: 'rgba(59,130,246,0.06)', borderRadius: 'var(--radius-md)', marginBottom: 16, fontSize: 13, color: 'var(--text-secondary)', display: 'flex', gap: 20, flexWrap: 'wrap' }}><span><b>NPSN:</b> {safeStr(selectedSchoolData.npsn)}</span><span><b>Kecamatan:</b> {safeStr(selectedSchoolData.kecamatan)}</span><span><b>Jenjang:</b> {safeStr(selectedSchoolData.jenjang)}</span></div>)}
 
                             <div className="form-row">
-                                <div className="form-group"><label className="form-label">Sub Kegiatan</label><select className="form-select" value={formData.subKegiatan || ''} onChange={e => setFormData({ ...formData, subKegiatan: e.target.value })}>{SUB_KEGIATAN.filter(s => !selectedSchoolData?.jenjang || s.jenjang === selectedSchoolData.jenjang).map(s => <option key={s.kode} value={s.nama}>{s.nama}</option>)}</select></div>
+                                <div className="form-group"><label className="form-label">Sub Kegiatan *</label><select className="form-select" value={formData.subKegiatan || ''} onChange={e => setFormData({ ...formData, subKegiatan: e.target.value })}>{SUB_KEGIATAN.filter(s => !selectedSchoolData?.jenjang || s.jenjang === selectedSchoolData.jenjang).map(s => <option key={s.kode} value={s.nama}>{s.nama}</option>)}</select></div>
                                 {isAdminOrVerifikator && (<div className="form-group"><label className="form-label">Status</label><select className="form-select" value={formData.status || ''} onChange={e => setFormData({ ...formData, status: e.target.value })}>{STATUS_PROPOSAL.map(s => <option key={s} value={s}>{s}</option>)}</select></div>)}
                             </div>
 
@@ -534,12 +541,12 @@ const Proposal = ({ readOnly = false }) => {
                                 </div>
                             )}
 
-                            <div className="form-row"><div className="form-group"><label className="form-label">Nilai Pengajuan (Rp) *</label><input className="form-input" type="text" inputMode="numeric" value={formData.nilaiPengajuan ? String(formData.nilaiPengajuan).replace(/\./g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.') : ''} onChange={e => { const raw = e.target.value.replace(/\./g, ''); if (/^\d*$/.test(raw)) setFormData({ ...formData, nilaiPengajuan: raw }); }} placeholder="Contoh: 50.000.000" /></div><div className="form-group"><label className="form-label">Target</label><input className="form-input" value={formData.target || ''} onChange={e => setFormData({ ...formData, target: e.target.value })} /></div></div>
-                            <div className="form-group"><label className="form-label">Keterangan</label><textarea className="form-input" rows={2} value={formData.keterangan || ''} onChange={e => setFormData({ ...formData, keterangan: e.target.value })}></textarea></div>
+                            <div className="form-row"><div className="form-group"><label className="form-label">Nilai Pengajuan (Rp) *</label><input className="form-input" type="text" inputMode="numeric" value={formData.nilaiPengajuan ? String(formData.nilaiPengajuan).replace(/\./g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.') : ''} onChange={e => { const raw = e.target.value.replace(/\./g, ''); if (/^\d*$/.test(raw)) setFormData({ ...formData, nilaiPengajuan: raw }); }} placeholder="Contoh: 50.000.000" /></div><div className="form-group"><label className="form-label">Target *</label><input className="form-input" value={formData.target || ''} onChange={e => setFormData({ ...formData, target: e.target.value })} /></div></div>
+                            <div className="form-group"><label className="form-label">Keterangan *</label><textarea className="form-input" rows={2} value={formData.keterangan || ''} onChange={e => setFormData({ ...formData, keterangan: e.target.value })}></textarea></div>
 
                             {/* Upload Soft File Proposal (PDF) */}
                             <div className="form-group">
-                                <label className="form-label">Upload Proposal (PDF)</label>
+                                <label className="form-label">Upload Proposal (PDF) *</label>
                                 <input className="form-input" type="file" accept=".pdf" onChange={e => { const f = e.target.files[0]; if (f && f.size > 5*1024*1024) { toast.error('Maks 5MB'); e.target.value = null; return; } setFormData({ ...formData, proposalFile: f || null }); }} />
                                 <small style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>Format PDF, maksimal 5MB</small>
                             </div>

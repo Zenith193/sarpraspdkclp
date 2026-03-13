@@ -21,6 +21,7 @@ const DataSarpras = ({ readOnly = false }) => {
     const user = useAuthStore(s => s.user);
     const { guard, isRestricted } = useCountdownGuard();
     const canAccessPriority = user?.role === 'Admin' || user?.role === 'Verifikator';
+    const isSekolahOrKorwil = user?.role === 'Sekolah' || isKorwil;
 
     const { data: sekolahList } = useSekolahData();
     const { data: sarprasList, loading: sarprasLoading, refetch: refetchSarpras } = useSarprasData();
@@ -128,8 +129,8 @@ const DataSarpras = ({ readOnly = false }) => {
         ...(canAccessPriority ? [{ key: 'bintang', label: '★', filterable: true, filterLabel: 'Prioritas', filterType: 'select', filterOptions: BINTANG_OPTIONS, width: 42 }] : []),
         { key: 'namaSekolah', label: 'Nama Sekolah', width: 150 },
         { key: 'npsn', label: 'NPSN', width: 80 },
-        { key: 'jenjang', label: 'Jenjang', filterable: true, filterLabel: 'Jenjang', filterType: 'select', filterOptions: JENJANG, width: 70 },
-        { key: 'kecamatan', label: 'Kecamatan', filterable: true, filterLabel: 'Kecamatan', filterType: 'searchable', filterOptions: KECAMATAN, width: 110 },
+        { key: 'jenjang', label: 'Jenjang', filterable: !isSekolahOrKorwil, filterLabel: 'Jenjang', filterType: 'select', filterOptions: JENJANG, width: 70 },
+        { key: 'kecamatan', label: 'Kecamatan', filterable: !isSekolahOrKorwil, filterLabel: 'Kecamatan', filterType: 'searchable', filterOptions: KECAMATAN, width: 110 },
         { key: 'masaBangunan', label: 'Masa', width: 50 },
         { key: 'jenisPrasarana', label: 'Jenis Prasarana', filterable: true, filterLabel: 'Jenis Prasarana', filterType: 'searchable', filterOptions: JENIS_PRASARANA, width: 120 },
         { key: 'namaRuang', label: 'Nama Ruang', width: 110 },
