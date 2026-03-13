@@ -21,6 +21,7 @@ const DataSarpras = ({ readOnly = false }) => {
     const user = useAuthStore(s => s.user);
     const { guard, isRestricted } = useCountdownGuard();
     const canAccessPriority = user?.role === 'Admin' || user?.role === 'Verifikator';
+    const isSekolah = user?.role === 'Sekolah';
     const isSekolahOrKorwil = user?.role === 'Sekolah' || isKorwil;
 
     const { data: sekolahList } = useSekolahData();
@@ -892,15 +893,19 @@ const DataSarpras = ({ readOnly = false }) => {
                             {/* Form content remains the same */}
                             <div className="form-group">
                                 <label className="form-label">Cari Sekolah *</label>
-                                <SearchableSelect
-                                    options={schoolNames}
-                                    value={formSekolah}
-                                    onChange={setFormSekolah}
-                                    placeholder="-- Pilih Sekolah --"
-                                    searchPlaceholder="Ketik nama sekolah atau NPSN..."
-                                    size="xl"
-                                    renderOption={renderSchoolOption}
-                                />
+                                {isSekolah || editItem ? (
+                                    <input className="form-input" value={formSekolah} disabled style={{ background: 'var(--bg-secondary)' }} />
+                                ) : (
+                                    <SearchableSelect
+                                        options={schoolNames}
+                                        value={formSekolah}
+                                        onChange={setFormSekolah}
+                                        placeholder="-- Pilih Sekolah --"
+                                        searchPlaceholder="Ketik nama sekolah atau NPSN..."
+                                        size="xl"
+                                        renderOption={renderSchoolOption}
+                                    />
+                                )}
                             </div>
                             {formSekolah && (() => {
                                 const sch = sekolahList.find(s => s.nama === formSekolah);

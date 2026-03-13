@@ -51,6 +51,7 @@ const Proposal = ({ readOnly = false }) => {
     const isAdminOrVerifikator = user?.role === 'Admin' || user?.role === 'Verifikator';
     const canManageKeranjang = user?.role === 'Admin' || user?.role === 'Verifikator';
     const isSekolahOrKorwil = user?.role === 'Sekolah' || (user?.role || '').toLowerCase() === 'korwil';
+    const isSekolah = user?.role === 'Sekolah';
 
     const { data: sekolahList } = useSekolahData();
     const { data: usersList } = useUsersData();
@@ -134,6 +135,13 @@ const Proposal = ({ readOnly = false }) => {
     // Form State
     const [formSekolah, setFormSekolah] = useState('');
     const [formData, setFormData] = useState(INITIAL_FORM_DATA);
+
+    // Auto-select school for sekolah role
+    useEffect(() => {
+        if (isSekolah && sekolahList?.length >= 1 && !formSekolah) {
+            setFormSekolah(sekolahList[0].nama);
+        }
+    }, [isSekolah, sekolahList, formSekolah]);
 
     // Effects
     useEffect(() => {
@@ -533,7 +541,7 @@ const Proposal = ({ readOnly = false }) => {
                         <div className="modal-body">
                             <div className="form-group">
                                 <label className="form-label">Nama Sekolah *</label>
-                                {editItem ? (<input className="form-input" value={formSekolah} disabled style={{ background: 'var(--bg-secondary)' }} />) : (<SearchableSelect options={schoolNames} value={formSekolah} onChange={setFormSekolah} placeholder="-- Pilih Sekolah --" renderOption={renderSchoolOption} />)}
+                                {editItem || isSekolah ? (<input className="form-input" value={formSekolah} disabled style={{ background: 'var(--bg-secondary)' }} />) : (<SearchableSelect options={schoolNames} value={formSekolah} onChange={setFormSekolah} placeholder="-- Pilih Sekolah --" renderOption={renderSchoolOption} />)}
                             </div>
                             {selectedSchoolData && (<div style={{ padding: '10px 14px', background: 'rgba(59,130,246,0.06)', borderRadius: 'var(--radius-md)', marginBottom: 16, fontSize: 13, color: 'var(--text-secondary)', display: 'flex', gap: 20, flexWrap: 'wrap' }}><span><b>NPSN:</b> {safeStr(selectedSchoolData.npsn)}</span><span><b>Kecamatan:</b> {safeStr(selectedSchoolData.kecamatan)}</span><span><b>Jenjang:</b> {safeStr(selectedSchoolData.jenjang)}</span></div>)}
 

@@ -63,22 +63,45 @@ const ProfilPengguna = () => {
         }
     }, [sekolahId]);
 
-    // Handle photo upload
-    const handlePhotoUpload = async (e) => {
+    // Photo preview state
+    const [photoPreview, setPhotoPreview] = useState(null);
+    const [pendingPhotoFile, setPendingPhotoFile] = useState(null);
+
+    // Handle photo select → show preview
+    const handlePhotoSelect = (e) => {
         const file = e.target.files[0];
         if (!file) return;
         e.target.value = null;
         if (!/^image\/(jpeg|png|webp|gif)$/.test(file.type)) { toast.error('Hanya file gambar (jpg, png, webp)'); return; }
         if (file.size > 2 * 1024 * 1024) { toast.error('Ukuran foto maksimal 2MB'); return; }
+        // Show preview
+        const previewUrl = URL.createObjectURL(file);
+        setPhotoPreview(previewUrl);
+        setPendingPhotoFile(file);
+    };
+
+    // Confirm upload after preview
+    const handlePhotoUpload = async () => {
+        if (!pendingPhotoFile) return;
         setUploadingPhoto(true);
         try {
-            const result = await penggunaApi.uploadPhoto(user.id, file);
+            const result = await penggunaApi.uploadPhoto(user.id, pendingPhotoFile);
             const imageUrl = result.imageUrl;
             updateProfile({ image: imageUrl });
             setProfileData(prev => ({ ...prev, image: imageUrl }));
             toast.success('Foto profil berhasil diperbarui');
         } catch (err) { toast.error(err.message || 'Gagal upload foto'); }
-        finally { setUploadingPhoto(false); }
+        finally {
+            setUploadingPhoto(false);
+            setPhotoPreview(null);
+            setPendingPhotoFile(null);
+        }
+    };
+
+    const cancelPhotoPreview = () => {
+        if (photoPreview) URL.revokeObjectURL(photoPreview);
+        setPhotoPreview(null);
+        setPendingPhotoFile(null);
     };
 
     // Helper: extract NPSN from email
@@ -246,7 +269,7 @@ const ProfilPengguna = () => {
         </div>
     );
 
-    return (
+    const content = (
         <div>
             <div className="page-header">
                 <div className="page-header-left">
@@ -279,7 +302,7 @@ const ProfilPengguna = () => {
                         <div style={{ position: 'absolute', bottom: 0, right: 0, width: 24, height: 24, borderRadius: '50%', background: 'var(--accent-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--bg-card)' }}>
                             <Upload size={12} style={{ color: '#fff' }} />
                         </div>
-                        <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={handlePhotoUpload} style={{ display: 'none' }} disabled={uploadingPhoto} />
+                        <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={handlePhotoSelect} style={{ display: 'none' }} disabled={uploadingPhoto} />
                     </label>
                     <div>
                         <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)' }}>{p.namaAkun || p.name}</div>
@@ -356,6 +379,34 @@ const ProfilPengguna = () => {
                 )}
             </div>
         </div>
+    );
+
+    return (
+        <>
+            {content}
+
+            {/* Photo Preview Modal */}
+            {photoPreview && (
+                <div className="modal-overlay" onClick={cancelPhotoPreview} style={{ zIndex: 1000 }}>
+                    <div className="modal" style={{ maxWidth: 360, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <div className="modal-title">Preview Foto Profil</div>
+                            <button className="modal-close" onClick={cancelPhotoPreview}><X size={18} /></button>
+                        </div>
+                        <div className="modal-body" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: 24 }}>
+                            <img src={photoPreview} alt="Preview" style={{ width: 120, height: 120, borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--border-color)' }} />
+                            <p style={{ fontSize: 13, color: 'var(--text-secondary)', margin: 0 }}>Apakah foto ini sudah benar?</p>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                                <button className="btn btn-ghost" onClick={cancelPhotoPreview}>Batal</button>
+                                <button className="btn btn-primary" onClick={handlePhotoUpload} disabled={uploadingPhoto}>
+                                    {uploadingPhoto ? 'Menyimpan...' : 'Simpan'}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
     );
 };
 
