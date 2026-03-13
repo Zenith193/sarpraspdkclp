@@ -42,12 +42,20 @@ const Prestasi = () => {
         const flat = raw.map(row => {
             if (row.prestasi) {
                 const p = row.prestasi;
+                // Derive sertifikat display name from path
+                let sertifikatName = null;
+                if (p.sertifikatPath) {
+                    const fname = p.sertifikatPath.split('/').pop().split('\\').pop();
+                    // If it looks like a GDrive ID (no dots/extensions), show generic name
+                    sertifikatName = fname.includes('.') ? fname : 'Sertifikat.pdf';
+                }
                 return {
                     ...p,
                     namaSekolah: row.sekolahNama || p.namaSekolah || '',
                     npsn: row.sekolahNpsn || p.npsn || '',
                     kecamatan: row.sekolahKecamatan || p.kecamatan || '',
-                    sertifikat: p.sertifikat || (p.sertifikatPath ? p.sertifikatPath.split('/').pop().split('\\').pop() : null),
+                    keterangan: p.capaian || p.keterangan || '',
+                    sertifikat: sertifikatName,
                 };
             }
             return row;

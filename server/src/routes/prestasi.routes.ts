@@ -27,9 +27,11 @@ router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadSertifikat.
             ...req.body,
             sekolahId: Number(req.body.sekolahId),
             tahun: req.body.tahun ? Number(req.body.tahun) : null,
+            capaian: req.body.keterangan || req.body.capaian || null,
             sertifikatPath: f?.finalPath || req.file?.path || null,
             uploadStatus: f?.uploadPending ? 'uploading' : 'done',
         };
+        delete data.keterangan; // remove non-schema field
         if (isSekolah) {
             data.sekolahId = req.user!.sekolahId;
         }
