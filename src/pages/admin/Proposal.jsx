@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { Plus, Search, Download, Eye, Edit, Trash2, X, Filter, Star, FileSpreadsheet, FileText, Save, Printer, FileCheck, FilePlus, Archive, AlertOctagon } from 'lucide-react';
+import { Plus, Search, Download, Eye, Edit, Trash2, X, Filter, Star, FileSpreadsheet, FileText, Save, Printer, FileCheck, FilePlus, Archive, AlertOctagon, Upload } from 'lucide-react';
 import { useProposalData, useSekolahData, useUsersData, useKorwilData } from '../../data/dataProvider';
 import { proposalApi, arsipDokumenApi } from '../../api/index';
 import { KECAMATAN, JENJANG, SUB_KEGIATAN, KERANJANG, STATUS_PROPOSAL } from '../../utils/constants';
@@ -566,7 +566,19 @@ const Proposal = ({ readOnly = false }) => {
                             {/* Upload Soft File Proposal (PDF) */}
                             <div className="form-group">
                                 <label className="form-label">Upload Proposal (PDF) *</label>
-                                <input className="form-input" type="file" accept=".pdf" onChange={e => { const f = e.target.files[0]; if (f && f.size > 5*1024*1024) { toast.error('Maks 5MB'); e.target.value = null; return; } setFormData({ ...formData, proposalFile: f || null }); }} />
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', flexShrink: 0 }}>
+                                        <Upload size={14} style={{ marginRight: 4 }} /> {formData.proposalFile || editItem?.fileName ? 'Ganti File' : 'Pilih File'}
+                                        <input type="file" accept=".pdf" style={{ display: 'none' }} onChange={e => { const f = e.target.files[0]; if (!f) return; if (f.type !== 'application/pdf') { toast.error('Hanya file PDF!'); e.target.value = null; return; } if (f.size > 5*1024*1024) { toast.error('Maks 5MB'); e.target.value = null; return; } setFormData({ ...formData, proposalFile: f }); }} />
+                                    </label>
+                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                        {formData.proposalFile ? (
+                                            <span style={{ color: 'var(--accent-green)' }}><FileText size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />{formData.proposalFile.name}</span>
+                                        ) : editItem?.fileName ? (
+                                            <span style={{ color: 'var(--accent-blue)' }}><FileText size={14} style={{ verticalAlign: 'middle', marginRight: 4 }} />{editItem.fileName} (tersimpan)</span>
+                                        ) : 'Belum ada file'}
+                                    </span>
+                                </div>
                                 <small style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>Format PDF, maksimal 5MB</small>
                             </div>
 
