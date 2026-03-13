@@ -126,9 +126,9 @@ router.put('/:id/photo', requireAuth, avatarUpload.single('photo'), async (req, 
         // Always use the local API URL for serving the photo
         const imageUrl = `/api/pengguna/photo/${req.file.filename}`;
 
-        // Upload to GDrive in background (keep local copy for serving)
+        // Upload to GDrive in background — use uploadToGDrive (NOT uploadFileToGDrive which deletes local file!)
         try {
-            const { isGDriveEnabled, uploadFileToGDrive } = await import('../utils/googleDriveClient.js');
+            const { isGDriveEnabled, uploadToGDrive } = await import('../utils/googleDriveClient.js');
             if (isGDriveEnabled()) {
                 let subPath = `profil`;
                 if (existing[0]?.sekolahId) {
@@ -136,13 +136,15 @@ router.put('/:id/photo', requireAuth, avatarUpload.single('photo'), async (req, 
                     const sch = await db.select().from(sekolahTable).where(eq(sekolahTable.id, existing[0].sekolahId));
                     if (sch[0]) subPath = `${sch[0].kecamatan || 'unknown'}/${sch[0].nama}_${sch[0].npsn}/profil`;
                 }
-                // Upload to GDrive as backup but DON'T change imageUrl
-                uploadFileToGDrive(req.file.path, 'profil', subPath).catch((e: any) =>
-                    console.error('GDrive avatar upload error:', e.message)
+                // Upload to GDrive as backup — uploadToGDrive does NOT delete local file
+                uploadToGDrive(req.file.path, subPath).then(r =>
+                    console.log('[Avatar] GDrive upload:', r.success ? `✅ ${r.fileId}` : '❌ failed')
+                ).catch((e: any) =>
+                    console.error('[Avatar] GDrive upload error:', e.message)
                 );
             }
         } catch (gErr) {
-            console.error('GDrive avatar check error:', gErr);
+            console.error('[Avatar] GDrive check error:', gErr);
         }
 
         await db.update(user).set({ image: imageUrl, updatedAt: new Date() }).where(eq(user.id, targetId));
