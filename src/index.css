@@ -385,6 +385,177 @@ textarea {
   50% { opacity: 1; }
 }
 
+/* ===== LOGOUT TRANSITION OVERLAY ===== */
+.logout-transition-overlay {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 99999;
+  background: linear-gradient(135deg, #0a0e1a 0%, #0d1528 30%, #111d3a 60%, #0a1025 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: transOverlayIn 0.6s ease-out;
+}
+
+.logout-transition-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  max-width: 480px;
+  width: 100%;
+  padding: 32px;
+}
+
+.logout-transition-scene {
+  width: 100%;
+  max-width: 440px;
+}
+.logout-transition-scene svg {
+  width: 100%;
+  height: auto;
+}
+
+/* Sun */
+.logout-sun {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.8s ease-out, transform 0.8s ease-out;
+}
+.logout-sun.active {
+  opacity: 1;
+  transform: translateY(0);
+}
+.logout-ray {
+  animation: logoutRaySpin 4s linear infinite;
+  transform-origin: 320px 45px;
+}
+@keyframes logoutRaySpin {
+  0% { opacity: 0.3; }
+  50% { opacity: 1; }
+  100% { opacity: 0.3; }
+}
+
+/* Clouds */
+.logout-cloud {
+  animation: logoutCloudDrift 12s ease-in-out infinite alternate;
+}
+@keyframes logoutCloudDrift {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(20px); }
+}
+
+/* Trees */
+.logout-tree {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+.logout-tree.active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* School */
+.logout-school {
+  opacity: 0;
+  transform: translateY(25px);
+  transition: opacity 0.7s ease-out 0.2s, transform 0.7s ease-out 0.2s;
+}
+.logout-school.active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Flag wave */
+.logout-flag {
+  animation: logoutFlagWave 2s ease-in-out infinite alternate;
+  transform-origin: 200px 50px;
+}
+@keyframes logoutFlagWave {
+  0% { transform: scaleX(1); }
+  100% { transform: scaleX(0.85); }
+}
+
+/* Windows */
+.logout-window {
+  transition: fill 0.5s ease;
+}
+
+/* Stars */
+.logout-star {
+  animation: logoutStarTwinkle 1.5s ease-in-out infinite alternate;
+}
+@keyframes logoutStarTwinkle {
+  0% { opacity: 0.2; transform: scale(0.8); }
+  100% { opacity: 1; transform: scale(1.2); }
+}
+
+/* Info */
+.logout-transition-info {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  animation: transInfoIn 0.6s ease-out 0.4s both;
+}
+.logout-transition-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 800;
+}
+.logout-transition-logo svg {
+  color: var(--accent-blue, #3b82f6);
+}
+.logout-transition-thanks {
+  color: #fff;
+  font-size: 22px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+.logout-transition-message {
+  color: #94a3b8;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.logout-transition-role-badge {
+  display: inline-block;
+  padding: 4px 16px;
+  border-radius: 20px;
+  background: rgba(34, 197, 94, 0.12);
+  color: #86efac;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  border: 1px solid rgba(34, 197, 94, 0.2);
+}
+.logout-transition-progress {
+  width: 240px;
+  height: 3px;
+  background: rgba(255,255,255,0.06);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 6px;
+}
+.logout-transition-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e, #3b82f6, #a855f7);
+  border-radius: 3px;
+  transition: width 0.5s ease;
+  box-shadow: 0 0 6px rgba(34,197,94,0.3);
+}
+.logout-transition-status {
+  color: #94a3b8;
+  font-size: 13px;
+  min-height: 18px;
+  animation: transStatusPulse 1.5s ease-in-out infinite;
+}
+
 .login-left {
   flex: 1;
   display: flex;

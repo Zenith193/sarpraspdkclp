@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import {
     LayoutDashboard, Database, FileText, DollarSign, Activity, Users, FileSpreadsheet,
     History, Grid3X3, FilePlus, Wallet, Map, Upload, Trophy, LogOut, School,
@@ -16,6 +16,8 @@ const Sidebar = ({ collapsed, onToggle, className = '' }) => {
     const { accessConfig, setAccessConfig } = useSettingsStore();
     const navigate = useNavigate();
     const role = user?.role?.toLowerCase();
+    const [showLogoutTransition, setShowLogoutTransition] = useState(false);
+    const [logoutStep, setLogoutStep] = useState(0);
 
     // Fetch latest access config from server on mount
     useEffect(() => {
@@ -31,11 +33,17 @@ const Sidebar = ({ collapsed, onToggle, className = '' }) => {
     }, []);
 
     const handleLogout = () => {
-        logout();
-        toast.success('Logout berhasil', {
-            style: { background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }
-        });
-        navigate('/login');
+        setShowLogoutTransition(true);
+        setLogoutStep(0);
+
+        setTimeout(() => setLogoutStep(1), 500);
+        setTimeout(() => setLogoutStep(2), 1200);
+        setTimeout(() => setLogoutStep(3), 1900);
+
+        setTimeout(() => {
+            logout();
+            navigate('/login');
+        }, 2800);
     };
 
     // Helper: extract menu key from path e.g. '/admin/data-sarpras' → 'data-sarpras'
@@ -207,6 +215,147 @@ const Sidebar = ({ collapsed, onToggle, className = '' }) => {
                 <LogOut size={18} />
                 {!collapsed && 'Logout'}
             </button>
+
+            {/* ===== LOGOUT TRANSITION OVERLAY ===== */}
+            {showLogoutTransition && (
+                <div className="logout-transition-overlay">
+                    <div className="logout-transition-content">
+                        {/* School Scene */}
+                        <div className="logout-transition-scene">
+                            <svg viewBox="0 0 400 220" xmlns="http://www.w3.org/2000/svg">
+                                {/* Sky gradient */}
+                                <defs>
+                                    <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stopColor="rgba(59,130,246,0.08)" />
+                                        <stop offset="100%" stopColor="rgba(168,85,247,0.04)" />
+                                    </linearGradient>
+                                </defs>
+                                <rect x="0" y="0" width="400" height="180" fill="url(#skyGrad)" />
+
+                                {/* Sun/Moon */}
+                                <g className={`logout-sun ${logoutStep >= 0 ? 'active' : ''}`}>
+                                    <circle cx="320" cy="45" r="20" fill="rgba(251,191,36,0.15)" />
+                                    <circle cx="320" cy="45" r="14" fill="rgba(251,191,36,0.25)" />
+                                    {[0,1,2,3,4,5,6,7].map(i => (
+                                        <line key={`ray-${i}`}
+                                            x1={320 + Math.cos(i * Math.PI / 4) * 22}
+                                            y1={45 + Math.sin(i * Math.PI / 4) * 22}
+                                            x2={320 + Math.cos(i * Math.PI / 4) * 28}
+                                            y2={45 + Math.sin(i * Math.PI / 4) * 28}
+                                            stroke="rgba(251,191,36,0.2)" strokeWidth="1.5" strokeLinecap="round"
+                                            className="logout-ray"
+                                            style={{ animationDelay: `${i * 0.15}s` }}
+                                        />
+                                    ))}
+                                </g>
+
+                                {/* Clouds */}
+                                <g className="logout-cloud" style={{ animationDelay: '0s' }}>
+                                    <ellipse cx="80" cy="40" rx="25" ry="10" fill="rgba(255,255,255,0.06)" />
+                                    <ellipse cx="95" cy="35" rx="18" ry="8" fill="rgba(255,255,255,0.05)" />
+                                </g>
+                                <g className="logout-cloud" style={{ animationDelay: '1s' }}>
+                                    <ellipse cx="220" cy="30" rx="22" ry="9" fill="rgba(255,255,255,0.05)" />
+                                    <ellipse cx="235" cy="26" rx="15" ry="7" fill="rgba(255,255,255,0.04)" />
+                                </g>
+
+                                {/* Ground */}
+                                <rect x="0" y="175" width="400" height="45" fill="rgba(34,197,94,0.06)" />
+                                <line x1="0" y1="175" x2="400" y2="175" stroke="rgba(34,197,94,0.15)" strokeWidth="1" />
+
+                                {/* Path/road to school */}
+                                <path d="M0,195 Q100,185 200,190 Q300,195 400,188" stroke="rgba(168,85,247,0.1)" strokeWidth="8" fill="none" strokeLinecap="round" />
+
+                                {/* Tree left */}
+                                <g className={`logout-tree ${logoutStep >= 0 ? 'active' : ''}`}>
+                                    <rect x="58" y="140" width="4" height="35" rx="1" fill="rgba(139,92,46,0.3)" />
+                                    <circle cx="60" cy="130" r="16" fill="rgba(34,197,94,0.12)" />
+                                    <circle cx="52" cy="135" r="10" fill="rgba(34,197,94,0.1)" />
+                                    <circle cx="68" cy="133" r="11" fill="rgba(34,197,94,0.1)" />
+                                </g>
+
+                                {/* Main School Building */}
+                                <g className={`logout-school ${logoutStep >= 1 ? 'active' : ''}`}>
+                                    {/* Main body */}
+                                    <rect x="130" y="105" width="140" height="70" rx="3" fill="rgba(59,130,246,0.1)" stroke="rgba(59,130,246,0.3)" strokeWidth="1" />
+                                    {/* Roof */}
+                                    <polygon points="120,105 200,65 280,105" fill="rgba(59,130,246,0.08)" stroke="rgba(59,130,246,0.25)" strokeWidth="1" />
+                                    {/* Flag */}
+                                    <line x1="200" y1="65" x2="200" y2="45" stroke="rgba(255,255,255,0.3)" strokeWidth="1" />
+                                    <rect x="200" y="45" width="15" height="10" rx="1" fill="rgba(220,38,38,0.3)" className="logout-flag" />
+                                    {/* Door */}
+                                    <rect x="185" y="145" width="30" height="30" rx="2" fill="rgba(59,130,246,0.15)" stroke="rgba(59,130,246,0.35)" strokeWidth="0.8" />
+                                    <circle cx="210" cy="162" r="1.5" fill="rgba(251,191,36,0.4)" />
+                                    {/* Windows */}
+                                    {[0,1,2,3].map(i => (
+                                        <rect key={`sw-${i}`}
+                                            x={140 + i * 32} y="118"
+                                            width="16" height="14" rx="1"
+                                            fill={logoutStep >= 2 ? 'rgba(251,191,36,0.25)' : 'rgba(59,130,246,0.1)'}
+                                            stroke="rgba(59,130,246,0.2)" strokeWidth="0.5"
+                                            className="logout-window"
+                                            style={{ animationDelay: `${i * 0.2}s` }}
+                                        />
+                                    ))}
+                                    {/* Sign */}
+                                    <rect x="166" y="93" width="68" height="10" rx="2" fill="rgba(255,255,255,0.08)" />
+                                    <text x="200" y="101" textAnchor="middle" fill="rgba(255,255,255,0.25)" fontSize="6" fontWeight="600">SEKOLAH</text>
+                                </g>
+
+                                {/* Tree right */}
+                                <g className={`logout-tree ${logoutStep >= 1 ? 'active' : ''}`} style={{ animationDelay: '0.3s' }}>
+                                    <rect x="318" y="135" width="4" height="40" rx="1" fill="rgba(139,92,46,0.3)" />
+                                    <circle cx="320" cy="122" r="18" fill="rgba(34,197,94,0.1)" />
+                                    <circle cx="310" cy="128" r="12" fill="rgba(34,197,94,0.09)" />
+                                    <circle cx="330" cy="126" r="13" fill="rgba(34,197,94,0.09)" />
+                                </g>
+
+                                {/* Stars appearing */}
+                                {logoutStep >= 2 && [
+                                    { x: 50, y: 25, r: 1.5 }, { x: 150, y: 18, r: 1 }, { x: 280, y: 22, r: 1.2 },
+                                    { x: 370, y: 35, r: 0.8 }, { x: 120, y: 50, r: 1 },
+                                ].map((s, i) => (
+                                    <circle key={`star-${i}`} cx={s.x} cy={s.y} r={s.r}
+                                        fill="rgba(255,255,255,0.3)"
+                                        className="logout-star"
+                                        style={{ animationDelay: `${i * 0.2}s` }}
+                                    />
+                                ))}
+                            </svg>
+                        </div>
+
+                        {/* Thank you info */}
+                        <div className="logout-transition-info">
+                            <div className="logout-transition-logo">
+                                <School size={24} />
+                                <span>SARDIKA</span>
+                            </div>
+                            <div className="logout-transition-thanks">
+                                Terima Kasih, {user?.namaAkun || user?.name || 'User'}!
+                            </div>
+                            <div className="logout-transition-message">
+                                Atas kontribusi Anda dalam pendataan<br />
+                                infrastruktur pendidikan Kabupaten Cilacap
+                            </div>
+                            <div className="logout-transition-role-badge">
+                                {user?.role || 'Sekolah'}
+                            </div>
+
+                            {/* Progress bar */}
+                            <div className="logout-transition-progress">
+                                <div className="logout-transition-progress-bar" style={{ width: `${(logoutStep + 1) * 25}%` }} />
+                            </div>
+
+                            <div className="logout-transition-status">
+                                {logoutStep === 0 && '📊 Menyimpan sesi terakhir...'}
+                                {logoutStep === 1 && '🔒 Mengamankan data...'}
+                                {logoutStep === 2 && '🙏 Matur Nuwun!'}
+                                {logoutStep === 3 && '👋 Sampai jumpa kembali!'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
