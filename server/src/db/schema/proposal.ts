@@ -12,7 +12,7 @@ export const proposal = pgTable('proposal', {
     nilaiPengajuan: bigint('nilai_pengajuan', { mode: 'number' }),
     target: text('target'),
     noAgendaSurat: text('no_agenda_surat'),
-    tanggalSurat: date('tanggal_surat'),
+    tanggalSurat: date('tanggal_surat', { mode: 'string' }),
     statusUsulan: text('status_usulan'),
     keterangan: text('keterangan'),
     status: text('status').notNull().default('Menunggu Verifikasi'),

@@ -49,15 +49,16 @@ const Proposal = ({ readOnly = false }) => {
     const { guard, isRestricted } = useCountdownGuard();
     const isAdmin = user?.role === 'Admin';
     const isAdminOrVerifikator = user?.role === 'Admin' || user?.role === 'Verifikator';
+    const isKorwil = (user?.role || '').toLowerCase() === 'korwil';
     const canManageKeranjang = user?.role === 'Admin' || user?.role === 'Verifikator';
-    const isSekolahOrKorwil = user?.role === 'Sekolah' || (user?.role || '').toLowerCase() === 'korwil';
+    const canVerify = user?.role === 'Admin' || user?.role === 'Verifikator' || isKorwil;
+    const isSekolahOrKorwil = user?.role === 'Sekolah' || isKorwil;
     const isSekolah = user?.role === 'Sekolah';
 
     const { data: sekolahList } = useSekolahData();
     const { data: usersList } = useUsersData();
     const { data: proposalList, loading: proposalLoading, refetch: refetchProposal } = useProposalData();
     const { data: korwilList } = useKorwilData();
-    const isKorwil = (user?.role || '').toLowerCase() === 'korwil';
 
     // Get korwil assignment (kecamatan + jenjang)
     const myKorwilAssignment = useMemo(() => {
@@ -159,17 +160,19 @@ const Proposal = ({ readOnly = false }) => {
     // ===== FILTERING =====
     const filtered = useMemo(() => {
         return data.filter(p => {
+            // Korwil only sees SD proposals
+            if (isKorwil && p.jenjang !== 'SD') return false;
             if (search) {
                 const q = search.toLowerCase();
                 if (!p.namaSekolah.toLowerCase().includes(q) && !p.npsn.includes(q)) return false;
             }
             if (headerFilters.kecamatan && p.kecamatan !== headerFilters.kecamatan) return false;
             if (headerFilters.jenjang && p.jenjang !== headerFilters.jenjang) return false;
-            if (canManageKeranjang && headerFilters.keranjang && p.keranjang !== headerFilters.keranjang) return false;
+            if ((canManageKeranjang || isKorwil) && headerFilters.keranjang && p.keranjang !== headerFilters.keranjang) return false;
             if (headerFilters.bintang === 'Ya' && p.bintang !== 1) return false;
             return true;
         });
-    }, [data, search, headerFilters, canManageKeranjang]);
+    }, [data, search, headerFilters, canManageKeranjang, isKorwil]);
 
     const paged = useMemo(() => {
         return filtered.slice((page - 1) * perPage, page * perPage);
@@ -405,7 +408,7 @@ const Proposal = ({ readOnly = false }) => {
                 </div>
             </div>
 
-            {canManageKeranjang && (
+            {(canManageKeranjang || isKorwil) && (
                 <div className="keranjang-tabs">
                     <button className={`keranjang-tab ${headerFilters.keranjang === '' ? 'active' : ''}`} onClick={() => { setHeaderFilters(prev => ({ ...prev, keranjang: '' })); setPage(1); }}>Semua</button>
                     {KERANJANG.map(k => (<button key={k} className={`keranjang-tab ${headerFilters.keranjang === k ? 'active' : ''}`} onClick={() => { setHeaderFilters(prev => ({ ...prev, keranjang: k })); setPage(1); }}>{k.replace('Keranjang Usulan ', '')}</button>))}
@@ -464,9 +467,9 @@ const Proposal = ({ readOnly = false }) => {
                                 <th>Sub Kegiatan</th>
                                 <th>Nilai Pengajuan</th>
                                 <th>Target</th>
-                                {isAdminOrVerifikator && <th>Status</th>}
+                                {(isAdminOrVerifikator || isKorwil) && <th>Status</th>}
                                 {isAdmin && <th>Prioritas</th>}
-                                {canManageKeranjang && <th>Keranjang</th>}
+                                {(canManageKeranjang || isKorwil) && <th>Keranjang</th>}
                                 <th>Aksi</th>
                             </tr>
                         </thead>
@@ -480,9 +483,9 @@ const Proposal = ({ readOnly = false }) => {
                                     <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.subKegiatan}</td>
                                     <td style={{ whiteSpace: 'nowrap' }}>{formatCurrency(item.nilaiPengajuan)}</td>
                                     <td>{item.target}</td>
-                                    {isAdminOrVerifikator && <td>{getStatusBadge(item.status)}</td>}
+                                    {(isAdminOrVerifikator || isKorwil) && <td>{getStatusBadge(item.status)}</td>}
                                     {isAdmin && <td>{renderPriorityStar(item.bintang === 1, item.id)}</td>}
-                                    {canManageKeranjang && (
+                                    {(canManageKeranjang || isKorwil) && (
                                         <td>
                                             <span className="badge badge-disetujui" style={{ fontSize: 10 }}>
                                                 {item.keranjang?.replace('Keranjang Usulan ', '') || '-'}
@@ -550,13 +553,19 @@ const Proposal = ({ readOnly = false }) => {
                                 {isAdminOrVerifikator && (<div className="form-group"><label className="form-label">Status</label><select className="form-select" value={formData.status || ''} onChange={e => setFormData({ ...formData, status: e.target.value })}>{STATUS_PROPOSAL.map(s => <option key={s} value={s}>{s}</option>)}</select></div>)}
                             </div>
 
-                            {canManageKeranjang && (
+                            {canManageKeranjang && editItem && (
                                 <div className="form-group">
                                     <label className="form-label">Keranjang Usulan</label>
                                     <select className="form-select" value={formData.keranjang || ''} onChange={e => setFormData({ ...formData, keranjang: e.target.value })}>
                                         <option value="">Belum Ditetapkan</option>
                                         {KERANJANG.map(k => <option key={k} value={k}>{k}</option>)}
                                     </select>
+                                </div>
+                            )}
+                            {!editItem && (
+                                <div className="form-group">
+                                    <label className="form-label">Keranjang Usulan</label>
+                                    <input className="form-input" value="Keranjang Usulan Sekolah" disabled style={{ background: 'var(--bg-secondary)' }} />
                                 </div>
                             )}
 
@@ -598,7 +607,7 @@ const Proposal = ({ readOnly = false }) => {
                             <div className="form-row"><div className="form-group"><label className="form-label">Nama Sekolah</label><div style={{ fontWeight: 500 }}>{safeStr(viewItem.namaSekolah)}</div></div><div className="form-group"><label className="form-label">NPSN</label><div>{safeStr(viewItem.npsn)}</div></div></div>
                             <div className="form-row"><div className="form-group"><label className="form-label">Kecamatan</label><div>{safeStr(viewItem.kecamatan)}</div></div>{isAdminOrVerifikator && <div className="form-group"><label className="form-label">Status</label><div>{getStatusBadge(viewItem.status)}</div></div>}</div>
                             <div className="form-group"><label className="form-label">Sub Kegiatan</label><div>{viewItem.subKegiatan}</div></div>
-                            {canManageKeranjang && (<div className="form-group"><label className="form-label">Keranjang</label><div>{viewItem.keranjang || 'Belum Ditetapkan'}</div></div>)}
+                            {(canManageKeranjang || isKorwil) && (<div className="form-group"><label className="form-label">Keranjang</label><div>{viewItem.keranjang || 'Belum Ditetapkan'}</div></div>)}
                             <div className="form-row"><div className="form-group"><label className="form-label">Nilai Pengajuan</label><div style={{ fontWeight: 600, color: 'var(--accent-green)', fontSize: 16 }}>{formatCurrency(viewItem.nilaiPengajuan)}</div></div><div className="form-group"><label className="form-label">Target</label><div>{viewItem.target}</div></div></div>
                             <div className="form-group"><label className="form-label">Keterangan</label><div>{viewItem.keterangan || '-'}</div></div>
                             {/* File Proposal PDF */}

@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import { proposalService } from '../services/proposal.service.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { db } from '../db/index.js';
+import { proposal, sekolah } from '../db/schema/index.js';
+import { eq } from 'drizzle-orm';
 import { uploadFotos, uploadProposal, forwardToNas } from '../middleware/upload.js';
 import { logActivity } from '../middleware/logActivity.js';
 
@@ -48,9 +51,11 @@ router.post('/', requireAuth, requireRole('admin', 'sekolah'), async (req, res) 
         if (isSekolah) {
             req.body.sekolahId = req.user!.sekolahId;
         }
-        // Sanitize empty date strings to null, convert string to Date for Drizzle
+        // Sanitize empty date strings to null
         if (req.body.tanggalSurat === '') req.body.tanggalSurat = null;
-        else if (req.body.tanggalSurat && typeof req.body.tanggalSurat === 'string') req.body.tanggalSurat = new Date(req.body.tanggalSurat);
+        // Auto-set keranjang to 'Keranjang Usulan Sekolah' for new proposals
+        req.body.keranjang = 'Keranjang Usulan Sekolah';
+        req.body.status = 'Menunggu Verifikasi';
         const result = await proposalService.create(req.body, req.user!.id);
         logActivity(req, 'Tambah Proposal', `Mengajukan proposal baru`);
         res.status(201).json(result);
@@ -71,9 +76,8 @@ router.put('/:id', requireAuth, requireRole('admin', 'sekolah'), async (req, res
             delete req.body.sekolahId;
         }
 
-        // Sanitize empty date strings to null, convert string to Date for Drizzle
+        // Sanitize empty date strings to null
         if (req.body.tanggalSurat === '') req.body.tanggalSurat = null;
-        else if (req.body.tanggalSurat && typeof req.body.tanggalSurat === 'string') req.body.tanggalSurat = new Date(req.body.tanggalSurat);
         const result = await proposalService.update(id, req.body);
         logActivity(req, 'Edit Proposal', `Mengubah proposal #${id}`);
         res.json(result);
@@ -101,11 +105,51 @@ router.post('/batch-approve', requireAuth, requireRole('admin'), async (req, res
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/:id/status', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
+// ===== WORKFLOW: Status + Keranjang auto-transition =====
+router.put('/:id/status', requireAuth, requireRole('admin', 'verifikator', 'korwil'), async (req, res) => {
     try {
-        const result = await proposalService.updateStatus(Number(req.params.id), req.body.status, req.user!.id);
-        logActivity(req, 'Ubah Status Proposal', `Mengubah status proposal #${req.params.id} menjadi ${req.body.status}`);
-        res.json(result);
+        const id = Number(req.params.id);
+        const newStatus = req.body.status;
+        const userRole = req.user!.role.toLowerCase();
+
+        // Lookup proposal + sekolah jenjang
+        const existing = await db.select({ proposal, jenjang: sekolah.jenjang })
+            .from(proposal).leftJoin(sekolah, eq(proposal.sekolahId, sekolah.id))
+            .where(eq(proposal.id, id));
+        if (!existing[0]) { res.status(404).json({ error: 'Proposal not found' }); return; }
+        const jenjang = existing[0].jenjang || 'SMP';
+
+        // Korwil can only verify SD proposals
+        if (userRole === 'korwil' && jenjang !== 'SD') {
+            res.status(403).json({ error: 'Korwil hanya bisa memverifikasi proposal SD' }); return;
+        }
+
+        // Update status
+        await proposalService.updateStatus(id, newStatus, req.user!.id);
+
+        // Auto-transition keranjang based on status + jenjang + role
+        let newKeranjang = existing[0].proposal.keranjang;
+        if (newStatus === 'Diterima' || newStatus === 'Disetujui') {
+            if (userRole === 'korwil' && jenjang === 'SD') {
+                // Korwil approves SD → move to Usulan Korwil
+                newKeranjang = 'Keranjang Usulan Korwil';
+            } else if (userRole === 'admin' || userRole === 'verifikator') {
+                // Admin/Verifikator approves → use specified keranjang (Kabupaten/Provinsi/Pusat)
+                newKeranjang = req.body.keranjang || existing[0].proposal.keranjang;
+            }
+        } else if (newStatus === 'Ditolak' || newStatus === 'Revisi') {
+            // Rejected/Revised → back to Usulan Sekolah
+            newKeranjang = 'Keranjang Usulan Sekolah';
+        }
+
+        if (newKeranjang !== existing[0].proposal.keranjang) {
+            await proposalService.updateKeranjang(id, newKeranjang || 'Keranjang Usulan Sekolah');
+        }
+
+        logActivity(req, 'Ubah Status Proposal', `Mengubah status proposal #${id} menjadi ${newStatus} (keranjang: ${newKeranjang})`);
+        // Return updated proposal
+        const updated = await proposalService.getById(id);
+        res.json(updated);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
