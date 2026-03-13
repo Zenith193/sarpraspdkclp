@@ -200,16 +200,22 @@ const DashboardSekolah = () => {
                                             padding: '10px 0', borderBottom: '1px solid var(--bg-secondary)',
                                             fontSize: '0.85rem'
                                         }}>
-                                            <div>
-                                                <div style={{ fontWeight: 500 }}>{p.jenisPrasarana || p.namaPrasarana || 'Proposal'}</div>
-                                                <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
-                                                    {p.createdAt ? new Date(p.createdAt).toLocaleDateString('id-ID') : '-'}
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <div style={{ fontWeight: 600 }}>{p.subKegiatan || p.jenisPrasarana || 'Proposal'}</div>
+                                                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 2 }}>
+                                                    <span>{p.namaSekolah || namaSekolah}</span>
+                                                    <span>{p.createdAt ? new Date(p.createdAt).toLocaleDateString('id-ID') : '-'}</span>
                                                 </div>
+                                                {p.nilaiPengajuan && (
+                                                    <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--accent-blue)', marginTop: 2 }}>
+                                                        {formatRupiah(Number(p.nilaiPengajuan))}
+                                                    </div>
+                                                )}
                                             </div>
                                             <span style={{
                                                 background: `${statusColor}15`, color: statusColor,
                                                 padding: '3px 10px', borderRadius: 10,
-                                                fontSize: '0.72rem', fontWeight: 600
+                                                fontSize: '0.72rem', fontWeight: 600, flexShrink: 0
                                             }}>
                                                 {p.status || 'Pending'}
                                             </span>

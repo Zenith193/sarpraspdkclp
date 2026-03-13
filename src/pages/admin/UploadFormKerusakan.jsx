@@ -345,9 +345,11 @@ const UploadFormKerusakan = () => {
                                         <td>Bangunan {d.masaBangunan}</td>
                                         <td>
                                             {d.fileName ? (
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--accent-green)', fontSize: 12 }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--accent-green)', fontSize: 12, cursor: 'pointer' }}
+                                                     onClick={() => window.open(`/api/file/kerusakan/${d.id}`, '_blank')}
+                                                     title="Klik untuk preview">
                                                     <FileText size={14} />
-                                                    <span style={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={d.fileName}>{d.fileName}</span>
+                                                    <span style={{ maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textDecoration: 'underline' }} title={d.fileName}>{d.fileName}</span>
                                                 </div>
                                             ) : (
                                                 <span className="badge badge-ditolak">Belum Upload</span>
