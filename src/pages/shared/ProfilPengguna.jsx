@@ -292,13 +292,12 @@ const ProfilPengguna = () => {
                 {/* Header Profil with Photo Upload */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 32 }}>
                     <label style={{ position: 'relative', cursor: uploadingPhoto ? 'wait' : 'pointer', flexShrink: 0 }} title="Klik untuk ganti foto">
-                        {p.image && !p.image.startsWith('gdrive://') ? (
-                            <img src={p.image} alt="Foto Profil" style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--border-color)' }} onError={e => { e.target.style.display = 'none'; e.target.nextSibling && (e.target.nextSibling.style.display = 'flex'); }} />
-                        ) : (
-                            <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 28, fontWeight: 700 }}>
-                                {p.namaAkun?.charAt(0) || p.name?.charAt(0) || 'U'}
-                            </div>
-                        )}
+                        <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 28, fontWeight: 700, position: 'relative', overflow: 'hidden' }}>
+                            {p.namaAkun?.charAt(0) || p.name?.charAt(0) || 'U'}
+                            {p.image && !p.image.startsWith('gdrive://') && (
+                                <img src={p.image} alt="Foto Profil" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--border-color)' }} onError={e => { e.target.style.display = 'none'; }} />
+                            )}
+                        </div>
                         <div style={{ position: 'absolute', bottom: 0, right: 0, width: 24, height: 24, borderRadius: '50%', background: 'var(--accent-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--bg-card)' }}>
                             <Upload size={12} style={{ color: '#fff' }} />
                         </div>
