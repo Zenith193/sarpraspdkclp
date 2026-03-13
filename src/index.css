@@ -199,127 +199,190 @@ textarea {
   }
 }
 
-/* ===== CONSTRUCTION ANIMATION ===== */
-.login-construction-bg {
-  position: absolute;
+/* ===== LOGIN TRANSITION OVERLAY ===== */
+.login-transition-overlay {
+  position: fixed;
   top: 0;
   left: 0;
-  width: 50%;
-  height: 100%;
-  z-index: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.login-construction-bg svg {
   width: 100%;
   height: 100%;
+  z-index: 9999;
+  background: linear-gradient(135deg, #0a0e1a 0%, #111d3a 40%, #162044 60%, #0a0e1a 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  animation: transOverlayIn 0.5s ease-out;
 }
 
-/* Buildings rise up */
-.construction-building {
-  animation: buildingRise 2s ease-out both;
-}
-.construction-building-1 { animation-delay: 0.2s; }
-.construction-building-2 { animation-delay: 0.6s; }
-.construction-building-3 { animation-delay: 1s; }
-.construction-building-4 { animation-delay: 1.4s; }
-
-@keyframes buildingRise {
-  0% {
-    opacity: 0;
-    transform: translateY(40px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
+@keyframes transOverlayIn {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
 }
 
-/* Window glow flicker */
-.construction-window {
-  animation: windowGlow 3s ease-in-out infinite alternate;
+.login-transition-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 32px;
+  max-width: 480px;
+  width: 100%;
+  padding: 32px;
 }
 
-@keyframes windowGlow {
-  0% { opacity: 0.3; }
+.login-transition-scene {
+  width: 100%;
+  max-width: 420px;
+}
+
+.login-transition-scene svg {
+  width: 100%;
+  height: auto;
+}
+
+/* Buildings animate in */
+.trans-building {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.6s ease-out, transform 0.6s ease-out;
+}
+.trans-building.active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Window glow */
+.trans-window {
+  transition: fill 0.4s ease;
+}
+
+/* Crane */
+.trans-crane {
+  opacity: 0;
+  transform: translateY(-15px);
+  transition: opacity 0.8s ease-out 0.2s, transform 0.8s ease-out 0.2s;
+}
+.trans-crane.active {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.trans-hook {
+  transform-origin: 150px 22px;
+  animation: transHookSway 3s ease-in-out infinite alternate;
+}
+
+@keyframes transHookSway {
+  0% { transform: rotate(-4deg); }
+  100% { transform: rotate(4deg); }
+}
+
+/* Bricks */
+.trans-brick {
+  animation: transBrickIn 0.5s ease-out both;
+}
+
+@keyframes transBrickIn {
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* Sparks */
+.trans-spark {
+  animation: transSparkFlash 1.5s ease-in-out infinite;
+}
+
+@keyframes transSparkFlash {
+  0%, 100% { opacity: 0; transform: scale(0.3); }
+  15% { opacity: 1; transform: scale(1.3); }
+  30% { opacity: 0.6; transform: scale(1); }
+  45% { opacity: 0; transform: scale(0.3); }
+}
+
+/* Particles */
+.trans-particle {
+  animation: transParticle 3s ease-in-out infinite alternate;
+}
+
+@keyframes transParticle {
+  0% { opacity: 0.1; transform: translate(0, 0); }
+  50% { opacity: 0.5; transform: translate(5px, -12px); }
+  100% { opacity: 0.15; transform: translate(-3px, -6px); }
+}
+
+/* Info section */
+.login-transition-info {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  animation: transInfoIn 0.6s ease-out 0.3s both;
+}
+
+@keyframes transInfoIn {
+  0% { opacity: 0; transform: translateY(20px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.login-transition-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #fff;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+}
+
+.login-transition-logo svg {
+  color: var(--accent-blue, #3b82f6);
+}
+
+.login-transition-greeting {
+  color: #e2e8f0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.login-transition-role {
+  display: inline-block;
+  padding: 4px 16px;
+  border-radius: 20px;
+  background: rgba(59, 130, 246, 0.15);
+  color: #93c5fd;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+}
+
+.login-transition-progress {
+  width: 280px;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 8px;
+}
+
+.login-transition-progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #3b82f6, #a855f7, #22c55e);
+  border-radius: 4px;
+  transition: width 0.4s ease;
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+}
+
+.login-transition-status {
+  color: #94a3b8;
+  font-size: 13px;
+  min-height: 20px;
+  animation: transStatusPulse 1.5s ease-in-out infinite;
+}
+
+@keyframes transStatusPulse {
+  0%, 100% { opacity: 0.7; }
   50% { opacity: 1; }
-  100% { opacity: 0.5; }
-}
-
-/* Crane hook sway */
-.construction-hook {
-  transform-origin: 230px 43px;
-  animation: hookSway 4s ease-in-out infinite alternate;
-}
-
-@keyframes hookSway {
-  0% { transform: rotate(-3deg); }
-  100% { transform: rotate(3deg); }
-}
-
-/* Bricks appear */
-.construction-brick {
-  animation: brickAppear 2s ease-out both;
-}
-
-@keyframes brickAppear {
-  0% {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Floating particles */
-.construction-particle {
-  animation: particleFloat 6s ease-in-out infinite alternate;
-}
-
-@keyframes particleFloat {
-  0% {
-    opacity: 0.1;
-    transform: translate(0, 0) scale(1);
-  }
-  50% {
-    opacity: 0.4;
-    transform: translate(10px, -20px) scale(1.3);
-  }
-  100% {
-    opacity: 0.1;
-    transform: translate(-5px, -10px) scale(0.8);
-  }
-}
-
-/* Welding sparkle */
-.construction-spark {
-  animation: sparkFlash 3s ease-in-out infinite;
-}
-
-@keyframes sparkFlash {
-  0%, 100% { opacity: 0; transform: scale(0.5); }
-  10% { opacity: 1; transform: scale(1.2); }
-  20% { opacity: 0.8; transform: scale(1); }
-  30% { opacity: 0; transform: scale(0.5); }
-}
-
-/* Crane entrance */
-.construction-crane {
-  animation: craneAppear 1.5s ease-out 0.5s both;
-}
-
-@keyframes craneAppear {
-  0% {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 .login-left {

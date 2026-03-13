@@ -15,6 +15,10 @@ const Login = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [submitting, setSubmitting] = useState(false);
     const [stats, setStats] = useState({ schoolCount: 0, userCount: 0, kecamatanCount: 0, jenjangBreakdown: {} });
+    const [showTransition, setShowTransition] = useState(false);
+    const [transitionStep, setTransitionStep] = useState(0);
+    const [transitionUser, setTransitionUser] = useState(null);
+    const pendingNav = useState(null);
     const navigate = useNavigate();
     const authLogin = useAuthStore(s => s.login);
     const { theme, toggleTheme } = useThemeStore();
@@ -28,6 +32,23 @@ const Login = () => {
             })
             .catch(() => { }); // Silently fail if server is down
     }, []);
+
+    const startTransition = (user, targetPath) => {
+        setTransitionUser(user);
+        setShowTransition(true);
+        setTransitionStep(0);
+
+        // Progress steps
+        setTimeout(() => setTransitionStep(1), 400);
+        setTimeout(() => setTransitionStep(2), 900);
+        setTimeout(() => setTransitionStep(3), 1500);
+        setTimeout(() => setTransitionStep(4), 2000);
+
+        // Navigate after animation
+        setTimeout(() => {
+            navigate(targetPath);
+        }, 2500);
+    };
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -52,12 +73,8 @@ const Login = () => {
                     namaAkun: data.user.name,
                 };
                 useAuthStore.setState({ user, isAuthenticated: true });
-
-                toast.success(`Sugeng Rawuh, ${user.namaAkun} (${user.role})`, {
-                    duration: 3000,
-                    style: { background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }
-                });
-                navigate('/sekolah/data-sarpras');
+                setSubmitting(false);
+                startTransition(user, '/sekolah/data-sarpras');
             } else {
                 // Staff login: use Better Auth email/password
                 let loginEmail = email;
@@ -67,22 +84,19 @@ const Login = () => {
                 const user = await authLogin(loginEmail, password);
 
                 if (user) {
-                    toast.success(`Sugeng Rawuh, ${user.name} (${user.role})`, {
-                        duration: 3000,
-                        style: { background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }
-                    });
+                    setSubmitting(false);
                     const rolePath = user.role?.toLowerCase();
-                    if (rolePath === 'admin') navigate('/admin/dashboard');
-                    else if (rolePath === 'verifikator') navigate('/verifikator/dashboard');
-                    else if (rolePath === 'korwil') navigate('/korwil/dashboard');
-                    else navigate('/sekolah/data-sarpras');
+                    let target = '/sekolah/data-sarpras';
+                    if (rolePath === 'admin') target = '/admin/dashboard';
+                    else if (rolePath === 'verifikator') target = '/verifikator/dashboard';
+                    else if (rolePath === 'korwil') target = '/korwil/dashboard';
+                    startTransition(user, target);
                 }
             }
         } catch (err) {
             toast.error(err.message || 'Login gagal!', {
                 style: { background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' }
             });
-        } finally {
             setSubmitting(false);
         }
     };
@@ -99,111 +113,125 @@ const Login = () => {
                 {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
             </button>
 
-            {/* Construction Animation Background */}
-            <div className="login-construction-bg" aria-hidden="true">
-                <svg viewBox="0 0 600 400" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg">
-                    {/* Ground */}
-                    <rect x="0" y="360" width="600" height="40" fill="rgba(255,255,255,0.03)" />
-                    <line x1="0" y1="360" x2="600" y2="360" stroke="rgba(59,130,246,0.15)" strokeWidth="1" />
+            {/* ===== LOGIN TRANSITION OVERLAY ===== */}
+            {showTransition && (
+                <div className="login-transition-overlay">
+                    <div className="login-transition-content">
+                        {/* Construction Scene */}
+                        <div className="login-transition-scene">
+                            <svg viewBox="0 0 400 200" xmlns="http://www.w3.org/2000/svg">
+                                {/* Ground line */}
+                                <line x1="0" y1="170" x2="400" y2="170" stroke="rgba(59,130,246,0.3)" strokeWidth="1" />
 
-                    {/* Building 1 — tall, animated rise */}
-                    <g className="construction-building construction-building-1">
-                        <rect x="40" y="160" width="60" height="200" rx="2" fill="rgba(59,130,246,0.08)" stroke="rgba(59,130,246,0.2)" strokeWidth="0.5" />
-                        {[0,1,2,3,4,5,6].map(i => (
-                            <g key={`b1-${i}`}>
-                                <rect x="48" y={172 + i * 26} width="12" height="16" rx="1" fill="rgba(59,130,246,0.12)" className="construction-window" style={{ animationDelay: `${i * 0.3}s` }} />
-                                <rect x="66" y={172 + i * 26} width="12" height="16" rx="1" fill="rgba(59,130,246,0.12)" className="construction-window" style={{ animationDelay: `${i * 0.3 + 0.15}s` }} />
-                                <rect x="84" y={172 + i * 26} width="8" height="16" rx="1" fill="rgba(59,130,246,0.08)" className="construction-window" style={{ animationDelay: `${i * 0.3 + 0.3}s` }} />
-                            </g>
-                        ))}
-                    </g>
+                                {/* Building 1 */}
+                                <g className={`trans-building ${transitionStep >= 0 ? 'active' : ''}`}>
+                                    <rect x="30" y="70" width="45" height="100" rx="2" fill="rgba(59,130,246,0.15)" stroke="rgba(59,130,246,0.4)" strokeWidth="1" />
+                                    {[0,1,2,3].map(i => (
+                                        <g key={`tb1-${i}`}>
+                                            <rect x="37" y={80 + i * 22} width="8" height="12" rx="1" fill={transitionStep >= 1 ? 'rgba(59,130,246,0.5)' : 'rgba(59,130,246,0.15)'} className="trans-window" style={{ animationDelay: `${i * 0.15}s` }} />
+                                            <rect x="50" y={80 + i * 22} width="8" height="12" rx="1" fill={transitionStep >= 1 ? 'rgba(59,130,246,0.5)' : 'rgba(59,130,246,0.15)'} className="trans-window" style={{ animationDelay: `${i * 0.15 + 0.08}s` }} />
+                                            <rect x="63" y={80 + i * 22} width="5" height="12" rx="1" fill={transitionStep >= 1 ? 'rgba(59,130,246,0.4)' : 'rgba(59,130,246,0.1)'} className="trans-window" style={{ animationDelay: `${i * 0.15 + 0.16}s` }} />
+                                        </g>
+                                    ))}
+                                </g>
 
-                    {/* Building 2 — medium */}
-                    <g className="construction-building construction-building-2">
-                        <rect x="120" y="220" width="50" height="140" rx="2" fill="rgba(168,85,247,0.07)" stroke="rgba(168,85,247,0.15)" strokeWidth="0.5" />
-                        {[0,1,2,3,4].map(i => (
-                            <g key={`b2-${i}`}>
-                                <rect x="128" y={232 + i * 24} width="10" height="14" rx="1" fill="rgba(168,85,247,0.1)" className="construction-window" style={{ animationDelay: `${i * 0.4 + 1}s` }} />
-                                <rect x="144" y={232 + i * 24} width="10" height="14" rx="1" fill="rgba(168,85,247,0.1)" className="construction-window" style={{ animationDelay: `${i * 0.4 + 1.2}s` }} />
-                            </g>
-                        ))}
-                    </g>
+                                {/* Building 2 */}
+                                <g className={`trans-building ${transitionStep >= 1 ? 'active' : ''}`} style={{ animationDelay: '0.3s' }}>
+                                    <rect x="90" y="95" width="35" height="75" rx="2" fill="rgba(168,85,247,0.12)" stroke="rgba(168,85,247,0.35)" strokeWidth="1" />
+                                    {[0,1,2].map(i => (
+                                        <g key={`tb2-${i}`}>
+                                            <rect x="97" y={105 + i * 20} width="7" height="10" rx="1" fill={transitionStep >= 2 ? 'rgba(168,85,247,0.5)' : 'rgba(168,85,247,0.15)'} className="trans-window" style={{ animationDelay: `${0.3 + i * 0.15}s` }} />
+                                            <rect x="110" y={105 + i * 20} width="7" height="10" rx="1" fill={transitionStep >= 2 ? 'rgba(168,85,247,0.5)' : 'rgba(168,85,247,0.15)'} className="trans-window" style={{ animationDelay: `${0.35 + i * 0.15}s` }} />
+                                        </g>
+                                    ))}
+                                </g>
 
-                    {/* Building 3 — short wide */}
-                    <g className="construction-building construction-building-3">
-                        <rect x="460" y="280" width="80" height="80" rx="2" fill="rgba(34,197,94,0.06)" stroke="rgba(34,197,94,0.12)" strokeWidth="0.5" />
-                        {[0,1,2].map(i => (
-                            <g key={`b3-${i}`}>
-                                <rect x="470" y={292 + i * 22} width="10" height="14" rx="1" fill="rgba(34,197,94,0.1)" className="construction-window" style={{ animationDelay: `${i * 0.5 + 2}s` }} />
-                                <rect x="486" y={292 + i * 22} width="10" height="14" rx="1" fill="rgba(34,197,94,0.1)" className="construction-window" style={{ animationDelay: `${i * 0.5 + 2.1}s` }} />
-                                <rect x="502" y={292 + i * 22} width="10" height="14" rx="1" fill="rgba(34,197,94,0.08)" className="construction-window" style={{ animationDelay: `${i * 0.5 + 2.2}s` }} />
-                                <rect x="518" y={292 + i * 22} width="10" height="14" rx="1" fill="rgba(34,197,94,0.1)" className="construction-window" style={{ animationDelay: `${i * 0.5 + 2.3}s` }} />
-                            </g>
-                        ))}
-                    </g>
+                                {/* Crane */}
+                                <g className={`trans-crane ${transitionStep >= 0 ? 'active' : ''}`}>
+                                    <rect x="168" y="20" width="3" height="150" fill="rgba(251,191,36,0.4)" />
+                                    <rect x="130" y="20" width="100" height="2.5" fill="rgba(251,191,36,0.35)" />
+                                    <rect x="165" y="24" width="9" height="10" rx="1" fill="rgba(251,191,36,0.2)" stroke="rgba(251,191,36,0.4)" strokeWidth="0.5" />
+                                    <g className="trans-hook">
+                                        <line x1="150" y1="22" x2="150" y2="80" stroke="rgba(251,191,36,0.3)" strokeWidth="0.8" />
+                                        <path d="M146,80 L154,80 L152,88 Q150,91 148,88 Z" fill="rgba(251,191,36,0.4)" />
+                                    </g>
+                                    <line x1="170" y1="20" x2="130" y2="22" stroke="rgba(251,191,36,0.15)" strokeWidth="0.5" />
+                                    <line x1="170" y1="20" x2="230" y2="22" stroke="rgba(251,191,36,0.15)" strokeWidth="0.5" />
+                                </g>
 
-                    {/* Building 4 — under construction */}
-                    <g className="construction-building construction-building-4">
-                        <rect x="340" y="200" width="55" height="160" rx="1" fill="none" stroke="rgba(251,191,36,0.15)" strokeWidth="0.5" strokeDasharray="4 2" />
-                        {/* Scaffolding lines */}
-                        {[0,1,2,3,4].map(i => (
-                            <line key={`sc-${i}`} x1="340" y1={200 + i * 32} x2="395" y2={200 + i * 32} stroke="rgba(251,191,36,0.12)" strokeWidth="0.5" />
-                        ))}
-                        <line x1="355" y1="200" x2="355" y2="360" stroke="rgba(251,191,36,0.1)" strokeWidth="0.5" />
-                        <line x1="380" y1="200" x2="380" y2="360" stroke="rgba(251,191,36,0.1)" strokeWidth="0.5" />
-                        {/* Bricks filling up */}
-                        {[0,1,2,3].map(i => (
-                            <rect key={`brick-${i}`} x="342" y={330 - i * 28} width="51" height="24" rx="1" fill="rgba(251,191,36,0.05)" stroke="rgba(251,191,36,0.1)" strokeWidth="0.3" className="construction-brick" style={{ animationDelay: `${i * 1.5}s` }} />
-                        ))}
-                    </g>
+                                {/* Building under construction */}
+                                <g className={`trans-building ${transitionStep >= 2 ? 'active' : ''}`} style={{ animationDelay: '0.6s' }}>
+                                    <rect x="220" y="90" width="40" height="80" rx="1" fill="none" stroke="rgba(251,191,36,0.3)" strokeWidth="0.8" strokeDasharray="4 2" />
+                                    {[0,1,2].map(i => (
+                                        <rect key={`tbr-${i}`} x="222" y={148 - i * 22} width="36" height="18" rx="1"
+                                            fill={transitionStep >= 3 ? 'rgba(251,191,36,0.12)' : 'rgba(251,191,36,0.04)'}
+                                            stroke="rgba(251,191,36,0.2)" strokeWidth="0.3"
+                                            className="trans-brick" style={{ animationDelay: `${0.6 + i * 0.4}s` }} />
+                                    ))}
+                                </g>
 
-                    {/* Crane */}
-                    <g className="construction-crane">
-                        {/* Crane vertical pole */}
-                        <rect x="268" y="40" width="4" height="320" fill="rgba(251,191,36,0.2)" />
-                        {/* Crane arm */}
-                        <rect x="200" y="40" width="180" height="3" fill="rgba(251,191,36,0.18)" />
-                        {/* Crane cabin */}
-                        <rect x="264" y="44" width="12" height="14" rx="1" fill="rgba(251,191,36,0.12)" stroke="rgba(251,191,36,0.2)" strokeWidth="0.5" />
-                        {/* Crane cable + hook */}
-                        <g className="construction-hook">
-                            <line x1="230" y1="43" x2="230" y2="120" stroke="rgba(251,191,36,0.15)" strokeWidth="0.8" />
-                            <path d="M225,120 L235,120 L232,130 Q230,134 228,130 Z" fill="rgba(251,191,36,0.2)" />
-                        </g>
-                        {/* Counter weight */}
-                        <rect x="360" y="36" width="16" height="10" rx="1" fill="rgba(251,191,36,0.1)" />
-                        {/* Support cables */}
-                        <line x1="270" y1="40" x2="200" y2="42" stroke="rgba(251,191,36,0.08)" strokeWidth="0.5" />
-                        <line x1="270" y1="40" x2="380" y2="42" stroke="rgba(251,191,36,0.08)" strokeWidth="0.5" />
-                    </g>
+                                {/* School building (final) */}
+                                <g className={`trans-building ${transitionStep >= 3 ? 'active' : ''}`} style={{ animationDelay: '0.9s' }}>
+                                    <rect x="290" y="110" width="70" height="60" rx="2" fill="rgba(34,197,94,0.12)" stroke="rgba(34,197,94,0.35)" strokeWidth="1" />
+                                    <polygon points="290,110 325,85 360,110" fill="rgba(34,197,94,0.08)" stroke="rgba(34,197,94,0.3)" strokeWidth="0.8" />
+                                    <rect x="310" y="140" width="14" height="30" rx="1" fill="rgba(34,197,94,0.2)" stroke="rgba(34,197,94,0.4)" strokeWidth="0.5" />
+                                    {[0,1].map(i => (
+                                        <g key={`tbs-${i}`}>
+                                            <rect x={298 + i * 38} y="120" width="8" height="10" rx="1" fill={transitionStep >= 4 ? 'rgba(34,197,94,0.5)' : 'rgba(34,197,94,0.15)'} className="trans-window" />
+                                        </g>
+                                    ))}
+                                </g>
 
-                    {/* Floating particles / dust */}
-                    {[
-                        { cx: 80, cy: 150, r: 1.5, dur: '6s', delay: '0s' },
-                        { cx: 200, cy: 100, r: 1, dur: '8s', delay: '1s' },
-                        { cx: 320, cy: 180, r: 1.2, dur: '7s', delay: '2s' },
-                        { cx: 450, cy: 120, r: 0.8, dur: '9s', delay: '0.5s' },
-                        { cx: 150, cy: 300, r: 1, dur: '5s', delay: '3s' },
-                        { cx: 500, cy: 250, r: 1.3, dur: '6.5s', delay: '1.5s' },
-                        { cx: 380, cy: 80, r: 0.7, dur: '7.5s', delay: '4s' },
-                        { cx: 550, cy: 180, r: 1, dur: '8.5s', delay: '2.5s' },
-                    ].map((p, i) => (
-                        <circle key={`particle-${i}`} cx={p.cx} cy={p.cy} r={p.r} fill="rgba(255,255,255,0.15)" className="construction-particle" style={{ animationDuration: p.dur, animationDelay: p.delay }} />
-                    ))}
+                                {/* Welding sparks */}
+                                {transitionStep >= 2 && [
+                                    { x: 240, y: 130 }, { x: 235, y: 110 }, { x: 248, y: 120 },
+                                ].map((s, i) => (
+                                    <g key={`ts-${i}`} className="trans-spark" style={{ animationDelay: `${i * 0.5}s` }}>
+                                        <line x1={s.x - 4} y1={s.y} x2={s.x + 4} y2={s.y} stroke="rgba(251,191,36,0.7)" strokeWidth="1.5" strokeLinecap="round" />
+                                        <line x1={s.x} y1={s.y - 4} x2={s.x} y2={s.y + 4} stroke="rgba(251,191,36,0.7)" strokeWidth="1.5" strokeLinecap="round" />
+                                    </g>
+                                ))}
 
-                    {/* Sparkle effects on construction site */}
-                    {[
-                        { x: 365, y: 290, delay: '0s' },
-                        { x: 350, y: 260, delay: '2s' },
-                        { x: 375, y: 235, delay: '4s' },
-                    ].map((s, i) => (
-                        <g key={`spark-${i}`} className="construction-spark" style={{ animationDelay: s.delay }}>
-                            <line x1={s.x - 3} y1={s.y} x2={s.x + 3} y2={s.y} stroke="rgba(251,191,36,0.4)" strokeWidth="1" strokeLinecap="round" />
-                            <line x1={s.x} y1={s.y - 3} x2={s.x} y2={s.y + 3} stroke="rgba(251,191,36,0.4)" strokeWidth="1" strokeLinecap="round" />
-                        </g>
-                    ))}
-                </svg>
-            </div>
+                                {/* Particles */}
+                                {[
+                                    { cx: 60, cy: 50, r: 1.2 }, { cx: 170, cy: 60, r: 1 }, { cx: 310, cy: 70, r: 0.8 },
+                                    { cx: 100, cy: 140, r: 0.9 }, { cx: 350, cy: 100, r: 1.1 },
+                                ].map((p, i) => (
+                                    <circle key={`tp-${i}`} cx={p.cx} cy={p.cy} r={p.r} fill="rgba(255,255,255,0.3)" className="trans-particle" style={{ animationDelay: `${i * 0.3}s` }} />
+                                ))}
+                            </svg>
+                        </div>
+
+                        {/* Progress info */}
+                        <div className="login-transition-info">
+                            <div className="login-transition-logo">
+                                <School size={24} />
+                                <span>SARDIKA</span>
+                            </div>
+                            <div className="login-transition-greeting">
+                                Sugeng Rawuh, {transitionUser?.namaAkun || transitionUser?.name || 'User'}
+                            </div>
+                            <div className="login-transition-role">
+                                {transitionUser?.role || 'Sekolah'}
+                            </div>
+
+                            {/* Progress bar */}
+                            <div className="login-transition-progress">
+                                <div className="login-transition-progress-bar" style={{ width: `${(transitionStep + 1) * 20}%` }} />
+                            </div>
+
+                            {/* Status messages */}
+                            <div className="login-transition-status">
+                                {transitionStep === 0 && '🔐 Memverifikasi akun...'}
+                                {transitionStep === 1 && '📦 Memuat data infrastruktur...'}
+                                {transitionStep === 2 && '🏗️ Menyiapkan dashboard...'}
+                                {transitionStep === 3 && '🏫 Memuat data sekolah...'}
+                                {transitionStep === 4 && '✅ Selamat datang!'}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Left Panel */}
             <div className="login-left">
