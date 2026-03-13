@@ -101,11 +101,27 @@ export function forwardToNas(
         const processFile = async (file: Express.Multer.File) => {
             try {
                 if (isGDriveEnabled()) {
-                    // Save locally — background queue will upload to GDrive
-                    // File stays in multer temp dir (file.path)
-                    (file as any).finalPath = file.path;
-                    (file as any).storedAt = 'local';
-                    (file as any).uploadPending = true;
+                    // Upload directly to GDrive
+                    try {
+                        // Build GDrive sub-path from category + sekolah info
+                        let gdriveSubPath: string = category;
+                        if (sekolah) {
+                            gdriveSubPath = `${sekolah.kecamatan || 'unknown'}/${sekolah.nama}_${sekolah.npsn}/${category}`;
+                            if (extra.masaBangunan) gdriveSubPath += `/${extra.masaBangunan}`;
+                            if (extra.namaRuang) gdriveSubPath += `/${extra.namaRuang}`;
+                        }
+                        const result = await uploadFileToGDrive(file.path, category, gdriveSubPath);
+                        (file as any).finalPath = result.path; // gdrive://fileId
+                        (file as any).storedAt = 'gdrive';
+                        (file as any).uploadPending = false;
+                        console.log(`[Upload] ${file.originalname} → GDrive ✅ ${result.path}`);
+                    } catch (gErr: any) {
+                        console.error(`[Upload] GDrive direct upload failed for ${file.originalname}:`, gErr.message);
+                        // Fallback: keep local, mark as pending for background queue retry
+                        (file as any).finalPath = file.path;
+                        (file as any).storedAt = 'local';
+                        (file as any).uploadPending = true;
+                    }
                 } else {
                     const result = await uploadToNas(file.path, category, sekolah, extra);
                     (file as any).storedAt = result.stored;
