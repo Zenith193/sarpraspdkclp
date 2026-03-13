@@ -91,11 +91,7 @@ const UploadFormKerusakan = () => {
     const filtered = useMemo(() => {
         let source = activeTab === 'data' ? data : missingSchools;
 
-        // Filter untuk Sekolah: Hanya data miliknya
-        if (isSekolah) {
-            source = source.filter(d => d.npsn === user.npsn);
-        }
-
+        // Backend already filters by sekolahId for Sekolah role, no client filter needed
         // Filter Pencarian
         return source.filter(d => {
             if (search) {
