@@ -187,6 +187,10 @@ const Proposal = ({ readOnly = false }) => {
         const rawValue = String(formData.nilaiPengajuan).replace(/\./g, '');
         if (!rawValue || parseFloat(rawValue) <= 0) { toast.error('Nilai pengajuan harus lebih dari 0'); return; }
         const payload = { ...formData, nilaiPengajuan: parseFloat(rawValue) };
+        // Convert empty date strings to null to avoid PostgreSQL error
+        if (!payload.tanggalSurat) payload.tanggalSurat = null;
+        // Remove file from JSON payload (uploaded separately if needed)
+        delete payload.proposalFile;
         try {
             if (editItem) {
                 await proposalApi.update(editItem.id, payload);

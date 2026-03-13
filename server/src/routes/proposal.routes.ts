@@ -47,6 +47,8 @@ router.post('/', requireAuth, requireRole('admin', 'sekolah'), async (req, res) 
         if (isSekolah) {
             req.body.sekolahId = req.user!.sekolahId;
         }
+        // Sanitize empty date strings to null
+        if (req.body.tanggalSurat === '') req.body.tanggalSurat = null;
         const result = await proposalService.create(req.body, req.user!.id);
         res.status(201).json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
@@ -66,6 +68,8 @@ router.put('/:id', requireAuth, requireRole('admin', 'sekolah'), async (req, res
             delete req.body.sekolahId;
         }
 
+        // Sanitize empty date strings to null
+        if (req.body.tanggalSurat === '') req.body.tanggalSurat = null;
         const result = await proposalService.update(id, req.body);
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
