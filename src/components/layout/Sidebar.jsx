@@ -1,4 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import {
     LayoutDashboard, Database, FileText, DollarSign, Activity, Users, FileSpreadsheet,
     History, Grid3X3, FilePlus, Wallet, Map, Upload, Trophy, LogOut, School,
@@ -7,13 +8,27 @@ import {
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import useSettingsStore from '../../store/settingsStore';
+import { settingsApi } from '../../api/index';
 import toast from 'react-hot-toast';
 
 const Sidebar = ({ collapsed, onToggle, className = '' }) => {
     const { user, logout } = useAuthStore();
-    const { accessConfig } = useSettingsStore();
+    const { accessConfig, setAccessConfig } = useSettingsStore();
     const navigate = useNavigate();
     const role = user?.role?.toLowerCase();
+
+    // Fetch latest access config from server on mount
+    useEffect(() => {
+        settingsApi.getAccess().then(res => {
+            let serverConfig = res;
+            if (res && res.value) {
+                serverConfig = typeof res.value === 'string' ? JSON.parse(res.value) : res.value;
+            }
+            if (serverConfig && typeof serverConfig === 'object' && (serverConfig.admin || serverConfig.verifikator)) {
+                setAccessConfig(serverConfig);
+            }
+        }).catch(() => {});
+    }, []);
 
     const handleLogout = () => {
         logout();
