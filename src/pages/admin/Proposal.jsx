@@ -410,7 +410,7 @@ const Proposal = ({ readOnly = false }) => {
                         </div>
                     </div>
                     <div className="table-toolbar-right">
-                        {isAdmin && (
+                        {isAdminOrVerifikator && (
                             <>
                                 <button className="btn btn-secondary btn-sm" onClick={() => setShowDaftarModal(true)}><Archive size={14} /> Daftar Dokumen</button>
                                 <button className="btn btn-secondary btn-sm" onClick={handleOpenRekomendasi}><FilePlus size={14} /> Rekomendasi</button>
