@@ -23,11 +23,33 @@ router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadSertifikat.
     try {
         const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
         const f = req.file as any;
-        const data = { ...req.body, sertifikatPath: f?.finalPath || req.file?.path || null, uploadStatus: f?.uploadPending ? 'uploading' : 'done' };
+        const data: any = {
+            ...req.body,
+            sekolahId: Number(req.body.sekolahId),
+            tahun: req.body.tahun ? Number(req.body.tahun) : null,
+            sertifikatPath: f?.finalPath || req.file?.path || null,
+            sertifikat: req.file?.originalname || null,
+            uploadStatus: f?.uploadPending ? 'uploading' : 'done',
+        };
         if (isSekolah) {
             data.sekolahId = req.user!.sekolahId;
         }
         res.status(201).json(await prestasiService.create(data, req.user!.id));
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// UPLOAD/REPLACE SERTIFIKAT
+router.put('/:id/sertifikat', requireAuth, requireRole('admin', 'sekolah'), uploadSertifikat.single('sertifikat'), forwardToNas('prestasi'), async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        if (!req.file) { res.status(400).json({ error: 'No file' }); return; }
+        const f = req.file as any;
+        const updateData: any = {
+            sertifikatPath: f?.finalPath || req.file?.path || null,
+            sertifikat: req.file.originalname,
+            uploadStatus: f?.uploadPending ? 'uploading' : 'done',
+        };
+        res.json(await prestasiService.update(id, updateData));
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.put('/:id', requireAuth, requireRole('admin', 'sekolah'), async (req, res) => {

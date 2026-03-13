@@ -168,12 +168,31 @@ const Prestasi = () => {
         if (!sekolah) { toast.error('Pilih sekolah yang valid'); return; }
         if (!formData.jenisPrestasi || !formData.siswa) { toast.error('Jenis prestasi dan nama siswa wajib diisi'); return; }
         try {
-            const payload = { ...formData, tahun: parseInt(formData.tahun), namaSekolah: sekolah.nama, npsn: sekolah.npsn, kecamatan: sekolah.kecamatan, sekolahId: sekolah.id };
             if (editItem) {
+                const payload = { ...formData, tahun: parseInt(formData.tahun), namaSekolah: sekolah.nama, npsn: sekolah.npsn, kecamatan: sekolah.kecamatan, sekolahId: sekolah.id };
                 await prestasiApi.update(editItem.id, payload);
+                // Upload sertifikat separately if changed
+                if (formSertifikat && editItem.id) {
+                    const fd = new FormData();
+                    fd.append('sertifikat', formSertifikat);
+                    await prestasiApi.uploadSertifikat(editItem.id, fd);
+                }
                 toast.success('Data diperbarui ✅');
             } else {
-                await prestasiApi.create(payload);
+                // Use FormData so sertifikat file is included
+                const fd = new FormData();
+                fd.append('jenisPrestasi', formData.jenisPrestasi);
+                fd.append('siswa', formData.siswa);
+                fd.append('kategori', formData.kategori);
+                fd.append('tingkat', formData.tingkat);
+                fd.append('tahun', String(parseInt(formData.tahun)));
+                fd.append('keterangan', formData.keterangan);
+                fd.append('namaSekolah', sekolah.nama);
+                fd.append('npsn', sekolah.npsn);
+                fd.append('kecamatan', sekolah.kecamatan);
+                fd.append('sekolahId', String(sekolah.id));
+                if (formSertifikat) fd.append('sertifikat', formSertifikat);
+                await prestasiApi.createWithFile(fd);
                 toast.success('Pengajuan berhasil 🚀');
             }
             setShowModal(false); resetForm(); refetch();

@@ -104,7 +104,9 @@ export const riwayatBantuanApi = {
 export const prestasiApi = {
     list: (params = {}) => { const q = new URLSearchParams(params).toString(); return api.get(`/prestasi?${q}`); },
     create: (data) => api.post('/prestasi', data),
+    createWithFile: (formData) => api.upload('/prestasi', formData),
     update: (id, data) => api.put(`/prestasi/${id}`, data),
+    uploadSertifikat: (id, formData) => api.upload(`/prestasi/${id}/sertifikat`, formData, 'PUT'),
     delete: (id) => api.delete(`/prestasi/${id}`),
     verify: (id) => api.post(`/prestasi/${id}/verify`),
     reject: (id, alasan) => api.post(`/prestasi/${id}/reject`, { alasan }),
