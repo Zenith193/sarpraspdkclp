@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, Download, Edit, Trash2, Eye, Plus, X, UserX, KeyRound, Filter, Save, EyeOff, CheckCircle, XCircle, UserCheck, FileSpreadsheet, FileText, ChevronLeft, ChevronRight, Upload, FileDown, UploadCloud } from 'lucide-react';
+import { Search, Download, Edit, Trash2, Eye, Plus, X, UserX, KeyRound, Filter, Save, EyeOff, CheckCircle, XCircle, UserCheck, FileSpreadsheet, FileText, ChevronLeft, ChevronRight, Upload, FileDown, UploadCloud, MoreVertical, Columns } from 'lucide-react';
 import { useUsersData } from '../../data/dataProvider';
 import { JENIS_AKUN, KECAMATAN, JENJANG } from '../../utils/constants';
 import { exportToExcel, exportToPDF } from '../../utils/exportUtils';
@@ -48,6 +48,40 @@ const ManajemenPengguna = () => {
     // ===== STATE PAGINASI =====
     const [perPage, setPerPage] = useState(10);
     const [currentPage, setCurrentPage] = useState(1);
+
+    // ===== STATE KOLOM & AKSI DROPDOWN =====
+    const ALL_COLUMNS = [
+        { key: 'no', label: 'No', alwaysVisible: true },
+        { key: 'namaAkun', label: 'Nama Akun', alwaysVisible: true },
+        { key: 'role', label: 'Role' },
+        { key: 'email', label: 'Email / NPSN' },
+        { key: 'password', label: 'Password', defaultHidden: true },
+        { key: 'jenjang', label: 'Jenjang' },
+        { key: 'kecamatan', label: 'Kecamatan' },
+        { key: 'status', label: 'Status' },
+    ];
+    const [visibleCols, setVisibleCols] = useState(() => {
+        const cols = {};
+        ALL_COLUMNS.forEach(c => { cols[c.key] = !c.defaultHidden; });
+        return cols;
+    });
+    const [showColMenu, setShowColMenu] = useState(false);
+    const [openActionId, setOpenActionId] = useState(null);
+    const actionDropdownRef = useRef(null);
+    const colMenuRef = useRef(null);
+
+    // Close dropdowns on outside click
+    useEffect(() => {
+        const handleClick = (e) => {
+            if (actionDropdownRef.current && !actionDropdownRef.current.contains(e.target)) setOpenActionId(null);
+            if (colMenuRef.current && !colMenuRef.current.contains(e.target)) setShowColMenu(false);
+        };
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, []);
+
+    const toggleCol = (key) => setVisibleCols(prev => ({ ...prev, [key]: !prev[key] }));
+    const isColVisible = (key) => visibleCols[key] !== false;
 
     // Filter Logic
     const filtered = useMemo(() => {
@@ -451,6 +485,38 @@ const ManajemenPengguna = () => {
                         <button className={`btn ${filterRole ? 'btn-primary' : 'btn-ghost'} btn-sm`} onClick={() => setShowFilters(!showFilters)}>
                             <Filter size={14} /> Filter {filterRole && <span style={{ marginLeft: 4, background: '#fff', color: 'var(--accent-blue)', borderRadius: '50%', width: 18, height: 18, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11 }}>1</span>}
                         </button>
+
+                        {/* Column Visibility Toggle */}
+                        <div style={{ position: 'relative' }} ref={colMenuRef}>
+                            <button className="btn btn-ghost btn-sm" onClick={() => setShowColMenu(!showColMenu)}>
+                                <Columns size={14} /> Kolom
+                            </button>
+                            {showColMenu && (
+                                <div style={{
+                                    position: 'absolute', top: '100%', left: 0, marginTop: 4, zIndex: 50,
+                                    background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+                                    borderRadius: 10, padding: '8px 0', minWidth: 180,
+                                    boxShadow: '0 8px 30px rgba(0,0,0,0.2)'
+                                }}>
+                                    <div style={{ padding: '4px 14px 8px', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Tampilkan Kolom</div>
+                                    {ALL_COLUMNS.filter(c => !c.alwaysVisible).map(col => (
+                                        <label key={col.key} style={{
+                                            display: 'flex', alignItems: 'center', gap: 8,
+                                            padding: '6px 14px', cursor: 'pointer', fontSize: 13,
+                                            transition: 'background 0.15s'
+                                        }}
+                                            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                        >
+                                            <input type="checkbox" checked={isColVisible(col.key)} onChange={() => toggleCol(col.key)}
+                                                style={{ width: 15, height: 15, accentColor: 'var(--accent-blue)', cursor: 'pointer' }} />
+                                            <span>{col.label}</span>
+                                            {col.defaultHidden && <span style={{ fontSize: 10, color: 'var(--text-secondary)', background: 'var(--bg-hover)', padding: '1px 5px', borderRadius: 3 }}>hidden</span>}
+                                        </label>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
                     <div className="table-toolbar-right">
                         <button className="btn btn-secondary btn-sm" onClick={() => handleExport('excel')}><FileSpreadsheet size={14} /> Excel</button>
@@ -474,13 +540,13 @@ const ManajemenPengguna = () => {
                             <tr>
                                 <th>No</th>
                                 <th>Nama Akun</th>
-                                <th>Role</th>
-                                <th>Email / NPSN</th>
-                                <th>Password</th>
-                                <th>Jenjang</th>
-                                <th>Kecamatan</th>
-                                <th>Status</th>
-                                <th style={{ width: 130 }}>Aksi</th>
+                                {isColVisible('role') && <th>Role</th>}
+                                {isColVisible('email') && <th>Email / NPSN</th>}
+                                {isColVisible('password') && <th>Password</th>}
+                                {isColVisible('jenjang') && <th>Jenjang</th>}
+                                {isColVisible('kecamatan') && <th>Kecamatan</th>}
+                                {isColVisible('status') && <th>Status</th>}
+                                <th style={{ width: 50 }}>Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -491,39 +557,64 @@ const ManajemenPengguna = () => {
                                         <div style={{ fontWeight: 500 }}>{u.namaAkun}</div>
                                         <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{u.alamat}</div>
                                     </td>
-                                    <td><span className="badge badge-disetujui">{u.role}</span></td>
-                                    <td>
-                                        <div>{u.npsn || (u.email?.replace('@SARDIKA.cilacapkab.go.id', '') || '-')}</div>
-                                    </td>
-                                    <td>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                            <span style={{ fontSize: '0.82rem', fontFamily: 'monospace' }}>{u.plainPassword || <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic', fontFamily: 'inherit' }}>-</span>}</span>
-                                        </div>
-                                    </td>
-                                    <td>{(u.role === 'Korwil' || u.role === 'Sekolah') ? (u.jenjang || '-') : '-'}</td>
-                                    <td>{(u.role === 'Korwil' || u.role === 'Sekolah') ? (u.kecamatan || '-') : '-'}</td>
-                                    <td>
+                                    {isColVisible('role') && <td><span className="badge badge-disetujui">{u.role}</span></td>}
+                                    {isColVisible('email') && <td><div>{u.npsn || (u.email?.replace('@SARDIKA.cilacapkab.go.id', '') || '-')}</div></td>}
+                                    {isColVisible('password') && <td>
+                                        <span style={{ fontSize: '0.82rem', fontFamily: 'monospace' }}>{u.plainPassword || <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic', fontFamily: 'inherit' }}>-</span>}</span>
+                                    </td>}
+                                    {isColVisible('jenjang') && <td>{(u.role === 'Korwil' || u.role === 'Sekolah') ? (u.jenjang || '-') : '-'}</td>}
+                                    {isColVisible('kecamatan') && <td>{(u.role === 'Korwil' || u.role === 'Sekolah') ? (u.kecamatan || '-') : '-'}</td>}
+                                    {isColVisible('status') && <td>
                                         {u.aktif ?
                                             <span className="badge badge-baik"><CheckCircle size={12} style={{ marginRight: 4 }} /> Aktif</span> :
                                             <span className="badge badge-ditolak"><XCircle size={12} style={{ marginRight: 4 }} /> Nonaktif</span>
                                         }
-                                    </td>
+                                    </td>}
                                     <td>
-                                        <div style={{ display: 'flex', gap: 2 }}>
-                                            <button className="btn-icon" onClick={() => openModal('view', u)} title="Lihat Detail"><Eye size={16} /></button>
-                                            <button className="btn-icon" onClick={() => openModal('edit', u)} title="Edit Data"><Edit size={16} /></button>
-                                            <button className="btn-icon" onClick={() => openModal('reset', u)} title="Reset Password"><KeyRound size={16} /></button>
-                                            <button className="btn-icon" onClick={() => requestAction('status', u)} title={u.aktif ? "Nonaktifkan" : "Aktifkan"}>
-                                                {u.aktif ? <UserX size={16} style={{ color: 'var(--text-secondary)' }} /> : <UserCheck size={16} style={{ color: 'var(--accent-green)' }} />}
+                                        <div style={{ position: 'relative' }} ref={openActionId === u.id ? actionDropdownRef : null}>
+                                            <button className="btn-icon" onClick={(e) => { e.stopPropagation(); setOpenActionId(openActionId === u.id ? null : u.id); }}
+                                                style={{ padding: '4px 6px', borderRadius: 8 }}>
+                                                <MoreVertical size={16} />
                                             </button>
-                                            <button className="btn-icon" onClick={() => requestAction('delete', u)} title="Hapus" style={{ color: 'var(--accent-red)' }}><Trash2 size={16} /></button>
+                                            {openActionId === u.id && (
+                                                <div style={{
+                                                    position: 'absolute', right: 0, top: '100%', marginTop: 4, zIndex: 50,
+                                                    background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+                                                    borderRadius: 10, padding: '4px 0', minWidth: 170,
+                                                    boxShadow: '0 8px 30px rgba(0,0,0,0.25)',
+                                                    animation: 'fadeIn 0.15s ease'
+                                                }}>
+                                                    {[
+                                                        { icon: <Eye size={14} />, label: 'Lihat Detail', color: 'var(--text-primary)', onClick: () => { openModal('view', u); setOpenActionId(null); } },
+                                                        { icon: <Edit size={14} />, label: 'Edit Data', color: 'var(--text-primary)', onClick: () => { openModal('edit', u); setOpenActionId(null); } },
+                                                        { icon: <KeyRound size={14} />, label: 'Reset Password', color: '#eab308', onClick: () => { openModal('reset', u); setOpenActionId(null); } },
+                                                        { icon: u.aktif ? <UserX size={14} /> : <UserCheck size={14} />, label: u.aktif ? 'Nonaktifkan' : 'Aktifkan', color: u.aktif ? 'var(--text-secondary)' : 'var(--accent-green)', onClick: () => { requestAction('status', u); setOpenActionId(null); } },
+                                                        { divider: true },
+                                                        { icon: <Trash2 size={14} />, label: 'Hapus', color: 'var(--accent-red)', onClick: () => { requestAction('delete', u); setOpenActionId(null); } },
+                                                    ].map((item, idx) => item.divider ? (
+                                                        <div key={idx} style={{ height: 1, background: 'var(--border-color)', margin: '4px 0' }} />
+                                                    ) : (
+                                                        <button key={idx} onClick={item.onClick} style={{
+                                                            display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                                                            padding: '8px 14px', border: 'none', background: 'transparent',
+                                                            color: item.color, fontSize: 13, cursor: 'pointer',
+                                                            transition: 'background 0.15s', textAlign: 'left'
+                                                        }}
+                                                            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                                                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                                        >
+                                                            {item.icon} {item.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>
                             ))}
                             {pagedData.length === 0 && (
                                 <tr>
-                                    <td colSpan={8} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>
+                                    <td colSpan={ALL_COLUMNS.length + 1} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>
                                         Tidak ada data ditemukan
                                     </td>
                                 </tr>
