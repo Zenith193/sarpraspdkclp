@@ -36,37 +36,32 @@ export const sarprasService = {
             db.select({ count: sql<number>`count(*)` }).from(sarpras).leftJoin(sekolah, eq(sarpras.sekolahId, sekolah.id)).where(where),
         ]);
 
-        // Load fotos for all sarpras in batch
+        // Load foto counts and last foto timestamp in batch (no full foto data — too large for list)
         const sarprasIds = data.map(d => d.sarpras.id);
-        let fotos: any[] = [];
+        let fotoCounts: Record<number, { count: number; lastAt: string | null }> = {};
         if (sarprasIds.length > 0) {
-            fotos = await db.select().from(sarprasFoto).where(sql`${sarprasFoto.sarprasId} IN (${sql.join(sarprasIds.map(id => sql`${id}`), sql`, `)})`);
+            const fotoStats = await db.select({
+                sarprasId: sarprasFoto.sarprasId,
+                count: sql<number>`count(*)`,
+                lastAt: sql<string>`max(${sarprasFoto.createdAt})`,
+            }).from(sarprasFoto)
+              .where(sql`${sarprasFoto.sarprasId} IN (${sql.join(sarprasIds.map(id => sql`${id}`), sql`, `)})`)
+              .groupBy(sarprasFoto.sarprasId);
+            for (const row of fotoStats) {
+                fotoCounts[row.sarprasId] = { count: Number(row.count), lastAt: row.lastAt };
+            }
         }
 
-        // Map fotos onto sarpras items
+        // Map foto counts onto sarpras items (no full foto data to keep payload small)
         const dataWithFotos = data.map(d => {
-            const itemFotos = fotos.filter(f => f.sarprasId === d.sarpras.id);
-            const fotoTimestamps = itemFotos.map(f => f.createdAt ? new Date(f.createdAt).getTime() : 0).filter(t => t > 0);
-            const lastFotoAt = fotoTimestamps.length > 0 ? new Date(Math.max(...fotoTimestamps)).toISOString() : null;
-
+            const stats = fotoCounts[d.sarpras.id] || { count: 0, lastAt: null };
             return {
                 ...d,
                 sarpras: {
                     ...d.sarpras,
-                    lastFotoAt,
-                    foto: itemFotos.map(f => {
-                        const proxyUrl = `/api/foto/${f.id}`;
-                        return {
-                            id: f.id,
-                            name: f.fileName,
-                            url: proxyUrl,
-                            proxyUrl,
-                            size: f.fileSize || 0,
-                            geo: (f.geoLat && f.geoLng) ? { lat: f.geoLat, lng: f.geoLng } : null,
-                            geoLat: f.geoLat,
-                            geoLng: f.geoLng,
-                        };
-                    }),
+                    lastFotoAt: stats.lastAt ? new Date(stats.lastAt).toISOString() : null,
+                    fotoCount: stats.count,
+                    foto: [], // Empty array — detail view via getById() returns full fotos
                 },
             };
         });
