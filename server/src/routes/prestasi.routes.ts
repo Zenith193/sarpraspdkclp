@@ -81,8 +81,19 @@ router.put('/:id', requireAuth, requireRole('admin', 'sekolah'), async (req, res
         res.json(await prestasiService.update(id, updateData));
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
-router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
-    try { await prestasiService.delete(Number(req.params.id)); res.json({ success: true }); } catch (e: any) { res.status(500).json({ error: e.message }); }
+router.delete('/:id', requireAuth, requireRole('admin', 'sekolah'), async (req, res) => {
+    try {
+        const id = Number(req.params.id);
+        const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
+        if (isSekolah) {
+            // Verify ownership
+            const existing = await prestasiService.list({ sekolahId: req.user!.sekolahId });
+            const item = existing.data.find(d => (d.prestasi as any).id === id);
+            if (!item) { res.status(403).json({ error: 'Forbidden' }); return; }
+        }
+        await prestasiService.delete(id);
+        res.json({ success: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 router.post('/:id/verify', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {

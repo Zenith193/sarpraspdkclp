@@ -362,9 +362,14 @@ const UploadFormKerusakan = () => {
                                                 {openActionId === d.id && (
                                                     <div className="dropdown-menu" style={{ right: 0, left: 'auto', top: '100%', marginTop: 4, minWidth: 180, zIndex: 50 }}>
                                                         {d.fileUrl && (
-                                                            <button className="dropdown-item" onClick={() => { setPreviewItem(d); setOpenActionId(null); }}>
-                                                                <Eye size={14} style={{ marginRight: 8, color: 'var(--accent-blue)' }} /> Lihat File
-                                                            </button>
+                                                            <>
+                                                                <button className="dropdown-item" onClick={() => { window.open(`/api/file/kerusakan/${d.id}`, '_blank'); setOpenActionId(null); }}>
+                                                                    <Eye size={14} style={{ marginRight: 8, color: 'var(--accent-blue)' }} /> Preview File
+                                                                </button>
+                                                                <button className="dropdown-item" onClick={() => { const a = document.createElement('a'); a.href = `/api/file/kerusakan/${d.id}`; a.download = d.fileName || 'form-kerusakan.pdf'; a.click(); setOpenActionId(null); }}>
+                                                                    <Download size={14} style={{ marginRight: 8, color: 'var(--accent-green)' }} /> Download File
+                                                                </button>
+                                                            </>
                                                         )}
                                                         {(isAdmin || (isSekolah && d.npsn === user.npsn)) && (
                                                             <label className="dropdown-item" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>

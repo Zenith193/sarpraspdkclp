@@ -419,8 +419,10 @@ app.post('/api/npsn-login', async (req, res) => {
                 id: foundUser.id,
                 name: foundUser.name,
                 email: foundUser.email,
+                image: foundUser.image,
                 role: foundUser.role,
                 sekolahId: foundUser.sekolahId,
+                kecamatan: (foundUser as any).kecamatan,
             },
             session: {
                 token: sessionToken,
@@ -482,9 +484,11 @@ app.get('/api/check-session', async (req, res) => {
                             id: u.id,
                             name: u.name,
                             email: u.email,
+                            image: u.image,
                             role: u.role,
                             sekolahId: u.sekolahId,
                             aktif: u.aktif,
+                            kecamatan: (u as any).kecamatan,
                         },
                         session: { token: s.token, expiresAt: s.expiresAt },
                     });

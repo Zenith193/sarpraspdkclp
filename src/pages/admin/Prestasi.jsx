@@ -303,7 +303,7 @@ const Prestasi = () => {
                                 {!isSekolah && <th style={{ fontSize: '0.8rem' }}>Sekolah</th>}
                                 <th style={{ fontSize: '0.8rem' }}>Jenis Prestasi</th>
                                 <th style={{ fontSize: '0.8rem' }}>Siswa/Tim</th>
-                                <th style={{ fontSize: '0.8rem' }}>Capaian</th>
+                                {isAdmin && <th style={{ fontSize: '0.8rem' }}>Capaian</th>}
                                 <th style={{ fontSize: '0.8rem' }}>Status</th>
                                 <th style={{ fontSize: '0.8rem' }}>Sertifikat</th>
                                 <th style={{ fontSize: '0.8rem' }}>Aksi</th>
@@ -315,15 +315,15 @@ const Prestasi = () => {
                                         {!isSekolah && <td style={{ fontSize: '0.85rem', fontWeight: 500 }}>{d.namaSekolah}</td>}
                                         <td style={{ fontSize: '0.85rem' }}>{d.jenisPrestasi}</td>
                                         <td style={{ fontSize: '0.85rem' }}>{d.siswa}</td>
-                                        <td><span className="badge badge-baik" style={{ fontSize: '0.75rem' }}>{d.keterangan}</span></td>
+                                        {isAdmin && <td><span className="badge badge-baik" style={{ fontSize: '0.75rem' }}>{d.keterangan}</span></td>}
                                         <td>{renderStatusBadge(d.status)}</td>
                                         <td>{d.sertifikat ? <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--accent-green)', fontSize: '0.8rem' }}><FileText size={14} />{d.sertifikat}</div> : <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Belum ada</span>}</td>
                                         <td>
                                             <div style={{ display: 'flex', gap: 4 }}>
-                                                {d.sertifikat && (<button className="btn-icon" onClick={() => setPreviewFile(d)} title="Lihat" style={{ color: 'var(--accent-blue)' }}><Eye size={16} /></button>)}
+                                                {d.sertifikatPath && (<button className="btn-icon" onClick={() => window.open(`/api/file/prestasi/${d.id}`, '_blank')} title="Lihat Sertifikat" style={{ color: 'var(--accent-blue)' }}><Eye size={16} /></button>)}
                                                 {canVerify && d.status === 'Menunggu Verifikasi' && (<><button className="btn-icon" onClick={() => handleVerify(d.id)} title="Verifikasi" style={{ color: 'var(--accent-green)' }}><CheckCircle size={16} /></button><button className="btn-icon" onClick={() => openRejectModal(d)} title="Tolak" style={{ color: 'var(--accent-red)' }}><XCircle size={16} /></button></>)}
                                                 {canVerify && d.status === 'Diverifikasi' && (<button className="btn-icon" onClick={() => openUnverifyModal(d)} title="Unverifikasi" style={{ color: 'var(--accent-orange)' }}><ShieldOff size={16} /></button>)}
-                                                {(isAdmin || (isSekolah && d.status !== 'Diverifikasi')) ? (<><button className="btn-icon" onClick={() => handleOpenModal(d)} title="Edit"><Edit size={16} /></button><button className="btn-icon" onClick={() => setDeleteTarget(d)} title="Hapus" style={{ color: 'var(--accent-red)' }}><Trash2 size={16} /></button></>) : (!canVerify && <span style={{ width: 50 }}></span>)}
+                                                {(isAdmin || (isSekolah && d.status !== 'Diverifikasi')) && (<><button className="btn-icon" onClick={() => handleOpenModal(d)} title="Edit"><Edit size={16} /></button><button className="btn-icon" onClick={() => setDeleteTarget(d)} title="Hapus" style={{ color: 'var(--accent-red)' }}><Trash2 size={16} /></button></>)}
                                             </div>
                                         </td>
                                     </tr>
