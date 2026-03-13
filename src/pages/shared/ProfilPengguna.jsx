@@ -91,11 +91,20 @@ const ProfilPengguna = () => {
 
     const p = profileData || user || {};
 
-    const handleSave = () => {
-        updateProfile({ ...form });
-        setProfileData({ ...form });
-        setEditing(false);
-        toast.success('Profil berhasil diperbarui');
+    const handleSave = async () => {
+        try {
+            const payload = { ...form };
+            // Remove read-only fields from payload
+            delete payload.role;
+            delete payload._npsn;
+            await penggunaApi.update(user.id, payload);
+            updateProfile({ ...form });
+            setProfileData({ ...form });
+            setEditing(false);
+            toast.success('Profil berhasil diperbarui');
+        } catch (err) {
+            toast.error(err.message || 'Gagal menyimpan profil');
+        }
     };
 
     const handleCancel = () => {
@@ -182,7 +191,7 @@ const ProfilPengguna = () => {
 
     // Build display fields based on role
     const fields = isSekolah ? [
-        { label: 'Nama Akun', key: 'namaAkun' },
+        { label: 'Nama Akun', key: 'namaAkun', readOnly: true },
         { label: 'Role', key: 'role', readOnly: true },
         { label: 'NPSN', key: '_npsn', readOnly: true },
         { label: 'Jenjang', key: 'jenjang', readOnly: true },
@@ -191,7 +200,7 @@ const ProfilPengguna = () => {
         { label: 'NIP', key: 'nip' },
         { label: 'No Rekening', key: 'noRek' },
         { label: 'Nama Bank', key: 'namaBank' },
-        { label: 'Jumlah Rombel', key: 'rombel', readOnly: true },
+        { label: 'Jumlah Rombel', key: 'rombel' },
     ] : [
         { label: 'Nama Akun', key: 'namaAkun' },
         { label: 'Role', key: 'role', readOnly: true },
