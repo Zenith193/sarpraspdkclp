@@ -101,36 +101,34 @@ export function forwardToNas(
         const processFile = async (file: Express.Multer.File) => {
             try {
                 if (isGDriveEnabled()) {
-                    // Save locally first, then upload to GDrive in background
-                    const localDest = getLocalDestination(category, body);
-                    const finalLocalPath = path.join(localDest, file.filename);
-                    try { fs.renameSync(file.path, finalLocalPath); } catch { /* keep original path */ }
-                    (file as any).finalPath = fs.existsSync(finalLocalPath) ? finalLocalPath : file.path;
-                    (file as any).storedAt = 'local';
-                    (file as any).uploadPending = true;
-
-                    // Upload to GDrive in background (non-blocking)
-                    const localPath = (file as any).finalPath;
-                    let gdriveSubPath: string = category;
-                    if (sekolah) {
-                        const folderName: Record<string, string> = {
-                            'kop-sekolah': 'profil',
-                            'kerusakan': 'form kerusakan',
-                            'sarpras': 'data sarpras',
-                            'proposal': 'proposal',
-                            'prestasi': 'prestasi',
-                            'riwayat-bantuan': 'riwayat bantuan',
-                        };
-                        gdriveSubPath = `${sekolah.kecamatan || 'unknown'}/${sekolah.nama}_${sekolah.npsn}/${folderName[category] || category}`;
-                        if (extra.masaBangunan) gdriveSubPath += `/${extra.masaBangunan}`;
-                        if (extra.namaRuang) gdriveSubPath += `/${extra.namaRuang}`;
+                    // Upload directly to GDrive
+                    try {
+                        let gdriveSubPath: string = category;
+                        if (sekolah) {
+                            const folderName: Record<string, string> = {
+                                'kop-sekolah': 'profil',
+                                'kerusakan': 'form kerusakan',
+                                'sarpras': 'data sarpras',
+                                'proposal': 'proposal',
+                                'prestasi': 'prestasi',
+                                'riwayat-bantuan': 'riwayat bantuan',
+                            };
+                            gdriveSubPath = `${sekolah.kecamatan || 'unknown'}/${sekolah.nama}_${sekolah.npsn}/${folderName[category] || category}`;
+                            if (extra.masaBangunan) gdriveSubPath += `/${extra.masaBangunan}`;
+                            if (extra.namaRuang) gdriveSubPath += `/${extra.namaRuang}`;
+                        }
+                        const result = await uploadFileToGDrive(file.path, category, gdriveSubPath);
+                        (file as any).finalPath = result.path; // gdrive://fileId
+                        (file as any).storedAt = 'gdrive';
+                        (file as any).uploadPending = false;
+                        console.log(`[Upload] ${file.originalname} → GDrive ✅ ${result.path}`);
+                    } catch (gErr: any) {
+                        console.error(`[Upload] GDrive failed for ${file.originalname}:`, gErr.message);
+                        // Fallback: keep local
+                        (file as any).finalPath = file.path;
+                        (file as any).storedAt = 'local';
+                        (file as any).uploadPending = true;
                     }
-                    // Fire-and-forget: upload to GDrive without blocking response
-                    uploadFileToGDrive(localPath, category, gdriveSubPath).then((r: any) => {
-                        console.log(`[Upload] ${file.originalname} → GDrive background ✅ ${r.path}`);
-                    }).catch((e: any) => {
-                        console.error(`[Upload] GDrive background error for ${file.originalname}:`, e.message);
-                    });
                 } else {
                     const result = await uploadToNas(file.path, category, sekolah, extra);
                     (file as any).storedAt = result.stored;
