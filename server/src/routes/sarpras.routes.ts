@@ -340,6 +340,7 @@ router.post('/batch-verify', requireAuth, requireRole('admin'), async (req, res)
 router.post('/:id/verify', requireAuth, requireRole('admin', 'verifikator', 'korwil'), async (req, res) => {
     try {
         const result = await sarprasService.verify(Number(req.params.id), req.user!.id);
+        logActivity(req, 'Verifikasi Sarpras', `Memverifikasi data sarpras #${req.params.id}`);
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
@@ -347,6 +348,7 @@ router.post('/:id/verify', requireAuth, requireRole('admin', 'verifikator', 'kor
 router.post('/:id/unverify', requireAuth, requireRole('admin', 'verifikator', 'korwil'), async (req, res) => {
     try {
         const result = await sarprasService.unverify(Number(req.params.id));
+        logActivity(req, 'Batalkan Verifikasi Sarpras', `Membatalkan verifikasi sarpras #${req.params.id}`);
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
