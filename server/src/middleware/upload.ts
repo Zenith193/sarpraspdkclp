@@ -101,13 +101,40 @@ export function forwardToNas(
         const processFile = async (file: Express.Multer.File) => {
             try {
                 if (isGDriveEnabled()) {
-                    // Save locally first for instant response
-                    const localDest = getLocalDestination(category, body);
-                    const finalLocalPath = path.join(localDest, file.filename);
-                    fs.renameSync(file.path, finalLocalPath);
-                    (file as any).finalPath = finalLocalPath;
-                    (file as any).storedAt = 'local';
-                    (file as any).uploadPending = false; // Instant save for user, queue worker handles GDrive sync silently
+                    // Upload directly to GDrive (synchronous)
+                    let gdriveSubPath: string = category;
+                    if (sekolah) {
+                        const folderName: Record<string, string> = {
+                            'kop-sekolah': 'profil',
+                            'kerusakan': 'form kerusakan',
+                            'sarpras': 'data sarpras',
+                            'proposal': 'proposal',
+                            'prestasi': 'prestasi',
+                            'riwayat-bantuan': 'riwayat bantuan',
+                            'bast': 'bast',
+                            'template': 'template',
+                            'backup': 'backup',
+                        };
+                        gdriveSubPath = `${sekolah.kecamatan || 'unknown'}/${sekolah.nama}_${sekolah.npsn}/${folderName[category] || category}`;
+                        if (extra.masaBangunan) gdriveSubPath += `/${extra.masaBangunan}`;
+                        if (extra.namaRuang) gdriveSubPath += `/${extra.namaRuang}`;
+                    }
+                    try {
+                        const result = await uploadFileToGDrive(file.path, category, gdriveSubPath);
+                        (file as any).finalPath = result.path; // gdrive://fileId
+                        (file as any).storedAt = 'gdrive';
+                        (file as any).uploadPending = false;
+                        console.log(`[Upload] ${file.originalname} → GDrive ✅ ${result.path}`);
+                    } catch (gErr: any) {
+                        // Fallback: save locally if GDrive fails
+                        console.error(`[Upload] GDrive failed for ${file.originalname}:`, gErr.message, '→ saving locally');
+                        const localDest = getLocalDestination(category, body);
+                        const finalLocalPath = path.join(localDest, file.filename);
+                        fs.renameSync(file.path, finalLocalPath);
+                        (file as any).finalPath = finalLocalPath;
+                        (file as any).storedAt = 'local';
+                        (file as any).uploadPending = false;
+                    }
                 } else {
                     const result = await uploadToNas(file.path, category, sekolah, extra);
                     (file as any).storedAt = result.stored;
