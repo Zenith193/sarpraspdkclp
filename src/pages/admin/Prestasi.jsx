@@ -23,7 +23,7 @@ const Prestasi = () => {
     const { data: sekolahList } = useSekolahData();
 
     const canManage = isAdmin || isSekolah;
-    const canVerify = isAdmin || isVerifikator;
+    const canVerify = isAdmin || isVerifikator || isKorwil;
 
     // State Tab
     const [activeTab, setActiveTab] = useState('data');
@@ -321,7 +321,7 @@ const Prestasi = () => {
                                         <td>
                                             <div style={{ display: 'flex', gap: 4 }}>
                                                 {d.sertifikatPath && (<button className="btn-icon" onClick={() => window.open(`/api/file/prestasi/${d.id}`, '_blank')} title="Lihat Sertifikat" style={{ color: 'var(--accent-blue)' }}><Eye size={16} /></button>)}
-                                                {canVerify && d.status === 'Menunggu Verifikasi' && (<><button className="btn-icon" onClick={() => handleVerify(d.id)} title="Verifikasi" style={{ color: 'var(--accent-green)' }}><CheckCircle size={16} /></button><button className="btn-icon" onClick={() => openRejectModal(d)} title="Tolak" style={{ color: 'var(--accent-red)' }}><XCircle size={16} /></button></>)}
+                                                {canVerify && ((isKorwil && d.status === 'Menunggu Verifikasi Korwil') || ((isAdmin || isVerifikator) && d.status === 'Menunggu Verifikasi')) && (<><button className="btn-icon" onClick={() => handleVerify(d.id)} title="Verifikasi" style={{ color: 'var(--accent-green)' }}><CheckCircle size={16} /></button><button className="btn-icon" onClick={() => openRejectModal(d)} title="Tolak" style={{ color: 'var(--accent-red)' }}><XCircle size={16} /></button></>)}
                                                 {canVerify && d.status === 'Diverifikasi' && (<button className="btn-icon" onClick={() => openUnverifyModal(d)} title="Unverifikasi" style={{ color: 'var(--accent-orange)' }}><ShieldOff size={16} /></button>)}
                                                 {isAdmin && (<><button className="btn-icon" onClick={() => handleOpenModal(d)} title="Edit"><Edit size={16} /></button><button className="btn-icon" onClick={() => setDeleteTarget(d)} title="Hapus" style={{ color: 'var(--accent-red)' }}><Trash2 size={16} /></button></>)}
                                             </div>

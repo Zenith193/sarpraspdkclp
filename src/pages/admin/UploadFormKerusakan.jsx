@@ -14,9 +14,10 @@ const UploadFormKerusakan = () => {
     const user = useAuthStore(s => s.user);
     const isAdmin = user?.role === 'Admin';
     const isVerifikator = user?.role === 'Verifikator';
+    const isKorwil = (user?.role || '').toLowerCase() === 'korwil';
     const isSekolah = user?.role === 'Sekolah';
     const canSeeMissing = isAdmin || isVerifikator;
-    const canVerify = isAdmin || isVerifikator;
+    const canVerify = isAdmin || isVerifikator || isKorwil;
     const canDelete = isAdmin || isVerifikator;
     const { data: sekolahList } = useSekolahData();
 
@@ -288,6 +289,7 @@ const UploadFormKerusakan = () => {
     const renderStatusBadge = (status, alasan) => {
         const styles = {
             'Menunggu Verifikasi': { bg: 'rgba(234, 179, 8, 0.1)', color: '#eab308', icon: RefreshCw },
+            'Menunggu Verifikasi Korwil': { bg: 'rgba(168, 85, 247, 0.1)', color: '#a855f7', icon: RefreshCw },
             'Diverifikasi': { bg: 'rgba(34, 197, 94, 0.1)', color: '#22c55e', icon: CheckCircle },
             'Ditolak': { bg: 'rgba(239, 68, 68, 0.1)', color: '#ef4444', icon: XCircle },
             'Revisi': { bg: 'rgba(249, 115, 22, 0.1)', color: '#f97316', icon: RefreshCw },
@@ -437,7 +439,9 @@ const UploadFormKerusakan = () => {
                                                                 <input type="file" accept="application/pdf" style={{ display: 'none' }} onChange={(e) => { handleDirectUpload(e, d); setOpenActionId(null); }} />
                                                             </label>
                                                         )}
-                                                        {canVerify && d.status === 'Menunggu Verifikasi' && (
+                                                        {canVerify && (
+                                                            ((isKorwil && d.status === 'Menunggu Verifikasi Korwil') || 
+                                                             ((isAdmin || isVerifikator) && d.status === 'Menunggu Verifikasi')) && (
                                                             <>
                                                                 <button className="dropdown-item" onClick={() => { handleVerify(d.id); setOpenActionId(null); }}>
                                                                     <CheckCircle size={14} style={{ marginRight: 8, color: 'var(--accent-green)' }} /> Verifikasi
