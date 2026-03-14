@@ -3,6 +3,7 @@ import { Toaster } from 'react-hot-toast';
 import useAuthStore from './store/authStore';
 import useThemeStore from './store/themeStore';
 import { useEffect } from 'react';
+import useIdleLogout from './hooks/useIdleLogout';
 
 // Layout
 import AppLayout from './components/layout/AppLayout';
@@ -74,6 +75,9 @@ function App() {
 
   // Revalidate server session on mount (handles new tabs)
   useEffect(() => { checkSession(); }, []);
+
+  // Auto-logout after 5 minutes of inactivity
+  useIdleLogout();
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);

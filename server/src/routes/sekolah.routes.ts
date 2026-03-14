@@ -7,6 +7,7 @@ import { sekolah } from '../db/schema/index.js';
 import { eq } from 'drizzle-orm';
 import { isGDriveEnabled, streamFromGDrive } from '../utils/googleDriveClient.js';
 import { queueGDriveDelete } from '../utils/uploadQueue.js';
+import { logActivity } from '../middleware/logActivity.js';
 import fs from 'fs';
 import path from 'path';
 
@@ -93,7 +94,8 @@ router.post('/:id/upload-kop', requireAuth, uploadKopSekolah.single('file'), for
         }
 
         const filePath = file.finalPath || file.path;
-        const uploadStatus = isGDriveEnabled() ? 'uploading' : 'done';
+        const uploadPending = (file as any).uploadPending === true;
+        const uploadStatus = uploadPending ? 'uploading' : 'done';
 
         await db.update(sekolah).set({
             kopSekolah: filePath,
@@ -101,6 +103,7 @@ router.post('/:id/upload-kop', requireAuth, uploadKopSekolah.single('file'), for
             updatedAt: new Date()
         }).where(eq(sekolah.id, id));
 
+        logActivity(req, 'Upload Kop Sekolah', `Mengupload kop sekolah`);
         res.json({ success: true, filePath, uploadStatus });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
@@ -132,7 +135,8 @@ router.post('/:id/upload-denah', requireAuth, uploadDenahSekolah.single('file'),
         }
 
         const filePath = file.finalPath || file.path;
-        const uploadStatus = isGDriveEnabled() ? 'uploading' : 'done';
+        const uploadPending = (file as any).uploadPending === true;
+        const uploadStatus = uploadPending ? 'uploading' : 'done';
 
         await db.update(sekolah).set({
             denahSekolah: filePath,
@@ -140,6 +144,7 @@ router.post('/:id/upload-denah', requireAuth, uploadDenahSekolah.single('file'),
             updatedAt: new Date()
         }).where(eq(sekolah.id, id));
 
+        logActivity(req, 'Upload Denah Sekolah', `Mengupload denah sekolah`);
         res.json({ success: true, filePath, uploadStatus });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
