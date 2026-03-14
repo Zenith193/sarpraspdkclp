@@ -4,7 +4,7 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 import { uploadFormKerusakan, forwardToNas } from '../middleware/upload.js';
 import { isGDriveEnabled } from '../utils/googleDriveClient.js';
 import { db } from '../db/index.js';
-import { korwilAssignment } from '../db/schema/index.js';
+import { korwilAssignment, formKerusakan } from '../db/schema/index.js';
 import { eq } from 'drizzle-orm';
 import { logActivity } from '../middleware/logActivity.js';
 
@@ -79,6 +79,15 @@ router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadFormKerusak
             if (isDup) { res.status(400).json({ error: `Masa bangunan "${masaBangunan}" sudah memiliki form kerusakan untuk sekolah ini` }); return; }
         }
 
+        // Determine initial status based on jenjang
+        let initialStatus = 'Belum Upload';
+        if (req.file) {
+            const { sekolah: sekolahTable } = await import('../db/schema/index.js');
+            const sch = await db.select({ jenjang: sekolahTable.jenjang }).from(sekolahTable).where(eq(sekolahTable.id, sekolahId));
+            const jenjang = sch[0]?.jenjang || 'SMP';
+            initialStatus = jenjang === 'SD' ? 'Menunggu Verifikasi Korwil' : 'Menunggu Verifikasi';
+        }
+
         const f = req.file as any;
         const data: any = {
             sekolahId,
@@ -86,7 +95,7 @@ router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadFormKerusak
             fileName: req.file?.originalname || null,
             filePath: f?.finalPath || req.file?.path || null,
             uploadStatus: req.file ? (f?.uploadPending ? 'uploading' : 'done') : 'done',
-            status: req.file ? 'Menunggu Verifikasi' : 'Belum Upload',
+            status: initialStatus,
         };
         const result = await kerusakanService.create(data, req.user!.id);
         logActivity(req, 'Tambah Form Kerusakan', `Menambahkan form kerusakan bangunan ${masaBangunan || 'N/A'}`);
@@ -121,7 +130,28 @@ router.delete('/:id', requireAuth, requireRole('admin', 'verifikator', 'korwil')
     try { await kerusakanService.delete(Number(req.params.id)); logActivity(req, 'Hapus Form Kerusakan', `Menghapus form kerusakan #${req.params.id}`); res.json({ success: true }); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.post('/:id/verify', requireAuth, requireRole('admin', 'verifikator', 'korwil'), async (req, res) => {
-    try { const r = await kerusakanService.verify(Number(req.params.id), req.user!.id); logActivity(req, 'Verifikasi Kerusakan', `Memverifikasi form kerusakan #${req.params.id}`); res.json(r); } catch (e: any) { res.status(500).json({ error: e.message }); }
+    try {
+        const id = Number(req.params.id);
+        const role = req.user!.role.toLowerCase();
+        // Look up jenjang
+        const existing = await kerusakanService.getById(id);
+        if (!existing) { res.status(404).json({ error: 'Not found' }); return; }
+        const { sekolah: sekolahTable } = await import('../db/schema/index.js');
+        const sch = await db.select({ jenjang: sekolahTable.jenjang }).from(sekolahTable).where(eq(sekolahTable.id, existing.formKerusakan.sekolahId));
+        const jenjang = sch[0]?.jenjang || 'SMP';
+
+        if (role === 'korwil' && jenjang === 'SD') {
+            // Korwil verifies SD → promote to verifikator queue
+            const r = await db.update(formKerusakan).set({ status: 'Menunggu Verifikasi', verifiedBy: req.user!.id, updatedAt: new Date() }).where(eq(formKerusakan.id, id)).returning();
+            logActivity(req, 'Verifikasi Korwil Kerusakan', `Memverifikasi form kerusakan #${id} (SD → verifikator)`);
+            res.json(r);
+        } else {
+            // Admin/Verifikator → final verify
+            const r = await kerusakanService.verify(id, req.user!.id);
+            logActivity(req, 'Verifikasi Kerusakan', `Memverifikasi form kerusakan #${id}`);
+            res.json(r);
+        }
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.post('/:id/reject', requireAuth, requireRole('admin', 'verifikator', 'korwil'), async (req, res) => {
     try { const r = await kerusakanService.reject(Number(req.params.id), req.user!.id, req.body.alasan); logActivity(req, 'Tolak Kerusakan', `Menolak form kerusakan #${req.params.id}`); res.json(r); } catch (e: any) { res.status(500).json({ error: e.message }); }

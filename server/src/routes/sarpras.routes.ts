@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { sarprasService } from '../services/sarpras.service.js';
 import { db } from '../db/index.js';
+import { sarpras, sekolah } from '../db/schema/index.js';
+import { eq } from 'drizzle-orm';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { uploadFotos, forwardToNas } from '../middleware/upload.js';
 import { logActivity } from '../middleware/logActivity.js';
@@ -339,9 +341,26 @@ router.post('/batch-verify', requireAuth, requireRole('admin'), async (req, res)
 
 router.post('/:id/verify', requireAuth, requireRole('admin', 'verifikator', 'korwil'), async (req, res) => {
     try {
-        const result = await sarprasService.verify(Number(req.params.id), req.user!.id);
-        logActivity(req, 'Verifikasi Sarpras', `Memverifikasi data sarpras #${req.params.id}`);
-        res.json(result);
+        const id = Number(req.params.id);
+        const role = req.user!.role.toLowerCase();
+        // Look up sekolah jenjang via sarpras
+        const sItem = await sarprasService.getById(id);
+        let jenjang = 'SMP';
+        if (sItem?.sarpras?.sekolahId) {
+            const sch = await db.select({ jenjang: sekolah.jenjang }).from(sekolah).where(eq(sekolah.id, sItem.sarpras.sekolahId));
+            jenjang = sch[0]?.jenjang || 'SMP';
+        }
+        if (role === 'korwil' && jenjang === 'SD') {
+            // Korwil verifies SD → mark verifiedBy but keep verified=false so verifikator can finalize
+            const r = await db.update(sarpras).set({ verified: false, verifiedBy: req.user!.id, updatedAt: new Date() }).where(eq(sarpras.id, id)).returning();
+            logActivity(req, 'Verifikasi Korwil Sarpras', `Memverifikasi sarpras #${id} (SD → verifikator)`);
+            res.json(r[0]);
+        } else {
+            // Admin/Verifikator → final verify
+            const result = await sarprasService.verify(id, req.user!.id);
+            logActivity(req, 'Verifikasi Sarpras', `Memverifikasi data sarpras #${id}`);
+            res.json(result);
+        }
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 

@@ -3,6 +3,9 @@ import { prestasiService } from '../services/prestasi.service.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { uploadSertifikat, forwardToNas } from '../middleware/upload.js';
 import { logActivity } from '../middleware/logActivity.js';
+import { db } from '../db/index.js';
+import { prestasi, sekolah } from '../db/schema/index.js';
+import { eq } from 'drizzle-orm';
 
 const router = Router();
 
@@ -91,7 +94,26 @@ router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
 });
 
 router.post('/:id/verify', requireAuth, requireRole('admin', 'verifikator', 'korwil'), async (req, res) => {
-    try { const r = await prestasiService.verify(Number(req.params.id), req.user!.id); logActivity(req, 'Verifikasi Prestasi', `Memverifikasi prestasi #${req.params.id}`); res.json(r); } catch (e: any) { res.status(500).json({ error: e.message }); }
+    try {
+        const id = Number(req.params.id);
+        const role = req.user!.role.toLowerCase();
+        // Look up sekolah jenjang via prestasi
+        const item = await db.select({ sekolahId: prestasi.sekolahId }).from(prestasi).where(eq(prestasi.id, id));
+        let jenjang = 'SMP';
+        if (item[0]?.sekolahId) {
+            const sch = await db.select({ jenjang: sekolah.jenjang }).from(sekolah).where(eq(sekolah.id, item[0].sekolahId));
+            jenjang = sch[0]?.jenjang || 'SMP';
+        }
+        if (role === 'korwil' && jenjang === 'SD') {
+            const r = await db.update(prestasi).set({ status: 'Menunggu Verifikasi', verifiedBy: req.user!.id, updatedAt: new Date() }).where(eq(prestasi.id, id)).returning();
+            logActivity(req, 'Verifikasi Korwil Prestasi', `Memverifikasi prestasi #${id} (SD → verifikator)`);
+            res.json(r);
+        } else {
+            const r = await prestasiService.verify(id, req.user!.id);
+            logActivity(req, 'Verifikasi Prestasi', `Memverifikasi prestasi #${id}`);
+            res.json(r);
+        }
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.post('/:id/reject', requireAuth, requireRole('admin', 'verifikator', 'korwil'), async (req, res) => {
     try { const r = await prestasiService.reject(Number(req.params.id), req.user!.id, req.body.alasan); logActivity(req, 'Tolak Prestasi', `Menolak prestasi #${req.params.id}: ${req.body.alasan || ''}`); res.json(r); } catch (e: any) { res.status(500).json({ error: e.message }); }
