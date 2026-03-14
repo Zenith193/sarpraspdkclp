@@ -409,6 +409,10 @@ const UploadFormKerusakan = () => {
                                         </td>
                                         <td>{renderStatusBadge(d.status, d.alasanPenolakan)}</td>
                                         <td>
+                                            {(() => {
+                                                const sekolahCanAct = !isSekolah || d.status === 'Ditolak' || d.status === 'Revisi' || d.status === 'Belum Upload' || d.fileUrl;
+                                                if (!sekolahCanAct && isSekolah) return null;
+                                                return (
                                             <div style={{ position: 'relative' }} ref={openActionId === d.id ? actionDropdownRef : null}>
                                                 <button className="btn-icon" onClick={() => setOpenActionId(openActionId === d.id ? null : d.id)} title="Aksi">
                                                     <MoreVertical size={16} />
@@ -465,6 +469,8 @@ const UploadFormKerusakan = () => {
                                                     </div>
                                                 )}
                                             </div>
+                                                );
+                                            })()}
                                         </td>
                                     </tr>
                                 ))}
