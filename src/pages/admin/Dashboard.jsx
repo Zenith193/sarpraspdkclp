@@ -51,6 +51,7 @@ const Dashboard = () => {
 
     const filteredSarpras = useMemo(() => {
         return sarprasData.filter(s => {
+            if (!s.status || s.status === 'Diverifikasi') { /* only verified */ } else return false;
             if (filterKec && s.kecamatan !== filterKec) return false;
             if (filterJenjang && s.jenjang !== filterJenjang) return false;
             if (chartYear && s.createdAt) {
@@ -99,7 +100,7 @@ const Dashboard = () => {
         (sekolahList || []).forEach(s => {
             sekolahMap[s.id] = { ...s, rombel: s.rombel || 0, prasaranaCount: {}, rehabGroup: {}, biayaRS: 0, biayaRB: 0, biayaBuild: 0 };
         });
-        (sarprasData || []).forEach(sp => {
+        (sarprasData || []).filter(sp => !sp.status || sp.status === 'Diverifikasi').forEach(sp => {
             const sk = sekolahMap[sp.sekolahId];
             if (!sk) return;
             sk.prasaranaCount[sp.jenisPrasarana] = (sk.prasaranaCount[sp.jenisPrasarana] || 0) + 1;
