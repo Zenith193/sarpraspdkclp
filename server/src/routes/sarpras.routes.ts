@@ -287,6 +287,12 @@ router.put('/:id', requireAuth, requireRole('admin', 'sekolah', 'verifikator', '
         }
 
         if (req.body.namaRuang) req.body.namaRuang = req.body.namaRuang.replace(/\//g, '');
+        // Reset verification when sekolah edits data — keep old values but set back to unverified
+        if (isSekolah) {
+            req.body.verified = false;
+            req.body.verifiedBy = null;
+            req.body.verifiedAt = null;
+        }
         const result = await sarprasService.update(id, req.body);
         res.json(result);
 

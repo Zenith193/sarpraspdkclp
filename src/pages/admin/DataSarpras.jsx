@@ -987,7 +987,7 @@ const DataSarpras = ({ readOnly = false }) => {
                                             </select>
                                         </div>
                                         <div className="form-group">
-                                            <label className="form-label">Keterangan</label>
+                                            <label className="form-label">Keterangan *</label>
                                             <input className="form-input" value={formData.keterangan} onChange={e => setFormData({ ...formData, keterangan: e.target.value })} placeholder="Keterangan kerusakan" />
                                         </div>
                                     </div>
