@@ -143,7 +143,7 @@ const VerifikasiProposal = () => {
                 <div style={{ overflowX: 'auto' }}>
                     <table className="data-table">
                         <thead>
-                            <tr><th>No</th><th>Sekolah</th><th>Kecamatan</th><th>Jenjang</th><th>Sub Kegiatan</th><th>Nilai</th><th>Target</th><th>Foto</th><th>Aksi</th></tr>
+                            <tr><th>No</th><th>Sekolah</th><th>Kecamatan</th><th>Jenjang</th><th>Sub Kegiatan</th><th>Nilai</th><th>Target</th><th>File</th><th>Aksi</th></tr>
                         </thead>
                         <tbody>
                             {pagedData.map((p, i) => (
@@ -156,9 +156,14 @@ const VerifikasiProposal = () => {
                                     <td>{formatCurrency(p.nilaiPengajuan)}</td>
                                     <td>{p.target}</td>
                                     <td>
-                                        <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: p.fotoKerusakan?.length ? 'var(--color-primary)' : 'var(--text-secondary)' }}>
-                                            <Image size={14} /> {p.fotoKerusakan?.length || 0}
-                                        </span>
+                                        {p.fileName ? (
+                                            <a href={`/api/file/proposal-doc/${p.id}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 4, color: 'var(--accent-blue)', fontSize: '0.78rem', textDecoration: 'none' }} title={p.fileName}>
+                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                                PDF
+                                            </a>
+                                        ) : (
+                                            <span style={{ color: 'var(--text-secondary)', fontSize: '0.78rem' }}>-</span>
+                                        )}
                                     </td>
                                     <td>
                                         <div style={{ display: 'flex', gap: 4 }}>
@@ -230,26 +235,22 @@ const VerifikasiProposal = () => {
                                     </a>
                                 </div>
                             )}
+                            {detailItem.fotoKerusakan?.length > 0 && (
                             <div style={{ marginTop: 20 }}>
                                 <h3 style={{ margin: '0 0 12px', fontSize: 15, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                    <Image size={16} /> Foto Kerusakan ({detailItem.fotoKerusakan?.length || 0})
+                                    <Image size={16} /> Foto Kerusakan ({detailItem.fotoKerusakan.length})
                                 </h3>
-                                {detailItem.fotoKerusakan?.length > 0 ? (
-                                    <div style={galleryGridStyle}>
-                                        {detailItem.fotoKerusakan.map((f, fi) => (
-                                            <div key={f.id} style={galleryItemStyle} onClick={() => setLightboxIdx(fi)}>
-                                                <img src={f.url} alt={f.nama} style={thumbStyle} loading="lazy" />
-                                                <div style={thumbOverlay}><Maximize2 size={18} color="#fff" /></div>
-                                                <div style={thumbInfoStyle}><span style={{ fontSize: 11, fontWeight: 500 }}>{f.nama}</span></div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : (
-                                    <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-secondary)', background: 'var(--bg-secondary)', borderRadius: 8 }}>
-                                        <Image size={32} style={{ opacity: 0.3, marginBottom: 8 }} /><br />Tidak ada foto kerusakan
-                                    </div>
-                                )}
+                                <div style={galleryGridStyle}>
+                                    {detailItem.fotoKerusakan.map((f, fi) => (
+                                        <div key={f.id} style={galleryItemStyle} onClick={() => setLightboxIdx(fi)}>
+                                            <img src={f.url} alt={f.nama} style={thumbStyle} loading="lazy" />
+                                            <div style={thumbOverlay}><Maximize2 size={18} color="#fff" /></div>
+                                            <div style={thumbInfoStyle}><span style={{ fontSize: 11, fontWeight: 500 }}>{f.nama}</span></div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
+                            )}
                             <div style={{ display: 'flex', gap: 8, marginTop: 20, justifyContent: 'flex-end' }}>
                                 <button className="btn btn-success" onClick={() => handleVerify(detailItem.id, 'Disetujui')}><CheckCircle size={16} /> Setujui</button>
                                 <button className="btn btn-danger" onClick={() => handleVerify(detailItem.id, 'Ditolak')}><XCircle size={16} /> Tolak</button>
