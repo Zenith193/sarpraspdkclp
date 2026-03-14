@@ -36,31 +36,33 @@ export const sarprasService = {
             db.select({ count: sql<number>`count(*)` }).from(sarpras).leftJoin(sekolah, eq(sarpras.sekolahId, sekolah.id)).where(where),
         ]);
 
-        // Load foto counts and last foto timestamp in batch (no full foto data — too large for list)
+        // Load foto counts, last foto timestamp, and first foto ID in batch
         const sarprasIds = data.map(d => d.sarpras.id);
-        let fotoCounts: Record<number, { count: number; lastAt: string | null }> = {};
+        let fotoCounts: Record<number, { count: number; lastAt: string | null; firstId: number | null }> = {};
         if (sarprasIds.length > 0) {
             const fotoStats = await db.select({
                 sarprasId: sarprasFoto.sarprasId,
                 count: sql<number>`count(*)`,
                 lastAt: sql<string>`max(${sarprasFoto.createdAt})`,
+                firstId: sql<number>`min(${sarprasFoto.id})`,
             }).from(sarprasFoto)
               .where(sql`${sarprasFoto.sarprasId} IN (${sql.join(sarprasIds.map(id => sql`${id}`), sql`, `)})`)
               .groupBy(sarprasFoto.sarprasId);
             for (const row of fotoStats) {
-                fotoCounts[row.sarprasId] = { count: Number(row.count), lastAt: row.lastAt };
+                fotoCounts[row.sarprasId] = { count: Number(row.count), lastAt: row.lastAt, firstId: row.firstId ? Number(row.firstId) : null };
             }
         }
 
         // Map foto counts onto sarpras items (no full foto data to keep payload small)
         const dataWithFotos = data.map(d => {
-            const stats = fotoCounts[d.sarpras.id] || { count: 0, lastAt: null };
+            const stats = fotoCounts[d.sarpras.id] || { count: 0, lastAt: null, firstId: null };
             return {
                 ...d,
                 sarpras: {
                     ...d.sarpras,
                     lastFotoAt: stats.lastAt ? new Date(stats.lastAt).toISOString() : null,
                     fotoCount: stats.count,
+                    firstFotoId: stats.firstId,
                     foto: [], // Empty array — detail view via getById() returns full fotos
                 },
             };

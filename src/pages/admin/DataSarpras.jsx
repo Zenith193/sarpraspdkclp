@@ -638,7 +638,7 @@ const DataSarpras = ({ readOnly = false }) => {
                 const count = item.fotoCount || 0;
                 if (count === 0) return <div style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-input)', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)' }}><Image size={14} /></div>;
                 return (
-                    <div style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }} onClick={async () => {
+                    <div style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4, position: 'relative' }} onClick={async () => {
                         try {
                             const detail = await sarprasApi.getById(item.id || item.sarpras?.id);
                             const fotos = (detail?.fotos || []).map(f => ({
@@ -658,10 +658,15 @@ const DataSarpras = ({ readOnly = false }) => {
                             handleViewDetail(item);
                         }
                     }}>
-                        <div style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(59,130,246,0.1)', borderRadius: 'var(--radius-sm)', color: 'var(--accent-blue)' }}>
-                            <Image size={16} />
+                        <div style={{ position: 'relative', width: 40, height: 40, borderRadius: 'var(--radius-sm)', overflow: 'hidden', border: '2px solid rgba(59,130,246,0.3)', flexShrink: 0 }}>
+                            {item.firstFotoId ? (
+                                <img src={`/api/foto/${item.firstFotoId}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
+                            ) : null}
+                            <div style={{ display: item.firstFotoId ? 'none' : 'flex', width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center', background: 'rgba(59,130,246,0.1)', color: 'var(--accent-blue)' }}>
+                                <Image size={16} />
+                            </div>
+                            <div style={{ position: 'absolute', bottom: -2, right: -2, background: 'var(--accent-blue)', color: '#fff', fontSize: '0.6rem', fontWeight: 700, width: 18, height: 18, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--bg-primary)' }}>{count}</div>
                         </div>
-                        <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--accent-blue)' }}>{count}</span>
                     </div>
                 );
             }
