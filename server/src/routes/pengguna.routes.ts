@@ -155,6 +155,34 @@ router.put('/:id/photo', requireAuth, avatarUpload.single('photo'), async (req, 
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// ===== DELETE PROFILE PHOTO =====
+router.delete('/:id/photo', requireAuth, async (req, res) => {
+    try {
+        const targetId = req.params.id as string;
+        const isAdmin = req.user!.role.toLowerCase() === 'admin';
+        const isSelf = req.user!.id === targetId;
+        if (!isAdmin && !isSelf) { res.status(403).json({ error: 'Forbidden' }); return; }
+
+        const existing = await db.select().from(user).where(eq(user.id, targetId));
+        if (existing[0]?.image) {
+            if (existing[0].image.startsWith('gdrive://')) {
+                try {
+                    const { queueGDriveDelete } = await import('../utils/uploadQueue.js');
+                    queueGDriveDelete(existing[0].image);
+                } catch { /* ignore */ }
+            } else if (existing[0].image.startsWith('/api/pengguna/photo/')) {
+                const filename = existing[0].image.replace('/api/pengguna/photo/', '');
+                const oldFile = path.join(avatarDir, filename);
+                if (fs.existsSync(oldFile)) fs.unlinkSync(oldFile);
+            }
+        }
+
+        await db.update(user).set({ image: null, updatedAt: new Date() }).where(eq(user.id, targetId));
+        logActivity(req, 'Hapus Foto Profil', `Menghapus foto profil`);
+        res.json({ success: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 // ===== SERVE PROFILE PHOTO =====
 router.get('/photo/:filename', async (req, res) => {
     const filePath = path.join(avatarDir, req.params.filename);

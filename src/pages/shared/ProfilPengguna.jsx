@@ -116,6 +116,17 @@ const ProfilPengguna = () => {
         setPendingPhotoFile(null);
     };
 
+    const handleDeletePhoto = async () => {
+        try {
+            await penggunaApi.deletePhoto(user.id);
+            updateProfile({ image: null });
+            setProfileData(prev => ({ ...prev, image: null }));
+            toast.success('Foto profil berhasil dihapus');
+        } catch (err) {
+            toast.error(err.message || 'Gagal menghapus foto');
+        }
+    };
+
     // Helper: extract NPSN from email
     const getNpsn = () => {
         if (profileData?.npsn) return profileData.npsn;
@@ -316,23 +327,34 @@ const ProfilPengguna = () => {
             <div className="card" style={{ maxWidth: 700 }}>
                 {/* Header Profil with Photo Upload */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 32 }}>
-                    <label style={{ position: 'relative', cursor: uploadingPhoto ? 'wait' : 'pointer', flexShrink: 0 }} title="Klik untuk ganti foto">
-                        <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 28, fontWeight: 700, position: 'relative', overflow: 'hidden' }}>
-                            {p.namaAkun?.charAt(0) || p.name?.charAt(0) || 'U'}
-                            {p.image && !p.image.startsWith('gdrive://') && (
-                                <img src={p.image} alt="Foto Profil" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--border-color)' }} onError={e => { e.target.style.display = 'none'; }} />
-                            )}
-                        </div>
-                        <div style={{ position: 'absolute', bottom: 0, right: 0, width: 24, height: 24, borderRadius: '50%', background: 'var(--accent-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--bg-card)' }}>
-                            <Upload size={12} style={{ color: '#fff' }} />
-                        </div>
-                        <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={handlePhotoSelect} style={{ display: 'none' }} disabled={uploadingPhoto} />
-                    </label>
+                    <div style={{ position: 'relative', flexShrink: 0 }}>
+                        <label style={{ cursor: uploadingPhoto ? 'wait' : 'pointer', display: 'block' }} title="Klik untuk ganti foto">
+                            <div style={{ width: 72, height: 72, borderRadius: '50%', background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-purple))', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: 28, fontWeight: 700, position: 'relative', overflow: 'hidden' }}>
+                                {p.namaAkun?.charAt(0) || p.name?.charAt(0) || 'U'}
+                                {p.image && !p.image.startsWith('gdrive://') && (
+                                    <img src={p.image} alt="Foto Profil" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover', border: '3px solid var(--border-color)' }} onError={e => { e.target.style.display = 'none'; }} />
+                                )}
+                            </div>
+                            <div style={{ position: 'absolute', bottom: 0, right: p.image ? 20 : 0, width: 24, height: 24, borderRadius: '50%', background: 'var(--accent-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--bg-card)' }}>
+                                <Upload size={12} style={{ color: '#fff' }} />
+                            </div>
+                            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" onChange={handlePhotoSelect} style={{ display: 'none' }} disabled={uploadingPhoto} />
+                        </label>
+                        {p.image && !p.image.startsWith('gdrive://') && (
+                            <button
+                                onClick={() => setDeleteConfirm('photo')}
+                                title="Hapus foto profil"
+                                style={{ position: 'absolute', bottom: 0, right: -4, width: 24, height: 24, borderRadius: '50%', background: 'var(--accent-red)', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid var(--bg-card)', cursor: 'pointer', padding: 0, color: '#fff' }}
+                            >
+                                <Trash2 size={11} />
+                            </button>
+                        )}
+                    </div>
                     <div>
                         <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)' }}>{p.namaAkun || p.name}</div>
                         <div style={{ fontSize: 13, color: 'var(--text-secondary)', textTransform: 'capitalize' }}>{p.role}</div>
                         {isSekolah && <div style={{ fontSize: 12, color: 'var(--text-secondary)' }}>NPSN: {getNpsn()}</div>}
-                        <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>Klik foto untuk mengganti • Maks 2MB (jpg, png, webp)</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>Klik foto untuk mengganti • Maks 1MB (jpg, png, webp)</div>
                     </div>
                 </div>
 
@@ -431,7 +453,16 @@ const ProfilPengguna = () => {
                 </div>
             )}
             <ConfirmModal
-                isOpen={!!deleteConfirm}
+                isOpen={deleteConfirm === 'photo'}
+                title="Hapus Foto Profil?"
+                message="Foto profil akan dihapus secara permanen. Anda bisa upload foto baru kapan saja."
+                confirmText="Ya, Hapus"
+                variant="danger"
+                onConfirm={() => { handleDeletePhoto(); setDeleteConfirm(null); }}
+                onCancel={() => setDeleteConfirm(null)}
+            />
+            <ConfirmModal
+                isOpen={deleteConfirm === 'kop' || deleteConfirm === 'denah'}
                 title={`Hapus ${deleteConfirm === 'kop' ? 'Kop Sekolah' : 'Denah Sekolah'}?`}
                 message={`File ${deleteConfirm === 'kop' ? 'Kop Sekolah' : 'Denah Sekolah'} akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan.`}
                 confirmText="Ya, Hapus"

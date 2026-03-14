@@ -163,6 +163,7 @@ export const penggunaApi = {
     delete: (id) => api.delete(`/pengguna/${id}`),
     changePassword: (id, newPassword) => api.put(`/pengguna/${id}/change-password`, { newPassword }),
     uploadPhoto: (id, file) => { const fd = new FormData(); fd.append('photo', file); return api.upload(`/pengguna/${id}/photo`, fd, 'PUT'); },
+    deletePhoto: (id) => api.delete(`/pengguna/${id}/photo`),
 };
 
 export const aktivitasApi = {
