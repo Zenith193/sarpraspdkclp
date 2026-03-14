@@ -107,7 +107,7 @@ export function forwardToNas(
                     fs.renameSync(file.path, finalLocalPath);
                     (file as any).finalPath = finalLocalPath;
                     (file as any).storedAt = 'local';
-                    (file as any).uploadPending = true;
+                    (file as any).uploadPending = false; // File accessible locally, GDrive is background bonus
 
                     // Fire-and-forget: upload to GDrive in background
                     let gdriveSubPath: string = category;
