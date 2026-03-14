@@ -203,11 +203,13 @@ router.get('/:id/download-denah', requireAuth, async (req, res) => {
             const fileId = filePath.replace('gdrive://', '');
             const data = await streamFromGDrive(fileId);
             if (!data) { res.status(404).json({ error: 'File tidak ditemukan di Google Drive' }); return; }
-            res.setHeader('Content-Type', data.mimeType);
-            res.setHeader('Content-Disposition', `attachment; filename="${data.fileName}"`);
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `inline; filename="${data.fileName}"`);
             data.stream.pipe(res);
         } else if (fs.existsSync(filePath)) {
-            res.download(filePath);
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `inline; filename="denah_sekolah.pdf"`);
+            res.sendFile(path.resolve(filePath));
         } else {
             res.status(404).json({ error: 'File tidak ditemukan' });
         }
