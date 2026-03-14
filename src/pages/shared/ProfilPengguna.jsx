@@ -214,21 +214,15 @@ const ProfilPengguna = () => {
     };
 
     const handlePreview = async (type) => {
-        const url = `/api/sekolah/${sekolahId}/download-${type === 'kop' ? 'kop' : 'denah'}`;
-        if (type === 'denah') {
-            // PDF: open directly in new tab
-            window.open(url, '_blank');
-        } else {
-            // Word: fetch blob with auth cookies, then open in new tab
-            try {
-                const res = await fetch(url, { credentials: 'include' });
-                if (!res.ok) { toast.error('File tidak ditemukan'); return; }
-                const blob = await res.blob();
-                const blobUrl = URL.createObjectURL(blob);
-                window.open(blobUrl, '_blank');
-            } catch (err) {
-                toast.error('Gagal membuka preview');
-            }
+        try {
+            const blob = type === 'kop'
+                ? await sekolahApi.downloadKop(sekolahId)
+                : await sekolahApi.downloadDenah(sekolahId);
+            if (!blob || blob.size === 0) { toast.error('File tidak ditemukan'); return; }
+            const blobUrl = URL.createObjectURL(blob);
+            window.open(blobUrl, '_blank');
+        } catch (err) {
+            toast.error('Gagal membuka preview: ' + (err.message || 'File tidak ditemukan'));
         }
     };
 
