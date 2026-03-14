@@ -410,7 +410,7 @@ const UploadFormKerusakan = () => {
                                         <td>{renderStatusBadge(d.status, d.alasanPenolakan)}</td>
                                         <td>
                                             {(() => {
-                                                const sekolahCanAct = !isSekolah || d.status === 'Ditolak' || d.status === 'Revisi' || d.status === 'Belum Upload' || d.fileUrl;
+                                                const sekolahCanAct = !isSekolah || d.status === 'Ditolak' || d.status === 'Revisi' || d.status === 'Belum Upload';
                                                 if (!sekolahCanAct && isSekolah) return null;
                                                 return (
                                             <div style={{ position: 'relative' }} ref={openActionId === d.id ? actionDropdownRef : null}>
