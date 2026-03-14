@@ -211,6 +211,18 @@ const ProfilPengguna = () => {
         } catch (err) { toast.error(err.message || 'Gagal download file'); }
     };
 
+    const handlePreview = (type) => {
+        const url = `/api/sekolah/${sekolahId}/download-${type === 'kop' ? 'kop' : 'denah'}`;
+        if (type === 'denah') {
+            // PDF: open directly in new tab
+            window.open(url, '_blank');
+        } else {
+            // Word (.doc/.docx): use Google Docs Viewer
+            const fullUrl = `${window.location.origin}${url}`;
+            window.open(`https://docs.google.com/gview?url=${encodeURIComponent(fullUrl)}&embedded=true`, '_blank');
+        }
+    };
+
     const handleDeleteFile = async (type) => {
         if (!confirm(`Hapus ${type === 'kop' ? 'Kop Sekolah' : 'Denah Sekolah'}?`)) return;
         try {
@@ -262,6 +274,7 @@ const ProfilPengguna = () => {
                 <div style={{ display: 'flex', gap: 6 }}>
                     {hasFile && (
                         <>
+                            <button className="btn-icon" onClick={() => handlePreview(type)} title="Preview" style={{ color: 'var(--accent-purple)' }}><Eye size={16} /></button>
                             <button className="btn-icon" onClick={() => handleDownload(type)} title="Download" style={{ color: 'var(--accent-blue)' }}><Download size={16} /></button>
                             <button className="btn-icon" onClick={() => handleDeleteFile(type)} title="Hapus" style={{ color: 'var(--accent-red)' }}><Trash2 size={16} /></button>
                         </>
