@@ -4,6 +4,7 @@ import useAuthStore from '../../store/authStore';
 import { penggunaApi, sekolahApi } from '../../api/index';
 import toast from 'react-hot-toast';
 import ConfirmModal from '../../components/ui/ConfirmModal';
+import mammoth from 'mammoth';
 
 const ProfilPengguna = () => {
     const user = useAuthStore(s => s.user);
@@ -17,7 +18,9 @@ const ProfilPengguna = () => {
     const [showPwSection, setShowPwSection] = useState(false);
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [deleteConfirm, setDeleteConfirm] = useState(null); // 'kop' | 'denah' | null
+    const [deleteConfirm, setDeleteConfirm] = useState(null); // 'kop' | 'denah' | 'photo' | null
+    const [wordPreviewHtml, setWordPreviewHtml] = useState(null);
+    const [loadingPreview, setLoadingPreview] = useState(false);
     const [showNewPw, setShowNewPw] = useState(false);
     const [showConfirmPw, setShowConfirmPw] = useState(false);
     const [changingPw, setChangingPw] = useState(false);
@@ -230,10 +233,32 @@ const ProfilPengguna = () => {
                 ? await sekolahApi.downloadKop(sekolahId)
                 : await sekolahApi.downloadDenah(sekolahId);
             if (!blob || blob.size === 0) { toast.error('File tidak ditemukan'); return; }
-            const blobUrl = URL.createObjectURL(blob);
-            window.open(blobUrl, '_blank');
+
+            if (type === 'denah') {
+                // PDF → open in new tab
+                const blobUrl = URL.createObjectURL(blob);
+                window.open(blobUrl, '_blank');
+            } else {
+                // Word (.docx) → convert to HTML with mammoth
+                setLoadingPreview(true);
+                try {
+                    const arrayBuffer = await blob.arrayBuffer();
+                    const result = await mammoth.convertToHtml({ arrayBuffer });
+                    setWordPreviewHtml(result.value);
+                } catch (convErr) {
+                    console.error('Mammoth conversion error:', convErr);
+                    // Fallback: download the file
+                    const blobUrl = URL.createObjectURL(blob);
+                    const a = document.createElement('a'); a.href = blobUrl; a.download = 'kop_sekolah'; a.click();
+                    URL.revokeObjectURL(blobUrl);
+                    toast.error('Format file tidak didukung untuk preview. File diunduh.');
+                } finally {
+                    setLoadingPreview(false);
+                }
+            }
         } catch (err) {
             toast.error('Gagal membuka preview: ' + (err.message || 'File tidak ditemukan'));
+            setLoadingPreview(false);
         }
     };
 
@@ -452,6 +477,50 @@ const ProfilPengguna = () => {
                     </div>
                 </div>
             )}
+
+            {/* Loading Preview Overlay */}
+            {loadingPreview && (
+                <div className="modal-overlay" style={{ zIndex: 1001 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+                        <Loader2 size={40} className="spin" style={{ color: 'var(--accent-blue)' }} />
+                        <span style={{ color: '#fff', fontSize: 14 }}>Memproses dokumen Word...</span>
+                    </div>
+                </div>
+            )}
+
+            {/* Word Preview Modal */}
+            {wordPreviewHtml && (
+                <div className="modal-overlay" onClick={() => setWordPreviewHtml(null)} style={{ zIndex: 1000 }}>
+                    <div className="modal" style={{ maxWidth: 800, maxHeight: '90vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <div className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <FileText size={18} /> Preview Kop Sekolah
+                            </div>
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                <button className="btn btn-secondary btn-sm" onClick={() => handleDownload('kop')}>
+                                    <Download size={14} /> Download
+                                </button>
+                                <button className="modal-close" onClick={() => setWordPreviewHtml(null)}><X size={18} /></button>
+                            </div>
+                        </div>
+                        <div className="modal-body" style={{ overflow: 'auto', flex: 1, padding: 0 }}>
+                            <div
+                                style={{
+                                    background: '#fff',
+                                    color: '#222',
+                                    padding: '40px 48px',
+                                    minHeight: 400,
+                                    fontFamily: 'serif',
+                                    fontSize: 14,
+                                    lineHeight: 1.7,
+                                }}
+                                dangerouslySetInnerHTML={{ __html: wordPreviewHtml }}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <ConfirmModal
                 isOpen={deleteConfirm === 'photo'}
                 title="Hapus Foto Profil?"
