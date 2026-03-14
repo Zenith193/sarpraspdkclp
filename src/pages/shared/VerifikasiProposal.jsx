@@ -218,6 +218,18 @@ const VerifikasiProposal = () => {
                                 {detailItem.tanggalSurat && <div style={infoItemStyle}><span style={labelStyle}>Tanggal Surat</span><span style={valueStyle}>{detailItem.tanggalSurat}</span></div>}
                                 <div style={{ ...infoItemStyle, gridColumn: '1 / -1' }}><span style={labelStyle}>Keterangan</span><span style={valueStyle}>{detailItem.keterangan}</span></div>
                             </div>
+                            {detailItem.fileName && (
+                                <div style={{ marginTop: 16, padding: '12px 16px', background: 'var(--bg-secondary)', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 10 }}>
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ fontSize: '0.85rem', fontWeight: 600 }}>{detailItem.fileName}</div>
+                                        <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>Proposal PDF</div>
+                                    </div>
+                                    <a href={`/api/file/proposal-doc/${detailItem.id}`} target="_blank" rel="noopener noreferrer" style={{ background: 'rgba(59,130,246,0.15)', color: '#3b82f6', padding: '6px 14px', borderRadius: 6, fontSize: '0.8rem', fontWeight: 600, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 4 }}>
+                                        <Eye size={14} /> Lihat PDF
+                                    </a>
+                                </div>
+                            )}
                             <div style={{ marginTop: 20 }}>
                                 <h3 style={{ margin: '0 0 12px', fontSize: 15, display: 'flex', alignItems: 'center', gap: 6 }}>
                                     <Image size={16} /> Foto Kerusakan ({detailItem.fotoKerusakan?.length || 0})
