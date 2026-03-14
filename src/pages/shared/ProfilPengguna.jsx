@@ -490,7 +490,7 @@ const ProfilPengguna = () => {
             {/* Word Preview Modal */}
             {wordPreviewHtml && (
                 <div className="modal-overlay" onClick={() => setWordPreviewHtml(null)} style={{ zIndex: 1000 }}>
-                    <div className="modal" style={{ maxWidth: 800, maxHeight: '90vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+                    <div className="modal" style={{ width: '95vw', maxWidth: 1100, maxHeight: '95vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
                             <div className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                 <FileText size={18} /> Preview Kop Sekolah
@@ -503,7 +503,15 @@ const ProfilPengguna = () => {
                             </div>
                         </div>
                         <div className="modal-body" style={{ overflow: 'auto', flex: 1, padding: 0 }}>
+                            <style>{`
+                                .word-preview-content img { max-width: 100% !important; height: auto !important; }
+                                .word-preview-content table { max-width: 100% !important; border-collapse: collapse; width: 100%; }
+                                .word-preview-content td, .word-preview-content th { border: 1px solid #ccc; padding: 6px 10px; }
+                                .word-preview-content p { margin: 4px 0; }
+                                .word-preview-content * { max-width: 100% !important; box-sizing: border-box; }
+                            `}</style>
                             <div
+                                className="word-preview-content"
                                 style={{
                                     background: '#fff',
                                     color: '#222',
@@ -512,6 +520,8 @@ const ProfilPengguna = () => {
                                     fontFamily: 'serif',
                                     fontSize: 14,
                                     lineHeight: 1.7,
+                                    overflowWrap: 'break-word',
+                                    wordBreak: 'break-word',
                                 }}
                                 dangerouslySetInnerHTML={{ __html: wordPreviewHtml }}
                             />
