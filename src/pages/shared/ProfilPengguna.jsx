@@ -228,11 +228,12 @@ const ProfilPengguna = () => {
     };
 
     const handlePreview = async (type) => {
+        if (type === 'kop') setLoadingPreview(true);
         try {
             const blob = type === 'kop'
                 ? await sekolahApi.downloadKop(sekolahId)
                 : await sekolahApi.downloadDenah(sekolahId);
-            if (!blob || blob.size === 0) { toast.error('File tidak ditemukan'); return; }
+            if (!blob || blob.size === 0) { toast.error('File tidak ditemukan'); setLoadingPreview(false); return; }
 
             if (type === 'denah') {
                 // PDF → open in new tab
@@ -240,24 +241,22 @@ const ProfilPengguna = () => {
                 window.open(blobUrl, '_blank');
             } else {
                 // Word (.docx) → convert to HTML with mammoth
-                setLoadingPreview(true);
                 try {
                     const arrayBuffer = await blob.arrayBuffer();
                     const result = await mammoth.convertToHtml({ arrayBuffer });
-                    setWordPreviewHtml(result.value);
+                    if (!result.value || result.value.trim() === '') {
+                        toast.error('File Word kosong atau format tidak didukung (.doc lama). Gunakan format .docx');
+                    } else {
+                        setWordPreviewHtml(result.value);
+                    }
                 } catch (convErr) {
                     console.error('Mammoth conversion error:', convErr);
-                    // Fallback: download the file
-                    const blobUrl = URL.createObjectURL(blob);
-                    const a = document.createElement('a'); a.href = blobUrl; a.download = 'kop_sekolah'; a.click();
-                    URL.revokeObjectURL(blobUrl);
-                    toast.error('Format file tidak didukung untuk preview. File diunduh.');
-                } finally {
-                    setLoadingPreview(false);
+                    toast.error('Format file .doc (lama) tidak didukung untuk preview. Silakan upload ulang dalam format .docx, atau gunakan tombol Download.');
                 }
+                setLoadingPreview(false);
             }
         } catch (err) {
-            toast.error('Gagal membuka preview: ' + (err.message || 'File tidak ditemukan'));
+            toast.error('Gagal memuat file: ' + (err.message || 'File tidak ditemukan'));
             setLoadingPreview(false);
         }
     };
