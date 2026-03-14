@@ -211,15 +211,22 @@ const ProfilPengguna = () => {
         } catch (err) { toast.error(err.message || 'Gagal download file'); }
     };
 
-    const handlePreview = (type) => {
+    const handlePreview = async (type) => {
         const url = `/api/sekolah/${sekolahId}/download-${type === 'kop' ? 'kop' : 'denah'}`;
         if (type === 'denah') {
             // PDF: open directly in new tab
             window.open(url, '_blank');
         } else {
-            // Word (.doc/.docx): use Google Docs Viewer
-            const fullUrl = `${window.location.origin}${url}`;
-            window.open(`https://docs.google.com/gview?url=${encodeURIComponent(fullUrl)}&embedded=true`, '_blank');
+            // Word: fetch blob with auth cookies, then open in new tab
+            try {
+                const res = await fetch(url, { credentials: 'include' });
+                if (!res.ok) { toast.error('File tidak ditemukan'); return; }
+                const blob = await res.blob();
+                const blobUrl = URL.createObjectURL(blob);
+                window.open(blobUrl, '_blank');
+            } catch (err) {
+                toast.error('Gagal membuka preview');
+            }
         }
     };
 
