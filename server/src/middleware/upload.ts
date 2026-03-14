@@ -107,30 +107,7 @@ export function forwardToNas(
                     fs.renameSync(file.path, finalLocalPath);
                     (file as any).finalPath = finalLocalPath;
                     (file as any).storedAt = 'local';
-                    (file as any).uploadPending = false; // File accessible locally, GDrive is background bonus
-
-                    // Fire-and-forget: upload to GDrive in background
-                    let gdriveSubPath: string = category;
-                    if (sekolah) {
-                        const folderName: Record<string, string> = {
-                            'kop-sekolah': 'profil',
-                            'kerusakan': 'form kerusakan',
-                            'sarpras': 'data sarpras',
-                            'proposal': 'proposal',
-                            'prestasi': 'prestasi',
-                            'riwayat-bantuan': 'riwayat bantuan',
-                        };
-                        gdriveSubPath = `${sekolah.kecamatan || 'unknown'}/${sekolah.nama}_${sekolah.npsn}/${folderName[category] || category}`;
-                        if (extra.masaBangunan) gdriveSubPath += `/${extra.masaBangunan}`;
-                        if (extra.namaRuang) gdriveSubPath += `/${extra.namaRuang}`;
-                    }
-                    uploadFileToGDrive(finalLocalPath, category, gdriveSubPath)
-                        .then(result => {
-                            console.log(`[Upload BG] ${file.originalname} → GDrive ✅ ${result.path}`);
-                        })
-                        .catch(gErr => {
-                            console.error(`[Upload BG] GDrive failed for ${file.originalname}:`, gErr.message);
-                        });
+                    (file as any).uploadPending = true; // Queue worker will upload to GDrive and update DB path
                 } else {
                     const result = await uploadToNas(file.path, category, sekolah, extra);
                     (file as any).storedAt = result.stored;
