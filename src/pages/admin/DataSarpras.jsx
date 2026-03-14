@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { Plus, Search, Download, Eye, Edit, Trash2, X, Star, ChevronLeft, ChevronRight, Upload, Columns, FileSpreadsheet, FileText, FileDown, ChevronDown, Save, Image, MapPin, Building2, AlertTriangle, CheckCircle, Filter, AlertOctagon, UploadCloud } from 'lucide-react';
+import { Plus, Search, Download, Eye, Edit, Trash2, X, Star, ChevronLeft, ChevronRight, Upload, Columns, FileSpreadsheet, FileText, FileDown, ChevronDown, Save, Image, MapPin, Building2, AlertTriangle, CheckCircle, Filter, AlertOctagon, UploadCloud, Clock, XCircle, RotateCcw, Check } from 'lucide-react';
 import { useSarprasData, useSekolahData, useKorwilData } from '../../data/dataProvider';
 import { KECAMATAN, JENJANG, KONDISI, JENIS_PRASARANA, MASA_BANGUNAN, LANTAI_OPTIONS } from '../../utils/constants';
 import { formatNumber } from '../../utils/formatters';
@@ -66,6 +66,8 @@ const DataSarpras = ({ readOnly = false }) => {
     const [headerFilters, setHeaderFilters] = useState({ jenjang: '', kecamatan: '', kondisi: '', jenisPrasarana: '', bintang: '' });
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(15);
+    const [activeTab, setActiveTab] = useState('data');
+    const [alasanModal, setAlasanModal] = useState(null); // { id, type: 'reject'|'revisi' }
 
     // Column visibility
     const defaultCols = ['no', ...(canAccessPriority ? ['bintang'] : []), 'namaSekolah', 'npsn', 'jenjang', 'kecamatan', 'masaBangunan', 'jenisPrasarana', 'namaRuang', 'lantai', 'panjang', 'lebar', 'luas', 'kondisi', 'keterangan', 'lastFotoAt', 'foto', 'aksi'];
@@ -170,6 +172,8 @@ const DataSarpras = ({ readOnly = false }) => {
     // ===== FILTERING =====
     const filtered = useMemo(() => {
         return data.filter(s => {
+            // Main table only shows verified data
+            if (s.status && s.status !== 'Diverifikasi') return false;
             if (search) {
                 const q = search.toLowerCase();
                 if (!s.namaSekolah.toLowerCase().includes(q) && !s.npsn.includes(q) && !s.namaRuang.toLowerCase().includes(q)) return false;
@@ -787,7 +791,165 @@ const DataSarpras = ({ readOnly = false }) => {
                 )}
             </div>
 
+            {/* ===== TAB SWITCHER ===== */}
+            <div style={{ display: 'flex', gap: 0, marginBottom: 16, borderBottom: '2px solid var(--border-color)' }}>
+                <button onClick={() => setActiveTab('data')} style={{ padding: '10px 20px', fontWeight: 600, fontSize: '0.85rem', background: 'none', border: 'none', borderBottom: activeTab === 'data' ? '2px solid var(--accent-blue)' : '2px solid transparent', color: activeTab === 'data' ? 'var(--accent-blue)' : 'var(--text-secondary)', cursor: 'pointer', marginBottom: -2, transition: 'all 150ms' }}>
+                    <Building2 size={14} style={{ marginRight: 6, verticalAlign: 'middle' }} /> Data Sarpras
+                </button>
+                <button onClick={() => setActiveTab('update')} style={{ padding: '10px 20px', fontWeight: 600, fontSize: '0.85rem', background: 'none', border: 'none', borderBottom: activeTab === 'update' ? '2px solid var(--accent-orange)' : '2px solid transparent', color: activeTab === 'update' ? 'var(--accent-orange)' : 'var(--text-secondary)', cursor: 'pointer', marginBottom: -2, transition: 'all 150ms', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <Clock size={14} /> Update Data
+                    {(() => { const c = data.filter(d => d.status && d.status !== 'Diverifikasi').length; return c > 0 ? <span style={{ background: 'var(--accent-orange)', color: '#fff', borderRadius: '50%', width: 20, height: 20, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.7rem', fontWeight: 700 }}>{c}</span> : null; })()}
+                </button>
+            </div>
+
+            {/* ===== UPDATE DATA TAB ===== */}
+            {activeTab === 'update' && (() => {
+                const pendingData = data.filter(d => d.status && d.status !== 'Diverifikasi');
+                const canVerify = ['admin', 'verifikator', 'korwil'].includes((user?.role || '').toLowerCase());
+                const getStatusBadge = (st) => {
+                    const map = {
+                        'Menunggu Verifikasi Korwil': { bg: 'rgba(234,179,8,0.15)', color: '#eab308', icon: <Clock size={12} /> },
+                        'Menunggu Verifikasi': { bg: 'rgba(59,130,246,0.15)', color: '#3b82f6', icon: <Clock size={12} /> },
+                        'Ditolak': { bg: 'rgba(239,68,68,0.15)', color: '#ef4444', icon: <XCircle size={12} /> },
+                        'Revisi': { bg: 'rgba(249,115,22,0.15)', color: '#f97316', icon: <RotateCcw size={12} /> },
+                    };
+                    const s = map[st] || { bg: 'rgba(107,114,128,0.15)', color: '#6b7280', icon: null };
+                    return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 'var(--radius-full)', background: s.bg, color: s.color, fontSize: '0.72rem', fontWeight: 600 }}>{s.icon} {st}</span>;
+                };
+                const getActionBadge = (at) => {
+                    const map = { 'tambah': { bg: 'rgba(34,197,94,0.15)', color: '#22c55e', label: 'Tambah' }, 'edit': { bg: 'rgba(59,130,246,0.15)', color: '#3b82f6', label: 'Edit' }, 'hapus': { bg: 'rgba(239,68,68,0.15)', color: '#ef4444', label: 'Hapus' } };
+                    const a = map[at] || { bg: 'rgba(107,114,128,0.15)', color: '#6b7280', label: at || '-' };
+                    return <span style={{ padding: '2px 8px', borderRadius: 'var(--radius-full)', background: a.bg, color: a.color, fontSize: '0.72rem', fontWeight: 600 }}>{a.label}</span>;
+                };
+                const handleVerifyItem = async (id) => {
+                    try {
+                        toast.loading('Memverifikasi...', { id: 'verify' });
+                        await sarprasApi.verify(id);
+                        toast.success('Data berhasil diverifikasi', { id: 'verify' });
+                        if (refetchSarpras) refetchSarpras();
+                    } catch (e) { toast.error(e.message || 'Gagal verifikasi', { id: 'verify' }); }
+                };
+                const handleRejectItem = async (id, alasan) => {
+                    try {
+                        await sarprasApi.reject(id, alasan);
+                        toast.success('Data ditolak');
+                        setAlasanModal(null);
+                        if (refetchSarpras) refetchSarpras();
+                    } catch (e) { toast.error(e.message || 'Gagal menolak'); }
+                };
+                const handleRevisiItem = async (id, alasan) => {
+                    try {
+                        await sarprasApi.revisi(id, alasan);
+                        toast.success('Data diminta revisi');
+                        setAlasanModal(null);
+                        if (refetchSarpras) refetchSarpras();
+                    } catch (e) { toast.error(e.message || 'Gagal revisi'); }
+                };
+                return (
+                    <div className="table-container">
+                        <div style={{ padding: '12px 16px', fontSize: '0.8rem', color: 'var(--text-secondary)', background: 'rgba(249,115,22,0.05)', borderBottom: '1px solid var(--border-color)' }}>
+                            Data yang ditambah, diedit, atau diajukan hapus oleh sekolah akan muncul di sini. Setelah diverifikasi, data masuk ke tabel Data Sarpras.
+                        </div>
+                        {pendingData.length === 0 ? (
+                            <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                <CheckCircle size={32} style={{ marginBottom: 8, opacity: 0.4 }} />
+                                <div>Tidak ada data yang menunggu verifikasi</div>
+                            </div>
+                        ) : (
+                            <div style={{ overflowX: 'auto' }}>
+                                <table className="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th style={{ width: 40 }}>No</th>
+                                            <th>Sekolah</th>
+                                            <th>Jenis Prasarana</th>
+                                            <th>Nama Ruang</th>
+                                            <th>Kondisi</th>
+                                            <th>Tipe</th>
+                                            <th>Status</th>
+                                            <th>Alasan</th>
+                                            {canVerify && <th style={{ width: 180 }}>Aksi</th>}
+                                            {isSekolah && <th style={{ width: 80 }}>Aksi</th>}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {pendingData.map((d, i) => (
+                                            <tr key={d.id}>
+                                                <td>{i + 1}</td>
+                                                <td><div style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.namaSekolah}</div></td>
+                                                <td>{d.jenisPrasarana}</td>
+                                                <td>{d.namaRuang}</td>
+                                                <td>{d.kondisi}</td>
+                                                <td>{getActionBadge(d.actionType)}</td>
+                                                <td>{getStatusBadge(d.status)}</td>
+                                                <td><div style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{d.alasanPenolakan || '-'}</div></td>
+                                                {canVerify && (
+                                                    <td>
+                                                        <div style={{ display: 'flex', gap: 4 }}>
+                                                            <button className="btn btn-sm" onClick={() => handleVerifyItem(d.id)} style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e', border: 'none', padding: '4px 8px', fontSize: '0.72rem', borderRadius: 'var(--radius-sm)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}>
+                                                                <Check size={12} /> Verifikasi
+                                                            </button>
+                                                            <button className="btn btn-sm" onClick={() => setAlasanModal({ id: d.id, type: 'revisi' })} style={{ background: 'rgba(249,115,22,0.15)', color: '#f97316', border: 'none', padding: '4px 8px', fontSize: '0.72rem', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}>
+                                                                Revisi
+                                                            </button>
+                                                            <button className="btn btn-sm" onClick={() => setAlasanModal({ id: d.id, type: 'reject' })} style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: 'none', padding: '4px 8px', fontSize: '0.72rem', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}>
+                                                                Tolak
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                )}
+                                                {isSekolah && (
+                                                    <td>
+                                                        {(d.status === 'Ditolak' || d.status === 'Revisi') && (
+                                                            <button className="btn btn-sm" onClick={() => handleEdit(d)} style={{ background: 'rgba(59,130,246,0.15)', color: '#3b82f6', border: 'none', padding: '4px 8px', fontSize: '0.72rem', borderRadius: 'var(--radius-sm)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}>
+                                                                <Edit size={12} /> Edit
+                                                            </button>
+                                                        )}
+                                                    </td>
+                                                )}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                );
+            })()}
+
+            {/* ===== ALASAN MODAL (reject/revisi) ===== */}
+            {alasanModal && (
+                <div className="modal-overlay" onClick={() => setAlasanModal(null)}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
+                        <div className="modal-header">
+                            <h3>{alasanModal.type === 'reject' ? 'Tolak Data' : 'Minta Revisi'}</h3>
+                            <button className="modal-close" onClick={() => setAlasanModal(null)}><X size={18} /></button>
+                        </div>
+                        <div className="modal-body">
+                            <div className="form-group">
+                                <label className="form-label">Alasan {alasanModal.type === 'reject' ? 'Penolakan' : 'Revisi'} *</label>
+                                <textarea id="alasan-input" className="form-input" rows={3} placeholder={`Tulis alasan ${alasanModal.type === 'reject' ? 'penolakan' : 'revisi'}...`} />
+                            </div>
+                        </div>
+                        <div className="modal-footer">
+                            <button className="btn btn-ghost" onClick={() => setAlasanModal(null)}>Batal</button>
+                            <button className={`btn ${alasanModal.type === 'reject' ? 'btn-danger' : 'btn-primary'}`} onClick={() => {
+                                const val = document.getElementById('alasan-input')?.value;
+                                if (!val?.trim()) { toast.error('Alasan wajib diisi'); return; }
+                                if (alasanModal.type === 'reject') handleRejectItem(alasanModal.id, val);
+                                else handleRevisiItem(alasanModal.id, val);
+                                function handleRejectItem(id, alasan) { sarprasApi.reject(id, alasan).then(() => { toast.success('Data ditolak'); setAlasanModal(null); refetchSarpras?.(); }).catch(e => toast.error(e.message)); }
+                                function handleRevisiItem(id, alasan) { sarprasApi.revisi(id, alasan).then(() => { toast.success('Data diminta revisi'); setAlasanModal(null); refetchSarpras?.(); }).catch(e => toast.error(e.message)); }
+                            }}>
+                                {alasanModal.type === 'reject' ? 'Tolak' : 'Kirim Revisi'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* ===== TABLE ===== */}
+            {activeTab === 'data' && (
             <div className="table-container">
                 <div className="table-toolbar">
                     <div className="table-toolbar-left">
@@ -938,6 +1100,7 @@ const DataSarpras = ({ readOnly = false }) => {
                     </div>
                 </div>
             </div>
+            )}
 
             {/* ===== ADD / EDIT MODAL ===== */}
             {showAddModal && (

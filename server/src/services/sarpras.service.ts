@@ -4,8 +4,8 @@ import { eq, ilike, and, sql, asc } from 'drizzle-orm';
 import { queueGDriveDelete } from '../utils/uploadQueue.js';
 
 export const sarprasService = {
-    async list(filters: { sekolahId?: number; kecamatan?: string; jenjang?: string; kondisi?: string; verified?: string; search?: string; page?: number; limit?: number }) {
-        const { sekolahId, kecamatan, jenjang, kondisi, verified, search, page = 1, limit = 50 } = filters;
+    async list(filters: { sekolahId?: number; kecamatan?: string; jenjang?: string; kondisi?: string; verified?: string; status?: string; search?: string; page?: number; limit?: number }) {
+        const { sekolahId, kecamatan, jenjang, kondisi, verified, status, search, page = 1, limit = 50 } = filters;
         const conditions = [];
 
         if (sekolahId) conditions.push(eq(sarpras.sekolahId, sekolahId));
@@ -14,6 +14,9 @@ export const sarprasService = {
         if (kondisi) conditions.push(eq(sarpras.kondisi, kondisi));
         if (verified === 'true') conditions.push(eq(sarpras.verified, true));
         if (verified === 'false') conditions.push(eq(sarpras.verified, false));
+        if (status === 'pending') conditions.push(sql`${sarpras.status} != 'Diverifikasi'`);
+        else if (status === 'verified') conditions.push(eq(sarpras.status, 'Diverifikasi'));
+        else if (status) conditions.push(eq(sarpras.status, status));
         if (search) conditions.push(ilike(sarpras.namaRuang, `%${search}%`));
 
         const where = conditions.length > 0 ? and(...conditions) : undefined;
@@ -123,13 +126,25 @@ export const sarprasService = {
 
     async verify(id: number, userId: string) {
         return db.update(sarpras)
-            .set({ verified: true, verifiedBy: userId, verifiedAt: new Date(), updatedAt: new Date() })
+            .set({ verified: true, status: 'Diverifikasi', actionType: null, alasanPenolakan: null, verifiedBy: userId, verifiedAt: new Date(), updatedAt: new Date() })
             .where(eq(sarpras.id, id)).returning();
     },
 
     async unverify(id: number) {
         return db.update(sarpras)
-            .set({ verified: false, verifiedBy: null, verifiedAt: null, updatedAt: new Date() })
+            .set({ verified: false, status: 'Menunggu Verifikasi', verifiedBy: null, verifiedAt: null, updatedAt: new Date() })
+            .where(eq(sarpras.id, id)).returning();
+    },
+
+    async reject(id: number, alasan: string) {
+        return db.update(sarpras)
+            .set({ status: 'Ditolak', alasanPenolakan: alasan, updatedAt: new Date() })
+            .where(eq(sarpras.id, id)).returning();
+    },
+
+    async revisi(id: number, alasan: string) {
+        return db.update(sarpras)
+            .set({ status: 'Revisi', alasanPenolakan: alasan, updatedAt: new Date() })
             .where(eq(sarpras.id, id)).returning();
     },
 

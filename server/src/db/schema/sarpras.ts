@@ -19,6 +19,9 @@ export const sarpras = pgTable('sarpras', {
     keterangan: text('keterangan'),
     bintang: integer('bintang').default(0),
     verified: boolean('verified').default(false),
+    status: text('status').default('Diverifikasi'),   // Menunggu Verifikasi Korwil | Menunggu Verifikasi | Diverifikasi | Ditolak | Revisi
+    actionType: text('action_type'),                   // tambah | edit | hapus
+    alasanPenolakan: text('alasan_penolakan'),
     verifiedBy: text('verified_by').references(() => user.id),
     verifiedAt: timestamp('verified_at'),
     createdBy: text('created_by').references(() => user.id),

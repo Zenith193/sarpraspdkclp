@@ -126,6 +126,7 @@ router.get('/', requireAuth, async (req, res) => {
             jenjang: req.query.jenjang as string,
             kondisi: req.query.kondisi as string,
             verified: req.query.verified as string,
+            status: req.query.status as string,
             search: req.query.search as string,
             page: Number(req.query.page) || 1,
             limit: Number(req.query.limit) || 50,
@@ -245,6 +246,20 @@ router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadFotos.array
         }
 
         if (req.body.namaRuang) req.body.namaRuang = req.body.namaRuang.replace(/\//g, '');
+
+        // Set verification status based on jenjang
+        if (isSekolah) {
+            const sch = await db.select({ jenjang: sekolah.jenjang }).from(sekolah).where(eq(sekolah.id, req.user!.sekolahId!));
+            const jenjang = sch[0]?.jenjang || 'SMP';
+            req.body.status = jenjang === 'SD' ? 'Menunggu Verifikasi Korwil' : 'Menunggu Verifikasi';
+            req.body.actionType = 'tambah';
+            req.body.verified = false;
+        } else {
+            // Admin creates → directly verified
+            req.body.status = 'Diverifikasi';
+            req.body.verified = true;
+        }
+
         const item = await sarprasService.create(req.body, req.user!.id);
         // Save uploaded fotos
         if (req.files && Array.isArray(req.files)) {
@@ -252,7 +267,6 @@ router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadFotos.array
             for (const file of req.files) {
                 const f = file as any;
                 const filePath = f.finalPath || file.path;
-                console.log('[SARPRAS] Foto:', file.originalname, 'finalPath:', f.finalPath, 'file.path:', file.path, 'saving:', filePath);
                 await sarprasService.addFoto(item.id, {
                     sarprasId: item.id,
                     fileName: file.originalname,
@@ -263,8 +277,6 @@ router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadFotos.array
                     uploadStatus: f.uploadPending ? 'uploading' : 'done',
                 });
             }
-        } else {
-            console.log('[SARPRAS] No files in req.files');
         }
         res.status(201).json(item);
         logActivity(req, 'Tambah Sarpras', `Menambahkan data sarpras: ${req.body.namaRuang || 'N/A'}`);
@@ -287,11 +299,16 @@ router.put('/:id', requireAuth, requireRole('admin', 'sekolah', 'verifikator', '
         }
 
         if (req.body.namaRuang) req.body.namaRuang = req.body.namaRuang.replace(/\//g, '');
-        // Reset verification when sekolah edits data — keep old values but set back to unverified
+        // Reset verification when sekolah edits data
         if (isSekolah) {
+            const sch = await db.select({ jenjang: sekolah.jenjang }).from(sekolah).where(eq(sekolah.id, req.user!.sekolahId!));
+            const jenjang = sch[0]?.jenjang || 'SMP';
             req.body.verified = false;
             req.body.verifiedBy = null;
             req.body.verifiedAt = null;
+            req.body.status = jenjang === 'SD' ? 'Menunggu Verifikasi Korwil' : 'Menunggu Verifikasi';
+            req.body.actionType = 'edit';
+            req.body.alasanPenolakan = null;
         }
         const result = await sarprasService.update(id, req.body);
         res.json(result);
@@ -321,15 +338,37 @@ router.put('/:id', requireAuth, requireRole('admin', 'sekolah', 'verifikator', '
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
+router.delete('/:id', requireAuth, requireRole('admin', 'sekolah'), async (req, res) => {
     try {
         const id = Number(req.params.id);
+        const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
         const existing = await sarprasService.getById(id);
         const nama = existing?.sekolahNama || '';
         const ruang = existing?.sarpras?.namaRuang || '';
-        await sarprasService.delete(id);
-        res.json({ success: true });
-        logActivity(req, 'Hapus Sarpras', `Menghapus data sarpras ${nama} ${ruang}`.trim());
+
+        if (isSekolah) {
+            // Sekolah can only request deletion, not hard delete
+            if (!existing || existing.sarpras.sekolahId !== req.user!.sekolahId) {
+                res.status(403).json({ error: 'Forbidden' }); return;
+            }
+            const sch = await db.select({ jenjang: sekolah.jenjang }).from(sekolah).where(eq(sekolah.id, req.user!.sekolahId!));
+            const jenjang = sch[0]?.jenjang || 'SMP';
+            await db.update(sarpras).set({
+                status: jenjang === 'SD' ? 'Menunggu Verifikasi Korwil' : 'Menunggu Verifikasi',
+                actionType: 'hapus',
+                verified: false,
+                verifiedBy: null,
+                verifiedAt: null,
+                updatedAt: new Date(),
+            }).where(eq(sarpras.id, id));
+            res.json({ success: true, pending: true });
+            logActivity(req, 'Ajukan Hapus Sarpras', `Mengajukan hapus data sarpras ${nama} ${ruang}`.trim());
+        } else {
+            // Admin: hard delete
+            await sarprasService.delete(id);
+            res.json({ success: true });
+            logActivity(req, 'Hapus Sarpras', `Menghapus data sarpras ${nama} ${ruang}`.trim());
+        }
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
@@ -356,16 +395,25 @@ router.post('/:id/verify', requireAuth, requireRole('admin', 'verifikator', 'kor
             const sch = await db.select({ jenjang: sekolah.jenjang }).from(sekolah).where(eq(sekolah.id, sItem.sarpras.sekolahId));
             jenjang = sch[0]?.jenjang || 'SMP';
         }
+        // Check if this is a delete request — if verified, actually delete the record
+        const currentItem = sItem?.sarpras;
         if (role === 'korwil' && jenjang === 'SD') {
-            // Korwil verifies SD → mark verifiedBy but keep verified=false so verifikator can finalize
-            const r = await db.update(sarpras).set({ verified: false, verifiedBy: req.user!.id, updatedAt: new Date() }).where(eq(sarpras.id, id)).returning();
+            // Korwil verifies SD → set status to Menunggu Verifikasi so verifikator can finalize
+            const r = await db.update(sarpras).set({ verified: false, status: 'Menunggu Verifikasi', verifiedBy: req.user!.id, updatedAt: new Date() }).where(eq(sarpras.id, id)).returning();
             logActivity(req, 'Verifikasi Korwil Sarpras', `Memverifikasi sarpras #${id} (SD → verifikator)`);
             res.json(r[0]);
         } else {
             // Admin/Verifikator → final verify
-            const result = await sarprasService.verify(id, req.user!.id);
-            logActivity(req, 'Verifikasi Sarpras', `Memverifikasi data sarpras #${id}`);
-            res.json(result);
+            if (currentItem?.actionType === 'hapus') {
+                // Delete request approved → actually delete
+                await sarprasService.delete(id);
+                logActivity(req, 'Verifikasi Hapus Sarpras', `Menyetujui penghapusan sarpras #${id}`);
+                res.json({ success: true, deleted: true });
+            } else {
+                const result = await sarprasService.verify(id, req.user!.id);
+                logActivity(req, 'Verifikasi Sarpras', `Memverifikasi data sarpras #${id}`);
+                res.json(result);
+            }
         }
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
@@ -374,6 +422,26 @@ router.post('/:id/unverify', requireAuth, requireRole('admin', 'verifikator', 'k
     try {
         const result = await sarprasService.unverify(Number(req.params.id));
         logActivity(req, 'Batalkan Verifikasi Sarpras', `Membatalkan verifikasi sarpras #${req.params.id}`);
+        res.json(result);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.post('/:id/reject', requireAuth, requireRole('admin', 'verifikator', 'korwil'), async (req, res) => {
+    try {
+        const { alasan } = req.body;
+        if (!alasan?.trim()) { res.status(400).json({ error: 'Alasan wajib diisi' }); return; }
+        const result = await sarprasService.reject(Number(req.params.id), alasan);
+        logActivity(req, 'Tolak Sarpras', `Menolak data sarpras #${req.params.id}: ${alasan}`);
+        res.json(result);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.post('/:id/revisi', requireAuth, requireRole('admin', 'verifikator', 'korwil'), async (req, res) => {
+    try {
+        const { alasan } = req.body;
+        if (!alasan?.trim()) { res.status(400).json({ error: 'Alasan revisi wajib diisi' }); return; }
+        const result = await sarprasService.revisi(Number(req.params.id), alasan);
+        logActivity(req, 'Revisi Sarpras', `Meminta revisi sarpras #${req.params.id}: ${alasan}`);
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
