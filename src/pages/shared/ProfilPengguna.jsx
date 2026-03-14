@@ -207,7 +207,7 @@ const ProfilPengguna = () => {
         if (!file) return;
         e.target.value = null;
         if (file.type !== 'application/pdf') { toast.error('Format file harus PDF'); return; }
-        if (file.size > 1 * 1024 * 1024) { toast.error('Ukuran file maksimal 1MB'); return; }
+        if (file.size > 5 * 1024 * 1024) { toast.error('Ukuran file maksimal 5MB'); return; }
         setUploadingDenah(true);
         try {
             await sekolahApi.uploadDenah(sekolahId, file);
@@ -324,7 +324,7 @@ const ProfilPengguna = () => {
                 </div>
             </div>
             <small style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: 4, display: 'block' }}>
-                {type === 'kop' ? '* Format Word (.doc, .docx), Maks 1MB' : '* Format PDF, Maks 1MB'}
+                {type === 'kop' ? '* Format Word (.doc, .docx), Maks 1MB' : '* Format PDF, Maks 5MB'}
             </small>
         </div>
     );

@@ -239,7 +239,7 @@ export const uploadKopSekolah = multer({
 export const uploadDenahSekolah = multer({
     storage: tempStorage,
     fileFilter: pdfFilter,
-    limits: { fileSize: 1 * 1024 * 1024 },
+    limits: { fileSize: 5 * 1024 * 1024 },
 });
 
 export const uploadTemplate = multer({
