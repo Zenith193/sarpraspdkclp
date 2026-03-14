@@ -74,7 +74,7 @@ const Login = () => {
                 };
                 useAuthStore.setState({ user, isAuthenticated: true });
                 setSubmitting(false);
-                startTransition(user, '/sekolah/data-sarpras');
+                startTransition(user, '/sekolah/dashboard');
             } else {
                 // Staff login: use Better Auth email/password
                 let loginEmail = email;
@@ -86,7 +86,7 @@ const Login = () => {
                 if (user) {
                     setSubmitting(false);
                     const rolePath = user.role?.toLowerCase();
-                    let target = '/sekolah/data-sarpras';
+                    let target = '/sekolah/dashboard';
                     if (rolePath === 'admin') target = '/admin/dashboard';
                     else if (rolePath === 'verifikator') target = '/verifikator/dashboard';
                     else if (rolePath === 'korwil') target = '/korwil/dashboard';

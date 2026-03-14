@@ -462,8 +462,8 @@ const Proposal = ({ readOnly = false }) => {
                             <tr>
                                 <th>No</th>
                                 <th>Nama Sekolah</th>
-                                <th>NPSN</th>
-                                <th>Kecamatan</th>
+                                {!isSekolah && <th>NPSN</th>}
+                                {!isSekolah && <th>Kecamatan</th>}
                                 <th>Sub Kegiatan</th>
                                 <th>Nilai Pengajuan</th>
                                 <th>Target</th>
@@ -478,8 +478,8 @@ const Proposal = ({ readOnly = false }) => {
                                 <tr key={item.id}>
                                     <td>{(page - 1) * perPage + i + 1}</td>
                                     <td style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis' }}>{safeStr(item.namaSekolah)}</td>
-                                    <td>{safeStr(item.npsn)}</td>
-                                    <td>{safeStr(item.kecamatan)}</td>
+                                    {!isSekolah && <td>{safeStr(item.npsn)}</td>}
+                                    {!isSekolah && <td>{safeStr(item.kecamatan)}</td>}
                                     <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.subKegiatan}</td>
                                     <td style={{ whiteSpace: 'nowrap' }}>{formatCurrency(item.nilaiPengajuan)}</td>
                                     <td>{item.target}</td>

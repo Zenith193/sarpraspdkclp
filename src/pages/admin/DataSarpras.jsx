@@ -379,6 +379,7 @@ const DataSarpras = ({ readOnly = false }) => {
         const panjang = parseFloat(formData.panjang) || 0;
         const lebar = parseFloat(formData.lebar) || 0;
         if (!panjang || !lebar) { toast.error('Panjang dan lebar harus diisi'); return; }
+        if (!formData.keterangan?.trim()) { toast.error('Keterangan wajib diisi'); return; }
         if (!editItem && formPhotos.length < 5) { toast.error('Wajib upload 5 foto dengan geotagging'); return; }
 
         try {
@@ -620,16 +621,14 @@ const DataSarpras = ({ readOnly = false }) => {
         switch (col.key) {
             case 'no': return (page - 1) * perPage + idx + 1;
             case 'foto': {
-                const photos = item.foto || [];
-                if (photos.length === 0) return <div style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-input)', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)' }}><Image size={14} /></div>;
+                const count = item.fotoCount || 0;
+                if (count === 0) return <div style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-input)', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)' }}><Image size={14} /></div>;
                 return (
-                    <div style={{ position: 'relative', cursor: 'pointer' }} onClick={() => { setPhotoModal(item); setPhotoIdx(0); }}>
-                        <img src={photos[0].url} alt=""
-                            onError={(e) => { if (photos[0].proxyUrl && e.target.src !== photos[0].proxyUrl) e.target.src = photos[0].proxyUrl; }}
-                            style={{ width: 36, height: 36, objectFit: 'cover', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }} />
-                        {photos.length > 1 && (
-                            <span style={{ position: 'absolute', bottom: -2, right: -4, background: 'var(--accent-blue)', color: '#fff', fontSize: '0.6rem', fontWeight: 700, padding: '1px 4px', borderRadius: 'var(--radius-full)', lineHeight: 1.3 }}>+{photos.length - 1}</span>
-                        )}
+                    <div style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }} onClick={() => handleViewDetail(item)}>
+                        <div style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(59,130,246,0.1)', borderRadius: 'var(--radius-sm)', color: 'var(--accent-blue)' }}>
+                            <Image size={16} />
+                        </div>
+                        <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--accent-blue)' }}>{count}</span>
                     </div>
                 );
             }
