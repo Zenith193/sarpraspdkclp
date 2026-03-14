@@ -151,9 +151,17 @@ app.get('/api/foto/:fotoId', async (req, res) => {
 async function serveFileFromPath(filePath: string, res: any) {
     const normalizedPath = filePath.replace(/\\/g, '/');
 
-    // 1. Local file
-    if (fs.existsSync(filePath)) {
-        return res.sendFile(path.resolve(filePath));
+    // 1. Local file – try multiple path resolutions
+    const candidates = [
+        filePath,
+        path.resolve(filePath),
+        path.join(process.cwd(), filePath),
+        path.join(process.cwd(), 'uploads', path.basename(filePath)),
+    ];
+    for (const candidate of candidates) {
+        if (fs.existsSync(candidate)) {
+            return res.sendFile(path.resolve(candidate));
+        }
     }
 
     // 2. Google Drive
