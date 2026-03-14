@@ -10,6 +10,26 @@ import { logActivity } from '../middleware/logActivity.js';
 
 const router = Router();
 
+// Inject sekolah info from proposal ID for GDrive folder path
+const injectSekolahFromProposal = async (req: any, _res: any, next: any) => {
+    try {
+        const proposalId = Number(req.params.id);
+        if (proposalId) {
+            const row = await db.select({ sekolahId: proposal.sekolahId }).from(proposal).where(eq(proposal.id, proposalId));
+            if (row[0]?.sekolahId) {
+                const sch = await db.select({ kecamatan: sekolah.kecamatan, nama: sekolah.nama, npsn: sekolah.npsn }).from(sekolah).where(eq(sekolah.id, row[0].sekolahId));
+                if (sch[0]) {
+                    req.body = req.body || {};
+                    req.body.kecamatan = sch[0].kecamatan;
+                    req.body.namaSekolah = sch[0].nama;
+                    req.body.npsn = sch[0].npsn;
+                }
+            }
+        }
+    } catch (e) { /* ignore */ }
+    next();
+};
+
 router.get('/', requireAuth, async (req, res) => {
     try {
         const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
@@ -86,7 +106,7 @@ router.put('/:id', requireAuth, requireRole('admin', 'sekolah'), async (req, res
 });
 
 // UPLOAD/REPLACE PROPOSAL PDF
-router.put('/:id/upload', requireAuth, requireRole('admin', 'sekolah'), uploadProposal.single('file'), forwardToNas('proposal'), async (req, res) => {
+router.put('/:id/upload', requireAuth, requireRole('admin', 'sekolah'), uploadProposal.single('file'), injectSekolahFromProposal, forwardToNas('proposal'), async (req, res) => {
     try {
         const id = Number(req.params.id);
         const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
@@ -212,7 +232,7 @@ router.put('/:id/upload', requireAuth, requireRole('admin', 'sekolah'), uploadPr
 });
 
 // ===== PROPOSAL FOTO UPLOAD =====
-router.post('/:id/foto', requireAuth, requireRole('admin', 'sekolah'), uploadFotos.single('foto'), forwardToNas('proposal'), async (req, res) => {
+router.post('/:id/foto', requireAuth, requireRole('admin', 'sekolah'), uploadFotos.single('foto'), injectSekolahFromProposal, forwardToNas('proposal'), async (req, res) => {
     try {
         if (!req.file) { res.status(400).json({ error: 'No file uploaded' }); return; }
         const f = req.file as any;

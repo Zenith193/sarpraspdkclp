@@ -106,7 +106,16 @@ export function forwardToNas(
                         // Build GDrive sub-path from category + sekolah info
                         let gdriveSubPath: string = category;
                         if (sekolah) {
-                            gdriveSubPath = `${sekolah.kecamatan || 'unknown'}/${sekolah.nama}_${sekolah.npsn}/${category}`;
+                            // Map category to GDrive folder name per user schema
+                            const folderName: Record<string, string> = {
+                                'kop-sekolah': 'profil',
+                                'kerusakan': 'form kerusakan',
+                                'sarpras': 'data sarpras',
+                                'proposal': 'proposal',
+                                'prestasi': 'prestasi',
+                                'riwayat-bantuan': 'riwayat bantuan',
+                            };
+                            gdriveSubPath = `${sekolah.kecamatan || 'unknown'}/${sekolah.nama}_${sekolah.npsn}/${folderName[category] || category}`;
                             if (extra.masaBangunan) gdriveSubPath += `/${extra.masaBangunan}`;
                             if (extra.namaRuang) gdriveSubPath += `/${extra.namaRuang}`;
                         }

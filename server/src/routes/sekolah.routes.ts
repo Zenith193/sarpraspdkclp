@@ -13,6 +13,24 @@ import path from 'path';
 
 const router = Router();
 
+// Middleware: inject sekolah info into req.body before forwardToNas
+// This ensures GDrive uploads go to {kecamatan}/{nama}_{npsn}/... folder
+const injectSekolahInfo = async (req: any, _res: any, next: any) => {
+    try {
+        const id = Number(req.params.id);
+        if (id) {
+            const sch = await db.select({ kecamatan: sekolah.kecamatan, nama: sekolah.nama, npsn: sekolah.npsn }).from(sekolah).where(eq(sekolah.id, id));
+            if (sch[0]) {
+                req.body = req.body || {};
+                req.body.kecamatan = sch[0].kecamatan;
+                req.body.namaSekolah = sch[0].nama;
+                req.body.npsn = sch[0].npsn;
+            }
+        }
+    } catch (e) { /* ignore lookup errors */ }
+    next();
+};
+
 router.get('/', requireAuth, async (req, res) => {
     try {
         const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
@@ -69,7 +87,7 @@ router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
 // ===================================================================
 // UPLOAD KOP SEKOLAH (Word, max 1MB)
 // ===================================================================
-router.post('/:id/upload-kop', requireAuth, uploadKopSekolah.single('file'), forwardToNas('kop-sekolah'), async (req, res) => {
+router.post('/:id/upload-kop', requireAuth, uploadKopSekolah.single('file'), injectSekolahInfo, forwardToNas('kop-sekolah'), async (req, res) => {
     try {
         const id = Number(req.params.id);
         const isSekolahUser = req.user!.role.toLowerCase() === 'sekolah';
@@ -111,7 +129,7 @@ router.post('/:id/upload-kop', requireAuth, uploadKopSekolah.single('file'), for
 // ===================================================================
 // UPLOAD DENAH SEKOLAH (PDF, max 5MB)
 // ===================================================================
-router.post('/:id/upload-denah', requireAuth, uploadDenahSekolah.single('file'), forwardToNas('kop-sekolah'), async (req, res) => {
+router.post('/:id/upload-denah', requireAuth, uploadDenahSekolah.single('file'), injectSekolahInfo, forwardToNas('kop-sekolah'), async (req, res) => {
     try {
         const id = Number(req.params.id);
         const isSekolahUser = req.user!.role.toLowerCase() === 'sekolah';
