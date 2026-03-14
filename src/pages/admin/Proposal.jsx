@@ -572,7 +572,7 @@ const Proposal = ({ readOnly = false }) => {
                                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                                     <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', flexShrink: 0 }}>
                                         <Upload size={14} style={{ marginRight: 4 }} /> {formData.proposalFile || editItem?.fileName ? 'Ganti File' : 'Pilih File'}
-                                        <input type="file" accept=".pdf" style={{ display: 'none' }} onChange={e => { const f = e.target.files[0]; if (!f) return; if (f.type !== 'application/pdf') { toast.error('Hanya file PDF!'); e.target.value = null; return; } if (f.size > 5*1024*1024) { toast.error('Maks 5MB'); e.target.value = null; return; } setFormData({ ...formData, proposalFile: f }); }} />
+                                        <input type="file" accept=".pdf" style={{ display: 'none' }} onChange={e => { const f = e.target.files[0]; if (!f) return; if (f.type !== 'application/pdf') { toast.error('Hanya file PDF!'); e.target.value = null; return; } if (f.size > 1*1024*1024) { toast.error('Maks 1MB'); e.target.value = null; return; } setFormData({ ...formData, proposalFile: f }); }} />
                                     </label>
                                     <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                         {formData.proposalFile ? (

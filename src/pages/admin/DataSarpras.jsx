@@ -324,9 +324,9 @@ const DataSarpras = ({ readOnly = false }) => {
         const files = Array.from(e.target.files);
         const maxFiles = 5 - formPhotos.length;
         const toAdd = files.slice(0, maxFiles);
-        const oversized = toAdd.filter(f => f.size > 512000);
-        if (oversized.length) toast.error(`${oversized.length} file melebihi 500KB`);
-        const valid = toAdd.filter(f => f.size <= 512000);
+        const oversized = toAdd.filter(f => f.size > 1 * 1024 * 1024);
+        if (oversized.length) toast.error(`${oversized.length} file melebihi 1MB`);
+        const valid = toAdd.filter(f => f.size <= 1 * 1024 * 1024);
 
         let rejectedCount = 0;
         for (const file of valid) {

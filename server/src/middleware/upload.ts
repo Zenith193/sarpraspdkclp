@@ -204,13 +204,13 @@ function getLocalDestination(category: string, body: any): string {
 export const uploadFotos = multer({
     storage: tempStorage,
     fileFilter: imageFilter,
-    limits: { fileSize: 500 * 1024, files: 5 },
+    limits: { fileSize: 1 * 1024 * 1024, files: 5 },
 });
 
 export const uploadSertifikat = multer({
     storage: tempStorage,
     fileFilter: pdfFilter,
-    limits: { fileSize: 5 * 1024 * 1024 },
+    limits: { fileSize: 1 * 1024 * 1024 },
 });
 
 export const uploadFormKerusakan = multer({
@@ -222,13 +222,13 @@ export const uploadFormKerusakan = multer({
 export const uploadProposal = multer({
     storage: tempStorage,
     fileFilter: pdfFilter,
-    limits: { fileSize: 10 * 1024 * 1024 },
+    limits: { fileSize: 1 * 1024 * 1024 },
 });
 
 export const uploadBast = multer({
     storage: tempStorage,
     fileFilter: pdfFilter,
-    limits: { fileSize: 10 * 1024 * 1024 },
+    limits: { fileSize: 1 * 1024 * 1024 },
 });
 
 export const uploadKopSekolah = multer({
@@ -239,10 +239,10 @@ export const uploadKopSekolah = multer({
 export const uploadDenahSekolah = multer({
     storage: tempStorage,
     fileFilter: pdfFilter,
-    limits: { fileSize: 5 * 1024 * 1024 },
+    limits: { fileSize: 1 * 1024 * 1024 },
 });
 
 export const uploadTemplate = multer({
     storage: tempStorage,
-    limits: { fileSize: 5 * 1024 * 1024 },
+    limits: { fileSize: 1 * 1024 * 1024 },
 });
