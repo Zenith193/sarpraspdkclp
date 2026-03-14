@@ -565,18 +565,24 @@ const UploadFormKerusakan = () => {
                             </div>
                             <div className="form-group">
                                 <label className="form-label">Upload Form (PDF)</label>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                    <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer' }}>
-                                        <Upload size={14} /> {formFile ? 'Ganti' : 'Pilih File'}
-                                        <input type="file" accept="application/pdf" style={{ display: 'none' }} onChange={handleFormFileChange} />
-                                    </label>
-                                    {formFile && <span style={{ fontSize: 12 }}>{formFile.name}</span>}
-                                </div>
+                                {masaBangunanOptions.length === 0 ? (
+                                    <div style={{ padding: '12px', background: 'rgba(239, 68, 68, 0.1)', borderRadius: 'var(--radius-sm)', color: 'var(--accent-red)', fontSize: '0.85rem', textAlign: 'center' }}>
+                                        Semua masa bangunan sudah memiliki form kerusakan. Tidak dapat upload lagi.
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                                        <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer' }}>
+                                            <Upload size={14} /> {formFile ? 'Ganti' : 'Pilih File'}
+                                            <input type="file" accept="application/pdf" style={{ display: 'none' }} onChange={handleFormFileChange} />
+                                        </label>
+                                        {formFile && <span style={{ fontSize: 12 }}>{formFile.name}</span>}
+                                    </div>
+                                )}
                             </div>
                         </div>
                         <div className="modal-footer">
                             <button className="btn btn-ghost" onClick={handleCloseModal}>Batal</button>
-                            <button className="btn btn-primary" onClick={handleSaveData} disabled={!formMasa}><Save size={14} /> Simpan</button>
+                            <button className="btn btn-primary" onClick={handleSaveData} disabled={!formMasa || masaBangunanOptions.length === 0}><Save size={14} /> Simpan</button>
                         </div>
                     </div>
                 </div>
