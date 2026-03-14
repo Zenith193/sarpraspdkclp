@@ -444,9 +444,10 @@ const Prestasi = () => {
                             </div>
                             <div className="form-group">
                                 <label className="form-label" style={{ fontSize: '0.875rem' }}>Sertifikat (PDF) {isSekolah && '*'}</label>
-                                <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer' }}><Upload size={14} style={{ marginRight: 4 }} /> {editItem?.sertifikat ? 'Ganti' : 'Pilih'}<input type="file" accept="application/pdf" style={{ display: 'none' }} onChange={e => { if (e.target.files[0]) { setFormSertifikat(e.target.files[0]); toast.success('File siap'); } }} /></label>
+                                <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer' }}><Upload size={14} style={{ marginRight: 4 }} /> {editItem?.sertifikat ? 'Ganti' : 'Pilih'}<input type="file" accept="application/pdf" style={{ display: 'none' }} onChange={e => { const f = e.target.files[0]; if (f) { if (f.size > 2 * 1024 * 1024) { toast.error('Ukuran file maksimal 2MB'); e.target.value = null; return; } setFormSertifikat(f); toast.success('File siap'); } }} /></label>
                                 {formSertifikat && <span style={{ fontSize: 12, marginLeft: 8 }}>{formSertifikat.name}</span>}
                                 {editItem?.sertifikat && !formSertifikat && <span style={{ fontSize: 12, marginLeft: 8, color: 'var(--text-secondary)' }}>{editItem.sertifikat}</span>}
+                                <small style={{ color: 'var(--text-secondary)', fontSize: '0.7rem', display: 'block', marginTop: 4 }}>* Format PDF, Maks 2MB</small>
                             </div>
                         </div>
                         <div className="modal-footer"><button className="btn btn-ghost" onClick={() => setShowModal(false)}>Batal</button><button className="btn btn-primary" onClick={handleSave}><Save size={14} /> Simpan</button></div>

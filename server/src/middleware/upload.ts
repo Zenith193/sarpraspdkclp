@@ -208,7 +208,7 @@ export const uploadFotos = multer({
 export const uploadSertifikat = multer({
     storage: tempStorage,
     fileFilter: pdfFilter,
-    limits: { fileSize: 1 * 1024 * 1024 },
+    limits: { fileSize: 2 * 1024 * 1024 },
 });
 
 export const uploadFormKerusakan = multer({
