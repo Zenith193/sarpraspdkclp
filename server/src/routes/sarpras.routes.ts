@@ -269,7 +269,7 @@ router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadFotos.array
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/:id', requireAuth, requireRole('admin', 'sekolah', 'verifikator'), async (req, res) => {
+router.put('/:id', requireAuth, requireRole('admin', 'sekolah', 'verifikator', 'korwil'), async (req, res) => {
     try {
         const id = Number(req.params.id);
         const isSekolah = req.user!.role.toLowerCase() === 'sekolah';
@@ -337,14 +337,14 @@ router.post('/batch-verify', requireAuth, requireRole('admin'), async (req, res)
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/:id/verify', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
+router.post('/:id/verify', requireAuth, requireRole('admin', 'verifikator', 'korwil'), async (req, res) => {
     try {
         const result = await sarprasService.verify(Number(req.params.id), req.user!.id);
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/:id/unverify', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
+router.post('/:id/unverify', requireAuth, requireRole('admin', 'verifikator', 'korwil'), async (req, res) => {
     try {
         const result = await sarprasService.unverify(Number(req.params.id));
         res.json(result);
