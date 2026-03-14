@@ -438,6 +438,7 @@ const Prestasi = () => {
                                 <div className="form-group"><label className="form-label" style={{ fontSize: '0.875rem' }}>Siswa/Tim</label><input className="form-input" value={formData.siswa} onChange={e => setFormData({ ...formData, siswa: e.target.value })} /></div>
                             </div>
                             <div className="form-row">
+                                <div className="form-group"><label className="form-label" style={{ fontSize: '0.875rem' }}>Kategori</label><select className="form-select" value={formData.kategori} onChange={e => setFormData({ ...formData, kategori: e.target.value })}>{KATEGORI_PRESTASI.map(k => <option key={k} value={k}>{k}</option>)}</select></div>
                                 <div className="form-group"><label className="form-label" style={{ fontSize: '0.875rem' }}>Tingkat</label><select className="form-select" value={formData.tingkat} onChange={e => setFormData({ ...formData, tingkat: e.target.value })}>{TINGKAT_LOMBA.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
                                 <div className="form-group"><label className="form-label" style={{ fontSize: '0.875rem' }}>Capaian</label><select className="form-select" value={formData.keterangan} onChange={e => setFormData({ ...formData, keterangan: e.target.value })}>{CAPAIAN_PRESTASI.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
                             </div>

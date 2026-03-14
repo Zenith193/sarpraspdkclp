@@ -62,12 +62,13 @@ router.post('/', requireAuth, requireRole('admin', 'sekolah'), uploadFormKerusak
             if (isDup) { res.status(400).json({ error: `Masa bangunan "${masaBangunan}" sudah memiliki form kerusakan untuk sekolah ini` }); return; }
         }
 
+        const f = req.file as any;
         const data: any = {
             sekolahId,
             masaBangunan,
             fileName: req.file?.originalname || null,
-            filePath: req.file?.path || null,
-            uploadStatus: req.file && isGDriveEnabled() ? 'uploading' : 'done',
+            filePath: f?.finalPath || req.file?.path || null,
+            uploadStatus: req.file ? (f?.uploadPending ? 'uploading' : 'done') : 'done',
             status: req.file ? 'Menunggu Verifikasi' : 'Belum Upload',
         };
         const result = await kerusakanService.create(data, req.user!.id);
@@ -91,8 +92,9 @@ router.put('/:id/upload', requireAuth, requireRole('admin', 'sekolah'), uploadFo
             }
         }
 
-        const uploadStatus = isGDriveEnabled() ? 'uploading' : 'done';
-        const result = await kerusakanService.updateFile(id, req.file.originalname, req.file.path, uploadStatus);
+        const f = req.file as any;
+        const uploadStatus = f?.uploadPending ? 'uploading' : 'done';
+        const result = await kerusakanService.updateFile(id, req.file.originalname, f?.finalPath || req.file.path, uploadStatus);
         logActivity(req, 'Upload File Kerusakan', `Upload file kerusakan #${id}: ${req.file.originalname}`);
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }

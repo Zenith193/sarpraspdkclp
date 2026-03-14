@@ -244,24 +244,72 @@ app.get('/api/file/template/:id', async (req, res) => {
 });
 
 // ===== QUEUE STATUS API =====
-app.get('/api/queue/status', async (_req, res) => {
+app.get('/api/queue/status', async (req, res) => {
     try {
         const { sarprasFoto, formKerusakan, prestasi, proposal, proposalFoto } = await import('./db/schema/index.js');
+        const { sarpras } = await import('./db/schema/sarpras.js');
         const { db: database } = await import('./db/index.js');
-        const { eq, sql } = await import('drizzle-orm');
+        const { eq, sql, and } = await import('drizzle-orm');
 
-        const count = async (table: any, col: string) => {
-            const uploading = await database.select({ count: sql<number>`count(*)` }).from(table).where(eq((table as any).uploadStatus, 'uploading'));
-            const failed = await database.select({ count: sql<number>`count(*)` }).from(table).where(eq((table as any).uploadStatus, 'failed'));
+        // Get current user from Better Auth session
+        let userId: string | null = null;
+        let userRole: string | null = null;
+        let userSekolahId: number | null = null;
+        try {
+            const { auth } = await import('./auth/index.js');
+            const { fromNodeHeaders } = await import('better-auth/node');
+            const session = await auth.api.getSession({ headers: fromNodeHeaders(req.headers) });
+            if (session?.user) {
+                userId = session.user.id;
+                userRole = (session.user as any).role || null;
+                userSekolahId = (session.user as any).sekolahId || null;
+            }
+        } catch { /* no auth */ }
+
+        // For non-admin: only count records for their school
+        const isAdmin = userRole?.toLowerCase() === 'admin' || userRole?.toLowerCase() === 'verifikator';
+
+        const countFiltered = async (table: any, ownerCol?: string) => {
+            let uploadingWhere: any = eq((table as any).uploadStatus, 'uploading');
+            let failedWhere: any = eq((table as any).uploadStatus, 'failed');
+
+            if (!isAdmin && userId && ownerCol && (table as any)[ownerCol]) {
+                uploadingWhere = and(uploadingWhere, eq((table as any)[ownerCol], userId));
+                failedWhere = and(failedWhere, eq((table as any)[ownerCol], userId));
+            }
+
+            const [uploading, failed] = await Promise.all([
+                database.select({ count: sql<number>`count(*)` }).from(table).where(uploadingWhere),
+                database.select({ count: sql<number>`count(*)` }).from(table).where(failedWhere),
+            ]);
             return { uploading: Number(uploading[0]?.count || 0), failed: Number(failed[0]?.count || 0) };
         };
 
+        // sarprasFoto doesn't have uploadedBy, but we can filter via sarpras.sekolahId
+        // For simplicity, use createdBy/uploadedBy where available
         const [foto, kerusakan, prest, prop, propFoto] = await Promise.all([
-            count(sarprasFoto, 'uploadStatus'),
-            count(formKerusakan, 'uploadStatus'),
-            count(prestasi, 'uploadStatus'),
-            count(proposal, 'uploadStatus'),
-            count(proposalFoto, 'uploadStatus'),
+            // sarprasFoto: no direct user column — show for all (admin handles it)
+            isAdmin ? countFiltered(sarprasFoto) : (async () => {
+                // For non-admin, filter sarprasFoto by joining sarpras → sekolahId
+                if (!userSekolahId) return { uploading: 0, failed: 0 };
+                const uploadingQ = await database.select({ count: sql<number>`count(*)` })
+                    .from(sarprasFoto)
+                    .innerJoin(sarpras, eq(sarprasFoto.sarprasId, sarpras.id))
+                    .where(and(eq(sarprasFoto.uploadStatus, 'uploading'), eq(sarpras.sekolahId, userSekolahId)));
+                const failedQ = await database.select({ count: sql<number>`count(*)` })
+                    .from(sarprasFoto)
+                    .innerJoin(sarpras, eq(sarprasFoto.sarprasId, sarpras.id))
+                    .where(and(eq(sarprasFoto.uploadStatus, 'failed'), eq(sarpras.sekolahId, userSekolahId)));
+                return { uploading: Number(uploadingQ[0]?.count || 0), failed: Number(failedQ[0]?.count || 0) };
+            })(),
+            // formKerusakan: has uploadedBy
+            countFiltered(formKerusakan, 'uploadedBy'),
+            // prestasi: has createdBy
+            countFiltered(prestasi, 'createdBy'),
+            // proposal: has createdBy
+            countFiltered(proposal, 'createdBy'),
+            // proposalFoto: no direct user column — show for admin only
+            isAdmin ? countFiltered(proposalFoto) : Promise.resolve({ uploading: 0, failed: 0 }),
         ]);
 
         const totalUploading = foto.uploading + kerusakan.uploading + prest.uploading + prop.uploading + propFoto.uploading;
