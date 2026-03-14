@@ -162,7 +162,7 @@ export const sarprasService = {
 
     async getStats() {
         const stats = await db.select({
-            total: sql<number>`count(*)`,
+            total: sql<number>`count(*) filter (where ${sarpras.verified} = true)`,
             baik: sql<number>`count(*) filter (where ${sarpras.kondisi} = 'BAIK' and ${sarpras.verified} = true)`,
             rusakRingan: sql<number>`count(*) filter (where ${sarpras.kondisi} = 'RUSAK RINGAN' and ${sarpras.verified} = true)`,
             rusakSedang: sql<number>`count(*) filter (where ${sarpras.kondisi} = 'RUSAK SEDANG' and ${sarpras.verified} = true)`,

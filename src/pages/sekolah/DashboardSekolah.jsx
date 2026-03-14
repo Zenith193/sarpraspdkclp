@@ -20,7 +20,7 @@ const DashboardSekolah = () => {
 
     // Filter data for this school - match by sekolahId or NPSN
     const mySarpras = useMemo(() =>
-        (sarprasData || []).filter(s => s.sekolahId === sekolahId || s.npsn === matchNpsn), [sarprasData, sekolahId, matchNpsn]);
+        (sarprasData || []).filter(s => (s.sekolahId === sekolahId || s.npsn === matchNpsn) && (!s.status || s.status === 'Diverifikasi')), [sarprasData, sekolahId, matchNpsn]);
     const myProposal = useMemo(() =>
         (proposalData || []).filter(p => p.sekolahId === sekolahId || p.npsn === matchNpsn), [proposalData, sekolahId, matchNpsn]);
     const myRiwayat = useMemo(() =>

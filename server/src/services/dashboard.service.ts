@@ -7,7 +7,7 @@ export const dashboardService = {
         const [sekolahCount, sarprasStats, proposalStats, userCount] = await Promise.all([
             db.select({ count: sql<number>`count(*)` }).from(sekolah),
             db.select({
-                total: sql<number>`count(*)`,
+                total: sql<number>`count(*) filter (where ${sarpras.verified} = true)`,
                 baik: sql<number>`count(*) filter (where ${sarpras.kondisi} = 'BAIK' and ${sarpras.verified} = true)`,
                 rusakRingan: sql<number>`count(*) filter (where ${sarpras.kondisi} = 'RUSAK RINGAN' and ${sarpras.verified} = true)`,
                 rusakSedang: sql<number>`count(*) filter (where ${sarpras.kondisi} = 'RUSAK SEDANG' and ${sarpras.verified} = true)`,
@@ -41,7 +41,7 @@ export const dashboardService = {
         if (schoolIds.length === 0) return { totalSekolah: 0, sarpras: { total: 0 }, proposal: { total: 0 } };
 
         const sarprasStats = await db.select({
-            total: sql<number>`count(*)`,
+            total: sql<number>`count(*) filter (where ${sarpras.verified} = true)`,
             verified: sql<number>`count(*) filter (where ${sarpras.verified} = true)`,
         }).from(sarpras).where(inArray(sarpras.sekolahId, schoolIds));
 
@@ -50,7 +50,7 @@ export const dashboardService = {
 
     async getSekolahStats(sekolahId: number) {
         const sarprasStats = await db.select({
-            total: sql<number>`count(*)`,
+            total: sql<number>`count(*) filter (where ${sarpras.verified} = true)`,
             baik: sql<number>`count(*) filter (where ${sarpras.kondisi} = 'BAIK' and ${sarpras.verified} = true)`,
             rusak: sql<number>`count(*) filter (where ${sarpras.kondisi} != 'BAIK' and ${sarpras.verified} = true)`,
             verified: sql<number>`count(*) filter (where ${sarpras.verified} = true)`,
