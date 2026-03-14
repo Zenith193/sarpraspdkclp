@@ -6,6 +6,7 @@ import { formatCurrency } from '../../utils/formatters';
 import toast from 'react-hot-toast';
 import { proyeksiApi } from '../../api/index';
 import { useApi } from '../../api/hooks';
+import ConfirmModal from '../../components/ui/ConfirmModal';
 
 // Opsi untuk Keterangan (Combo Box)
 const KETERANGAN_OPTIONS = [
@@ -67,6 +68,7 @@ const ProyeksiAnggaran = () => {
     const [modalType, setModalType] = useState('');
     const [editItem, setEditItem] = useState(null);
     const [formData, setFormData] = useState({});
+    const [deleteConfirm, setDeleteConfirm] = useState(null); // { type, id }
 
     // Reset page & expand saat tab, pageSize, atau filter berubah
     useEffect(() => {
@@ -377,12 +379,18 @@ const ProyeksiAnggaran = () => {
     };
 
     const handleDelete = async (type, id) => {
-        if (!confirm('Hapus data ini?')) return;
+        setDeleteConfirm({ type, id });
+    };
+
+    const executeDelete = async () => {
+        if (!deleteConfirm) return;
+        const { type, id } = deleteConfirm;
         try {
             if (type === 'anggaran') { await proyeksiApi.deleteAnggaran(id); setAnggaranData(prev => prev.filter(d => d.id !== id)); }
             else { await proyeksiApi.deleteSnp(id); refetchSnp(); }
             toast.success('Data dihapus');
         } catch (err) { toast.error(err.message || 'Gagal menghapus'); }
+        setDeleteConfirm(null);
     };
 
     const handleExport = (type) => toast.success('Ekspor berhasil');
@@ -905,6 +913,15 @@ const ProyeksiAnggaran = () => {
             )}
 
             {renderModal()}
+            <ConfirmModal
+                isOpen={!!deleteConfirm}
+                title="Hapus Data?"
+                message="Data ini akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan."
+                confirmText="Ya, Hapus"
+                variant="danger"
+                onConfirm={executeDelete}
+                onCancel={() => setDeleteConfirm(null)}
+            />
         </div>
     );
 };

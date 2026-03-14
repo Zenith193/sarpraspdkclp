@@ -3,6 +3,7 @@ import { Edit, Save, X, Upload, FileText, CheckCircle, Eye, EyeOff, Lock, Downlo
 import useAuthStore from '../../store/authStore';
 import { penggunaApi, sekolahApi } from '../../api/index';
 import toast from 'react-hot-toast';
+import ConfirmModal from '../../components/ui/ConfirmModal';
 
 const ProfilPengguna = () => {
     const user = useAuthStore(s => s.user);
@@ -16,6 +17,7 @@ const ProfilPengguna = () => {
     const [showPwSection, setShowPwSection] = useState(false);
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [deleteConfirm, setDeleteConfirm] = useState(null); // 'kop' | 'denah' | null
     const [showNewPw, setShowNewPw] = useState(false);
     const [showConfirmPw, setShowConfirmPw] = useState(false);
     const [changingPw, setChangingPw] = useState(false);
@@ -231,7 +233,6 @@ const ProfilPengguna = () => {
     };
 
     const handleDeleteFile = async (type) => {
-        if (!confirm(`Hapus ${type === 'kop' ? 'Kop Sekolah' : 'Denah Sekolah'}?`)) return;
         try {
             if (type === 'kop') await sekolahApi.deleteKop(sekolahId);
             else await sekolahApi.deleteDenah(sekolahId);
@@ -283,7 +284,7 @@ const ProfilPengguna = () => {
                         <>
                             <button className="btn-icon" onClick={() => handlePreview(type)} title="Preview" style={{ color: 'var(--accent-purple)' }}><Eye size={16} /></button>
                             <button className="btn-icon" onClick={() => handleDownload(type)} title="Download" style={{ color: 'var(--accent-blue)' }}><Download size={16} /></button>
-                            <button className="btn-icon" onClick={() => handleDeleteFile(type)} title="Hapus" style={{ color: 'var(--accent-red)' }}><Trash2 size={16} /></button>
+                            <button className="btn-icon" onClick={() => setDeleteConfirm(type)} title="Hapus" style={{ color: 'var(--accent-red)' }}><Trash2 size={16} /></button>
                         </>
                     )}
                     <label className="btn btn-secondary btn-sm" style={{ cursor: uploading ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, opacity: uploading ? 0.6 : 1 }}>
@@ -435,6 +436,15 @@ const ProfilPengguna = () => {
                     </div>
                 </div>
             )}
+            <ConfirmModal
+                isOpen={!!deleteConfirm}
+                title={`Hapus ${deleteConfirm === 'kop' ? 'Kop Sekolah' : 'Denah Sekolah'}?`}
+                message={`File ${deleteConfirm === 'kop' ? 'Kop Sekolah' : 'Denah Sekolah'} akan dihapus secara permanen. Tindakan ini tidak dapat dibatalkan.`}
+                confirmText="Ya, Hapus"
+                variant="danger"
+                onConfirm={() => { handleDeleteFile(deleteConfirm); setDeleteConfirm(null); }}
+                onCancel={() => setDeleteConfirm(null)}
+            />
         </>
     );
 };

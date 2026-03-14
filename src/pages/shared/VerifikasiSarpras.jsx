@@ -4,6 +4,7 @@ import { sarprasApi, korwilApi } from '../../api/index';
 import useAuthStore from '../../store/authStore';
 import toast from 'react-hot-toast';
 import { safeStr } from '../../utils/safeStr';
+import ConfirmModal from '../../components/ui/ConfirmModal';
 
 const PER_PAGE_OPTIONS = [15, 30, 50, 100];
 
@@ -17,6 +18,7 @@ const VerifikasiSarpras = () => {
     const [lightboxIdx, setLightboxIdx] = useState(-1);
     const [perPage, setPerPage] = useState(15);
     const [currentPage, setCurrentPage] = useState(1);
+    const [showBatchConfirm, setShowBatchConfirm] = useState(false);
 
     // Fetch data with proper server-side filtering for korwil
     const fetchData = useCallback(async () => {
@@ -97,7 +99,11 @@ const VerifikasiSarpras = () => {
 
     const handleBatchVerify = async () => {
         if (!pending.length) return;
-        if (!window.confirm(`Setujui semua ${pending.length} data sarpras sekaligus?`)) return;
+        setShowBatchConfirm(true);
+    };
+
+    const executeBatchVerify = async () => {
+        setShowBatchConfirm(false);
         try {
             const ids = pending.map(s => s.id);
             const result = await sarprasApi.batchVerify(ids);
@@ -274,6 +280,15 @@ const VerifikasiSarpras = () => {
                     </div>
                 </div>
             )}
+            <ConfirmModal
+                isOpen={showBatchConfirm}
+                title="Setujui Semua Data?"
+                message={`${pending.length} data sarpras akan disetujui sekaligus. Pastikan data sudah diperiksa.`}
+                confirmText="Ya, Setujui Semua"
+                variant="success"
+                onConfirm={executeBatchVerify}
+                onCancel={() => setShowBatchConfirm(false)}
+            />
         </div>
     );
 };

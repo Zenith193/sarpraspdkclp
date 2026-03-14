@@ -5,6 +5,7 @@ import useAuthStore from '../../store/authStore';
 import { formatCurrency } from '../../utils/formatters';
 import toast from 'react-hot-toast';
 import { safeStr } from '../../utils/safeStr';
+import ConfirmModal from '../../components/ui/ConfirmModal';
 
 const PER_PAGE_OPTIONS = [15, 30, 50, 100];
 
@@ -18,6 +19,7 @@ const VerifikasiProposal = () => {
     const [lightboxIdx, setLightboxIdx] = useState(-1);
     const [perPage, setPerPage] = useState(15);
     const [currentPage, setCurrentPage] = useState(1);
+    const [showBatchConfirm, setShowBatchConfirm] = useState(false);
 
     // Fetch data with proper server-side filtering for korwil
     const fetchData = useCallback(async () => {
@@ -99,7 +101,11 @@ const VerifikasiProposal = () => {
 
     const handleBatchApprove = async () => {
         if (!pending.length) return;
-        if (!window.confirm(`Setujui semua ${pending.length} proposal sekaligus?`)) return;
+        setShowBatchConfirm(true);
+    };
+
+    const executeBatchApprove = async () => {
+        setShowBatchConfirm(false);
         try {
             const ids = pending.map(p => p.id);
             const result = await proposalApi.batchApprove(ids);
@@ -261,6 +267,15 @@ const VerifikasiProposal = () => {
                     </div>
                 </div>
             )}
+            <ConfirmModal
+                isOpen={showBatchConfirm}
+                title="Setujui Semua Proposal?"
+                message={`${pending.length} proposal akan disetujui sekaligus. Pastikan data sudah diperiksa.`}
+                confirmText="Ya, Setujui Semua"
+                variant="success"
+                onConfirm={executeBatchApprove}
+                onCancel={() => setShowBatchConfirm(false)}
+            />
         </div>
     );
 };
