@@ -8,11 +8,12 @@ export const dashboardService = {
             db.select({ count: sql<number>`count(*)` }).from(sekolah),
             db.select({
                 total: sql<number>`count(*)`,
-                baik: sql<number>`count(*) filter (where ${sarpras.kondisi} = 'BAIK')`,
-                rusakRingan: sql<number>`count(*) filter (where ${sarpras.kondisi} = 'RUSAK RINGAN')`,
-                rusakSedang: sql<number>`count(*) filter (where ${sarpras.kondisi} = 'RUSAK SEDANG')`,
-                rusakBerat: sql<number>`count(*) filter (where ${sarpras.kondisi} = 'RUSAK BERAT')`,
+                baik: sql<number>`count(*) filter (where ${sarpras.kondisi} = 'BAIK' and ${sarpras.verified} = true)`,
+                rusakRingan: sql<number>`count(*) filter (where ${sarpras.kondisi} = 'RUSAK RINGAN' and ${sarpras.verified} = true)`,
+                rusakSedang: sql<number>`count(*) filter (where ${sarpras.kondisi} = 'RUSAK SEDANG' and ${sarpras.verified} = true)`,
+                rusakBerat: sql<number>`count(*) filter (where ${sarpras.kondisi} = 'RUSAK BERAT' and ${sarpras.verified} = true)`,
                 verified: sql<number>`count(*) filter (where ${sarpras.verified} = true)`,
+                unverified: sql<number>`count(*) filter (where ${sarpras.verified} = false or ${sarpras.verified} is null)`,
             }).from(sarpras),
             db.select({
                 total: sql<number>`count(*)`,
@@ -50,8 +51,10 @@ export const dashboardService = {
     async getSekolahStats(sekolahId: number) {
         const sarprasStats = await db.select({
             total: sql<number>`count(*)`,
-            baik: sql<number>`count(*) filter (where ${sarpras.kondisi} = 'BAIK')`,
-            rusak: sql<number>`count(*) filter (where ${sarpras.kondisi} != 'BAIK')`,
+            baik: sql<number>`count(*) filter (where ${sarpras.kondisi} = 'BAIK' and ${sarpras.verified} = true)`,
+            rusak: sql<number>`count(*) filter (where ${sarpras.kondisi} != 'BAIK' and ${sarpras.verified} = true)`,
+            verified: sql<number>`count(*) filter (where ${sarpras.verified} = true)`,
+            unverified: sql<number>`count(*) filter (where ${sarpras.verified} = false or ${sarpras.verified} is null)`,
         }).from(sarpras).where(eq(sarpras.sekolahId, sekolahId));
 
         const proposalStats = await db.select({ total: sql<number>`count(*)` }).from(proposal).where(eq(proposal.sekolahId, sekolahId));

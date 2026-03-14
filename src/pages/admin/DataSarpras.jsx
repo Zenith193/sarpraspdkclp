@@ -571,13 +571,27 @@ const DataSarpras = ({ readOnly = false }) => {
         }
     };
 
-    const handleEdit = (item) => {
+    const handleEdit = async (item) => {
         if (!guard('edit')) return;
         setEditItem(item);
         setFormSekolah(item.namaSekolah);
         setFormData({ masaBangunan: item.masaBangunan, jenisPrasarana: item.jenisPrasarana, namaRuang: item.namaRuang, lantai: item.lantai, panjang: item.panjang, lebar: item.lebar, kondisi: item.kondisi, keterangan: item.keterangan });
-        setFormPhotos(item.foto || []);
         setDeletedPhotoIds([]);
+        // Fetch existing photos from API
+        try {
+            const detail = await sarprasApi.getById(item.id || item.sarpras?.id);
+            const fotos = (detail?.fotos || []).map(f => ({
+                id: f.id,
+                name: f.fileName || f.name || 'foto',
+                url: `/api/foto/${f.id}`,
+                proxyUrl: `/api/foto/${f.id}`,
+                geo: (f.geoLat && f.geoLng) ? { lat: f.geoLat, lng: f.geoLng } : null,
+                existing: true,
+            }));
+            setFormPhotos(fotos);
+        } catch {
+            setFormPhotos([]);
+        }
         setShowAddModal(true);
     };
 
@@ -1028,7 +1042,7 @@ const DataSarpras = ({ readOnly = false }) => {
                                                         <div style={{ flex: 1, minWidth: 0 }}>
                                                             <div style={{ fontWeight: 500, color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.name}</div>
                                                             <div style={{ color: 'var(--text-secondary)', fontSize: '0.7rem', display: 'flex', gap: 8, marginTop: 2 }}>
-                                                                <span>{(p.size / 1024).toFixed(0)} KB</span>
+                                                                {p.size ? <span>{(p.size / 1024).toFixed(0)} KB</span> : p.existing ? <span style={{ color: 'var(--accent-green)' }}>✓ Tersimpan</span> : null}
                                                                 {p.geo ? (
                                                                     <a href={`https://www.google.com/maps?q=${p.geo.lat},${p.geo.lng}`} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--accent-green)', display: 'flex', alignItems: 'center', gap: 3, textDecoration: 'none' }} onClick={e => e.stopPropagation()}>
                                                                         <MapPin size={10} /> {p.geo.lat.toFixed(5)}, {p.geo.lng.toFixed(5)}
