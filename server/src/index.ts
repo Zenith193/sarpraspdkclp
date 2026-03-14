@@ -768,7 +768,9 @@ app.get('/api/health', async (req: any, res: any) => {
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     // Handle multer file size / file type errors with user-friendly messages
     if (err.code === 'LIMIT_FILE_SIZE') {
-        res.status(413).json({ error: 'Ukuran file terlalu besar. Maksimal 1MB.' });
+        const limitBytes = err.limit || 1 * 1024 * 1024;
+        const limitMB = Math.round(limitBytes / (1024 * 1024));
+        res.status(413).json({ error: `Ukuran file terlalu besar. Maksimal ${limitMB}MB.` });
         return;
     }
     if (err.code === 'LIMIT_UNEXPECTED_FILE' || err.code === 'LIMIT_FILE_COUNT') {
