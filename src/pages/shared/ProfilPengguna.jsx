@@ -210,11 +210,27 @@ const ProfilPengguna = () => {
         if (file.size > 5 * 1024 * 1024) { toast.error('Ukuran file maksimal 5MB'); return; }
         setUploadingDenah(true);
         try {
-            await sekolahApi.uploadDenah(sekolahId, file);
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
+            const fd = new FormData(); fd.append('file', file);
+            const res = await fetch(`/api/sekolah/${sekolahId}/upload-denah`, {
+                method: 'POST', body: fd, credentials: 'include', signal: controller.signal,
+            });
+            clearTimeout(timeoutId);
+            if (!res.ok) {
+                const data = await res.json().catch(() => ({}));
+                throw new Error(data.error || `Upload gagal (${res.status})`);
+            }
             toast.success('Denah sekolah berhasil diupload');
             const updated = await sekolahApi.getById(sekolahId);
             setSekolahData(updated);
-        } catch (err) { toast.error(err.message || 'Gagal upload denah sekolah'); }
+        } catch (err) {
+            if (err.name === 'AbortError') {
+                toast.error('Upload timeout — pastikan nginx client_max_body_size sudah diset minimal 10M');
+            } else {
+                toast.error(err.message || 'Gagal upload denah sekolah');
+            }
+        }
         finally { setUploadingDenah(false); }
     };
 
