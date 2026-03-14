@@ -135,6 +135,7 @@ const Proposal = ({ readOnly = false }) => {
 
     // Form State
     const [formSekolah, setFormSekolah] = useState('');
+    const [saving, setSaving] = useState(false);
     const [formData, setFormData] = useState(INITIAL_FORM_DATA);
 
     // Auto-select school for sekolah role
@@ -202,6 +203,7 @@ const Proposal = ({ readOnly = false }) => {
         if (!formData.target?.trim()) { toast.error('Target wajib diisi'); return; }
         if (!formData.keterangan?.trim()) { toast.error('Keterangan wajib diisi'); return; }
         if (!editItem && !formData.proposalFile) { toast.error('Upload Proposal (PDF) wajib diisi'); return; }
+        setSaving(true);
         const pdfFile = formData.proposalFile;
         const payload = { ...formData, nilaiPengajuan: parseFloat(rawValue) };
         // Convert empty date strings to null to avoid PostgreSQL error
@@ -232,6 +234,8 @@ const Proposal = ({ readOnly = false }) => {
             setShowModal(false); resetForm();
         } catch (err) {
             toast.error(err?.message || 'Gagal menyimpan proposal');
+        } finally {
+            setSaving(false);
         }
     };
 
@@ -587,7 +591,7 @@ const Proposal = ({ readOnly = false }) => {
 
                             {isAdminOrVerifikator && (<div className="form-row"><div className="form-group"><label className="form-label">No Agenda Surat</label><input className="form-input" value={formData.noAgendaSurat || ''} onChange={e => setFormData({ ...formData, noAgendaSurat: e.target.value })} /></div><div className="form-group"><label className="form-label">Tanggal Surat</label><input className="form-input" type="date" value={formData.tanggalSurat || ''} onChange={e => setFormData({ ...formData, tanggalSurat: e.target.value })} /></div></div>)}
                         </div>
-                        <div className="modal-footer"><button className="btn btn-ghost" onClick={() => { setShowModal(false); resetForm(); }}>Batal</button><button className="btn btn-primary" onClick={handleSave} disabled={!editItem && !formSekolah}><Save size={14} /> Simpan</button></div>
+                        <div className="modal-footer"><button className="btn btn-ghost" onClick={() => { setShowModal(false); resetForm(); }}>Batal</button><button className="btn btn-primary" onClick={handleSave} disabled={saving || (!editItem && !formSekolah)}>{saving ? <><span className="spinner" style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.6s linear infinite', marginRight: 6, verticalAlign: 'middle' }} /> Menyimpan...</> : <><Save size={14} /> Simpan</>}</button></div>
                     </div>
                 </div>
             )}
