@@ -439,9 +439,7 @@ const UploadFormKerusakan = () => {
                                                                 <input type="file" accept="application/pdf" style={{ display: 'none' }} onChange={(e) => { handleDirectUpload(e, d); setOpenActionId(null); }} />
                                                             </label>
                                                         )}
-                                                        {canVerify && (
-                                                            ((isKorwil && d.status === 'Menunggu Verifikasi Korwil') || 
-                                                             ((isAdmin || isVerifikator) && d.status === 'Menunggu Verifikasi')) && (
+                                                        {canVerify && ((isKorwil && d.status === 'Menunggu Verifikasi Korwil') || ((isAdmin || isVerifikator) && d.status === 'Menunggu Verifikasi')) && (
                                                             <>
                                                                 <button className="dropdown-item" onClick={() => { handleVerify(d.id); setOpenActionId(null); }}>
                                                                     <CheckCircle size={14} style={{ marginRight: 8, color: 'var(--accent-green)' }} /> Verifikasi
