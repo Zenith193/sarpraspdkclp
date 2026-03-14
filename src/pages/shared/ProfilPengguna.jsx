@@ -244,37 +244,32 @@ const ProfilPengguna = () => {
     };
 
     const handlePreview = async (type) => {
-        if (type === 'kop') setLoadingPreview(true);
+        if (type === 'denah') {
+            // PDF → open directly in new tab (cookies sent automatically for same-origin)
+            window.open(`/api/sekolah/${sekolahId}/download-denah`, '_blank');
+            return;
+        }
+        // Word (.docx) → convert to HTML with mammoth
+        setLoadingPreview(true);
         try {
-            const blob = type === 'kop'
-                ? await sekolahApi.downloadKop(sekolahId)
-                : await sekolahApi.downloadDenah(sekolahId);
+            const blob = await sekolahApi.downloadKop(sekolahId);
             if (!blob || blob.size === 0) { toast.error('File tidak ditemukan'); setLoadingPreview(false); return; }
-
-            if (type === 'denah') {
-                // PDF → open in new tab
-                const blobUrl = URL.createObjectURL(blob);
-                window.open(blobUrl, '_blank');
-            } else {
-                // Word (.docx) → convert to HTML with mammoth
-                try {
-                    const arrayBuffer = await blob.arrayBuffer();
-                    const result = await mammoth.convertToHtml({ arrayBuffer });
-                    if (!result.value || result.value.trim() === '') {
-                        toast.error('File Word kosong atau format tidak didukung (.doc lama). Gunakan format .docx');
-                    } else {
-                        setWordPreviewHtml(result.value);
-                    }
-                } catch (convErr) {
-                    console.error('Mammoth conversion error:', convErr);
-                    toast.error('Format file .doc (lama) tidak didukung untuk preview. Silakan upload ulang dalam format .docx, atau gunakan tombol Download.');
+            try {
+                const arrayBuffer = await blob.arrayBuffer();
+                const result = await mammoth.convertToHtml({ arrayBuffer });
+                if (!result.value || result.value.trim() === '') {
+                    toast.error('File Word kosong atau format tidak didukung (.doc lama). Gunakan format .docx');
+                } else {
+                    setWordPreviewHtml(result.value);
                 }
-                setLoadingPreview(false);
+            } catch (convErr) {
+                console.error('Mammoth conversion error:', convErr);
+                toast.error('Format file .doc (lama) tidak didukung untuk preview. Silakan upload ulang dalam format .docx, atau gunakan tombol Download.');
             }
         } catch (err) {
             toast.error('Gagal memuat file: ' + (err.message || 'File tidak ditemukan'));
-            setLoadingPreview(false);
         }
+        setLoadingPreview(false);
     };
 
     const handleDeleteFile = async (type) => {
