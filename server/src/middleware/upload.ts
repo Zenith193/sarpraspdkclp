@@ -107,7 +107,7 @@ export function forwardToNas(
                     fs.renameSync(file.path, finalLocalPath);
                     (file as any).finalPath = finalLocalPath;
                     (file as any).storedAt = 'local';
-                    (file as any).uploadPending = true; // Queue worker will upload to GDrive and update DB path
+                    (file as any).uploadPending = false; // Instant save for user, queue worker handles GDrive sync silently
                 } else {
                     const result = await uploadToNas(file.path, category, sekolah, extra);
                     (file as any).storedAt = result.stored;

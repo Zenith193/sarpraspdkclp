@@ -10,9 +10,21 @@ import { db } from '../db/index.js';
 import { sarprasFoto, formKerusakan, prestasi, proposal, proposalFoto, bastTemplate, riwayatBantuan } from '../db/schema/index.js';
 import { sarpras } from '../db/schema/sarpras.js';
 import { sekolah } from '../db/schema/sekolah.js';
-import { eq } from 'drizzle-orm';
+import { eq, or, and, not, like, type AnyColumn } from 'drizzle-orm';
 import { isGDriveEnabled } from '../utils/googleDriveClient.js';
 import fs from 'fs';
+
+/**
+ * Build a condition that matches items needing GDrive upload:
+ * - uploadStatus = 'uploading' (explicit pending)
+ * - OR uploadStatus = 'done' AND filePath NOT like 'gdrive://%' (locally saved, needs sync)
+ */
+function needsGDriveSync(statusCol: AnyColumn, pathCol: AnyColumn) {
+    return or(
+        eq(statusCol, 'uploading'),
+        and(eq(statusCol, 'done'), not(like(pathCol, 'gdrive://%')))
+    );
+}
 
 // ==================== DELETE QUEUE ====================
 // In-memory queue for GDrive file deletions
@@ -73,7 +85,7 @@ async function processUploadQueue() {
     const { uploadFileToGDrive } = await getGDriveUtils();
 
     // 1. sarpras_foto — build full folder path: kecamatan/namaSekolah_npsn/sarpras/masaBangunan/namaRuang
-    const pendingFotos = await db.select().from(sarprasFoto).where(eq(sarprasFoto.uploadStatus, 'uploading')).limit(5);
+    const pendingFotos = await db.select().from(sarprasFoto).where(needsGDriveSync(sarprasFoto.uploadStatus, sarprasFoto.filePath)).limit(5);
     for (const foto of pendingFotos) {
         if (!foto.filePath || !fs.existsSync(foto.filePath)) {
             await db.update(sarprasFoto).set({ uploadStatus: 'failed' }).where(eq(sarprasFoto.id, foto.id));
@@ -105,7 +117,7 @@ async function processUploadQueue() {
     }
 
     // 2. form_kerusakan
-    const pendingKerusakan = await db.select().from(formKerusakan).where(eq(formKerusakan.uploadStatus, 'uploading')).limit(5);
+    const pendingKerusakan = await db.select().from(formKerusakan).where(needsGDriveSync(formKerusakan.uploadStatus, formKerusakan.filePath)).limit(5);
     for (const item of pendingKerusakan) {
         if (!item.filePath || !fs.existsSync(item.filePath)) {
             await db.update(formKerusakan).set({ uploadStatus: 'failed' }).where(eq(formKerusakan.id, item.id));
@@ -130,7 +142,7 @@ async function processUploadQueue() {
     }
 
     // 3. prestasi
-    const pendingPrestasi = await db.select().from(prestasi).where(eq(prestasi.uploadStatus, 'uploading')).limit(5);
+    const pendingPrestasi = await db.select().from(prestasi).where(needsGDriveSync(prestasi.uploadStatus, prestasi.sertifikatPath)).limit(5);
     for (const item of pendingPrestasi) {
         if (!item.sertifikatPath || !fs.existsSync(item.sertifikatPath)) {
             await db.update(prestasi).set({ uploadStatus: 'failed' }).where(eq(prestasi.id, item.id));
@@ -155,7 +167,7 @@ async function processUploadQueue() {
     }
 
     // 4. proposal
-    const pendingProposal = await db.select().from(proposal).where(eq(proposal.uploadStatus, 'uploading')).limit(5);
+    const pendingProposal = await db.select().from(proposal).where(needsGDriveSync(proposal.uploadStatus, proposal.filePath)).limit(5);
     for (const item of pendingProposal) {
         if (!item.filePath || !fs.existsSync(item.filePath)) {
             await db.update(proposal).set({ uploadStatus: 'failed' }).where(eq(proposal.id, item.id));
@@ -179,7 +191,7 @@ async function processUploadQueue() {
     }
 
     // 5. proposal_foto
-    const pendingProposalFoto = await db.select().from(proposalFoto).where(eq(proposalFoto.uploadStatus, 'uploading')).limit(5);
+    const pendingProposalFoto = await db.select().from(proposalFoto).where(needsGDriveSync(proposalFoto.uploadStatus, proposalFoto.filePath)).limit(5);
     for (const item of pendingProposalFoto) {
         if (!item.filePath || !fs.existsSync(item.filePath)) {
             await db.update(proposalFoto).set({ uploadStatus: 'failed' }).where(eq(proposalFoto.id, item.id));
@@ -205,7 +217,7 @@ async function processUploadQueue() {
     }
 
     // 6. bast_template
-    const pendingTemplate = await db.select().from(bastTemplate).where(eq(bastTemplate.uploadStatus, 'uploading')).limit(5);
+    const pendingTemplate = await db.select().from(bastTemplate).where(needsGDriveSync(bastTemplate.uploadStatus, bastTemplate.filePath)).limit(5);
     for (const item of pendingTemplate) {
         if (!item.filePath || !fs.existsSync(item.filePath)) {
             await db.update(bastTemplate).set({ uploadStatus: 'failed' }).where(eq(bastTemplate.id, item.id));
@@ -225,7 +237,7 @@ async function processUploadQueue() {
     }
 
     // 6b. riwayat_bantuan
-    const pendingRiwayat = await db.select().from(riwayatBantuan).where(eq(riwayatBantuan.uploadStatus, 'uploading')).limit(5);
+    const pendingRiwayat = await db.select().from(riwayatBantuan).where(needsGDriveSync(riwayatBantuan.uploadStatus, riwayatBantuan.filePath)).limit(5);
     for (const item of pendingRiwayat) {
         if (!item.filePath || !fs.existsSync(item.filePath)) {
             await db.update(riwayatBantuan).set({ uploadStatus: 'failed' }).where(eq(riwayatBantuan.id, item.id));
@@ -249,7 +261,7 @@ async function processUploadQueue() {
     }
 
     // 7. kop_sekolah
-    const pendingKop = await db.select().from(sekolah).where(eq(sekolah.kopUploadStatus, 'uploading')).limit(5);
+    const pendingKop = await db.select().from(sekolah).where(needsGDriveSync(sekolah.kopUploadStatus, sekolah.kopSekolah)).limit(5);
     for (const item of pendingKop) {
         if (!item.kopSekolah || !fs.existsSync(item.kopSekolah)) {
             await db.update(sekolah).set({ kopUploadStatus: 'failed' }).where(eq(sekolah.id, item.id));
@@ -269,7 +281,7 @@ async function processUploadQueue() {
     }
 
     // 8. denah_sekolah
-    const pendingDenah = await db.select().from(sekolah).where(eq(sekolah.denahUploadStatus, 'uploading')).limit(5);
+    const pendingDenah = await db.select().from(sekolah).where(needsGDriveSync(sekolah.denahUploadStatus, sekolah.denahSekolah)).limit(5);
     for (const item of pendingDenah) {
         if (!item.denahSekolah || !fs.existsSync(item.denahSekolah)) {
             await db.update(sekolah).set({ denahUploadStatus: 'failed' }).where(eq(sekolah.id, item.id));
