@@ -624,7 +624,26 @@ const DataSarpras = ({ readOnly = false }) => {
                 const count = item.fotoCount || 0;
                 if (count === 0) return <div style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-input)', borderRadius: 'var(--radius-sm)', color: 'var(--text-secondary)' }}><Image size={14} /></div>;
                 return (
-                    <div style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }} onClick={() => handleViewDetail(item)}>
+                    <div style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }} onClick={async () => {
+                        try {
+                            const detail = await sarprasApi.getById(item.id || item.sarpras?.id);
+                            const fotos = (detail?.fotos || []).map(f => ({
+                                id: f.id,
+                                name: f.fileName || f.name || 'foto',
+                                url: `/api/foto/${f.id}`,
+                                proxyUrl: `/api/foto/${f.id}`,
+                                geo: (f.geoLat && f.geoLng) ? { lat: f.geoLat, lng: f.geoLng } : null,
+                            }));
+                            if (fotos.length > 0) {
+                                setPhotoIdx(0);
+                                setPhotoModal({ ...item, foto: fotos });
+                            } else {
+                                handleViewDetail(item);
+                            }
+                        } catch {
+                            handleViewDetail(item);
+                        }
+                    }}>
                         <div style={{ width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(59,130,246,0.1)', borderRadius: 'var(--radius-sm)', color: 'var(--accent-blue)' }}>
                             <Image size={16} />
                         </div>
