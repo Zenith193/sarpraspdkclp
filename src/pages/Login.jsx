@@ -205,7 +205,7 @@ const Login = () => {
                         {/* Progress info */}
                         <div className="login-transition-info">
                             <div className="login-transition-logo">
-                                <School size={24} />
+                                <img src="/favicon.png" alt="Logo" style={{ width: 24, height: 24, objectFit: 'contain' }} />
                                 <span>SARDIKA</span>
                             </div>
                             <div className="login-transition-greeting">
@@ -237,7 +237,7 @@ const Login = () => {
             <div className="login-left">
                 <div className="login-logo">
                     <div className="login-logo-icon">
-                        <School size={28} />
+                        <img src="/favicon.png" alt="Logo" style={{ width: 32, height: 32, objectFit: 'contain' }} />
                     </div>
                     <h1>SARDIKA</h1>
                 </div>

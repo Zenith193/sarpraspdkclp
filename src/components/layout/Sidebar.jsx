@@ -143,7 +143,7 @@ const Sidebar = ({ collapsed, onToggle, className = '' }) => {
         <div className={`sidebar ${collapsed ? 'collapsed' : ''} ${className}`}>
             <div className="sidebar-header">
                 <div className="sidebar-logo">
-                    <School size={20} />
+                    <img src="/favicon.png" alt="Logo" style={{ width: 28, height: 28, objectFit: 'contain' }} />
                 </div>
                 {!collapsed && (
                     <div className="sidebar-brand">
@@ -327,7 +327,7 @@ const Sidebar = ({ collapsed, onToggle, className = '' }) => {
                         {/* Thank you info */}
                         <div className="logout-transition-info">
                             <div className="logout-transition-logo">
-                                <School size={24} />
+                                <img src="/favicon.png" alt="Logo" style={{ width: 24, height: 24, objectFit: 'contain' }} />
                                 <span>SARDIKA</span>
                             </div>
                             <div className="logout-transition-thanks">
