@@ -165,6 +165,8 @@ const Proposal = ({ readOnly = false }) => {
     const [batchImporting, setBatchImporting] = useState(false);
     const [realisasiModal, setRealisasiModal] = useState(null);
     const [proposalTab, setProposalTab] = useState('aktif'); // 'aktif' | 'realisasi'
+    const [realisasiPage, setRealisasiPage] = useState(1);
+    const [realisasiPerPage, setRealisasiPerPage] = useState(10);
 
     // ===== FILTERING =====
     const filtered = useMemo(() => {
@@ -186,13 +188,15 @@ const Proposal = ({ readOnly = false }) => {
     const filteredAktif = useMemo(() => filtered.filter(p => !p.statusUsulan), [filtered]);
     const filteredRealisasi = useMemo(() => filtered.filter(p => !!p.statusUsulan), [filtered]);
 
-    // Summary stats
+    // Summary stats (count ALL proposals)
     const stats = useMemo(() => {
-        const src = filteredAktif;
+        const src = filtered;
         const uniqueSchools = new Set(src.map(p => p.npsn)).size;
         const totalPengajuan = src.reduce((sum, p) => sum + (Number(p.nilaiPengajuan) || 0), 0);
-        return { jumlahProposal: src.length, jumlahSekolah: uniqueSchools, totalPengajuan };
-    }, [filteredAktif]);
+        const aktifCount = filteredAktif.length;
+        const realisasiCount = filteredRealisasi.length;
+        return { jumlahProposal: src.length, jumlahSekolah: uniqueSchools, totalPengajuan, aktifCount, realisasiCount };
+    }, [filtered, filteredAktif, filteredRealisasi]);
 
     const paged = useMemo(() => {
         return filteredAktif.slice((page - 1) * perPage, page * perPage);
@@ -526,6 +530,9 @@ const Proposal = ({ readOnly = false }) => {
                     <div style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', padding: '16px 20px', border: '1px solid var(--border-color)' }}>
                         <div style={{ fontSize: 12, color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: 0.5 }}>Jumlah Proposal</div>
                         <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-primary)', marginTop: 4 }}>{stats.jumlahProposal}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>
+                            <span style={{ color: 'var(--accent-blue)' }}>{stats.aktifCount} aktif</span> · <span style={{ color: 'var(--accent-green)' }}>{stats.realisasiCount} terealisasi</span>
+                        </div>
                     </div>
                     <div style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', padding: '16px 20px', border: '1px solid var(--border-color)' }}>
                         <div style={{ fontSize: 12, color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: 0.5 }}>Jumlah Sekolah Pengaju</div>
@@ -708,10 +715,33 @@ const Proposal = ({ readOnly = false }) => {
                 <div className="table-container" style={{ borderTopLeftRadius: 0, borderTopRightRadius: 0 }}>
                     <div className="table-toolbar">
                         <div className="table-toolbar-left">
-                            <div className="table-search"><Search size={16} className="search-icon" /><input placeholder="Cari proposal terealisasi..." value={search} onChange={e => { setSearch(e.target.value); }} /></div>
+                            <div className="table-search"><Search size={16} className="search-icon" /><input placeholder="Cari proposal terealisasi..." value={search} onChange={e => { setSearch(e.target.value); setRealisasiPage(1); }} /></div>
+
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                Tampil
+                                <select
+                                    value={realisasiPerPage}
+                                    onChange={(e) => { setRealisasiPerPage(Number(e.target.value)); setRealisasiPage(1); }}
+                                    style={{ padding: '4px 8px', background: 'var(--bg-input)', border: '1px solid var(--border-input)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.8rem' }}
+                                >
+                                    <option value="10">10</option>
+                                    <option value="15">15</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                </select>
+                                data
+                            </div>
+
+                            {!isSekolah && (
+                            <div style={{ position: 'relative' }} ref={filterPanelRef}>
+                                <button className={`btn ${activeFilterCount > 0 ? 'btn-primary' : 'btn-ghost'} btn-sm`} onClick={() => setShowFilterPanel(!showFilterPanel)}><Filter size={14} /> Filter {activeFilterCount > 0 && <span style={{ background: '#fff', color: 'var(--accent-blue)', borderRadius: 'var(--radius-full)', width: 18, height: 18, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, marginLeft: 2 }}>{activeFilterCount}</span>}</button>
+                                {showFilterPanel && (<div className="dropdown-menu" style={{ right: 0, top: '100%', marginTop: 4, minWidth: 400, padding: 16, zIndex: 50 }}><div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}><div><label style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Kecamatan</label><SearchableSelect options={KECAMATAN} value={headerFilters.kecamatan} onChange={v => { setHeaderFilters(prev => ({ ...prev, kecamatan: v })); setRealisasiPage(1); }} placeholder="Semua" /></div><div><label style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Jenjang</label><select className="form-select" value={headerFilters.jenjang} onChange={e => { setHeaderFilters(prev => ({ ...prev, jenjang: e.target.value })); setRealisasiPage(1); }}><option value="">Semua</option>{JENJANG.map(j => <option key={j} value={j}>{j}</option>)}</select></div></div></div>)}
+                            </div>
+                            )}
                         </div>
                         <div className="table-toolbar-right">
                             <button className="btn btn-secondary btn-sm" onClick={() => handleExport('excel')}><FileSpreadsheet size={14} /> Excel</button>
+                            <button className="btn btn-secondary btn-sm" onClick={() => handleExport('pdf')}><FileText size={14} /> PDF</button>
                         </div>
                     </div>
                     <div style={{ overflowX: 'auto' }}>
@@ -720,9 +750,9 @@ const Proposal = ({ readOnly = false }) => {
                                 <tr><th>No</th><th>Nama Sekolah</th><th>NPSN</th><th>Kecamatan</th><th>Sub Kegiatan</th><th>Nilai Pengajuan</th><th>Target</th><th>Nama Bantuan</th><th>Aksi</th></tr>
                             </thead>
                             <tbody>
-                                {filteredRealisasi.map((item, i) => (
+                                {filteredRealisasi.slice((realisasiPage - 1) * realisasiPerPage, realisasiPage * realisasiPerPage).map((item, i) => (
                                     <tr key={item.id}>
-                                        <td>{i + 1}</td>
+                                        <td>{(realisasiPage - 1) * realisasiPerPage + i + 1}</td>
                                         <td>{item.namaSekolah}</td>
                                         <td>{item.npsn}</td>
                                         <td>{item.kecamatan}</td>
@@ -746,6 +776,16 @@ const Proposal = ({ readOnly = false }) => {
                             </tbody>
                         </table>
                     </div>
+                    {(() => { const rTotalPages = Math.ceil(filteredRealisasi.length / realisasiPerPage) || 1; return (
+                        <div className="table-pagination">
+                            <div className="table-pagination-info">Menampilkan {Math.min((realisasiPage - 1) * realisasiPerPage + 1, filteredRealisasi.length)}-{Math.min(realisasiPage * realisasiPerPage, filteredRealisasi.length)} dari {filteredRealisasi.length}</div>
+                            <div className="table-pagination-controls">
+                                <button onClick={() => setRealisasiPage(Math.max(1, realisasiPage - 1))} disabled={realisasiPage === 1}>‹</button>
+                                {Array.from({ length: Math.min(rTotalPages, 5) }, (_, i) => i + 1).map(p => (<button key={p} className={p === realisasiPage ? 'active' : ''} onClick={() => setRealisasiPage(p)}>{p}</button>))}
+                                <button onClick={() => setRealisasiPage(Math.min(rTotalPages, realisasiPage + 1))} disabled={realisasiPage === rTotalPages}>›</button>
+                            </div>
+                        </div>
+                    ); })()}
                 </div>
             )}
 
