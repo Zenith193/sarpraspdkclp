@@ -342,6 +342,7 @@ const VerifikasiSarpras = () => {
                             </div>
                             <div style={{ display: 'flex', gap: 8, marginTop: 20, justifyContent: 'flex-end' }}>
                                 <button className="btn btn-success" onClick={() => handleVerify(detailItem.id, true)}><CheckCircle size={16} /> Setujui</button>
+                                <button className="btn" style={{ background: 'rgba(249,115,22,0.15)', color: '#f97316', border: '1px solid rgba(249,115,22,0.3)' }} onClick={() => { setAlasanModal({ id: detailItem.id, type: 'revisi' }); setDetailItem(null); }}><RotateCcw size={16} /> Revisi</button>
                                 <button className="btn btn-danger" onClick={() => handleVerify(detailItem.id, false)}><XCircle size={16} /> Tolak</button>
                             </div>
                         </div>
