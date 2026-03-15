@@ -101,14 +101,50 @@ export function forwardToNas(
         const processFile = async (file: Express.Multer.File) => {
             try {
                 if (isGDriveEnabled()) {
-                    // Save locally — uploadQueue will handle GDrive upload in background
-                    const localDest = getLocalDestination(category, body);
-                    const finalLocalPath = path.join(localDest, file.filename);
-                    fs.renameSync(file.path, finalLocalPath);
-
-                    (file as any).finalPath = finalLocalPath;
-                    (file as any).storedAt = 'local';
-                    (file as any).uploadPending = true;
+                    // Upload directly to GDrive
+                    try {
+                        const { uploadFileToGDrive } = await import('../utils/googleDriveClient.js');
+                        // Build subPath for folder hierarchy
+                        let subPath = category;
+                        if (sekolah) {
+                            switch (category) {
+                                case 'sarpras':
+                                    subPath = `${sekolah.kecamatan}/${sekolah.nama}_${sekolah.npsn}/data sarpras`;
+                                    if (extra.masaBangunan) subPath += `/${extra.masaBangunan}`;
+                                    if (extra.namaRuang) subPath += `/${extra.namaRuang}`;
+                                    break;
+                                case 'proposal':
+                                    subPath = `${sekolah.kecamatan}/${sekolah.nama}_${sekolah.npsn}/proposal`;
+                                    break;
+                                case 'kerusakan':
+                                    subPath = `${sekolah.kecamatan}/${sekolah.nama}_${sekolah.npsn}/form kerusakan`;
+                                    break;
+                                case 'prestasi':
+                                    subPath = `${sekolah.kecamatan}/${sekolah.nama}_${sekolah.npsn}/prestasi`;
+                                    break;
+                                case 'bast':
+                                    subPath = `${sekolah.kecamatan}/${sekolah.nama}_${sekolah.npsn}/bast`;
+                                    break;
+                                default:
+                                    subPath = `${sekolah.kecamatan}/${sekolah.nama}_${sekolah.npsn}/${category}`;
+                            }
+                        }
+                        const result = await uploadFileToGDrive(file.path, category, subPath);
+                        (file as any).finalPath = result.path;
+                        (file as any).storedAt = 'gdrive';
+                        (file as any).uploadPending = false;
+                        // Delete temp file after successful upload
+                        try { fs.unlinkSync(file.path); } catch { }
+                    } catch (gdriveErr) {
+                        console.error('GDrive direct upload failed, falling back to local:', gdriveErr);
+                        // Fallback: save locally, queue will handle later
+                        const localDest = getLocalDestination(category, body);
+                        const finalLocalPath = path.join(localDest, file.filename);
+                        fs.renameSync(file.path, finalLocalPath);
+                        (file as any).finalPath = finalLocalPath;
+                        (file as any).storedAt = 'local';
+                        (file as any).uploadPending = true;
+                    }
                 } else {
                     const result = await uploadToNas(file.path, category, sekolah, extra);
                     (file as any).storedAt = result.stored;
