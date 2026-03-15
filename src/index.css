@@ -575,17 +575,14 @@ textarea {
 }
 
 .login-logo-icon {
-  width: 56px;
-  height: 56px;
-  background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
-  border-radius: var(--radius-lg);
+  width: 48px;
+  height: 60px;
+  background: transparent;
+  border-radius: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
-  font-size: 24px;
-  font-weight: 800;
-  box-shadow: 0 4px 20px rgba(59, 130, 246, 0.3);
+  box-shadow: none;
 }
 
 .login-logo h1 {
@@ -944,17 +941,14 @@ textarea {
 }
 
 .sidebar-logo {
-  width: 38px;
-  height: 38px;
-  min-width: 38px;
-  background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-purple) 100%);
-  border-radius: var(--radius-md);
+  width: 32px;
+  height: 40px;
+  min-width: 32px;
+  background: transparent;
+  border-radius: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
-  font-weight: 800;
-  font-size: 16px;
 }
 
 .sidebar-brand {

@@ -237,7 +237,7 @@ const Login = () => {
             <div className="login-left">
                 <div className="login-logo">
                     <div className="login-logo-icon">
-                        <img src="/favicon.png" alt="Logo" style={{ width: 44, height: 44, objectFit: 'contain' }} />
+                        <img src="/favicon.png" alt="Logo" style={{ width: 44, height: 56, objectFit: 'contain' }} />
                     </div>
                     <h1>SARDIKA</h1>
                 </div>
