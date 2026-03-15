@@ -174,7 +174,7 @@ const DashboardKorwil = () => {
             </div>
 
             {/* Stat Cards */}
-            <div className="stats-grid" style={{ marginBottom: 20 }}>
+            <div className="stats-grid" style={{ marginBottom: 20, gridTemplateColumns: 'repeat(6, 1fr)' }}>
                 <div className="stat-card"><div className="stat-label"><Database size={14} style={{ color: 'var(--accent-blue)' }} /> Total Sarpras</div><div className="stat-value">{loading ? '...' : formatNumber(sarprasStats.total)}</div></div>
                 <div className="stat-card"><div className="stat-label"><Building2 size={14} style={{ color: 'var(--accent-purple)' }} /> Jumlah Sekolah</div><div className="stat-value" style={{ color: 'var(--accent-purple)' }}>{formatNumber(jumlahSekolah)}</div></div>
                 <div className="stat-card"><div className="stat-label"><CheckCircle size={14} style={{ color: '#22c55e' }} /> Baik</div><div className="stat-value" style={{ color: '#22c55e' }}>{loading ? '...' : formatNumber(sarprasStats.baik)}</div></div>
@@ -184,7 +184,7 @@ const DashboardKorwil = () => {
             </div>
 
             {/* Summary Cards */}
-            <div className="summary-grid" style={{ marginBottom: 24 }}>
+            <div className="summary-grid" style={{ marginBottom: 24, gridTemplateColumns: 'repeat(3, 1fr)' }}>
                 <div className="summary-card">
                     <div className="summary-card-header"><div className="summary-card-title">Rekap Sarpras {jenjang}</div><div className="summary-card-icon" style={{ background: 'rgba(59,130,246,0.1)', color: 'var(--accent-blue)' }}><Building2 size={16} /></div></div>
                     <div className="summary-card-value">{loading ? '...' : formatNumber(sarprasStats.total)}</div>
