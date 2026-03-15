@@ -211,7 +211,7 @@ const ProfilPengguna = () => {
         setUploadingDenah(true);
         try {
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 30000);
+            const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minutes for GDrive sync
             const fd = new FormData(); fd.append('file', file);
             const res = await fetch(`/api/sekolah/${sekolahId}/upload-denah`, {
                 method: 'POST', body: fd, credentials: 'include', signal: controller.signal,
@@ -226,7 +226,7 @@ const ProfilPengguna = () => {
             setSekolahData(updated);
         } catch (err) {
             if (err.name === 'AbortError') {
-                toast.error('Upload timeout — pastikan nginx client_max_body_size sudah diset minimal 10M');
+                toast.error('Upload timeout — file terlalu besar atau koneksi lambat. Coba lagi.');
             } else {
                 toast.error(err.message || 'Gagal upload denah sekolah');
             }

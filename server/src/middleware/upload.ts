@@ -126,7 +126,7 @@ export function forwardToNas(
                     }
                     try {
                         const uploadPromise = uploadFileToGDrive(finalLocalPath, category, gdriveSubPath);
-                        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('GDrive upload timeout')), 30000));
+                        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('GDrive upload timeout (60s)')), 60000));
                         const result = await Promise.race([uploadPromise, timeoutPromise]) as any;
                         (file as any).finalPath = result.path; // gdrive://fileId
                         (file as any).storedAt = 'gdrive';
