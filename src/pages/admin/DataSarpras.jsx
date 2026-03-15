@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { Plus, Search, Download, Eye, Edit, Trash2, X, Star, ChevronLeft, ChevronRight, Upload, Columns, FileSpreadsheet, FileText, FileDown, ChevronDown, Save, Image, MapPin, Building2, AlertTriangle, CheckCircle, Filter, AlertOctagon, UploadCloud, Clock, XCircle, RotateCcw, Check } from 'lucide-react';
+import { Plus, Search, Download, Eye, Edit, Trash2, X, Star, ChevronLeft, ChevronRight, Upload, Columns, FileSpreadsheet, FileText, FileDown, ChevronDown, Save, Image, MapPin, Building2, AlertTriangle, CheckCircle, Filter, AlertOctagon, UploadCloud, Clock, XCircle, RotateCcw, Check, MoreHorizontal } from 'lucide-react';
 import { useSarprasData, useSekolahData, useKorwilData } from '../../data/dataProvider';
 import { KECAMATAN, JENJANG, KONDISI, JENIS_PRASARANA, MASA_BANGUNAN, LANTAI_OPTIONS } from '../../utils/constants';
 import { formatNumber } from '../../utils/formatters';
@@ -70,7 +70,7 @@ const DataSarpras = ({ readOnly = false }) => {
     const [alasanModal, setAlasanModal] = useState(null); // { id, type: 'reject'|'revisi' }
 
     // Column visibility
-    const defaultCols = ['no', ...(canAccessPriority ? ['bintang'] : []), 'namaSekolah', 'npsn', 'jenjang', 'kecamatan', 'masaBangunan', 'jenisPrasarana', 'namaRuang', 'lantai', 'panjang', 'lebar', 'luas', 'kondisi', 'keterangan', 'lastFotoAt', 'foto', 'aksi'];
+    const defaultCols = ['no', ...(canAccessPriority ? ['bintang'] : []), 'namaSekolah', 'masaBangunan', 'jenisPrasarana', 'namaRuang', 'lantai', 'panjang', 'lebar', 'luas', 'kondisi', 'keterangan', 'foto', 'aksi'];
     const [visibleCols, setVisibleCols] = useState(defaultCols);
     const [showColPicker, setShowColPicker] = useState(false);
     const colPickerRef = useRef(null);
@@ -120,12 +120,22 @@ const DataSarpras = ({ readOnly = false }) => {
     const [showFilterPanel, setShowFilterPanel] = useState(false);
     const filterPanelRef = useRef(null);
 
+    const [openActionId, setOpenActionId] = useState(null);
+    const [actionPos, setActionPos] = useState({ top: 0, left: 0 });
+    const handleActionClick = (e, id) => {
+        if (openActionId === id) { setOpenActionId(null); return; }
+        const rect = e.currentTarget.getBoundingClientRect();
+        setActionPos({ top: rect.bottom + 4, left: rect.right - 170 });
+        setOpenActionId(id);
+    };
+
     // Click outside to close panels
     useEffect(() => {
         const handler = (e) => {
             if (filterPanelRef.current && !filterPanelRef.current.contains(e.target)) setShowFilterPanel(false);
             if (colPickerRef.current && !colPickerRef.current.contains(e.target)) setShowColPicker(false);
             if (exportRef.current && !exportRef.current.contains(e.target)) setShowExport(false);
+            setOpenActionId(null);
         };
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
@@ -689,23 +699,9 @@ const DataSarpras = ({ readOnly = false }) => {
                 );
             case 'aksi':
                 return (
-                    <div style={{ display: 'flex', gap: 4 }}>
-                        <button className="btn-icon" onClick={() => handleViewDetail(item)} title="Lihat"><Eye size={16} /></button>
-                        {!readOnly && <button className="btn-icon" onClick={() => handleEdit(item)} title="Edit"><Edit size={16} /></button>}
-                        {!readOnly && (
-                            <button
-                                className="btn-icon"
-                                onClick={() => {
-                                    if (!guard('hapus')) return;
-                                    setDeleteConfirm(item);
-                                }}
-                                title="Hapus"
-                                style={{ color: 'var(--accent-red)' }}
-                            >
-                                <Trash2 size={16} />
-                            </button>
-                        )}
-                    </div>
+                    <button className="btn-icon" onClick={(e) => handleActionClick(e, item.id)} title="Aksi">
+                        <MoreHorizontal size={16} />
+                    </button>
                 );
             case 'panjang': return String(item.panjang ?? 0).replace('.', ',');
             case 'lebar': return String(item.lebar ?? 0).replace('.', ',');
@@ -1077,7 +1073,7 @@ const DataSarpras = ({ readOnly = false }) => {
                             {paged.map((item, i) => (
                                 <tr key={item.id}>
                                     {activeColumns.map(col => (
-                                        <td key={col.key} style={{ textAlign: ['no', 'lantai', 'panjang', 'lebar', 'luas', 'foto', 'bintang', 'masaBangunan'].includes(col.key) ? 'center' : undefined, padding: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                        <td key={col.key} style={{ textAlign: 'center', verticalAlign: 'middle', padding: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                             {renderCell(col, item, i)}
                                         </td>
                                     ))}
@@ -1089,6 +1085,28 @@ const DataSarpras = ({ readOnly = false }) => {
                         </tbody>
                     </table>
                 </div>
+                {/* Fixed-position action dropdown */}
+                {openActionId && (() => {
+                    const item = paged.find(p => p.id === openActionId);
+                    if (!item) return null;
+                    return (
+                        <div className="dropdown-menu" style={{ position: 'fixed', top: actionPos.top, left: actionPos.left, minWidth: 170, padding: 4, zIndex: 9999, boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}>
+                            <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-primary)', borderRadius: 6 }} className="dropdown-item" onClick={() => { handleViewDetail(item); setOpenActionId(null); }}>
+                                <Eye size={14} /> Lihat Detail
+                            </button>
+                            {!readOnly && (
+                                <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-primary)', borderRadius: 6 }} className="dropdown-item" onClick={() => { handleEdit(item); setOpenActionId(null); }}>
+                                    <Edit size={14} /> Edit
+                                </button>
+                            )}
+                            {!readOnly && (
+                                <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--accent-red)', borderRadius: 6 }} className="dropdown-item" onClick={() => { if (!guard('hapus')) return; setDeleteConfirm(item); setOpenActionId(null); }}>
+                                    <Trash2 size={14} /> Hapus
+                                </button>
+                            )}
+                        </div>
+                    );
+                })()}
 
                 <div className="table-pagination">
                     <div className="table-pagination-info" style={{ fontSize: '0.8rem' }}>Menampilkan {filtered.length > 0 ? (page - 1) * perPage + 1 : 0}-{Math.min(page * perPage, filtered.length)} dari {filtered.length} data</div>

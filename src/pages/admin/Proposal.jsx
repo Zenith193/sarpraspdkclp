@@ -576,7 +576,7 @@ const Proposal = ({ readOnly = false }) => {
                 </div>
             )}
 
-            {(canManageKeranjang || isKorwil) && (
+            {canManageKeranjang && (
                 <div className="keranjang-tabs">
                     <button className={`keranjang-tab ${headerFilters.keranjang === '' ? 'active' : ''}`} onClick={() => { setHeaderFilters(prev => ({ ...prev, keranjang: '' })); setPage(1); }}>Semua</button>
                     {KERANJANG.map(k => (<button key={k} className={`keranjang-tab ${headerFilters.keranjang === k ? 'active' : ''}`} onClick={() => { setHeaderFilters(prev => ({ ...prev, keranjang: k })); setPage(1); }}>{k.replace('Keranjang Usulan ', '')}</button>))}

@@ -68,6 +68,13 @@ const CountdownSettings = () => {
         return () => clearInterval(i);
     }, [countdownTimers]);
 
+    // Click outside to close dropdown
+    useEffect(() => {
+        const handler = () => setOpenActionId(null);
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
     const saveToServer = async (timers) => {
         try {
             await settingsApi.setCountdown({ timers });
