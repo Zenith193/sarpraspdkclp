@@ -473,7 +473,7 @@ const Proposal = ({ readOnly = false }) => {
                                 <th>Target</th>
                                 {(isAdminOrVerifikator || isKorwil) && <th>Status</th>}
                                 {isAdmin && <th>Prioritas</th>}
-                                {(canManageKeranjang || isKorwil) && <th>Keranjang</th>}
+                                {canManageKeranjang && <th>Keranjang</th>}
                                 <th>Aksi</th>
                             </tr>
                         </thead>
@@ -489,7 +489,7 @@ const Proposal = ({ readOnly = false }) => {
                                     <td>{item.target}</td>
                                     {(isAdminOrVerifikator || isKorwil) && <td>{getStatusBadge(item.status)}</td>}
                                     {isAdmin && <td>{renderPriorityStar(item.bintang === 1, item.id)}</td>}
-                                    {(canManageKeranjang || isKorwil) && (
+                                    {canManageKeranjang && (
                                         <td>
                                             <span className="badge badge-disetujui" style={{ fontSize: 10 }}>
                                                 {item.keranjang?.replace('Keranjang Usulan ', '') || '-'}
@@ -499,22 +499,21 @@ const Proposal = ({ readOnly = false }) => {
                                     <td>
                                         <div style={{ display: 'flex', gap: 4 }}>
                                             <button className="btn-icon" onClick={() => setViewItem(item)} title="Lihat"><Eye size={16} /></button>
-                                            {!readOnly && !isSekolah && (
-                                                <>
-                                                    <button className="btn-icon" onClick={() => handleOpenModal(item)} title="Edit"><Edit size={16} /></button>
-                                                    {/* Tombol Hapus diubah untuk membuka modal konfirmasi */}
-                                                    <button
-                                                        className="btn-icon"
-                                                        onClick={() => {
-                                                            if (!guard('hapus')) return;
-                                                            setDeleteConfirm(item);
-                                                        }}
-                                                        title="Hapus"
-                                                        style={{ color: 'var(--accent-red)' }}
-                                                    >
-                                                        <Trash2 size={16} />
-                                                    </button>
-                                                </>
+                                            {!readOnly && isAdminOrVerifikator && (
+                                                <button className="btn-icon" onClick={() => handleOpenModal(item)} title="Edit"><Edit size={16} /></button>
+                                            )}
+                                            {!readOnly && isAdmin && (
+                                                <button
+                                                    className="btn-icon"
+                                                    onClick={() => {
+                                                        if (!guard('hapus')) return;
+                                                        setDeleteConfirm(item);
+                                                    }}
+                                                    title="Hapus"
+                                                    style={{ color: 'var(--accent-red)' }}
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
                                             )}
                                         </div>
                                     </td>
@@ -636,7 +635,7 @@ const Proposal = ({ readOnly = false }) => {
                             </div>
                             {isAdmin && <div className="form-group"><label className="form-label">Prioritas</label><div>{renderPriorityStar(viewItem.bintang === 1, viewItem.id)}</div></div>}
                         </div>
-                        <div className="modal-footer"><button className="btn btn-ghost" onClick={() => setViewItem(null)}>Tutup</button>{!readOnly && !isSekolah && <button className="btn btn-primary" onClick={() => { setViewItem(null); handleOpenModal(viewItem); }}><Edit size={14} /> Edit Data</button>}</div>
+                        <div className="modal-footer"><button className="btn btn-ghost" onClick={() => setViewItem(null)}>Tutup</button>{!readOnly && isAdminOrVerifikator && <button className="btn btn-primary" onClick={() => { setViewItem(null); handleOpenModal(viewItem); }}><Edit size={14} /> Edit Data</button>}</div>
                     </div>
                 </div>
             )}
