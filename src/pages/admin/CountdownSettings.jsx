@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Timer, Save, RotateCcw, Play, Pause, Clock, Users, ShieldAlert, CheckCircle, XCircle, AlertTriangle } from 'lucide-react';
+import { Timer, Save, RotateCcw, Play, Pause, Clock, Users, ShieldAlert, CheckCircle, XCircle, AlertTriangle, MapPin, GraduationCap } from 'lucide-react';
 import useSettingsStore, { AVAILABLE_ACTIONS } from '../../store/settingsStore';
 import { settingsApi } from '../../api/index';
+import { KECAMATAN, JENJANG } from '../../utils/constants';
+import SearchableSelect from '../../components/ui/SearchableSelect';
 import toast from 'react-hot-toast';
 
 const ROLE_OPTIONS = [
@@ -206,6 +208,88 @@ const CountdownSettings = () => {
                         </div>
                     </div>
 
+                    {/* Filter Jenjang */}
+                    <div className="table-container" style={{ padding: 20, marginBottom: 16, opacity: form.enabled ? 1 : 0.5, pointerEvents: form.enabled ? 'auto' : 'none' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, paddingBottom: 10, borderBottom: '2px solid var(--bg-secondary)' }}>
+                            <GraduationCap size={16} style={{ color: '#8b5cf6' }} />
+                            <h3 style={{ fontSize: '0.9rem', fontWeight: 600, margin: 0 }}>Filter Jenjang</h3>
+                        </div>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 12 }}>
+                            Kosongkan untuk menerapkan ke semua jenjang. Pilih jenjang tertentu agar countdown hanya berlaku untuk jenjang tersebut.
+                        </p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                            {JENJANG.map(j => {
+                                const checked = (form.filterJenjang || []).includes(j);
+                                return (
+                                    <label key={j} style={{
+                                        display: 'flex', alignItems: 'center', gap: 8,
+                                        padding: '8px 14px', borderRadius: 10, cursor: 'pointer',
+                                        border: `2px solid ${checked ? '#8b5cf6' : 'var(--border-color)'}`,
+                                        background: checked ? 'rgba(139,92,246,0.06)' : 'transparent',
+                                        transition: '0.2s', fontSize: '0.85rem'
+                                    }}>
+                                        <input type="checkbox" checked={checked}
+                                            onChange={() => {
+                                                const arr = form.filterJenjang || [];
+                                                handleChange('filterJenjang', checked ? arr.filter(x => x !== j) : [...arr, j]);
+                                            }}
+                                            style={{ accentColor: '#8b5cf6', width: 16, height: 16 }} />
+                                        <span style={{ fontWeight: checked ? 600 : 400, color: checked ? '#8b5cf6' : 'var(--text-primary)' }}>{j}</span>
+                                    </label>
+                                );
+                            })}
+                        </div>
+                        {(form.filterJenjang || []).length === 0 && (
+                            <div style={{ fontSize: '0.75rem', color: 'var(--accent-green)', marginTop: 8, fontStyle: 'italic' }}>
+                                ✓ Berlaku untuk semua jenjang
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Filter Kecamatan */}
+                    <div className="table-container" style={{ padding: 20, marginBottom: 16, opacity: form.enabled ? 1 : 0.5, pointerEvents: form.enabled ? 'auto' : 'none' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, paddingBottom: 10, borderBottom: '2px solid var(--bg-secondary)' }}>
+                            <MapPin size={16} style={{ color: '#0ea5e9' }} />
+                            <h3 style={{ fontSize: '0.9rem', fontWeight: 600, margin: 0 }}>Filter Kecamatan</h3>
+                        </div>
+                        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 12 }}>
+                            Kosongkan untuk menerapkan ke semua kecamatan. Pilih kecamatan tertentu agar countdown hanya berlaku untuk kecamatan tersebut.
+                        </p>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, maxHeight: 200, overflowY: 'auto', padding: 4 }}>
+                            {KECAMATAN.map(k => {
+                                const checked = (form.filterKecamatan || []).includes(k);
+                                return (
+                                    <label key={k} style={{
+                                        display: 'flex', alignItems: 'center', gap: 6,
+                                        padding: '5px 10px', borderRadius: 8, cursor: 'pointer',
+                                        border: `1.5px solid ${checked ? '#0ea5e9' : 'var(--border-color)'}`,
+                                        background: checked ? 'rgba(14,165,233,0.06)' : 'transparent',
+                                        transition: '0.2s', fontSize: '0.78rem'
+                                    }}>
+                                        <input type="checkbox" checked={checked}
+                                            onChange={() => {
+                                                const arr = form.filterKecamatan || [];
+                                                handleChange('filterKecamatan', checked ? arr.filter(x => x !== k) : [...arr, k]);
+                                            }}
+                                            style={{ accentColor: '#0ea5e9', width: 14, height: 14 }} />
+                                        <span style={{ fontWeight: checked ? 600 : 400, color: checked ? '#0ea5e9' : 'var(--text-primary)' }}>{k}</span>
+                                    </label>
+                                );
+                            })}
+                        </div>
+                        {(form.filterKecamatan || []).length > 0 && (
+                            <div style={{ fontSize: '0.75rem', color: '#0ea5e9', marginTop: 8 }}>
+                                {(form.filterKecamatan || []).length} kecamatan dipilih
+                                <button onClick={() => handleChange('filterKecamatan', [])} style={{ marginLeft: 8, fontSize: '0.7rem', color: 'var(--text-secondary)', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}>Reset</button>
+                            </div>
+                        )}
+                        {(form.filterKecamatan || []).length === 0 && (
+                            <div style={{ fontSize: '0.75rem', color: 'var(--accent-green)', marginTop: 8, fontStyle: 'italic' }}>
+                                ✓ Berlaku untuk semua kecamatan
+                            </div>
+                        )}
+                    </div>
+
                     {/* Restricted Actions */}
                     <div className="table-container" style={{ padding: 20, opacity: form.enabled ? 1 : 0.5, pointerEvents: form.enabled ? 'auto' : 'none' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, paddingBottom: 10, borderBottom: '2px solid var(--bg-secondary)' }}>
@@ -375,6 +459,20 @@ const CountdownSettings = () => {
                                         }}>{a}</span>
                                     )) : '—'}
                                 </div>
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                                <span style={{ color: 'var(--text-secondary)' }}>Jenjang</span>
+                                <span style={{ fontWeight: 500, color: (form.filterJenjang || []).length > 0 ? '#8b5cf6' : 'var(--text-secondary)' }}>
+                                    {(form.filterJenjang || []).length > 0 ? (form.filterJenjang || []).join(', ') : 'Semua'}
+                                </span>
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                                <span style={{ color: 'var(--text-secondary)' }}>Kecamatan</span>
+                                <span style={{ fontWeight: 500, color: (form.filterKecamatan || []).length > 0 ? '#0ea5e9' : 'var(--text-secondary)' }}>
+                                    {(form.filterKecamatan || []).length > 0 ? `${(form.filterKecamatan || []).length} dipilih` : 'Semua'}
+                                </span>
                             </div>
                         </div>
                     </div>

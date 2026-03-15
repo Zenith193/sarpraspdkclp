@@ -118,6 +118,8 @@ const DEFAULT_COUNTDOWN = {
     label: 'Batas Akhir Input Data Sarpras',
     affectedRoles: ['sekolah', 'korwil', 'verifikator'],
     restrictedActions: ['tambah', 'edit', 'hapus'],
+    filterJenjang: [],
+    filterKecamatan: [],
 };
 
 // ===== AVAILABLE ACTIONS =====
@@ -190,13 +192,21 @@ const useSettingsStore = create(
 
             resetCountdown: () => set({ countdownConfig: { ...DEFAULT_COUNTDOWN } }),
 
-            isActionRestricted: (role, action) => {
+            isActionRestricted: (role, action, userJenjang, userKecamatan) => {
                 const cfg = get().countdownConfig;
                 if (!cfg.enabled || !cfg.deadline) return false;
                 const roleKey = role?.toLowerCase();
                 if (roleKey === 'admin') return false;
                 if (!cfg.affectedRoles.includes(roleKey)) return false;
                 if (!cfg.restrictedActions.includes(action)) return false;
+                // Check jenjang filter
+                if (cfg.filterJenjang && cfg.filterJenjang.length > 0 && userJenjang) {
+                    if (!cfg.filterJenjang.includes(userJenjang)) return false;
+                }
+                // Check kecamatan filter
+                if (cfg.filterKecamatan && cfg.filterKecamatan.length > 0 && userKecamatan) {
+                    if (!cfg.filterKecamatan.includes(userKecamatan)) return false;
+                }
                 return new Date() > new Date(cfg.deadline);
             },
         }),

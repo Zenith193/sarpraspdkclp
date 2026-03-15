@@ -63,7 +63,7 @@ const Dashboard = () => {
     }, [sarprasData, filterKec, filterJenjang, chartYear]);
 
     const filteredProposal = useMemo(() => {
-        return proposalData.filter(p => {
+        return (proposalData || []).filter(p => {
             if (filterKec && p.kecamatan !== filterKec) return false;
             if (filterJenjang && p.jenjang !== filterJenjang) return false;
             if (chartYear && p.createdAt) {
@@ -72,7 +72,7 @@ const Dashboard = () => {
             }
             return true;
         });
-    }, [filterKec, filterJenjang, chartYear]);
+    }, [proposalData, filterKec, filterJenjang, chartYear]);
 
     const sarprasStats = useMemo(() => {
         const total = filteredSarpras.length;
@@ -88,7 +88,9 @@ const Dashboard = () => {
         const disetujui = filteredProposal.filter(p => p.status === 'Disetujui').length;
         const ditolak = filteredProposal.filter(p => p.status === 'Ditolak').length;
         const revisi = filteredProposal.filter(p => p.status === 'Revisi').length;
-        return { menunggu, disetujui, ditolak, revisi };
+        const terealisasi = filteredProposal.filter(p => p.statusUsulan && p.statusUsulan !== '').length;
+        const aktif = filteredProposal.filter(p => !p.statusUsulan || p.statusUsulan === '').length;
+        return { menunggu, disetujui, ditolak, revisi, terealisasi, aktif };
     }, [filteredProposal]);
 
     // Rekapitulasi calculation (same logic as ProyeksiAnggaran)
@@ -243,10 +245,10 @@ const Dashboard = () => {
 
     // Pie Chart Data
     const pieData = {
-        labels: ['Menunggu', 'Disetujui', 'Ditolak', 'Revisi'],
+        labels: ['Menunggu', 'Disetujui', 'Ditolak', 'Revisi', 'Terealisasi'],
         datasets: [{
-            data: [proposalStats.menunggu, proposalStats.disetujui, proposalStats.ditolak, proposalStats.revisi],
-            backgroundColor: ['#eab308', '#22c55e', '#ef4444', '#f97316'],
+            data: [proposalStats.menunggu, proposalStats.disetujui, proposalStats.ditolak, proposalStats.revisi, proposalStats.terealisasi],
+            backgroundColor: ['#eab308', '#22c55e', '#ef4444', '#f97316', '#06b6d4'],
             borderWidth: 0,
         }]
     };
@@ -396,10 +398,12 @@ const Dashboard = () => {
                     </div>
                     <div className="summary-card-value">{filteredProposal.length}</div>
                     <ul className="summary-card-list">
+                        <li><span className="dot" style={{ background: '#06b6d4' }} /> Aktif ({proposalStats.aktif})</li>
                         <li><span className="dot" style={{ background: 'var(--proposal-menunggu)' }} /> Menunggu ({proposalStats.menunggu})</li>
                         <li><span className="dot" style={{ background: 'var(--proposal-disetujui)' }} /> Disetujui ({proposalStats.disetujui})</li>
                         <li><span className="dot" style={{ background: 'var(--proposal-ditolak)' }} /> Ditolak ({proposalStats.ditolak})</li>
                         <li><span className="dot" style={{ background: 'var(--proposal-revisi)' }} /> Revisi ({proposalStats.revisi})</li>
+                        <li><span className="dot" style={{ background: '#06b6d4' }} /> Terealisasi ({proposalStats.terealisasi})</li>
                     </ul>
                 </div>
                 <div className="summary-card">
