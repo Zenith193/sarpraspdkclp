@@ -213,6 +213,11 @@ const Proposal = ({ readOnly = false }) => {
         try {
             let proposalId;
             if (editItem) {
+                // When Sekolah edits a rejected/revised proposal, reset status to re-enter verification queue
+                if (isSekolah && (editItem.status === 'Ditolak' || editItem.status === 'Revisi')) {
+                    payload.status = 'Menunggu Verifikasi';
+                    payload.keranjang = 'Keranjang Usulan Sekolah';
+                }
                 await proposalApi.update(editItem.id, payload);
                 proposalId = editItem.id;
                 toast.success('Proposal berhasil diperbarui');
@@ -499,7 +504,7 @@ const Proposal = ({ readOnly = false }) => {
                                     <td>
                                         <div style={{ display: 'flex', gap: 4 }}>
                                             <button className="btn-icon" onClick={() => setViewItem(item)} title="Lihat"><Eye size={16} /></button>
-                                            {!readOnly && isAdminOrVerifikator && (
+                                            {!readOnly && (isAdminOrVerifikator || (isSekolah && (item.status === 'Ditolak' || item.status === 'Revisi'))) && (
                                                 <button className="btn-icon" onClick={() => handleOpenModal(item)} title="Edit"><Edit size={16} /></button>
                                             )}
                                             {!readOnly && isAdmin && (
@@ -635,7 +640,7 @@ const Proposal = ({ readOnly = false }) => {
                             </div>
                             {isAdmin && <div className="form-group"><label className="form-label">Prioritas</label><div>{renderPriorityStar(viewItem.bintang === 1, viewItem.id)}</div></div>}
                         </div>
-                        <div className="modal-footer"><button className="btn btn-ghost" onClick={() => setViewItem(null)}>Tutup</button>{!readOnly && isAdminOrVerifikator && <button className="btn btn-primary" onClick={() => { setViewItem(null); handleOpenModal(viewItem); }}><Edit size={14} /> Edit Data</button>}</div>
+                        <div className="modal-footer"><button className="btn btn-ghost" onClick={() => setViewItem(null)}>Tutup</button>{!readOnly && (isAdminOrVerifikator || (isSekolah && (viewItem.status === 'Ditolak' || viewItem.status === 'Revisi'))) && <button className="btn btn-primary" onClick={() => { setViewItem(null); handleOpenModal(viewItem); }}><Edit size={14} /> Edit Data</button>}</div>
                     </div>
                 </div>
             )}
