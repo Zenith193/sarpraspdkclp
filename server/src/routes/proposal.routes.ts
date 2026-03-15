@@ -213,6 +213,13 @@ router.put('/:id/status', requireAuth, requireRole('admin', 'verifikator', 'korw
         // Update status with potentially modified finalStatus
         await proposalService.updateStatus(id, finalStatus, req.user!.id);
 
+        // Save or clear reason
+        if (newStatus === 'Ditolak' || newStatus === 'Revisi') {
+            await proposalService.update(id, { alasanRevisi: req.body.alasan || null });
+        } else if (newStatus === 'Disetujui' || newStatus === 'Diterima') {
+            await proposalService.update(id, { alasanRevisi: null });
+        }
+
         if (newKeranjang !== existing[0].proposal.keranjang) {
             await proposalService.updateKeranjang(id, newKeranjang || 'Keranjang Usulan Sekolah');
         }

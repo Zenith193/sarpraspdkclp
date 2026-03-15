@@ -18,6 +18,7 @@ export const proposal = pgTable('proposal', {
     status: text('status').notNull().default('Menunggu Verifikasi'),
     bintang: integer('bintang').default(0),
     keranjang: text('keranjang'),
+    alasanRevisi: text('alasan_revisi'),
     ranking: integer('ranking'),
     fileName: text('file_name'),
     filePath: text('file_path'),

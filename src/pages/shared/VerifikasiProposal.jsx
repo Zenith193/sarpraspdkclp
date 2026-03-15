@@ -20,6 +20,8 @@ const VerifikasiProposal = () => {
     const [perPage, setPerPage] = useState(15);
     const [currentPage, setCurrentPage] = useState(1);
     const [showBatchConfirm, setShowBatchConfirm] = useState(false);
+    const [reasonModal, setReasonModal] = useState(null); // { id, action: 'Revisi'|'Ditolak' }
+    const [reasonText, setReasonText] = useState('');
 
     // Fetch data with proper server-side filtering for korwil
     const fetchData = useCallback(async () => {
@@ -88,15 +90,27 @@ const VerifikasiProposal = () => {
 
     useEffect(() => { setCurrentPage(1); }, [search, perPage]);
 
-    const handleVerify = async (id, status) => {
+    const handleVerify = async (id, status, alasan = null) => {
         try {
-            await proposalApi.updateStatus(id, status);
+            await proposalApi.updateStatus(id, status, alasan);
             setData(prev => prev.filter(p => p.id !== id && p.proposal?.id !== id));
             toast.success(`Proposal ${status.toLowerCase()}`, { style: { background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' } });
             setDetailItem(null);
+            setReasonModal(null);
+            setReasonText('');
         } catch (err) {
             toast.error(err.message || 'Gagal memverifikasi');
         }
+    };
+
+    const openReasonModal = (id, action) => {
+        setReasonModal({ id, action });
+        setReasonText('');
+    };
+
+    const submitWithReason = () => {
+        if (!reasonText.trim()) { toast.error('Alasan wajib diisi'); return; }
+        handleVerify(reasonModal.id, reasonModal.action, reasonText.trim());
     };
 
     const openDetail = (item) => { setDetailItem(item); setLightboxIdx(-1); };
@@ -168,11 +182,7 @@ const VerifikasiProposal = () => {
                                         )}
                                     </td>
                                     <td>
-                                        <div style={{ display: 'flex', gap: 4 }}>
-                                            <button className="btn btn-sm btn-primary" onClick={() => openDetail(p)} title="Lihat Detail & Foto"><Eye size={14} /> Detail</button>
-                                            <button className="btn btn-sm btn-success" onClick={() => handleVerify(p.id, 'Disetujui')}><CheckCircle size={14} /> Setujui</button>
-                                            <button className="btn btn-sm btn-danger" onClick={() => handleVerify(p.id, 'Ditolak')}><XCircle size={14} /> Tolak</button>
-                                        </div>
+                                        <button className="btn btn-sm btn-primary" onClick={() => openDetail(p)} title="Lihat Detail & Foto"><Eye size={14} /> Detail</button>
                                     </td>
                                 </tr>
                             ))}
@@ -255,8 +265,8 @@ const VerifikasiProposal = () => {
                             )}
                             <div style={{ display: 'flex', gap: 8, marginTop: 20, justifyContent: 'flex-end' }}>
                                 <button className="btn btn-success" onClick={() => handleVerify(detailItem.id, 'Disetujui')}><CheckCircle size={16} /> Setujui</button>
-                                <button className="btn btn-danger" onClick={() => handleVerify(detailItem.id, 'Ditolak')}><XCircle size={16} /> Tolak</button>
-                                <button className="btn btn-secondary" onClick={() => handleVerify(detailItem.id, 'Revisi')}><MessageSquare size={16} /> Revisi</button>
+                                <button className="btn" style={{ background: '#f59e0b', color: '#fff' }} onClick={() => { setDetailItem(null); openReasonModal(detailItem.id, 'Revisi'); }}><MessageSquare size={16} /> Revisi</button>
+                                <button className="btn btn-danger" onClick={() => { setDetailItem(null); openReasonModal(detailItem.id, 'Ditolak'); }}><XCircle size={16} /> Tolak</button>
                             </div>
                         </div>
                     </div>
@@ -291,6 +301,48 @@ const VerifikasiProposal = () => {
                 onConfirm={executeBatchApprove}
                 onCancel={() => setShowBatchConfirm(false)}
             />
+
+            {/* ===== REASON MODAL (Revisi / Tolak) ===== */}
+            {reasonModal && (
+                <div style={overlayStyle} onClick={() => setReasonModal(null)}>
+                    <div style={{ ...modalStyle, maxWidth: 500 }} onClick={e => e.stopPropagation()}>
+                        <div style={modalHeaderStyle}>
+                            <h2 style={{ margin: 0, fontSize: 18 }}>
+                                {reasonModal.action === 'Revisi' ? '📝 Alasan Revisi' : '❌ Alasan Penolakan'}
+                            </h2>
+                            <button onClick={() => setReasonModal(null)} style={closeBtnStyle}><X size={20} /></button>
+                        </div>
+                        <div style={modalBodyStyle}>
+                            <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 12 }}>
+                                {reasonModal.action === 'Revisi'
+                                    ? 'Jelaskan apa yang perlu diperbaiki oleh sekolah:'
+                                    : 'Jelaskan alasan penolakan proposal:'
+                                }
+                            </p>
+                            <textarea
+                                className="form-input"
+                                rows={4}
+                                value={reasonText}
+                                onChange={e => setReasonText(e.target.value)}
+                                placeholder={reasonModal.action === 'Revisi' ? 'Contoh: Data RAB belum lengkap, mohon dilengkapi...' : 'Contoh: Proposal tidak memenuhi syarat...'}
+                                autoFocus
+                                style={{ resize: 'vertical' }}
+                            />
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', padding: '12px 20px', borderTop: '1px solid var(--border-color)' }}>
+                            <button className="btn btn-ghost" onClick={() => setReasonModal(null)}>Batal</button>
+                            <button
+                                className={reasonModal.action === 'Revisi' ? 'btn' : 'btn btn-danger'}
+                                style={reasonModal.action === 'Revisi' ? { background: '#f59e0b', color: '#fff' } : {}}
+                                onClick={submitWithReason}
+                                disabled={!reasonText.trim()}
+                            >
+                                {reasonModal.action === 'Revisi' ? 'Kirim Revisi' : 'Tolak Proposal'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

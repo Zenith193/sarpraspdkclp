@@ -476,7 +476,7 @@ const Proposal = ({ readOnly = false }) => {
                                 <th>Sub Kegiatan</th>
                                 <th>Nilai Pengajuan</th>
                                 <th>Target</th>
-                                {(isAdminOrVerifikator || isKorwil) && <th>Status</th>}
+                                <th>Status</th>
                                 {isAdmin && <th>Prioritas</th>}
                                 {canManageKeranjang && <th>Keranjang</th>}
                                 <th>Aksi</th>
@@ -492,7 +492,7 @@ const Proposal = ({ readOnly = false }) => {
                                     <td style={{ minWidth: 220, whiteSpace: 'normal' }}>{item.subKegiatan}</td>
                                     <td style={{ whiteSpace: 'nowrap' }}>{formatCurrency(item.nilaiPengajuan)}</td>
                                     <td>{item.target}</td>
-                                    {(isAdminOrVerifikator || isKorwil) && <td>{getStatusBadge(item.status)}</td>}
+                                    <td>{getStatusBadge(item.status)}</td>
                                     {isAdmin && <td>{renderPriorityStar(item.bintang === 1, item.id)}</td>}
                                     {canManageKeranjang && (
                                         <td>
@@ -639,6 +639,21 @@ const Proposal = ({ readOnly = false }) => {
                                 </div>
                             </div>
                             {isAdmin && <div className="form-group"><label className="form-label">Prioritas</label><div>{renderPriorityStar(viewItem.bintang === 1, viewItem.id)}</div></div>}
+                            {/* Show reason for Revisi/Ditolak */}
+                            {viewItem.alasanRevisi && (viewItem.status === 'Ditolak' || viewItem.status === 'Revisi') && (
+                                <div style={{
+                                    padding: '12px 16px',
+                                    borderRadius: 8,
+                                    background: viewItem.status === 'Revisi' ? 'rgba(245,158,11,0.1)' : 'rgba(239,68,68,0.1)',
+                                    border: `1px solid ${viewItem.status === 'Revisi' ? 'rgba(245,158,11,0.3)' : 'rgba(239,68,68,0.3)'}`,
+                                    marginTop: 8
+                                }}>
+                                    <div style={{ fontSize: 12, fontWeight: 700, textTransform: 'uppercase', color: viewItem.status === 'Revisi' ? '#f59e0b' : '#ef4444', marginBottom: 4 }}>
+                                        {viewItem.status === 'Revisi' ? '📝 Catatan Revisi' : '❌ Alasan Penolakan'}
+                                    </div>
+                                    <div style={{ fontSize: 14, color: 'var(--text-primary)', lineHeight: 1.5 }}>{viewItem.alasanRevisi}</div>
+                                </div>
+                            )}
                         </div>
                         <div className="modal-footer"><button className="btn btn-ghost" onClick={() => setViewItem(null)}>Tutup</button>{!readOnly && (isAdminOrVerifikator || (isSekolah && (viewItem.status === 'Ditolak' || viewItem.status === 'Revisi'))) && <button className="btn btn-primary" onClick={() => { setViewItem(null); handleOpenModal(viewItem); }}><Edit size={14} /> Edit Data</button>}</div>
                     </div>
