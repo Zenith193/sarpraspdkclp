@@ -476,20 +476,15 @@ export async function uploadFileToGDrive(
         return { stored: 'local', path: localFilePath };
     }
 
-    try {
-        const result = await uploadToGDrive(localFilePath, subPath);
+    const result = await uploadToGDrive(localFilePath, subPath);
 
-        if (result.success) {
-            try { fs.unlinkSync(localFilePath); } catch { /* ignore */ }
-            return { stored: 'gdrive', path: result.path };
-        }
-
-        return { stored: 'local', path: localFilePath };
-
-    } catch (err) {
-        console.error('[GDrive] Upload error:', err);
-        return { stored: 'local', path: localFilePath };
+    if (result.success) {
+        // Don't delete local file here — let the caller handle cleanup
+        return { stored: 'gdrive', path: result.path };
     }
+
+    // Throw so caller knows upload failed
+    throw new Error('GDrive upload returned success=false');
 }
 
 // ==================== DELETE ====================
