@@ -49,6 +49,7 @@ export const proposalApi = {
     updateKeranjang: (id, keranjang) => api.put(`/proposal/${id}/keranjang`, { keranjang }),
     updateRanking: (id, data) => api.put(`/proposal/${id}/ranking`, data),
     batchApprove: (ids) => api.post('/proposal/batch-approve', { ids }),
+    batchCreate: (data) => api.post('/proposal/batch', data),
     uploadPdf: (id, formData) => api.upload(`/proposal/${id}/upload`, formData, 'PUT'),
 };
 

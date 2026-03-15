@@ -1,10 +1,11 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { Plus, Search, Download, Eye, Edit, Trash2, X, Filter, Star, FileSpreadsheet, FileText, Save, Printer, FileCheck, FilePlus, Archive, AlertOctagon, Upload } from 'lucide-react';
+import { Plus, Search, Download, Eye, Edit, Trash2, X, Filter, Star, FileSpreadsheet, FileText, Save, Printer, FileCheck, FilePlus, Archive, AlertOctagon, Upload, CheckCircle, RotateCcw } from 'lucide-react';
 import { useProposalData, useSekolahData, useUsersData, useKorwilData } from '../../data/dataProvider';
 import { proposalApi, arsipDokumenApi } from '../../api/index';
 import { KECAMATAN, JENJANG, SUB_KEGIATAN, KERANJANG, STATUS_PROPOSAL } from '../../utils/constants';
 import { formatCurrency } from '../../utils/formatters';
-import { exportToExcel, exportToCSV, exportToPDF } from '../../utils/exportUtils';
+import { exportToExcel, exportToCSV, exportToPDF, exportToExcelMultiSheet } from '../../utils/exportUtils';
+import * as XLSX from 'xlsx';
 import SearchableSelect from '../../components/ui/SearchableSelect';
 import useAuthStore from '../../store/authStore';
 import useCountdownGuard from '../../hooks/useCountdownGuard';
@@ -158,10 +159,14 @@ const Proposal = ({ readOnly = false }) => {
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(10);
 
+    // Batch import state
+    const [showBatchModal, setShowBatchModal] = useState(false);
+    const [batchData, setBatchData] = useState([]);
+    const [batchImporting, setBatchImporting] = useState(false);
+
     // ===== FILTERING =====
     const filtered = useMemo(() => {
         return data.filter(p => {
-            // Korwil only sees SD proposals
             if (isKorwil && p.jenjang !== 'SD') return false;
             if (search) {
                 const q = search.toLowerCase();
@@ -175,11 +180,23 @@ const Proposal = ({ readOnly = false }) => {
         });
     }, [data, search, headerFilters, canManageKeranjang, isKorwil]);
 
-    const paged = useMemo(() => {
-        return filtered.slice((page - 1) * perPage, page * perPage);
-    }, [filtered, page, perPage]);
+    // Split into aktif vs terealisasi
+    const filteredAktif = useMemo(() => filtered.filter(p => p.statusUsulan !== 'Terealisasi'), [filtered]);
+    const filteredRealisasi = useMemo(() => filtered.filter(p => p.statusUsulan === 'Terealisasi'), [filtered]);
 
-    const totalPages = Math.ceil(filtered.length / perPage) || 1;
+    // Summary stats
+    const stats = useMemo(() => {
+        const src = filteredAktif;
+        const uniqueSchools = new Set(src.map(p => p.npsn)).size;
+        const totalPengajuan = src.reduce((sum, p) => sum + (Number(p.nilaiPengajuan) || 0), 0);
+        return { jumlahProposal: src.length, jumlahSekolah: uniqueSchools, totalPengajuan };
+    }, [filteredAktif]);
+
+    const paged = useMemo(() => {
+        return filteredAktif.slice((page - 1) * perPage, page * perPage);
+    }, [filteredAktif, page, perPage]);
+
+    const totalPages = Math.ceil(filteredAktif.length / perPage) || 1;
 
     // ===== HANDLERS =====
     const resetForm = () => { setFormSekolah(''); setFormData(INITIAL_FORM_DATA); setEditItem(null); };
@@ -405,9 +422,80 @@ const Proposal = ({ readOnly = false }) => {
     const selectedSchoolData = useMemo(() => sekolahList.find(s => s.nama === formSekolah), [formSekolah]);
 
     const handleExport = (format) => {
-        const exportCols = [{ header: 'No', accessor: (_, i) => i + 1 }, { header: 'Nama Sekolah', key: 'namaSekolah' }, { header: 'NPSN', key: 'npsn' }, { header: 'Kecamatan', key: 'kecamatan' }, { header: 'Sub Kegiatan', key: 'subKegiatan' }, { header: 'Nilai', key: 'nilaiPengajuan' }, { header: 'Status', key: 'status' }];
-        try { if (format === 'excel') exportToExcel(filtered, exportCols, 'data_proposal'); else if (format === 'csv') exportToCSV(filtered, exportCols, 'data_proposal'); else if (format === 'pdf') exportToPDF(filtered, exportCols, 'data_proposal', 'Data Proposal'); toast.success(`Berhasil ekspor ${format.toUpperCase()}`); }
-        catch (err) { toast.error('Gagal ekspor'); }
+        const exportCols = [{ header: 'No', accessor: (_, i) => i + 1 }, { header: 'Nama Sekolah', key: 'namaSekolah' }, { header: 'NPSN', key: 'npsn' }, { header: 'Kecamatan', key: 'kecamatan' }, { header: 'Sub Kegiatan', key: 'subKegiatan' }, { header: 'Nilai Pengajuan', key: 'nilaiPengajuan' }, { header: 'Target', key: 'target' }, { header: 'Status', key: 'status' }, { header: 'Keranjang', key: 'keranjang' }, { header: 'Keterangan', key: 'keterangan' }];
+        try {
+            if (format === 'excel') {
+                const sheets = [{ sheetName: 'Proposal Aktif', data: filteredAktif, columns: exportCols }];
+                if (filteredRealisasi.length > 0) sheets.push({ sheetName: 'Terealisasi', data: filteredRealisasi, columns: exportCols });
+                exportToExcelMultiSheet(sheets, 'data_proposal');
+            } else if (format === 'csv') exportToCSV(filteredAktif, exportCols, 'data_proposal');
+            else if (format === 'pdf') exportToPDF(filteredAktif, exportCols, 'data_proposal', 'Data Proposal');
+            toast.success(`Berhasil ekspor ${format.toUpperCase()}`);
+        } catch (err) { toast.error('Gagal ekspor'); }
+    };
+
+    const handleRealisasi = async (item) => {
+        try {
+            await proposalApi.update(item.id, { statusUsulan: 'Terealisasi' });
+            setData(prev => prev.map(d => d.id === item.id ? { ...d, statusUsulan: 'Terealisasi' } : d));
+            toast.success('Proposal dipindahkan ke Terealisasi');
+        } catch (err) { toast.error('Gagal memindahkan proposal'); }
+    };
+
+    const handleUnrealisasi = async (item) => {
+        try {
+            await proposalApi.update(item.id, { statusUsulan: null });
+            setData(prev => prev.map(d => d.id === item.id ? { ...d, statusUsulan: null } : d));
+            toast.success('Proposal dikembalikan ke aktif');
+        } catch (err) { toast.error('Gagal mengembalikan proposal'); }
+    };
+
+    // Batch import handlers
+    const handleBatchFileUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            const wb = XLSX.read(evt.target.result, { type: 'array' });
+            const ws = wb.Sheets[wb.SheetNames[0]];
+            const jsonData = XLSX.utils.sheet_to_json(ws, { defval: '' });
+            setBatchData(jsonData);
+        };
+        reader.readAsArrayBuffer(file);
+        e.target.value = '';
+    };
+
+    const handleBatchImport = async () => {
+        if (!batchData.length) return;
+        setBatchImporting(true);
+        try {
+            const items = batchData.map(row => ({
+                npsn: String(row['NPSN'] || row['npsn'] || '').trim(),
+                subKegiatan: row['Sub Kegiatan'] || row['subKegiatan'] || '',
+                nilaiPengajuan: Number(String(row['Nilai Pengajuan'] || row['nilaiPengajuan'] || '0').replace(/\./g, '')) || 0,
+                target: row['Target'] || row['target'] || '',
+                keterangan: row['Keterangan'] || row['keterangan'] || '',
+            }));
+            const result = await proposalApi.batchCreate({ items });
+            toast.success(`${result.created}/${result.total} proposal berhasil diimport`);
+            if (result.errors?.length) result.errors.slice(0, 5).forEach(e => toast.error(e));
+            setShowBatchModal(false);
+            setBatchData([]);
+            refetchProposal();
+        } catch (err) { toast.error(err?.message || 'Gagal import batch'); }
+        finally { setBatchImporting(false); }
+    };
+
+    const downloadBatchTemplate = () => {
+        const ws = XLSX.utils.aoa_to_sheet([
+            ['NPSN', 'Sub Kegiatan', 'Nilai Pengajuan', 'Target', 'Keterangan'],
+            ['20301170', 'Pengadaan Mebel Sekolah SD', '50000000', '1 lokal', 'Mebel rusak berat'],
+            ['20301171', 'Rehabilitasi Sedang/Berat Ruang Kelas Sekolah SD', '200000000', '2 ruang', 'Atap bocor'],
+        ]);
+        ws['!cols'] = [{ wch: 12 }, { wch: 50 }, { wch: 18 }, { wch: 12 }, { wch: 30 }];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Template');
+        XLSX.writeFile(wb, 'template_batch_proposal.xlsx');
     };
 
     const activeFilterCount = Object.values(headerFilters).filter(v => v).length;
@@ -415,11 +503,30 @@ const Proposal = ({ readOnly = false }) => {
     return (
         <div>
             <div className="page-header">
-                <div className="page-header-left"><h1>Proposal</h1><p>Total {filtered.length} proposal</p></div>
-                <div className="page-header-right">
+                <div className="page-header-left"><h1>Proposal</h1><p>Total {filteredAktif.length} proposal aktif{filteredRealisasi.length > 0 ? `, ${filteredRealisasi.length} terealisasi` : ''}</p></div>
+                <div className="page-header-right" style={{ display: 'flex', gap: 8 }}>
+                    {isAdminOrVerifikator && (<button className="btn btn-secondary" onClick={() => setShowBatchModal(true)}><Upload size={16} /> Import Batch</button>)}
                     {!readOnly && (<button className="btn btn-primary" onClick={() => handleOpenModal()} disabled={isRestricted('tambah')} style={isRestricted('tambah') ? { opacity: 0.5, cursor: 'not-allowed' } : {}}><Plus size={16} /> Tambah Proposal</button>)}
                 </div>
             </div>
+
+            {/* Summary Stat Cards */}
+            {!isSekolah && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
+                    <div style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', padding: '16px 20px', border: '1px solid var(--border-color)' }}>
+                        <div style={{ fontSize: 12, color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: 0.5 }}>Jumlah Proposal</div>
+                        <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-primary)', marginTop: 4 }}>{stats.jumlahProposal}</div>
+                    </div>
+                    <div style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', padding: '16px 20px', border: '1px solid var(--border-color)' }}>
+                        <div style={{ fontSize: 12, color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: 0.5 }}>Jumlah Sekolah Pengaju</div>
+                        <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--accent-blue)', marginTop: 4 }}>{stats.jumlahSekolah}</div>
+                    </div>
+                    <div style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', padding: '16px 20px', border: '1px solid var(--border-color)' }}>
+                        <div style={{ fontSize: 12, color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: 0.5 }}>Total Pengajuan</div>
+                        <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--accent-green)', marginTop: 4 }}>{formatCurrency(stats.totalPengajuan)}</div>
+                    </div>
+                </div>
+            )}
 
             {(canManageKeranjang || isKorwil) && (
                 <div className="keranjang-tabs">
@@ -448,7 +555,7 @@ const Proposal = ({ readOnly = false }) => {
                             data
                         </div>
 
-                        {!isSekolahOrKorwil && (
+                        {!isSekolah && (
                         <div style={{ position: 'relative' }} ref={filterPanelRef}>
                             <button className={`btn ${activeFilterCount > 0 ? 'btn-primary' : 'btn-ghost'} btn-sm`} onClick={() => setShowFilterPanel(!showFilterPanel)}><Filter size={14} /> Filter {activeFilterCount > 0 && <span style={{ background: '#fff', color: 'var(--accent-blue)', borderRadius: 'var(--radius-full)', width: 18, height: 18, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, marginLeft: 2 }}>{activeFilterCount}</span>}</button>
                             {showFilterPanel && (<div className="dropdown-menu" style={{ left: 0, top: '100%', marginTop: 4, minWidth: 500, padding: 16, zIndex: 50 }}><div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}><div><label style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Kecamatan</label><SearchableSelect options={KECAMATAN} value={headerFilters.kecamatan} onChange={v => { setHeaderFilters(prev => ({ ...prev, kecamatan: v })); setPage(1); }} placeholder="Semua" /></div><div><label style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Jenjang</label><select className="form-select" value={headerFilters.jenjang} onChange={e => { setHeaderFilters(prev => ({ ...prev, jenjang: e.target.value })); setPage(1); }}><option value="">Semua</option>{JENJANG.map(j => <option key={j} value={j}>{j}</option>)}</select></div>{isAdmin && (<div><label style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Prioritas</label><select className="form-select" value={headerFilters.bintang} onChange={e => { setHeaderFilters(prev => ({ ...prev, bintang: e.target.value })); setPage(1); }}><option value="">Semua</option><option value="Ya">Berbintang</option></select></div>)}</div></div>)}
@@ -524,13 +631,16 @@ const Proposal = ({ readOnly = false }) => {
                                                     <Trash2 size={16} />
                                                 </button>
                                             )}
+                                            {isAdmin && item.status === 'Disetujui' && (
+                                                <button className="btn-icon" onClick={() => handleRealisasi(item)} title="Tandai Terealisasi" style={{ color: 'var(--accent-green)' }}><CheckCircle size={16} /></button>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>
                             ))}
                             {paged.length === 0 && (
                                 <tr>
-                                    <td colSpan={isAdmin ? (canManageKeranjang ? 11 : 10) : (canManageKeranjang ? 10 : 9)} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>
+                                    <td colSpan={99} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>
                                         Tidak ada data ditemukan
                                     </td>
                                 </tr>
@@ -539,7 +649,7 @@ const Proposal = ({ readOnly = false }) => {
                     </table>
                 </div>
                 <div className="table-pagination">
-                    <div className="table-pagination-info">Menampilkan {Math.min((page - 1) * perPage + 1, filtered.length)}-{Math.min(page * perPage, filtered.length)} dari {filtered.length}</div>
+                    <div className="table-pagination-info">Menampilkan {Math.min((page - 1) * perPage + 1, filteredAktif.length)}-{Math.min(page * perPage, filteredAktif.length)} dari {filteredAktif.length}</div>
                     <div className="table-pagination-controls">
                         <button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1}>‹</button>
                         {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(p => (<button key={p} className={p === page ? 'active' : ''} onClick={() => setPage(p)}>{p}</button>))}
@@ -547,6 +657,47 @@ const Proposal = ({ readOnly = false }) => {
                     </div>
                 </div>
             </div>
+
+            {/* ===== REALISASI TABLE ===== */}
+            {isAdminOrVerifikator && filteredRealisasi.length > 0 && (
+                <div className="table-container" style={{ marginTop: 24 }}>
+                    <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div>
+                            <h3 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Proposal Terealisasi</h3>
+                            <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-secondary)' }}>{filteredRealisasi.length} proposal sudah terealisasi</p>
+                        </div>
+                    </div>
+                    <div style={{ overflowX: 'auto' }}>
+                        <table className="data-table">
+                            <thead>
+                                <tr><th>No</th><th>Sekolah</th><th>NPSN</th><th>Kecamatan</th><th>Sub Kegiatan</th><th>Nilai Pengajuan</th><th>Target</th><th>Status</th><th>Aksi</th></tr>
+                            </thead>
+                            <tbody>
+                                {filteredRealisasi.map((item, i) => (
+                                    <tr key={item.id}>
+                                        <td>{i + 1}</td>
+                                        <td>{item.namaSekolah}</td>
+                                        <td>{item.npsn}</td>
+                                        <td>{item.kecamatan}</td>
+                                        <td style={{ maxWidth: 220, whiteSpace: 'normal' }}>{item.subKegiatan}</td>
+                                        <td style={{ whiteSpace: 'nowrap' }}>{formatCurrency(item.nilaiPengajuan)}</td>
+                                        <td>{item.target}</td>
+                                        <td><span className="badge badge-disetujui">Terealisasi</span></td>
+                                        <td>
+                                            <div style={{ display: 'flex', gap: 4 }}>
+                                                <button className="btn-icon" onClick={() => setViewItem(item)} title="Detail"><Eye size={16} /></button>
+                                                {isAdmin && (
+                                                    <button className="btn-icon" onClick={() => handleUnrealisasi(item)} title="Kembalikan ke Aktif" style={{ color: 'var(--accent-blue)' }}><RotateCcw size={16} /></button>
+                                                )}
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            )}
 
             {/* ===== MODAL PROPOSAL (ADD/EDIT) ===== */}
             {showModal && (
@@ -946,6 +1097,54 @@ const Proposal = ({ readOnly = false }) => {
                     100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
                 }
             `}</style>
+
+            {/* ===== BATCH IMPORT MODAL ===== */}
+            {showBatchModal && (
+                <div className="modal-overlay" onClick={() => { setShowBatchModal(false); setBatchData([]); }}>
+                    <div className="modal" style={{ maxWidth: 800, maxHeight: '90vh' }} onClick={e => e.stopPropagation()}>
+                        <div className="modal-header"><div className="modal-title">Import Batch Proposal</div><button className="modal-close" onClick={() => { setShowBatchModal(false); setBatchData([]); }}><X size={18} /></button></div>
+                        <div className="modal-body" style={{ overflowY: 'auto', maxHeight: 'calc(90vh - 140px)' }}>
+                            <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
+                                <button className="btn btn-secondary" onClick={downloadBatchTemplate}><Download size={14} /> Download Template</button>
+                                <label className="btn btn-primary" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                    <Upload size={14} /> Upload File Excel
+                                    <input type="file" accept=".xlsx,.xls" onChange={handleBatchFileUpload} hidden />
+                                </label>
+                            </div>
+                            {batchData.length > 0 && (
+                                <>
+                                    <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 12 }}>{batchData.length} data siap diimport:</p>
+                                    <div style={{ overflowX: 'auto', maxHeight: 400, border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
+                                        <table className="data-table" style={{ margin: 0 }}>
+                                            <thead>
+                                                <tr><th>No</th><th>NPSN</th><th>Sub Kegiatan</th><th>Nilai Pengajuan</th><th>Target</th><th>Keterangan</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                {batchData.map((row, i) => (
+                                                    <tr key={i}>
+                                                        <td>{i + 1}</td>
+                                                        <td>{row['NPSN'] || row['npsn'] || '-'}</td>
+                                                        <td>{row['Sub Kegiatan'] || row['subKegiatan'] || '-'}</td>
+                                                        <td>{row['Nilai Pengajuan'] || row['nilaiPengajuan'] || '-'}</td>
+                                                        <td>{row['Target'] || row['target'] || '-'}</td>
+                                                        <td>{row['Keterangan'] || row['keterangan'] || '-'}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                        <div className="modal-footer">
+                            <button className="btn btn-ghost" onClick={() => { setShowBatchModal(false); setBatchData([]); }}>Batal</button>
+                            <button className="btn btn-primary" onClick={handleBatchImport} disabled={!batchData.length || batchImporting}>
+                                {batchImporting ? 'Mengimport...' : `Import ${batchData.length} Proposal`}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

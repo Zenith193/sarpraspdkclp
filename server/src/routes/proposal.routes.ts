@@ -174,6 +174,36 @@ router.post('/batch-approve', requireAuth, requireRole('admin'), async (req, res
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// BATCH CREATE PROPOSALS (by NPSN)
+router.post('/batch', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
+    try {
+        const items = req.body.items || [];
+        if (!Array.isArray(items) || items.length === 0) { res.status(400).json({ error: 'items array required' }); return; }
+        let created = 0;
+        const errors: string[] = [];
+        for (const item of items) {
+            try {
+                const npsn = String(item.npsn).trim();
+                const sch = await db.select({ id: sekolah.id }).from(sekolah).where(eq(sekolah.npsn, npsn));
+                if (!sch[0]) { errors.push(`NPSN ${npsn} tidak ditemukan`); continue; }
+                await proposalService.create({
+                    sekolahId: sch[0].id,
+                    subKegiatan: item.subKegiatan || '',
+                    nilaiPengajuan: Number(item.nilaiPengajuan) || 0,
+                    target: item.target || '',
+                    keterangan: item.keterangan || '',
+                    status: 'Menunggu Verifikasi',
+                    keranjang: 'Keranjang Usulan Sekolah',
+                    createdBy: req.user!.id,
+                });
+                created++;
+            } catch (e: any) { errors.push(`Row error: ${e.message}`); }
+        }
+        logActivity(req, 'Batch Import Proposal', `Import ${created}/${items.length} proposal`);
+        res.json({ success: true, created, total: items.length, errors });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 // ===== WORKFLOW: Status + Keranjang auto-transition =====
 router.put('/:id/status', requireAuth, requireRole('admin', 'verifikator', 'korwil'), async (req, res) => {
     try {

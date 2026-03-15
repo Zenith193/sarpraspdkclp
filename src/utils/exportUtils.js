@@ -29,6 +29,29 @@ export const exportToExcel = (data, columns, filename = 'laporan') => {
 };
 
 /**
+ * Ekspor multi-sheet ke Excel (.xlsx)
+ * @param {Array<{sheetName: string, data: Array, columns: Array}>} sheets
+ */
+export const exportToExcelMultiSheet = (sheets, filename = 'laporan') => {
+    const wb = XLSX.utils.book_new();
+    for (const { sheetName, data, columns } of sheets) {
+        const rows = data.map((row, i) =>
+            columns.reduce((acc, col) => {
+                acc[col.header] = col.accessor ? col.accessor(row, i) : row[col.key] ?? '';
+                return acc;
+            }, {})
+        );
+        const ws = XLSX.utils.json_to_sheet(rows);
+        const colWidths = columns.map(col => ({
+            wch: Math.max(col.header.length + 2, ...rows.map(r => String(r[col.header] ?? '').length))
+        }));
+        ws['!cols'] = colWidths;
+        XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    }
+    XLSX.writeFile(wb, `${filename}.xlsx`);
+};
+
+/**
  * Ekspor data ke CSV
  */
 export const exportToCSV = (data, columns, filename = 'laporan') => {

@@ -61,7 +61,7 @@ export const SUB_KEGIATAN = [
     { kode: '1.01.02.2.02.0067', nama: 'Pengadaan Alat Praktik dan Peraga Peserta Didik SMP', jenjang: 'SMP' },
 ];
 
-export const STATUS_PROPOSAL = ['Menunggu Verifikasi', 'Disetujui', 'Diterima', 'Ditolak', 'Revisi'];
+export const STATUS_PROPOSAL = ['Menunggu Verifikasi', 'Disetujui', 'Diterima', 'Ditolak', 'Revisi', 'Terealisasi'];
 
 export const KERANJANG = [
     'Keranjang Usulan Sekolah',
