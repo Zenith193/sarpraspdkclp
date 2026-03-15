@@ -56,6 +56,7 @@ export const matrikService = {
             matrik: matrikKegiatan,
             kepsek: sekolah.kepsek,
             nipKs: sekolah.nip,
+            kopSekolah: sekolah.kopSekolah,
         }).from(matrikKegiatan)
             .leftJoin(sekolah, eq(matrikKegiatan.npsn, sekolah.npsn))
             .where(where)
@@ -72,6 +73,7 @@ export const matrikService = {
                 ...row.matrik,
                 kepsek: row.kepsek || '',
                 nipKs: row.nipKs || '',
+                kopSekolah: row.kopSekolah || null,
             };
 
             if (isChild) {

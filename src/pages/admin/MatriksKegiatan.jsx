@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Search, Download, Plus, Edit, Trash2, ChevronLeft, ChevronRight, X, Save, AlertTriangle, FileSpreadsheet, Building, User, Briefcase, FileText, Settings, DollarSign, Calendar, Truck, PlusCircle, AlertCircle, RefreshCw, CheckSquare, Square, FileDown, Info, Printer, Clock, Phone } from 'lucide-react';
+import { Search, Download, Plus, Edit, Trash2, ChevronLeft, ChevronRight, X, Save, AlertTriangle, FileSpreadsheet, Building, User, Briefcase, FileText, Settings, DollarSign, Calendar, Truck, PlusCircle, AlertCircle, RefreshCw, CheckSquare, Square, FileDown, Info, Printer, Clock, Phone, Columns, Eye, EyeOff } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 import { SUB_KEGIATAN } from '../../utils/constants';
 import { useSekolahData } from '../../data/dataProvider';
@@ -601,6 +601,7 @@ const SplTab = () => {
     const [splHistory, setSplHistory] = useState([]);
     const [showHistory, setShowHistory] = useState(false);
     const [generating, setGenerating] = useState(false);
+    const [showColMenu, setShowColMenu] = useState(false);
 
     const loadSpl = useCallback(async () => {
         setSplLoading(true);
@@ -704,15 +705,25 @@ const SplTab = () => {
         { key: 'alamatKantor', label: 'Alamat Penyedia' },
         { key: 'kepsek', label: 'Nama KS' },
         { key: 'nipKs', label: 'NIP KS' },
-        { key: 'konsultanPengawas', label: 'Konsultan Pengawas' },
-        { key: 'dirKonsultanPengawas', label: 'Dir. Konsultan' },
-        { key: 'noMc0', label: 'No MC 0' },
-        { key: 'tglMc0', label: 'Tgl MC 0', fmt: fmtDate },
-        { key: 'noMc100', label: 'No MC 100' },
-        { key: 'tglMc100', label: 'Tgl MC 100', fmt: fmtDate },
-        { key: 'noPcm', label: 'No PCM' },
-        { key: 'tglPcm', label: 'Tgl PCM', fmt: fmtDate },
+        { key: 'kopSekolah', label: 'Kop Sekolah', fmt: v => v ? '✅ Ada' : '❌ Belum' },
+        { key: 'konsultanPengawas', label: 'Konsultan Pengawas', defaultHidden: true },
+        { key: 'dirKonsultanPengawas', label: 'Dir. Konsultan', defaultHidden: true },
+        { key: 'noMc0', label: 'No MC 0', defaultHidden: true },
+        { key: 'tglMc0', label: 'Tgl MC 0', fmt: fmtDate, defaultHidden: true },
+        { key: 'noMc100', label: 'No MC 100', defaultHidden: true },
+        { key: 'tglMc100', label: 'Tgl MC 100', fmt: fmtDate, defaultHidden: true },
+        { key: 'noPcm', label: 'No PCM', defaultHidden: true },
+        { key: 'tglPcm', label: 'Tgl PCM', fmt: fmtDate, defaultHidden: true },
     ];
+
+    const [visibleSplCols, setVisibleSplCols] = useState(() => {
+        const cols = {};
+        SPL_COLS.forEach(c => { cols[c.key] = !c.defaultHidden; });
+        return cols;
+    });
+    const toggleSplCol = (key) => setVisibleSplCols(prev => ({ ...prev, [key]: !prev[key] }));
+    const isSplColVisible = (key) => visibleSplCols[key] !== false;
+    const activeSplCols = SPL_COLS.filter(c => isSplColVisible(c.key));
 
     return (
         <>
@@ -746,6 +757,45 @@ const SplTab = () => {
                         )}
                     </div>
                     <div className="table-toolbar-right" style={{ gap: 8 }}>
+                        {/* Column Visibility Toggle */}
+                        <div style={{ position: 'relative' }}>
+                            <button className="btn btn-ghost btn-sm" onClick={(e) => {
+                                if (showColMenu) { setShowColMenu(false); return; }
+                                setShowColMenu(true);
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                setTimeout(() => {
+                                    const dd = document.getElementById('spl-col-menu');
+                                    if (dd) { dd.style.top = `${rect.bottom + 4}px`; dd.style.right = `${window.innerWidth - rect.right}px`; }
+                                }, 0);
+                            }}>
+                                <Columns size={14} /> Kolom
+                            </button>
+                            {showColMenu && (
+                                <div id="spl-col-menu" style={{
+                                    position: 'fixed', zIndex: 9999,
+                                    background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+                                    borderRadius: 10, padding: '8px 0', minWidth: 200,
+                                    boxShadow: '0 8px 30px rgba(0,0,0,0.2)',
+                                    maxHeight: '60vh', overflowY: 'auto'
+                                }}>
+                                    <div style={{ padding: '4px 14px 8px', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Tampilkan Kolom</div>
+                                    {SPL_COLS.map(col => (
+                                        <label key={col.key} style={{
+                                            display: 'flex', alignItems: 'center', gap: 8,
+                                            padding: '6px 14px', cursor: 'pointer', fontSize: 13,
+                                        }}
+                                            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                        >
+                                            <input type="checkbox" checked={isSplColVisible(col.key)} onChange={() => toggleSplCol(col.key)}
+                                                style={{ width: 15, height: 15, accentColor: 'var(--accent-blue)', cursor: 'pointer' }} />
+                                            <span>{col.label}</span>
+                                            {col.defaultHidden && <span style={{ fontSize: 10, color: 'var(--text-secondary)', background: 'var(--bg-hover)', padding: '1px 5px', borderRadius: 3 }}>hidden</span>}
+                                        </label>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                         <button className="btn btn-secondary btn-sm" onClick={handleOpenHistory}><Clock size={14} /> Riwayat</button>
                         <button className="btn btn-primary btn-sm" onClick={handleOpenGenerate} disabled={selectedIds.size === 0}>
                             <Printer size={14} /> Generate SPL ({selectedIds.size})
@@ -763,15 +813,15 @@ const SplTab = () => {
                                     </button>
                                 </th>
                                 <th>No</th>
-                                {SPL_COLS.map(c => <th key={c.key} style={{ whiteSpace: 'nowrap' }}>{c.label}</th>)}
+                                {activeSplCols.map(c => <th key={c.key} style={{ whiteSpace: 'nowrap' }}>{c.label}</th>)}
                                 <th>Anak</th>
                             </tr>
                         </thead>
                         <tbody>
                             {splLoading ? (
-                                <tr><td colSpan={SPL_COLS.length + 3} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>Memuat data...</td></tr>
+                                <tr><td colSpan={activeSplCols.length + 3} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>Memuat data...</td></tr>
                             ) : filteredSpl.length === 0 ? (
-                                <tr><td colSpan={SPL_COLS.length + 3} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>Tidak ada data</td></tr>
+                                <tr><td colSpan={activeSplCols.length + 3} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>Tidak ada data</td></tr>
                             ) : filteredSpl.map((d, i) => (
                                 <tr key={d.id} style={{ background: selectedIds.has(d.id) ? 'rgba(59,130,246,0.08)' : undefined }}>
                                     <td>
@@ -780,7 +830,7 @@ const SplTab = () => {
                                         </button>
                                     </td>
                                     <td>{i + 1}</td>
-                                    {SPL_COLS.map(c => (
+                                    {activeSplCols.map(c => (
                                         <td key={c.key} style={{ whiteSpace: 'nowrap', fontSize: '0.82rem' }}>
                                             {c.fmt ? c.fmt(d[c.key]) : (d[c.key] || '-')}
                                         </td>
