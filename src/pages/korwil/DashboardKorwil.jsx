@@ -90,19 +90,27 @@ const DashboardKorwil = () => {
         return () => { cancelled = true; };
     }, [wilayah, jenjang]);
 
-    // Fetch top 5 from Ranking Prioritas (merged with sekolahList for names)
+    // Fetch top 5 from Ranking Prioritas (per korwil's kecamatan + jenjang)
     useEffect(() => {
-        if (!sekolahList || sekolahList.length === 0) return;
-        rankingApi.getData('all', 'all').then(res => {
-            const items = res?.items || res || [];
-            const sorted = [...items].sort((a, b) => (a.rank || 999) - (b.rank || 999));
-            const top5 = sorted.slice(0, 5).map(item => {
-                const sch = sekolahList.find(s => s.id === item.id);
-                return { ...item, namaSekolah: sch?.nama || sch?.name || '' };
-            });
-            setAllProposalsTop5(top5);
-        }).catch(() => {});
-    }, [sekolahList]);
+        if (!sekolahList || sekolahList.length === 0 || wilayah.length === 0) return;
+        const fetchRanking = async () => {
+            try {
+                let allItems = [];
+                for (const kec of wilayah) {
+                    const res = await rankingApi.getData(kec, jenjang);
+                    const items = res?.items || [];
+                    allItems.push(...items);
+                }
+                const sorted = [...allItems].sort((a, b) => (a.rank || 999) - (b.rank || 999));
+                const top5 = sorted.slice(0, 5).map(item => {
+                    const sch = sekolahList.find(s => s.id === item.id);
+                    return { ...item, namaSekolah: sch?.nama || sch?.name || '' };
+                });
+                setAllProposalsTop5(top5);
+            } catch { /* ignore */ }
+        };
+        fetchRanking();
+    }, [sekolahList, wilayah, jenjang]);
 
     const jumlahSekolah = useMemo(() =>
         sekolahList.filter(s => wilayah.includes(s.kecamatan) && s.jenjang === jenjang).length
