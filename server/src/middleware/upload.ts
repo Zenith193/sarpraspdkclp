@@ -106,7 +106,12 @@ export function forwardToNas(
                     const finalLocalPath = path.join(localDest, file.filename);
                     fs.renameSync(file.path, finalLocalPath);
 
-                    // Upload to GDrive with 30s timeout
+                    // Set local path immediately so request doesn't block
+                    (file as any).finalPath = finalLocalPath;
+                    (file as any).storedAt = 'local';
+                    (file as any).uploadPending = true;
+
+                    // Upload to GDrive in background (fire-and-forget)
                     let gdriveSubPath: string = category;
                     if (sekolah) {
                         const folderName: Record<string, string> = {
@@ -124,23 +129,15 @@ export function forwardToNas(
                         if (extra.masaBangunan) gdriveSubPath += `/${extra.masaBangunan}`;
                         if (extra.namaRuang) gdriveSubPath += `/${extra.namaRuang}`;
                     }
-                    try {
-                        const uploadPromise = uploadFileToGDrive(finalLocalPath, category, gdriveSubPath);
-                        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('GDrive upload timeout (60s)')), 60000));
-                        const result = await Promise.race([uploadPromise, timeoutPromise]) as any;
-                        (file as any).finalPath = result.path; // gdrive://fileId
-                        (file as any).storedAt = 'gdrive';
-                        (file as any).uploadPending = false;
-                        // Clean up local file after successful GDrive upload
-                        try { fs.unlinkSync(finalLocalPath); } catch {}
-                        console.log(`[Upload] ${file.originalname} → GDrive ✅ ${result.path}`);
-                    } catch (gErr: any) {
-                        // Fallback: use local file
-                        console.error(`[Upload] GDrive failed for ${file.originalname}:`, gErr.message, '→ using local file');
-                        (file as any).finalPath = finalLocalPath;
-                        (file as any).storedAt = 'local';
-                        (file as any).uploadPending = false;
-                    }
+                    // Background upload - don't await
+                    uploadFileToGDrive(finalLocalPath, category, gdriveSubPath)
+                        .then((result: any) => {
+                            console.log(`[Upload] ${file.originalname} → GDrive ✅ ${result.path}`);
+                            try { fs.unlinkSync(finalLocalPath); } catch {}
+                        })
+                        .catch((gErr: any) => {
+                            console.error(`[Upload] GDrive background upload failed for ${file.originalname}:`, gErr.message);
+                        });
                 } else {
                     const result = await uploadToNas(file.path, category, sekolah, extra);
                     (file as any).storedAt = result.stored;
