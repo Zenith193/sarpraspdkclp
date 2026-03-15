@@ -203,6 +203,7 @@ export const dashboardApi = {
 
 export const queueApi = {
     status: () => api.get('/queue/status'),
+    files: () => api.get('/queue/files'),
 };
 
 export const arsipDokumenApi = {

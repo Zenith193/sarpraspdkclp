@@ -331,6 +331,40 @@ app.get('/api/queue/status', async (req, res) => {
     } catch (e: any) { res.json({ totalUploading: 0, totalFailed: 0, error: e.message }); }
 });
 
+// ===== QUEUE FILES LIST (for dropdown) =====
+app.get('/api/queue/files', async (req, res) => {
+    try {
+        const { sarprasFoto, formKerusakan, prestasi, proposal, proposalFoto } = await import('./db/schema/index.js');
+        const { db: database } = await import('./db/index.js');
+        const { eq, or, sql } = await import('drizzle-orm');
+
+        const statusFilter = (col: any) => or(eq(col, 'uploading'), eq(col, 'failed'));
+        const files: any[] = [];
+
+        const fotos = await database.select({ id: sarprasFoto.id, fileName: sarprasFoto.fileName, status: sarprasFoto.uploadStatus })
+            .from(sarprasFoto).where(statusFilter(sarprasFoto.uploadStatus)).limit(10);
+        fotos.forEach(f => files.push({ type: 'Foto Sarpras', name: f.fileName || `foto_${f.id}`, status: f.status }));
+
+        const kerusakans = await database.select({ id: formKerusakan.id, fileName: formKerusakan.fileName, status: formKerusakan.uploadStatus })
+            .from(formKerusakan).where(statusFilter(formKerusakan.uploadStatus)).limit(5);
+        kerusakans.forEach(f => files.push({ type: 'Form Kerusakan', name: f.fileName || `kerusakan_${f.id}`, status: f.status }));
+
+        const prestasis = await database.select({ id: prestasi.id, fileName: sql<string>`COALESCE(${prestasi.nama}, 'prestasi_' || ${prestasi.id}::text)`, status: prestasi.uploadStatus })
+            .from(prestasi).where(statusFilter(prestasi.uploadStatus)).limit(5);
+        prestasis.forEach(f => files.push({ type: 'Prestasi', name: (f as any).fileName || `prestasi_${f.id}`, status: f.status }));
+
+        const proposals = await database.select({ id: proposal.id, fileName: proposal.fileName, status: proposal.uploadStatus })
+            .from(proposal).where(statusFilter(proposal.uploadStatus)).limit(5);
+        proposals.forEach(f => files.push({ type: 'Proposal', name: f.fileName || `proposal_${f.id}`, status: f.status }));
+
+        const propFotos = await database.select({ id: proposalFoto.id, fileName: proposalFoto.fileName, status: proposalFoto.uploadStatus })
+            .from(proposalFoto).where(statusFilter(proposalFoto.uploadStatus)).limit(5);
+        propFotos.forEach(f => files.push({ type: 'Foto Proposal', name: f.fileName || `foto_proposal_${f.id}`, status: f.status }));
+
+        res.json({ files });
+    } catch (e: any) { res.json({ files: [], error: e.message }); }
+});
+
 // Re-queue all local files for GDrive upload (for existing data migration)
 app.post('/api/queue/requeue', async (_req, res) => {
     try {
