@@ -101,7 +101,12 @@ export function forwardToNas(
         const processFile = async (file: Express.Multer.File) => {
             try {
                 if (isGDriveEnabled()) {
-                    // Upload directly to GDrive (synchronous)
+                    // Save locally first (safety net)
+                    const localDest = getLocalDestination(category, body);
+                    const finalLocalPath = path.join(localDest, file.filename);
+                    fs.renameSync(file.path, finalLocalPath);
+
+                    // Upload to GDrive with 30s timeout
                     let gdriveSubPath: string = category;
                     if (sekolah) {
                         const folderName: Record<string, string> = {
@@ -120,17 +125,18 @@ export function forwardToNas(
                         if (extra.namaRuang) gdriveSubPath += `/${extra.namaRuang}`;
                     }
                     try {
-                        const result = await uploadFileToGDrive(file.path, category, gdriveSubPath);
+                        const uploadPromise = uploadFileToGDrive(finalLocalPath, category, gdriveSubPath);
+                        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('GDrive upload timeout')), 30000));
+                        const result = await Promise.race([uploadPromise, timeoutPromise]) as any;
                         (file as any).finalPath = result.path; // gdrive://fileId
                         (file as any).storedAt = 'gdrive';
                         (file as any).uploadPending = false;
+                        // Clean up local file after successful GDrive upload
+                        try { fs.unlinkSync(finalLocalPath); } catch {}
                         console.log(`[Upload] ${file.originalname} → GDrive ✅ ${result.path}`);
                     } catch (gErr: any) {
-                        // Fallback: save locally if GDrive fails
-                        console.error(`[Upload] GDrive failed for ${file.originalname}:`, gErr.message, '→ saving locally');
-                        const localDest = getLocalDestination(category, body);
-                        const finalLocalPath = path.join(localDest, file.filename);
-                        fs.renameSync(file.path, finalLocalPath);
+                        // Fallback: use local file
+                        console.error(`[Upload] GDrive failed for ${file.originalname}:`, gErr.message, '→ using local file');
                         (file as any).finalPath = finalLocalPath;
                         (file as any).storedAt = 'local';
                         (file as any).uploadPending = false;
