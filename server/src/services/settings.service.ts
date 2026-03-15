@@ -10,7 +10,7 @@ const DEFAULTS: Record<string, any> = {
         korwil: ['dashboard', 'verifikasi-sarpras', 'verifikasi-proposal', 'ranking', 'data-sarpras', 'proposal', 'riwayat-bantuan', 'form-kerusakan'],
         sekolah: ['dashboard', 'data-sarpras', 'proposal', 'riwayat-bantuan', 'prestasi', 'form-kerusakan'],
     },
-    countdown: { enabled: false, deadline: '', label: 'Batas Akhir Input Data Sarpras', affectedRoles: ['sekolah', 'korwil', 'verifikator'], restrictedActions: ['tambah', 'edit', 'hapus'] },
+    countdown: { timers: [] },
     nas_config: { enabled: false, hostname: '', port: 5000, protocol: 'https', username: '', password: '', folders: { fotoSarpras: '/SarprasData/foto/', dokumenBAST: '/SarprasData/bast/', backupDB: '/SarprasData/backup/', template: '/SarprasData/template/', formKerusakan: '/SarprasData/form-kerusakan/' } },
     gdrive_config: { enabled: false, clientId: '', clientSecret: '', refreshToken: '', folderId: '' },
 };

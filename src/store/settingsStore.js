@@ -111,16 +111,9 @@ const DEFAULT_NAS = {
     lastTestTime: null
 };
 
-// ===== DEFAULT COUNTDOWN CONFIG =====
-const DEFAULT_COUNTDOWN = {
-    enabled: false,
-    deadline: '',
-    label: 'Batas Akhir Input Data Sarpras',
-    affectedRoles: ['sekolah', 'korwil', 'verifikator'],
-    restrictedActions: ['tambah', 'edit', 'hapus'],
-    filterJenjang: [],
-    filterKecamatan: [],
-};
+// ===== MULTI-TIMER COUNTDOWN (array of timers) =====
+// Each timer has: id, enabled, deadline, label, affectedRoles, restrictedActions, filterJenjang, filterKecamatan
+const DEFAULT_COUNTDOWN_TIMERS = [];
 
 // ===== AVAILABLE ACTIONS =====
 export const AVAILABLE_ACTIONS = [
@@ -131,13 +124,34 @@ export const AVAILABLE_ACTIONS = [
     { key: 'verifikasi', label: 'Verifikasi', desc: 'Memverifikasi data' },
 ];
 
+// Helper to create a new timer with defaults
+export const createNewTimer = (overrides = {}) => ({
+    id: Date.now().toString(),
+    enabled: true,
+    deadline: '',
+    label: 'Batas Akhir Input Data',
+    affectedRoles: ['sekolah', 'korwil', 'verifikator'],
+    restrictedActions: ['tambah', 'edit', 'hapus'],
+    filterJenjang: [],
+    filterKecamatan: [],
+    ...overrides,
+});
+
 // ===== STORE =====
 const useSettingsStore = create(
     persist(
         (set, get) => ({
             accessConfig: { ...DEFAULT_ACCESS },
             nasConfig: { ...DEFAULT_NAS },
-            countdownConfig: { ...DEFAULT_COUNTDOWN },
+            // Multi-timer: array of timer configs
+            countdownTimers: [...DEFAULT_COUNTDOWN_TIMERS],
+            // Legacy compat: single countdownConfig for old components
+            get countdownConfig() {
+                const timers = get().countdownTimers;
+                if (timers.length === 0) return { enabled: false, deadline: '', label: '', affectedRoles: [], restrictedActions: [], filterJenjang: [], filterKecamatan: [] };
+                // Return first enabled timer or first timer
+                return timers.find(t => t.enabled) || timers[0];
+            },
 
             // ===== ACCESS CONTROL =====
             isMenuAllowed: (role, menuPath) => {
@@ -185,29 +199,70 @@ const useSettingsStore = create(
 
             resetNasConfig: () => set({ nasConfig: { ...DEFAULT_NAS } }),
 
-            // ===== COUNTDOWN TIMER =====
-            updateCountdown: (updates) => set((state) => ({
-                countdownConfig: { ...state.countdownConfig, ...updates }
+            // ===== MULTI-TIMER COUNTDOWN =====
+            setCountdownTimers: (timers) => set({ countdownTimers: timers }),
+
+            addCountdownTimer: (timer) => set((state) => ({
+                countdownTimers: [...state.countdownTimers, timer]
             })),
 
-            resetCountdown: () => set({ countdownConfig: { ...DEFAULT_COUNTDOWN } }),
+            updateCountdownTimer: (id, updates) => set((state) => ({
+                countdownTimers: state.countdownTimers.map(t =>
+                    t.id === id ? { ...t, ...updates } : t
+                )
+            })),
 
+            removeCountdownTimer: (id) => set((state) => ({
+                countdownTimers: state.countdownTimers.filter(t => t.id !== id)
+            })),
+
+            toggleCountdownTimer: (id) => set((state) => ({
+                countdownTimers: state.countdownTimers.map(t =>
+                    t.id === id ? { ...t, enabled: !t.enabled } : t
+                )
+            })),
+
+            resetCountdownTimers: () => set({ countdownTimers: [] }),
+
+            // Legacy compat: updateCountdown — if called with old single-object format, migrate
+            updateCountdown: (cfg) => {
+                if (cfg && Array.isArray(cfg.timers)) {
+                    // New multi-timer format from server
+                    set({ countdownTimers: cfg.timers });
+                } else if (cfg && cfg.enabled !== undefined && !cfg.id) {
+                    // Old single-timer format — migrate to array
+                    const existing = get().countdownTimers;
+                    if (existing.length === 0) {
+                        set({ countdownTimers: [{ ...cfg, id: 'legacy' }] });
+                    } else {
+                        set({ countdownTimers: existing.map((t, i) => i === 0 ? { ...t, ...cfg } : t) });
+                    }
+                }
+            },
+            resetCountdown: () => set({ countdownTimers: [] }),
+
+            // ===== ACTION RESTRICTION CHECK (checks ALL enabled timers) =====
             isActionRestricted: (role, action, userJenjang, userKecamatan) => {
-                const cfg = get().countdownConfig;
-                if (!cfg.enabled || !cfg.deadline) return false;
+                const timers = get().countdownTimers;
                 const roleKey = role?.toLowerCase();
                 if (roleKey === 'admin') return false;
-                if (!cfg.affectedRoles.includes(roleKey)) return false;
-                if (!cfg.restrictedActions.includes(action)) return false;
-                // Check jenjang filter
-                if (cfg.filterJenjang && cfg.filterJenjang.length > 0 && userJenjang) {
-                    if (!cfg.filterJenjang.includes(userJenjang)) return false;
+
+                for (const cfg of timers) {
+                    if (!cfg.enabled || !cfg.deadline) continue;
+                    if (!cfg.affectedRoles.includes(roleKey)) continue;
+                    if (!cfg.restrictedActions.includes(action)) continue;
+                    // Check jenjang filter
+                    if (cfg.filterJenjang && cfg.filterJenjang.length > 0 && userJenjang) {
+                        if (!cfg.filterJenjang.includes(userJenjang)) continue;
+                    }
+                    // Check kecamatan filter
+                    if (cfg.filterKecamatan && cfg.filterKecamatan.length > 0 && userKecamatan) {
+                        if (!cfg.filterKecamatan.includes(userKecamatan)) continue;
+                    }
+                    // If deadline has passed, action is restricted
+                    if (new Date() > new Date(cfg.deadline)) return true;
                 }
-                // Check kecamatan filter
-                if (cfg.filterKecamatan && cfg.filterKecamatan.length > 0 && userKecamatan) {
-                    if (!cfg.filterKecamatan.includes(userKecamatan)) return false;
-                }
-                return new Date() > new Date(cfg.deadline);
+                return false;
             },
         }),
         {
@@ -215,10 +270,7 @@ const useSettingsStore = create(
             merge: (persistedState, currentState) => ({
                 ...currentState,
                 ...persistedState,
-                countdownConfig: {
-                    ...DEFAULT_COUNTDOWN,
-                    ...(persistedState?.countdownConfig || {}),
-                },
+                countdownTimers: persistedState?.countdownTimers || [],
                 nasConfig: {
                     ...DEFAULT_NAS,
                     ...(persistedState?.nasConfig || {}),

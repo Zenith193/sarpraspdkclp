@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Timer, Save, RotateCcw, Play, Pause, Clock, Users, ShieldAlert, CheckCircle, XCircle, AlertTriangle, MapPin, GraduationCap } from 'lucide-react';
-import useSettingsStore, { AVAILABLE_ACTIONS } from '../../store/settingsStore';
+import { Timer, Save, RotateCcw, Play, Pause, Clock, Users, ShieldAlert, CheckCircle, XCircle, AlertTriangle, MapPin, GraduationCap, Plus, Edit, Trash2, Power, X } from 'lucide-react';
+import useSettingsStore, { AVAILABLE_ACTIONS, createNewTimer } from '../../store/settingsStore';
 import { settingsApi } from '../../api/index';
 import { KECAMATAN, JENJANG } from '../../utils/constants';
-import SearchableSelect from '../../components/ui/SearchableSelect';
 import toast from 'react-hot-toast';
 
 const ROLE_OPTIONS = [
@@ -13,87 +12,117 @@ const ROLE_OPTIONS = [
 ];
 
 const CountdownSettings = () => {
-    const { countdownConfig, updateCountdown, resetCountdown } = useSettingsStore();
-    const [form, setForm] = useState({ ...countdownConfig });
-    const [hasChanges, setHasChanges] = useState(false);
-    const [preview, setPreview] = useState(null);
+    const { countdownTimers, setCountdownTimers, addCountdownTimer, updateCountdownTimer, removeCountdownTimer, toggleCountdownTimer, resetCountdownTimers } = useSettingsStore();
+    const [editTimer, setEditTimer] = useState(null); // null = closed, object = editing
+    const [showForm, setShowForm] = useState(false);
+    const [previews, setPreviews] = useState({});
 
-    // Load countdown config from server on mount
+    // Load from server on mount
     useEffect(() => {
         settingsApi.getCountdown().then(serverCfg => {
             const cfg = serverCfg?.value || serverCfg;
-            if (cfg && typeof cfg === 'object' && cfg.enabled !== undefined) {
-                updateCountdown(cfg);
-                setForm({ ...countdownConfig, ...cfg });
+            if (cfg && Array.isArray(cfg.timers)) {
+                setCountdownTimers(cfg.timers);
+            } else if (cfg && typeof cfg === 'object' && cfg.enabled !== undefined) {
+                // Legacy single-timer — migrate
+                setCountdownTimers([{ ...cfg, id: cfg.id || 'legacy' }]);
             }
         }).catch(() => { });
     }, []);
 
-    // Live preview timer
+    // Live previews for all timers
     useEffect(() => {
-        if (!form.enabled || !form.deadline) { setPreview(null); return; }
         const tick = () => {
-            const diff = new Date(form.deadline) - new Date();
-            if (diff <= 0) {
-                setPreview({ expired: true });
-            } else {
-                setPreview({
-                    expired: false,
-                    days: Math.floor(diff / 86400000),
-                    hours: Math.floor((diff % 86400000) / 3600000),
-                    minutes: Math.floor((diff % 3600000) / 60000),
-                    seconds: Math.floor((diff % 60000) / 1000),
-                });
-            }
+            const now = new Date();
+            const newPreviews = {};
+            countdownTimers.forEach(t => {
+                if (!t.enabled || !t.deadline) {
+                    newPreviews[t.id] = null;
+                    return;
+                }
+                const diff = new Date(t.deadline) - now;
+                if (diff <= 0) {
+                    newPreviews[t.id] = { expired: true };
+                } else {
+                    newPreviews[t.id] = {
+                        expired: false,
+                        days: Math.floor(diff / 86400000),
+                        hours: Math.floor((diff % 86400000) / 3600000),
+                        minutes: Math.floor((diff % 3600000) / 60000),
+                        seconds: Math.floor((diff % 60000) / 1000),
+                    };
+                }
+            });
+            setPreviews(newPreviews);
         };
         tick();
         const i = setInterval(tick, 1000);
         return () => clearInterval(i);
-    }, [form.enabled, form.deadline]);
+    }, [countdownTimers]);
 
-    const handleChange = (field, value) => {
-        setForm(prev => ({ ...prev, [field]: value }));
-        setHasChanges(true);
-    };
-
-    const toggleRole = (role) => {
-        const roles = form.affectedRoles.includes(role)
-            ? form.affectedRoles.filter(r => r !== role)
-            : [...form.affectedRoles, role];
-        handleChange('affectedRoles', roles);
-    };
-
-    const toggleAction = (action) => {
-        const actions = form.restrictedActions.includes(action)
-            ? form.restrictedActions.filter(a => a !== action)
-            : [...form.restrictedActions, action];
-        handleChange('restrictedActions', actions);
-    };
-
-    const handleSave = async () => {
-        if (form.enabled && !form.deadline) {
-            toast.error('Tentukan deadline terlebih dahulu');
-            return;
-        }
+    const saveToServer = async (timers) => {
         try {
-            // Save to server so all users get the same config
-            await settingsApi.setCountdown(form);
-            // Also save to local store
-            updateCountdown(form);
-            setHasChanges(false);
-            toast.success('Pengaturan countdown berhasil disimpan ke server');
-        } catch (err) {
-            // Fallback: save to local only
-            updateCountdown(form);
-            setHasChanges(false);
+            await settingsApi.setCountdown({ timers });
+            toast.success('Countdown Timer disimpan ke server');
+        } catch {
             toast.success('Disimpan lokal (gagal sync ke server)');
         }
     };
 
-    const handleReset = () => {
-        resetCountdown();
-        setHasChanges(false);
-        toast.success('Countdown direset ke default');
+    const handleAdd = () => {
+        const newTimer = createNewTimer();
+        setEditTimer(newTimer);
+        setShowForm(true);
+    };
+
+    const handleEdit = (timer) => {
+        setEditTimer({ ...timer });
+        setShowForm(true);
+    };
+
+    const handleSaveTimer = async () => {
+        if (!editTimer.deadline) {
+            toast.error('Tentukan deadline terlebih dahulu');
+            return;
+        }
+        const existing = countdownTimers.find(t => t.id === editTimer.id);
+        let newTimers;
+        if (existing) {
+            newTimers = countdownTimers.map(t => t.id === editTimer.id ? editTimer : t);
+        } else {
+            newTimers = [...countdownTimers, editTimer];
+        }
+        setCountdownTimers(newTimers);
+        await saveToServer(newTimers);
+        setShowForm(false);
+        setEditTimer(null);
+    };
+
+    const handleDelete = async (id) => {
+        const newTimers = countdownTimers.filter(t => t.id !== id);
+        setCountdownTimers(newTimers);
+        await saveToServer(newTimers);
+    };
+
+    const handleToggle = async (id) => {
+        const newTimers = countdownTimers.map(t => t.id === id ? { ...t, enabled: !t.enabled } : t);
+        setCountdownTimers(newTimers);
+        await saveToServer(newTimers);
+    };
+
+    const handleResetAll = async () => {
+        resetCountdownTimers();
+        await saveToServer([]);
+    };
+
+    const handleFormChange = (field, value) => {
+        setEditTimer(prev => ({ ...prev, [field]: value }));
+    };
+
+    const formatCountdown = (preview) => {
+        if (!preview) return 'Nonaktif';
+        if (preview.expired) return 'EXPIRED';
+        return `${preview.days}h ${preview.hours}j ${preview.minutes}m ${preview.seconds}d`;
     };
 
     return (
@@ -101,383 +130,255 @@ const CountdownSettings = () => {
             <div className="page-header">
                 <div className="page-header-left">
                     <h1>Countdown Timer</h1>
-                    <p>Atur batas waktu aksi untuk akun non-admin</p>
+                    <p>Kelola beberapa countdown timer sekaligus</p>
                 </div>
                 <div className="page-header-right" style={{ gap: 8 }}>
-                    <button className="btn btn-ghost" onClick={handleReset}><RotateCcw size={14} /> Reset</button>
-                    <button className="btn btn-primary" onClick={handleSave} disabled={!hasChanges}>
-                        <Save size={14} /> Simpan
-                    </button>
+                    <button className="btn btn-ghost" onClick={handleResetAll}><RotateCcw size={14} /> Reset Semua</button>
+                    <button className="btn btn-primary" onClick={handleAdd}><Plus size={14} /> Tambah Timer</button>
                 </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-                {/* ===== LEFT: CONFIG ===== */}
-                <div>
-                    {/* Enable Toggle */}
-                    <div className="table-container" style={{ padding: 20, marginBottom: 16 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                                <div style={{
-                                    width: 40, height: 40, borderRadius: 10,
-                                    background: form.enabled ? 'rgba(59,130,246,0.12)' : 'var(--bg-secondary)',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    color: form.enabled ? '#3b82f6' : 'var(--text-secondary)'
-                                }}>
-                                    <Timer size={20} />
-                                </div>
-                                <div>
-                                    <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>Countdown Timer</div>
-                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                                        {form.enabled ? 'Timer aktif — aksi akan dibatasi setelah deadline' : 'Timer nonaktif'}
-                                    </div>
-                                </div>
-                            </div>
-                            <label style={{ position: 'relative', display: 'inline-block', width: 48, height: 26, cursor: 'pointer' }}>
-                                <input type="checkbox" checked={form.enabled} onChange={e => handleChange('enabled', e.target.checked)}
-                                    style={{ opacity: 0, width: 0, height: 0 }} />
-                                <span style={{
-                                    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-                                    background: form.enabled ? '#3b82f6' : 'var(--bg-secondary)',
-                                    borderRadius: 26, transition: '0.3s',
-                                    border: `1px solid ${form.enabled ? '#3b82f6' : 'var(--border-color)'}`
-                                }}>
-                                    <span style={{
-                                        position: 'absolute', height: 20, width: 20, left: form.enabled ? 24 : 2, bottom: 2,
-                                        background: '#fff', borderRadius: '50%', transition: '0.3s',
-                                        boxShadow: '0 1px 3px rgba(0,0,0,0.2)'
-                                    }} />
-                                </span>
-                            </label>
-                        </div>
-                    </div>
-
-                    {/* Deadline & Label */}
-                    <div className="table-container" style={{ padding: 20, marginBottom: 16, opacity: form.enabled ? 1 : 0.5, pointerEvents: form.enabled ? 'auto' : 'none' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, paddingBottom: 10, borderBottom: '2px solid var(--bg-secondary)' }}>
-                            <Clock size={16} style={{ color: 'var(--accent-blue)' }} />
-                            <h3 style={{ fontSize: '0.9rem', fontWeight: 600, margin: 0 }}>Deadline & Label</h3>
-                        </div>
-
-                        <div className="form-group">
-                            <label className="form-label">Label Timer</label>
-                            <input className="form-input" value={form.label}
-                                onChange={e => handleChange('label', e.target.value)}
-                                placeholder="Cth: Batas Akhir Input Data Sarpras" />
-                        </div>
-
-                        <div className="form-group">
-                            <label className="form-label">Tanggal & Waktu Deadline</label>
-                            <input className="form-input" type="datetime-local"
-                                value={form.deadline ? form.deadline.slice(0, 16) : ''}
-                                onChange={e => handleChange('deadline', e.target.value ? new Date(e.target.value).toISOString() : '')}
-                                style={{ fontFamily: 'monospace' }} />
-                        </div>
-                    </div>
-
-                    {/* Affected Roles */}
-                    <div className="table-container" style={{ padding: 20, marginBottom: 16, opacity: form.enabled ? 1 : 0.5, pointerEvents: form.enabled ? 'auto' : 'none' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, paddingBottom: 10, borderBottom: '2px solid var(--bg-secondary)' }}>
-                            <Users size={16} style={{ color: 'var(--accent-green)' }} />
-                            <h3 style={{ fontSize: '0.9rem', fontWeight: 600, margin: 0 }}>Role Terdampak</h3>
-                        </div>
-                        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 12 }}>
-                            Pilih role yang akan terdampak countdown. Admin tidak pernah terdampak.
-                        </p>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                            {ROLE_OPTIONS.map(r => {
-                                const checked = form.affectedRoles.includes(r.key);
-                                return (
-                                    <label key={r.key} style={{
-                                        display: 'flex', alignItems: 'center', gap: 12,
-                                        padding: '10px 14px', borderRadius: 10, cursor: 'pointer',
-                                        border: `2px solid ${checked ? r.color : 'var(--border-color)'}`,
-                                        background: checked ? `${r.color}08` : 'transparent',
-                                        transition: '0.2s'
-                                    }}>
-                                        <input type="checkbox" checked={checked}
-                                            onChange={() => toggleRole(r.key)}
-                                            style={{ accentColor: r.color, width: 16, height: 16 }} />
-                                        <span style={{ fontWeight: checked ? 600 : 400, fontSize: '0.85rem', color: checked ? r.color : 'var(--text-primary)' }}>
-                                            {r.label}
-                                        </span>
-                                    </label>
-                                );
-                            })}
-                        </div>
-                    </div>
-
-                    {/* Filter Jenjang */}
-                    <div className="table-container" style={{ padding: 20, marginBottom: 16, opacity: form.enabled ? 1 : 0.5, pointerEvents: form.enabled ? 'auto' : 'none' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, paddingBottom: 10, borderBottom: '2px solid var(--bg-secondary)' }}>
-                            <GraduationCap size={16} style={{ color: '#8b5cf6' }} />
-                            <h3 style={{ fontSize: '0.9rem', fontWeight: 600, margin: 0 }}>Filter Jenjang</h3>
-                        </div>
-                        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 12 }}>
-                            Kosongkan untuk menerapkan ke semua jenjang. Pilih jenjang tertentu agar countdown hanya berlaku untuk jenjang tersebut.
-                        </p>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                            {JENJANG.map(j => {
-                                const checked = (form.filterJenjang || []).includes(j);
-                                return (
-                                    <label key={j} style={{
-                                        display: 'flex', alignItems: 'center', gap: 8,
-                                        padding: '8px 14px', borderRadius: 10, cursor: 'pointer',
-                                        border: `2px solid ${checked ? '#8b5cf6' : 'var(--border-color)'}`,
-                                        background: checked ? 'rgba(139,92,246,0.06)' : 'transparent',
-                                        transition: '0.2s', fontSize: '0.85rem'
-                                    }}>
-                                        <input type="checkbox" checked={checked}
-                                            onChange={() => {
-                                                const arr = form.filterJenjang || [];
-                                                handleChange('filterJenjang', checked ? arr.filter(x => x !== j) : [...arr, j]);
-                                            }}
-                                            style={{ accentColor: '#8b5cf6', width: 16, height: 16 }} />
-                                        <span style={{ fontWeight: checked ? 600 : 400, color: checked ? '#8b5cf6' : 'var(--text-primary)' }}>{j}</span>
-                                    </label>
-                                );
-                            })}
-                        </div>
-                        {(form.filterJenjang || []).length === 0 && (
-                            <div style={{ fontSize: '0.75rem', color: 'var(--accent-green)', marginTop: 8, fontStyle: 'italic' }}>
-                                ✓ Berlaku untuk semua jenjang
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Filter Kecamatan */}
-                    <div className="table-container" style={{ padding: 20, marginBottom: 16, opacity: form.enabled ? 1 : 0.5, pointerEvents: form.enabled ? 'auto' : 'none' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, paddingBottom: 10, borderBottom: '2px solid var(--bg-secondary)' }}>
-                            <MapPin size={16} style={{ color: '#0ea5e9' }} />
-                            <h3 style={{ fontSize: '0.9rem', fontWeight: 600, margin: 0 }}>Filter Kecamatan</h3>
-                        </div>
-                        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 12 }}>
-                            Kosongkan untuk menerapkan ke semua kecamatan. Pilih kecamatan tertentu agar countdown hanya berlaku untuk kecamatan tersebut.
-                        </p>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, maxHeight: 200, overflowY: 'auto', padding: 4 }}>
-                            {KECAMATAN.map(k => {
-                                const checked = (form.filterKecamatan || []).includes(k);
-                                return (
-                                    <label key={k} style={{
-                                        display: 'flex', alignItems: 'center', gap: 6,
-                                        padding: '5px 10px', borderRadius: 8, cursor: 'pointer',
-                                        border: `1.5px solid ${checked ? '#0ea5e9' : 'var(--border-color)'}`,
-                                        background: checked ? 'rgba(14,165,233,0.06)' : 'transparent',
-                                        transition: '0.2s', fontSize: '0.78rem'
-                                    }}>
-                                        <input type="checkbox" checked={checked}
-                                            onChange={() => {
-                                                const arr = form.filterKecamatan || [];
-                                                handleChange('filterKecamatan', checked ? arr.filter(x => x !== k) : [...arr, k]);
-                                            }}
-                                            style={{ accentColor: '#0ea5e9', width: 14, height: 14 }} />
-                                        <span style={{ fontWeight: checked ? 600 : 400, color: checked ? '#0ea5e9' : 'var(--text-primary)' }}>{k}</span>
-                                    </label>
-                                );
-                            })}
-                        </div>
-                        {(form.filterKecamatan || []).length > 0 && (
-                            <div style={{ fontSize: '0.75rem', color: '#0ea5e9', marginTop: 8 }}>
-                                {(form.filterKecamatan || []).length} kecamatan dipilih
-                                <button onClick={() => handleChange('filterKecamatan', [])} style={{ marginLeft: 8, fontSize: '0.7rem', color: 'var(--text-secondary)', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer' }}>Reset</button>
-                            </div>
-                        )}
-                        {(form.filterKecamatan || []).length === 0 && (
-                            <div style={{ fontSize: '0.75rem', color: 'var(--accent-green)', marginTop: 8, fontStyle: 'italic' }}>
-                                ✓ Berlaku untuk semua kecamatan
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Restricted Actions */}
-                    <div className="table-container" style={{ padding: 20, opacity: form.enabled ? 1 : 0.5, pointerEvents: form.enabled ? 'auto' : 'none' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, paddingBottom: 10, borderBottom: '2px solid var(--bg-secondary)' }}>
-                            <ShieldAlert size={16} style={{ color: '#ef4444' }} />
-                            <h3 style={{ fontSize: '0.9rem', fontWeight: 600, margin: 0 }}>Aksi yang Dibatasi</h3>
-                        </div>
-                        <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 12 }}>
-                            Pilih aksi yang akan dinonaktifkan setelah deadline berakhir.
-                        </p>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                            {AVAILABLE_ACTIONS.map(a => {
-                                const checked = form.restrictedActions.includes(a.key);
-                                return (
-                                    <label key={a.key} style={{
-                                        display: 'flex', alignItems: 'flex-start', gap: 10,
-                                        padding: '10px 12px', borderRadius: 10, cursor: 'pointer',
-                                        border: `2px solid ${checked ? '#ef4444' : 'var(--border-color)'}`,
-                                        background: checked ? 'rgba(239,68,68,0.04)' : 'transparent',
-                                        transition: '0.2s'
-                                    }}>
-                                        <input type="checkbox" checked={checked}
-                                            onChange={() => toggleAction(a.key)}
-                                            style={{ accentColor: '#ef4444', width: 16, height: 16, marginTop: 2 }} />
-                                        <div>
-                                            <div style={{ fontWeight: checked ? 600 : 400, fontSize: '0.85rem' }}>{a.label}</div>
-                                            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{a.desc}</div>
-                                        </div>
-                                    </label>
-                                );
-                            })}
-                        </div>
+            {/* ===== TIMER TABLE ===== */}
+            <div className="table-container">
+                <div className="table-toolbar">
+                    <div className="table-toolbar-left">
+                        <h3 style={{ fontSize: 15, fontWeight: 600, color: 'var(--text-primary)', margin: 0 }}>
+                            <Timer size={16} style={{ verticalAlign: -3, marginRight: 6 }} />
+                            Daftar Countdown Timer ({countdownTimers.length})
+                        </h3>
                     </div>
                 </div>
-
-                {/* ===== RIGHT: PREVIEW ===== */}
-                <div>
-                    {/* Live Preview */}
-                    <div className="table-container" style={{ padding: 20, marginBottom: 16 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, paddingBottom: 10, borderBottom: '2px solid var(--bg-secondary)' }}>
-                            <Play size={16} style={{ color: 'var(--accent-blue)' }} />
-                            <h3 style={{ fontSize: '0.9rem', fontWeight: 600, margin: 0 }}>Preview Timer</h3>
-                        </div>
-
-                        {!form.enabled ? (
-                            <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                                <Pause size={32} style={{ opacity: 0.3, marginBottom: 8 }} /><br />
-                                Timer tidak aktif
-                            </div>
-                        ) : !form.deadline ? (
-                            <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                                <Clock size={32} style={{ opacity: 0.3, marginBottom: 8 }} /><br />
-                                Tentukan deadline untuk melihat preview
-                            </div>
-                        ) : preview ? (
-                            <div>
-                                {/* Simulated Banner */}
-                                <div style={{
-                                    background: preview.expired
-                                        ? 'linear-gradient(135deg, #fee2e2, #fecaca)'
-                                        : 'linear-gradient(135deg, #eff6ff, #dbeafe)',
-                                    border: `1px solid ${preview.expired ? '#fca5a5' : '#93c5fd'}`,
-                                    borderRadius: 12, padding: '14px 18px'
-                                }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                                        {preview.expired
-                                            ? <AlertTriangle size={18} style={{ color: '#ef4444' }} />
-                                            : <Timer size={18} style={{ color: '#3b82f6' }} />
-                                        }
-                                        <span style={{ fontWeight: 600, fontSize: '0.85rem', color: preview.expired ? '#b91c1c' : '#1e40af' }}>
-                                            {form.label}
-                                        </span>
-                                    </div>
-
-                                    {!preview.expired && (
-                                        <div style={{ display: 'flex', gap: 6, justifyContent: 'center', margin: '12px 0' }}>
-                                            {[
-                                                { val: preview.days, label: 'Hari' },
-                                                { val: preview.hours, label: 'Jam' },
-                                                { val: preview.minutes, label: 'Mnt' },
-                                                { val: preview.seconds, label: 'Dtk' },
-                                            ].map(item => (
-                                                <div key={item.label} style={{
-                                                    background: 'rgba(59,130,246,0.1)',
-                                                    border: '1px solid rgba(59,130,246,0.2)',
-                                                    borderRadius: 8, padding: '8px 14px',
-                                                    textAlign: 'center', minWidth: 52
+                <div style={{ overflowX: 'auto' }}>
+                    <table className="data-table">
+                        <thead>
+                            <tr>
+                                <th style={{ width: 50 }}>No</th>
+                                <th>Label</th>
+                                <th>Deadline</th>
+                                <th>Sisa Waktu</th>
+                                <th>Role</th>
+                                <th>Jenjang</th>
+                                <th>Kecamatan</th>
+                                <th>Aksi Dibatasi</th>
+                                <th>Status</th>
+                                <th style={{ width: 130 }}>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {countdownTimers.map((timer, i) => {
+                                const preview = previews[timer.id];
+                                const isExpired = preview?.expired;
+                                const isActive = timer.enabled && timer.deadline;
+                                return (
+                                    <tr key={timer.id} style={{ opacity: timer.enabled ? 1 : 0.5 }}>
+                                        <td>{i + 1}</td>
+                                        <td style={{ fontWeight: 600, minWidth: 180 }}>{timer.label || 'Timer'}</td>
+                                        <td style={{ whiteSpace: 'nowrap', fontFamily: 'monospace', fontSize: '0.8rem' }}>
+                                            {timer.deadline ? new Date(timer.deadline).toLocaleString('id-ID') : '—'}
+                                        </td>
+                                        <td>
+                                            {isActive ? (
+                                                <span style={{
+                                                    fontFamily: 'monospace', fontWeight: 700, fontSize: '0.8rem',
+                                                    color: isExpired ? '#ef4444' : '#3b82f6',
+                                                    background: isExpired ? 'rgba(239,68,68,0.1)' : 'rgba(59,130,246,0.1)',
+                                                    padding: '3px 8px', borderRadius: 6
                                                 }}>
-                                                    <div style={{ fontSize: '1.3rem', fontWeight: 700, color: '#1e40af', fontFamily: 'monospace', lineHeight: 1 }}>
-                                                        {String(item.val).padStart(2, '0')}
-                                                    </div>
-                                                    <div style={{ fontSize: '0.6rem', color: '#3b82f6', fontWeight: 500, marginTop: 3 }}>
-                                                        {item.label}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
+                                                    {formatCountdown(preview)}
+                                                </span>
+                                            ) : '—'}
+                                        </td>
+                                        <td>
+                                            <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                                                {(timer.affectedRoles || []).map(r => (
+                                                    <span key={r} style={{ background: 'var(--bg-secondary)', padding: '1px 6px', borderRadius: 8, fontSize: 10, textTransform: 'capitalize' }}>{r}</span>
+                                                ))}
+                                            </div>
+                                        </td>
+                                        <td style={{ fontSize: '0.78rem' }}>
+                                            {(timer.filterJenjang || []).length > 0 ? timer.filterJenjang.join(', ') : <span style={{ color: 'var(--text-secondary)' }}>Semua</span>}
+                                        </td>
+                                        <td style={{ fontSize: '0.78rem' }}>
+                                            {(timer.filterKecamatan || []).length > 0 ? `${timer.filterKecamatan.length} kec.` : <span style={{ color: 'var(--text-secondary)' }}>Semua</span>}
+                                        </td>
+                                        <td>
+                                            <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                                                {(timer.restrictedActions || []).map(a => (
+                                                    <span key={a} style={{ background: 'rgba(239,68,68,0.08)', color: '#ef4444', padding: '1px 6px', borderRadius: 8, fontSize: 10, textTransform: 'capitalize' }}>{a}</span>
+                                                ))}
+                                            </div>
+                                        </td>
+                                        <td>
+                                            {isExpired ? (
+                                                <span className="badge badge-ditolak" style={{ fontSize: 10 }}>Expired</span>
+                                            ) : timer.enabled ? (
+                                                <span className="badge badge-disetujui" style={{ fontSize: 10 }}>Aktif</span>
+                                            ) : (
+                                                <span className="badge badge-menunggu" style={{ fontSize: 10 }}>Nonaktif</span>
+                                            )}
+                                        </td>
+                                        <td>
+                                            <div style={{ display: 'flex', gap: 4 }}>
+                                                <button className="btn-icon" onClick={() => handleToggle(timer.id)} title={timer.enabled ? 'Nonaktifkan' : 'Aktifkan'} style={{ color: timer.enabled ? '#22c55e' : 'var(--text-secondary)' }}>
+                                                    <Power size={15} />
+                                                </button>
+                                                <button className="btn-icon" onClick={() => handleEdit(timer)} title="Edit">
+                                                    <Edit size={15} />
+                                                </button>
+                                                <button className="btn-icon" onClick={() => handleDelete(timer.id)} title="Hapus" style={{ color: 'var(--accent-red)' }}>
+                                                    <Trash2 size={15} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
+                            {countdownTimers.length === 0 && (
+                                <tr>
+                                    <td colSpan={10} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>
+                                        <Timer size={32} style={{ opacity: 0.2, marginBottom: 8 }} /><br />
+                                        Belum ada countdown timer. Klik "Tambah Timer" untuk membuat.
+                                    </td>
+                                </tr>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
 
-                                    {preview.expired && (
-                                        <div style={{
-                                            textAlign: 'center', marginTop: 10,
-                                            background: '#ef4444', color: '#fff',
-                                            padding: '8px 0', borderRadius: 8,
-                                            fontWeight: 700, fontSize: '0.9rem', letterSpacing: '1px'
-                                        }}>
-                                            WAKTU TELAH HABIS
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 10, textAlign: 'center' }}>
-                                    Tampilan ini akan muncul di halaman akun role terdampak
-                                </div>
-                            </div>
-                        ) : null}
-                    </div>
-
-                    {/* Summary Card */}
-                    <div className="table-container" style={{ padding: 20 }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16, paddingBottom: 10, borderBottom: '2px solid var(--bg-secondary)' }}>
-                            <CheckCircle size={16} style={{ color: 'var(--accent-green)' }} />
-                            <h3 style={{ fontSize: '0.9rem', fontWeight: 600, margin: 0 }}>Ringkasan Konfigurasi</h3>
+            {/* ===== ADD/EDIT MODAL ===== */}
+            {showForm && editTimer && (
+                <div className="modal-overlay" onClick={() => { setShowForm(false); setEditTimer(null); }}>
+                    <div className="modal" style={{ maxWidth: 650, maxHeight: '90vh', overflow: 'auto' }} onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <div className="modal-title">{countdownTimers.find(t => t.id === editTimer.id) ? 'Edit Timer' : 'Tambah Timer Baru'}</div>
+                            <button className="modal-close" onClick={() => { setShowForm(false); setEditTimer(null); }}><X size={18} /></button>
                         </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                                <span style={{ color: 'var(--text-secondary)' }}>Status</span>
-                                <span style={{
-                                    fontWeight: 600,
-                                    color: form.enabled ? '#22c55e' : 'var(--text-secondary)',
-                                    display: 'flex', alignItems: 'center', gap: 6
-                                }}>
-                                    {form.enabled ? <><CheckCircle size={14} /> Aktif</> : <><XCircle size={14} /> Nonaktif</>}
-                                </span>
+                        <div className="modal-body">
+                            {/* Label & Deadline */}
+                            <div className="form-group">
+                                <label className="form-label">Label Timer *</label>
+                                <input className="form-input" value={editTimer.label} onChange={e => handleFormChange('label', e.target.value)} placeholder="Cth: Batas Akhir Input Data Sarpras" />
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Tanggal & Waktu Deadline *</label>
+                                <input className="form-input" type="datetime-local" value={editTimer.deadline ? editTimer.deadline.slice(0, 16) : ''} onChange={e => handleFormChange('deadline', e.target.value ? new Date(e.target.value).toISOString() : '')} style={{ fontFamily: 'monospace' }} />
                             </div>
 
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                                <span style={{ color: 'var(--text-secondary)' }}>Deadline</span>
-                                <span style={{ fontWeight: 500 }}>
-                                    {form.deadline ? new Date(form.deadline).toLocaleString('id-ID') : '—'}
-                                </span>
+                            {/* Enabled Toggle */}
+                            <div className="form-group" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 14px', background: 'var(--bg-secondary)', borderRadius: 10 }}>
+                                <span style={{ fontWeight: 600, fontSize: '0.85rem' }}>Timer {editTimer.enabled ? 'Aktif' : 'Nonaktif'}</span>
+                                <label style={{ position: 'relative', display: 'inline-block', width: 44, height: 24, cursor: 'pointer' }}>
+                                    <input type="checkbox" checked={editTimer.enabled} onChange={e => handleFormChange('enabled', e.target.checked)} style={{ opacity: 0, width: 0, height: 0 }} />
+                                    <span style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, background: editTimer.enabled ? '#3b82f6' : 'var(--bg-card)', borderRadius: 24, transition: '0.3s', border: `1px solid ${editTimer.enabled ? '#3b82f6' : 'var(--border-color)'}` }}>
+                                        <span style={{ position: 'absolute', height: 18, width: 18, left: editTimer.enabled ? 22 : 2, bottom: 2, background: '#fff', borderRadius: '50%', transition: '0.3s', boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }} />
+                                    </span>
+                                </label>
                             </div>
 
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                                <span style={{ color: 'var(--text-secondary)' }}>Role Terdampak</span>
-                                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                                    {form.affectedRoles.length > 0 ? form.affectedRoles.map(r => (
-                                        <span key={r} style={{
-                                            background: 'var(--bg-secondary)', padding: '2px 8px',
-                                            borderRadius: 10, fontSize: '0.75rem', fontWeight: 500,
-                                            textTransform: 'capitalize'
-                                        }}>{r}</span>
-                                    )) : '—'}
+                            {/* Affected Roles */}
+                            <div style={{ marginTop: 12, marginBottom: 12 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                                    <Users size={14} style={{ color: 'var(--accent-green)' }} />
+                                    <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Role Terdampak</span>
+                                </div>
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                    {ROLE_OPTIONS.map(r => {
+                                        const checked = (editTimer.affectedRoles || []).includes(r.key);
+                                        return (
+                                            <label key={r.key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px', borderRadius: 10, cursor: 'pointer', border: `2px solid ${checked ? r.color : 'var(--border-color)'}`, background: checked ? `${r.color}08` : 'transparent', transition: '0.2s' }}>
+                                                <input type="checkbox" checked={checked} onChange={() => {
+                                                    const arr = editTimer.affectedRoles || [];
+                                                    handleFormChange('affectedRoles', checked ? arr.filter(x => x !== r.key) : [...arr, r.key]);
+                                                }} style={{ accentColor: r.color, width: 16, height: 16 }} />
+                                                <span style={{ fontWeight: checked ? 600 : 400, fontSize: '0.85rem', color: checked ? r.color : 'var(--text-primary)' }}>{r.label}</span>
+                                            </label>
+                                        );
+                                    })}
                                 </div>
                             </div>
 
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                                <span style={{ color: 'var(--text-secondary)' }}>Aksi Dibatasi</span>
-                                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-                                    {form.restrictedActions.length > 0 ? form.restrictedActions.map(a => (
-                                        <span key={a} style={{
-                                            background: 'rgba(239,68,68,0.08)', color: '#ef4444',
-                                            padding: '2px 8px', borderRadius: 10,
-                                            fontSize: '0.75rem', fontWeight: 500,
-                                            textTransform: 'capitalize'
-                                        }}>{a}</span>
-                                    )) : '—'}
+                            {/* Restricted Actions */}
+                            <div style={{ marginBottom: 12 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                                    <ShieldAlert size={14} style={{ color: '#ef4444' }} />
+                                    <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Aksi yang Dibatasi</span>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                                    {AVAILABLE_ACTIONS.map(a => {
+                                        const checked = (editTimer.restrictedActions || []).includes(a.key);
+                                        return (
+                                            <label key={a.key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 8, cursor: 'pointer', border: `1.5px solid ${checked ? '#ef4444' : 'var(--border-color)'}`, background: checked ? 'rgba(239,68,68,0.04)' : 'transparent', transition: '0.2s' }}>
+                                                <input type="checkbox" checked={checked} onChange={() => {
+                                                    const arr = editTimer.restrictedActions || [];
+                                                    handleFormChange('restrictedActions', checked ? arr.filter(x => x !== a.key) : [...arr, a.key]);
+                                                }} style={{ accentColor: '#ef4444', width: 14, height: 14 }} />
+                                                <div>
+                                                    <div style={{ fontSize: '0.8rem', fontWeight: checked ? 600 : 400 }}>{a.label}</div>
+                                                    <div style={{ fontSize: '0.65rem', color: 'var(--text-secondary)' }}>{a.desc}</div>
+                                                </div>
+                                            </label>
+                                        );
+                                    })}
                                 </div>
                             </div>
 
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                                <span style={{ color: 'var(--text-secondary)' }}>Jenjang</span>
-                                <span style={{ fontWeight: 500, color: (form.filterJenjang || []).length > 0 ? '#8b5cf6' : 'var(--text-secondary)' }}>
-                                    {(form.filterJenjang || []).length > 0 ? (form.filterJenjang || []).join(', ') : 'Semua'}
-                                </span>
+                            {/* Filter Jenjang */}
+                            <div style={{ marginBottom: 12 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                                    <GraduationCap size={14} style={{ color: '#8b5cf6' }} />
+                                    <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Filter Jenjang</span>
+                                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>(kosong = semua)</span>
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                                    {JENJANG.map(j => {
+                                        const checked = (editTimer.filterJenjang || []).includes(j);
+                                        return (
+                                            <label key={j} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '6px 12px', borderRadius: 8, cursor: 'pointer', border: `1.5px solid ${checked ? '#8b5cf6' : 'var(--border-color)'}`, background: checked ? 'rgba(139,92,246,0.06)' : 'transparent', transition: '0.2s', fontSize: '0.8rem' }}>
+                                                <input type="checkbox" checked={checked} onChange={() => {
+                                                    const arr = editTimer.filterJenjang || [];
+                                                    handleFormChange('filterJenjang', checked ? arr.filter(x => x !== j) : [...arr, j]);
+                                                }} style={{ accentColor: '#8b5cf6', width: 14, height: 14 }} />
+                                                <span style={{ fontWeight: checked ? 600 : 400, color: checked ? '#8b5cf6' : 'var(--text-primary)' }}>{j}</span>
+                                            </label>
+                                        );
+                                    })}
+                                </div>
                             </div>
 
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                                <span style={{ color: 'var(--text-secondary)' }}>Kecamatan</span>
-                                <span style={{ fontWeight: 500, color: (form.filterKecamatan || []).length > 0 ? '#0ea5e9' : 'var(--text-secondary)' }}>
-                                    {(form.filterKecamatan || []).length > 0 ? `${(form.filterKecamatan || []).length} dipilih` : 'Semua'}
-                                </span>
+                            {/* Filter Kecamatan */}
+                            <div style={{ marginBottom: 12 }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                                    <MapPin size={14} style={{ color: '#0ea5e9' }} />
+                                    <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>Filter Kecamatan</span>
+                                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>(kosong = semua)</span>
+                                    {(editTimer.filterKecamatan || []).length > 0 && (
+                                        <button onClick={() => handleFormChange('filterKecamatan', [])} style={{ fontSize: '0.7rem', color: 'var(--accent-blue)', textDecoration: 'underline', background: 'none', border: 'none', cursor: 'pointer', marginLeft: 'auto' }}>Reset</button>
+                                    )}
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, maxHeight: 160, overflowY: 'auto', padding: 2 }}>
+                                    {KECAMATAN.map(k => {
+                                        const checked = (editTimer.filterKecamatan || []).includes(k);
+                                        return (
+                                            <label key={k} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '4px 8px', borderRadius: 6, cursor: 'pointer', border: `1px solid ${checked ? '#0ea5e9' : 'var(--border-color)'}`, background: checked ? 'rgba(14,165,233,0.06)' : 'transparent', transition: '0.2s', fontSize: '0.73rem' }}>
+                                                <input type="checkbox" checked={checked} onChange={() => {
+                                                    const arr = editTimer.filterKecamatan || [];
+                                                    handleFormChange('filterKecamatan', checked ? arr.filter(x => x !== k) : [...arr, k]);
+                                                }} style={{ accentColor: '#0ea5e9', width: 12, height: 12 }} />
+                                                <span style={{ fontWeight: checked ? 600 : 400, color: checked ? '#0ea5e9' : 'var(--text-primary)' }}>{k}</span>
+                                            </label>
+                                        );
+                                    })}
+                                </div>
                             </div>
+                        </div>
+                        <div className="modal-footer">
+                            <button className="btn btn-ghost" onClick={() => { setShowForm(false); setEditTimer(null); }}>Batal</button>
+                            <button className="btn btn-primary" onClick={handleSaveTimer}><Save size={14} /> Simpan Timer</button>
                         </div>
                     </div>
                 </div>
-            </div>
+            )}
         </div>
     );
 };
