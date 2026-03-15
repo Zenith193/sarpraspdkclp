@@ -493,15 +493,27 @@ const ManajemenPengguna = () => {
 
                         {/* Column Visibility Toggle */}
                         <div style={{ position: 'relative' }} ref={colMenuRef}>
-                            <button className="btn btn-ghost btn-sm" onClick={() => setShowColMenu(!showColMenu)}>
+                            <button className="btn btn-ghost btn-sm" onClick={(e) => {
+                                if (showColMenu) { setShowColMenu(false); return; }
+                                setShowColMenu(true);
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                setTimeout(() => {
+                                    const dd = document.getElementById('col-menu-dd');
+                                    if (dd) {
+                                        dd.style.top = `${rect.bottom + 4}px`;
+                                        dd.style.left = `${rect.left}px`;
+                                    }
+                                }, 0);
+                            }}>
                                 <Columns size={14} /> Kolom
                             </button>
                             {showColMenu && (
-                                <div style={{
-                                    position: 'absolute', top: '100%', left: 0, marginTop: 4, zIndex: 50,
+                                <div id="col-menu-dd" style={{
+                                    position: 'fixed', top: 'auto', left: 'auto', zIndex: 9999,
                                     background: 'var(--bg-card)', border: '1px solid var(--border-color)',
-                                    borderRadius: 10, padding: '8px 0', minWidth: 180,
-                                    boxShadow: '0 8px 30px rgba(0,0,0,0.2)'
+                                    borderRadius: 10, padding: '8px 0', minWidth: 200,
+                                    boxShadow: '0 8px 30px rgba(0,0,0,0.2)',
+                                    maxHeight: '70vh', overflowY: 'auto'
                                 }}>
                                     <div style={{ padding: '4px 14px 8px', fontSize: 11, fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Tampilkan Kolom</div>
                                     {ALL_COLUMNS.filter(c => !c.alwaysVisible).map(col => (
