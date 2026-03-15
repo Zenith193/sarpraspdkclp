@@ -29,6 +29,8 @@ const VerifikasiProposal = () => {
 
             // For korwil: get assignment first, then filter server-side
             if (role === 'Korwil' && user?.id) {
+                // Korwil only sees proposals still in Keranjang Usulan Sekolah (not yet forwarded)
+                params.keranjang = 'Keranjang Usulan Sekolah';
                 try {
                     const korwilList = await korwilApi.list();
                     const myRows = (korwilList || []).filter(row => {

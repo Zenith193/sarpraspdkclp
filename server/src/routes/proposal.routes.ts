@@ -184,14 +184,13 @@ router.put('/:id/status', requireAuth, requireRole('admin', 'verifikator', 'korw
             res.status(403).json({ error: 'Korwil hanya bisa memverifikasi proposal SD' }); return;
         }
 
-        // Update status
-        await proposalService.updateStatus(id, newStatus, req.user!.id);
-
         // Auto-transition keranjang based on status + jenjang + role
         let newKeranjang = existing[0].proposal.keranjang;
+        let finalStatus = newStatus;
         if (newStatus === 'Diterima' || newStatus === 'Disetujui') {
             if (userRole === 'korwil' && jenjang === 'SD') {
-                // Korwil approves SD → move to Usulan Korwil
+                // Korwil approves SD → keep as Menunggu Verifikasi, move keranjang to Usulan Korwil
+                finalStatus = 'Menunggu Verifikasi';
                 newKeranjang = 'Keranjang Usulan Korwil';
             } else if (userRole === 'admin' || userRole === 'verifikator') {
                 // Admin/Verifikator approves → use specified keranjang (Kabupaten/Provinsi/Pusat)
@@ -201,6 +200,9 @@ router.put('/:id/status', requireAuth, requireRole('admin', 'verifikator', 'korw
             // Rejected/Revised → back to Usulan Sekolah
             newKeranjang = 'Keranjang Usulan Sekolah';
         }
+
+        // Update status with potentially modified finalStatus
+        await proposalService.updateStatus(id, finalStatus, req.user!.id);
 
         if (newKeranjang !== existing[0].proposal.keranjang) {
             await proposalService.updateKeranjang(id, newKeranjang || 'Keranjang Usulan Sekolah');
