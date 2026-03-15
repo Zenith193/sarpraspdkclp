@@ -414,11 +414,29 @@ const UploadFormKerusakan = () => {
                                                 if (!sekolahCanAct && isSekolah) return null;
                                                 return (
                                             <div style={{ position: 'relative' }} ref={openActionId === d.id ? actionDropdownRef : null}>
-                                                <button className="btn-icon" onClick={() => setOpenActionId(openActionId === d.id ? null : d.id)} title="Aksi">
+                                                <button className="btn-icon" onClick={(e) => {
+                                                    if (openActionId === d.id) { setOpenActionId(null); return; }
+                                                    setOpenActionId(d.id);
+                                                    const rect = e.currentTarget.getBoundingClientRect();
+                                                    setTimeout(() => {
+                                                        const dd = document.getElementById(`action-dd-${d.id}`);
+                                                        if (dd) {
+                                                            const spaceBelow = window.innerHeight - rect.bottom;
+                                                            if (spaceBelow < 250) {
+                                                                dd.style.bottom = `${window.innerHeight - rect.top + 4}px`;
+                                                                dd.style.top = 'auto';
+                                                            } else {
+                                                                dd.style.top = `${rect.bottom + 4}px`;
+                                                                dd.style.bottom = 'auto';
+                                                            }
+                                                            dd.style.right = `${window.innerWidth - rect.right}px`;
+                                                        }
+                                                    }, 0);
+                                                }} title="Aksi">
                                                     <MoreVertical size={16} />
                                                 </button>
                                                 {openActionId === d.id && (
-                                                    <div className="dropdown-menu" style={{ right: 0, left: 'auto', top: '100%', marginTop: 4, minWidth: 180, zIndex: 50 }}>
+                                                    <div id={`action-dd-${d.id}`} className="dropdown-menu" style={{ position: 'fixed', right: 0, left: 'auto', minWidth: 180, zIndex: 9999 }}>
                                                         {d.fileUrl && (
                                                             <>
                                                                 <button className="dropdown-item" onClick={() => { window.open(`/api/file/kerusakan/${d.id}`, '_blank'); setOpenActionId(null); }}>
