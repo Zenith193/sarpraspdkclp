@@ -184,7 +184,7 @@ const DashboardKorwil = () => {
             </div>
 
             {/* Summary Cards */}
-            <div className="summary-grid" style={{ marginBottom: 24, gridTemplateColumns: 'repeat(3, 1fr)' }}>
+            <div className="summary-grid" style={{ marginBottom: 24, gridTemplateColumns: '1fr 1fr 2fr' }}>
                 <div className="summary-card">
                     <div className="summary-card-header"><div className="summary-card-title">Rekap Sarpras {jenjang}</div><div className="summary-card-icon" style={{ background: 'rgba(59,130,246,0.1)', color: 'var(--accent-blue)' }}><Building2 size={16} /></div></div>
                     <div className="summary-card-value">{loading ? '...' : formatNumber(sarprasStats.total)}</div>
