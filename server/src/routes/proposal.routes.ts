@@ -78,7 +78,9 @@ router.post('/', requireAuth, requireRole('admin', 'sekolah'), async (req, res) 
         req.body.keranjang = 'Keranjang Usulan Sekolah';
         req.body.status = 'Menunggu Verifikasi';
         const result = await proposalService.create(req.body, req.user!.id);
-        logActivity(req, 'Tambah Proposal', `Mengajukan proposal baru`);
+        let schNm = '';
+        if (req.body.sekolahId) { const sc = await db.select({ nama: sekolah.nama }).from(sekolah).where(eq(sekolah.id, Number(req.body.sekolahId))); schNm = sc[0]?.nama || ''; }
+        logActivity(req, 'Tambah Proposal', `Mengajukan proposal baru: ${schNm} - ${req.body.subKegiatan || req.body.jenisPrasarana || ''}`);
         res.status(201).json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
@@ -100,7 +102,10 @@ router.put('/:id', requireAuth, requireRole('admin', 'sekolah'), async (req, res
         // Sanitize empty date strings to null
         if (req.body.tanggalSurat === '') req.body.tanggalSurat = null;
         const result = await proposalService.update(id, req.body);
-        logActivity(req, 'Edit Proposal', `Mengubah proposal #${id}`);
+        const pRow = await db.select({ sk: proposal.subKegiatan, sid: proposal.sekolahId }).from(proposal).where(eq(proposal.id, id));
+        let schNm = '';
+        if (pRow[0]?.sid) { const sc = await db.select({ nama: sekolah.nama }).from(sekolah).where(eq(sekolah.id, pRow[0].sid)); schNm = sc[0]?.nama || ''; }
+        logActivity(req, 'Edit Proposal', `Mengubah proposal ${schNm} - ${pRow[0]?.sk || ''}`);
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
@@ -127,15 +132,22 @@ router.put('/:id/upload', requireAuth, requireRole('admin', 'sekolah'), uploadPr
             filePath: finalPath,
             uploadStatus: uploadPending ? 'uploading' : 'done',
         });
-        logActivity(req, 'Upload Proposal PDF', `Upload PDF proposal #${id}: ${req.file.originalname}`);
+        const pRow = await db.select({ sk: proposal.subKegiatan, sid: proposal.sekolahId }).from(proposal).where(eq(proposal.id, id));
+        let schNm = '';
+        if (pRow[0]?.sid) { const sc = await db.select({ nama: sekolah.nama }).from(sekolah).where(eq(sekolah.id, pRow[0].sid)); schNm = sc[0]?.nama || ''; }
+        logActivity(req, 'Upload Proposal PDF', `Upload PDF ${schNm} - ${pRow[0]?.sk || ''}: ${req.file.originalname}`);
         res.json({ success: true, fileName: req.file.originalname });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
     try {
-        await proposalService.delete(Number(req.params.id));
-        logActivity(req, 'Hapus Proposal', `Menghapus proposal #${req.params.id}`);
+        const id = Number(req.params.id);
+        const pRow = await db.select({ sk: proposal.subKegiatan, sid: proposal.sekolahId }).from(proposal).where(eq(proposal.id, id));
+        let schNm = '';
+        if (pRow[0]?.sid) { const sc = await db.select({ nama: sekolah.nama }).from(sekolah).where(eq(sekolah.id, pRow[0].sid)); schNm = sc[0]?.nama || ''; }
+        await proposalService.delete(id);
+        logActivity(req, 'Hapus Proposal', `Menghapus proposal ${schNm} - ${pRow[0]?.sk || ''}`);
         res.json({ success: true });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
@@ -194,7 +206,10 @@ router.put('/:id/status', requireAuth, requireRole('admin', 'verifikator', 'korw
             await proposalService.updateKeranjang(id, newKeranjang || 'Keranjang Usulan Sekolah');
         }
 
-        logActivity(req, 'Ubah Status Proposal', `Mengubah status proposal #${id} menjadi ${newStatus} (keranjang: ${newKeranjang})`);
+        const pSk = existing[0].proposal.subKegiatan || '';
+        let schNm2 = '';
+        if (existing[0].proposal.sekolahId) { const sc = await db.select({ nama: sekolah.nama }).from(sekolah).where(eq(sekolah.id, existing[0].proposal.sekolahId)); schNm2 = sc[0]?.nama || ''; }
+        logActivity(req, 'Ubah Status Proposal', `Mengubah status proposal ${schNm2} - ${pSk} menjadi ${newStatus} (keranjang: ${newKeranjang})`);
         // Return updated proposal
         const updated = await proposalService.getById(id);
         res.json(updated);
@@ -226,7 +241,10 @@ router.put('/:id/upload', requireAuth, requireRole('admin', 'sekolah'), uploadPr
             filePath: f.finalPath || req.file.path,
             uploadStatus: f.uploadPending ? 'uploading' : 'done',
         });
-        logActivity(req, 'Upload File Proposal', `Upload file proposal #${id}: ${req.file.originalname}`);
+        const pRow2 = await db.select({ sk: proposal.subKegiatan, sid: proposal.sekolahId }).from(proposal).where(eq(proposal.id, id));
+        let schNm3 = '';
+        if (pRow2[0]?.sid) { const sc = await db.select({ nama: sekolah.nama }).from(sekolah).where(eq(sekolah.id, pRow2[0].sid)); schNm3 = sc[0]?.nama || ''; }
+        logActivity(req, 'Upload File Proposal', `Upload file ${schNm3} - ${pRow2[0]?.sk || ''}: ${req.file.originalname}`);
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });

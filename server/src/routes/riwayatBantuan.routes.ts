@@ -39,7 +39,7 @@ router.post('/', requireAuth, requireRole('admin'), uploadFormKerusakan.single('
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.put('/:id', requireAuth, requireRole('admin'), async (req, res) => {
-    try { const r = await riwayatBantuanService.update(Number(req.params.id), req.body); logActivity(req, 'Edit Riwayat Bantuan', `Mengubah riwayat bantuan #${req.params.id}`); res.json(r); } catch (e: any) { res.status(500).json({ error: e.message }); }
+    try { const r = await riwayatBantuanService.update(Number(req.params.id), req.body); const ex = await riwayatBantuanService.getById(Number(req.params.id)); logActivity(req, 'Edit Riwayat Bantuan', `Mengubah riwayat bantuan ${(ex as any)?.sekolahNama || ''} - ${(ex as any)?.riwayatBantuan?.namaPaket || req.body.namaPaket || ''}`); res.json(r); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 // Upload/replace file for existing riwayat bantuan
@@ -58,7 +58,7 @@ router.put('/:id/upload', requireAuth, requireRole('admin'), uploadFormKerusakan
 });
 
 router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
-    try { await riwayatBantuanService.delete(Number(req.params.id)); logActivity(req, 'Hapus Riwayat Bantuan', `Menghapus riwayat bantuan #${req.params.id}`); res.json({ success: true }); } catch (e: any) { res.status(500).json({ error: e.message }); }
+    try { const ex = await riwayatBantuanService.getById(Number(req.params.id)); const sn = (ex as any)?.sekolahNama || ''; const np = (ex as any)?.riwayatBantuan?.namaPaket || ''; await riwayatBantuanService.delete(Number(req.params.id)); logActivity(req, 'Hapus Riwayat Bantuan', `Menghapus riwayat bantuan ${sn} - ${np}`); res.json({ success: true }); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 export default router;

@@ -120,14 +120,17 @@ router.put('/:id/upload', requireAuth, requireRole('admin', 'sekolah'), uploadFo
 
         const f = req.file as any;
         const uploadStatus = f?.uploadPending ? 'uploading' : 'done';
+        const existing2 = isSekolah ? null : await kerusakanService.getById(id);
+        const schName = existing2?.sekolahNama || '';
+        const masa = existing2?.formKerusakan?.masaBangunan || '';
         const result = await kerusakanService.updateFile(id, req.file.originalname, f?.finalPath || req.file.path, uploadStatus);
-        logActivity(req, 'Upload File Kerusakan', `Upload file kerusakan #${id}: ${req.file.originalname}`);
+        logActivity(req, 'Upload File Kerusakan', `Upload file kerusakan ${schName} - ${masa}: ${req.file.originalname}`);
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 router.delete('/:id', requireAuth, requireRole('admin', 'verifikator', 'korwil'), async (req, res) => {
-    try { await kerusakanService.delete(Number(req.params.id)); logActivity(req, 'Hapus Form Kerusakan', `Menghapus form kerusakan #${req.params.id}`); res.json({ success: true }); } catch (e: any) { res.status(500).json({ error: e.message }); }
+    try { const ex = await kerusakanService.getById(Number(req.params.id)); const sn = ex?.sekolahNama || ''; const mb = ex?.formKerusakan?.masaBangunan || ''; await kerusakanService.delete(Number(req.params.id)); logActivity(req, 'Hapus Form Kerusakan', `Menghapus form kerusakan ${sn} - ${mb}`); res.json({ success: true }); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.post('/:id/verify', requireAuth, requireRole('admin', 'verifikator', 'korwil'), async (req, res) => {
     try {
@@ -143,24 +146,24 @@ router.post('/:id/verify', requireAuth, requireRole('admin', 'verifikator', 'kor
         if (role === 'korwil' && jenjang === 'SD') {
             // Korwil verifies SD → promote to verifikator queue
             const r = await db.update(formKerusakan).set({ status: 'Menunggu Verifikasi', verifiedBy: req.user!.id, updatedAt: new Date() }).where(eq(formKerusakan.id, id)).returning();
-            logActivity(req, 'Verifikasi Korwil Kerusakan', `Memverifikasi form kerusakan #${id} (SD → verifikator)`);
+            logActivity(req, 'Verifikasi Korwil Kerusakan', `Memverifikasi form kerusakan ${existing.sekolahNama || ''} - ${existing.formKerusakan.masaBangunan || ''} → diteruskan ke verifikator`);
             res.json(r);
         } else {
             // Admin/Verifikator → final verify
             const r = await kerusakanService.verify(id, req.user!.id);
-            logActivity(req, 'Verifikasi Kerusakan', `Memverifikasi form kerusakan #${id}`);
+            logActivity(req, 'Verifikasi Kerusakan', `Memverifikasi form kerusakan ${existing.sekolahNama || ''} - ${existing.formKerusakan.masaBangunan || ''}`);
             res.json(r);
         }
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.post('/:id/reject', requireAuth, requireRole('admin', 'verifikator', 'korwil'), async (req, res) => {
-    try { const r = await kerusakanService.reject(Number(req.params.id), req.user!.id, req.body.alasan); logActivity(req, 'Tolak Kerusakan', `Menolak form kerusakan #${req.params.id}`); res.json(r); } catch (e: any) { res.status(500).json({ error: e.message }); }
+    try { const ex = await kerusakanService.getById(Number(req.params.id)); const sn = ex?.sekolahNama || ''; const mb = ex?.formKerusakan?.masaBangunan || ''; const r = await kerusakanService.reject(Number(req.params.id), req.user!.id, req.body.alasan); logActivity(req, 'Tolak Kerusakan', `Menolak form kerusakan ${sn} - ${mb}: ${req.body.alasan || ''}`); res.json(r); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.post('/:id/unverify', requireAuth, requireRole('admin', 'verifikator', 'korwil'), async (req, res) => {
-    try { const r = await kerusakanService.unverify(Number(req.params.id)); logActivity(req, 'Batalkan Verifikasi Kerusakan', `Membatalkan verifikasi kerusakan #${req.params.id}`); res.json(r); } catch (e: any) { res.status(500).json({ error: e.message }); }
+    try { const ex = await kerusakanService.getById(Number(req.params.id)); const sn = ex?.sekolahNama || ''; const mb = ex?.formKerusakan?.masaBangunan || ''; const r = await kerusakanService.unverify(Number(req.params.id)); logActivity(req, 'Batalkan Verifikasi Kerusakan', `Membatalkan verifikasi kerusakan ${sn} - ${mb}`); res.json(r); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.post('/:id/revise', requireAuth, requireRole('admin', 'verifikator', 'korwil'), async (req, res) => {
-    try { const r = await kerusakanService.revise(Number(req.params.id), req.user!.id, req.body.alasan); logActivity(req, 'Revisi Kerusakan', `Merevisi form kerusakan #${req.params.id}`); res.json(r); } catch (e: any) { res.status(500).json({ error: e.message }); }
+    try { const ex = await kerusakanService.getById(Number(req.params.id)); const sn = ex?.sekolahNama || ''; const mb = ex?.formKerusakan?.masaBangunan || ''; const r = await kerusakanService.revise(Number(req.params.id), req.user!.id, req.body.alasan); logActivity(req, 'Revisi Kerusakan', `Merevisi form kerusakan ${sn} - ${mb}: ${req.body.alasan || ''}`); res.json(r); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 // Get submitted masa bangunan for a school (for duplicate prevention)
 router.get('/submitted-masa/:sekolahId', requireAuth, async (req, res) => {

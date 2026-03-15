@@ -85,12 +85,22 @@ router.put('/:id', requireAuth, requireRole('admin', 'sekolah'), async (req, res
             capaian: req.body.keterangan || req.body.capaian || null,
         };
         const result = await prestasiService.update(id, updateData);
-        logActivity(req, 'Edit Prestasi', `Mengubah data prestasi #${id}`);
+        const pItem = await db.select({ jp: prestasi.jenisPrestasi, siswa: prestasi.siswa, sid: prestasi.sekolahId }).from(prestasi).where(eq(prestasi.id, id));
+        let schNm = '';
+        if (pItem[0]?.sid) { const sc = await db.select({ nama: sekolah.nama }).from(sekolah).where(eq(sekolah.id, pItem[0].sid)); schNm = sc[0]?.nama || ''; }
+        logActivity(req, 'Edit Prestasi', `Mengubah prestasi ${schNm} - ${pItem[0]?.jp || ''} (${pItem[0]?.siswa || ''})`);
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
-    try { await prestasiService.delete(Number(req.params.id)); logActivity(req, 'Hapus Prestasi', `Menghapus data prestasi #${req.params.id}`); res.json({ success: true }); } catch (e: any) { res.status(500).json({ error: e.message }); }
+    try {
+        const pItem = await db.select({ jp: prestasi.jenisPrestasi, siswa: prestasi.siswa, sid: prestasi.sekolahId }).from(prestasi).where(eq(prestasi.id, Number(req.params.id)));
+        let schNm = '';
+        if (pItem[0]?.sid) { const sc = await db.select({ nama: sekolah.nama }).from(sekolah).where(eq(sekolah.id, pItem[0].sid)); schNm = sc[0]?.nama || ''; }
+        await prestasiService.delete(Number(req.params.id));
+        logActivity(req, 'Hapus Prestasi', `Menghapus prestasi ${schNm} - ${pItem[0]?.jp || ''} (${pItem[0]?.siswa || ''})`);
+        res.json({ success: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 router.post('/:id/verify', requireAuth, requireRole('admin', 'verifikator', 'korwil'), async (req, res) => {
@@ -104,19 +114,31 @@ router.post('/:id/verify', requireAuth, requireRole('admin', 'verifikator', 'kor
             const sch = await db.select({ jenjang: sekolah.jenjang }).from(sekolah).where(eq(sekolah.id, item[0].sekolahId));
             jenjang = sch[0]?.jenjang || 'SMP';
         }
+        // Get school name for activity log
+        let schNm = '';
+        const pItem = await db.select({ jp: prestasi.jenisPrestasi, siswa: prestasi.siswa }).from(prestasi).where(eq(prestasi.id, id));
+        if (item[0]?.sekolahId) { const sc = await db.select({ nama: sekolah.nama }).from(sekolah).where(eq(sekolah.id, item[0].sekolahId)); schNm = sc[0]?.nama || ''; }
+        const prestasiInfo = `${schNm} - ${pItem[0]?.jp || ''} (${pItem[0]?.siswa || ''})`;
         if (role === 'korwil' && jenjang === 'SD') {
             const r = await db.update(prestasi).set({ status: 'Menunggu Verifikasi', verifiedBy: req.user!.id, updatedAt: new Date() }).where(eq(prestasi.id, id)).returning();
-            logActivity(req, 'Verifikasi Korwil Prestasi', `Memverifikasi prestasi #${id} (SD → verifikator)`);
+            logActivity(req, 'Verifikasi Korwil Prestasi', `Memverifikasi prestasi ${prestasiInfo} → diteruskan ke verifikator`);
             res.json(r);
         } else {
             const r = await prestasiService.verify(id, req.user!.id);
-            logActivity(req, 'Verifikasi Prestasi', `Memverifikasi prestasi #${id}`);
+            logActivity(req, 'Verifikasi Prestasi', `Memverifikasi prestasi ${prestasiInfo}`);
             res.json(r);
         }
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.post('/:id/reject', requireAuth, requireRole('admin', 'verifikator', 'korwil'), async (req, res) => {
-    try { const r = await prestasiService.reject(Number(req.params.id), req.user!.id, req.body.alasan); logActivity(req, 'Tolak Prestasi', `Menolak prestasi #${req.params.id}: ${req.body.alasan || ''}`); res.json(r); } catch (e: any) { res.status(500).json({ error: e.message }); }
+    try {
+        const pItem = await db.select({ jp: prestasi.jenisPrestasi, siswa: prestasi.siswa, sid: prestasi.sekolahId }).from(prestasi).where(eq(prestasi.id, Number(req.params.id)));
+        let schNm = '';
+        if (pItem[0]?.sid) { const sc = await db.select({ nama: sekolah.nama }).from(sekolah).where(eq(sekolah.id, pItem[0].sid)); schNm = sc[0]?.nama || ''; }
+        const r = await prestasiService.reject(Number(req.params.id), req.user!.id, req.body.alasan);
+        logActivity(req, 'Tolak Prestasi', `Menolak prestasi ${schNm} - ${pItem[0]?.jp || ''}: ${req.body.alasan || ''}`);
+        res.json(r);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.post('/:id/unverify', requireAuth, requireRole('admin', 'verifikator', 'korwil'), async (req, res) => {
     try { res.json(await prestasiService.unverify(Number(req.params.id))); } catch (e: any) { res.status(500).json({ error: e.message }); }
