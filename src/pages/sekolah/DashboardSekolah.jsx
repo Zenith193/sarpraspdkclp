@@ -146,10 +146,8 @@ const DashboardSekolah = () => {
                 ))}
             </div>
 
-            {/* Data Sarpras (wider) + Proposal & Riwayat (narrower) */}
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
-                {/* Sarpras Data */}
-                <div className="table-container">
+            {/* Data Sarpras - full width */}
+            <div className="table-container" style={{ marginBottom: 16 }}>
                     <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: 8 }}>
                         <Database size={16} style={{ color: '#3b82f6' }} />
                         <h3 style={{ fontSize: '0.9rem', fontWeight: 600, margin: 0 }}>Data Sarpras</h3>
@@ -197,10 +195,10 @@ const DashboardSekolah = () => {
                             </table>
                         </div>
                     )}
-                </div>
+            </div>
 
-                {/* Proposal & Riwayat (narrower, with pagination) */}
-                <div>
+            {/* Proposal & Riwayat side by side */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                     {/* Proposals */}
                     <div className="table-container" style={{ marginBottom: 16 }}>
                         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -297,7 +295,6 @@ const DashboardSekolah = () => {
                             </div>
                         )}
                     </div>
-                </div>
             </div>
         </div>
     );
