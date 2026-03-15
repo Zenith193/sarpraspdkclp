@@ -1,11 +1,12 @@
-import { useMemo } from 'react';
-import { School, Database, FileText, History, AlertCircle, CheckCircle, Clock, TrendingUp, Award } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { School, Database, FileText, History, AlertCircle, CheckCircle, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import { useSarprasData, useProposalData, useRiwayatBantuanData, useSekolahData } from '../../data/dataProvider';
 
+const ITEMS_PER_PAGE = 3;
+
 const DashboardSekolah = () => {
     const user = useAuthStore(s => s.user);
-    // Extract NPSN from email (e.g. '20300544@spidol...' -> '20300544')
     const email = user?.email || '';
     const npsn = user?.npsn || email.split('@')[0] || '';
     const sekolahId = user?.sekolahId;
@@ -18,7 +19,9 @@ const DashboardSekolah = () => {
     const { data: proposalData } = useProposalData();
     const { data: riwayatData } = useRiwayatBantuanData();
 
-    // Filter data for this school - match by sekolahId or NPSN
+    const [proposalPage, setProposalPage] = useState(0);
+    const [riwayatPage, setRiwayatPage] = useState(0);
+
     const mySarpras = useMemo(() =>
         (sarprasData || []).filter(s => (s.sekolahId === sekolahId || s.npsn === matchNpsn) && (!s.status || s.status === 'Diverifikasi')), [sarprasData, sekolahId, matchNpsn]);
     const myProposal = useMemo(() =>
@@ -26,7 +29,6 @@ const DashboardSekolah = () => {
     const myRiwayat = useMemo(() =>
         (riwayatData || []).filter(r => r.sekolahId === sekolahId || r.npsn === matchNpsn), [riwayatData, sekolahId, matchNpsn]);
 
-    // Stats
     const totalSarpras = mySarpras.length;
     const baik = mySarpras.filter(s => (s.kondisi || '').toUpperCase() === 'BAIK').length;
     const rusakRingan = mySarpras.filter(s => (s.kondisi || '').toUpperCase() === 'RUSAK RINGAN').length;
@@ -36,7 +38,6 @@ const DashboardSekolah = () => {
     const proposalDisetujui = myProposal.filter(p => p.status === 'Disetujui' || p.status === 'Diterima').length;
     const totalBantuan = myRiwayat.reduce((sum, r) => sum + (r.nilaiPaket || 0), 0);
 
-    // Recap per jenis prasarana
     const sarprasRecap = useMemo(() => {
         const map = {};
         mySarpras.forEach(s => {
@@ -63,6 +64,29 @@ const DashboardSekolah = () => {
     ];
 
     const formatRupiah = (n) => n ? `Rp ${n.toLocaleString('id-ID')}` : 'Rp 0';
+
+    // Pagination helpers
+    const proposalTotalPages = Math.max(1, Math.ceil(myProposal.length / ITEMS_PER_PAGE));
+    const proposalSlice = myProposal.slice(proposalPage * ITEMS_PER_PAGE, (proposalPage + 1) * ITEMS_PER_PAGE);
+
+    const riwayatTotalPages = Math.max(1, Math.ceil(myRiwayat.length / ITEMS_PER_PAGE));
+    const riwayatSlice = myRiwayat.slice(riwayatPage * ITEMS_PER_PAGE, (riwayatPage + 1) * ITEMS_PER_PAGE);
+
+    const PaginationControls = ({ page, totalPages, setPage }) => (
+        totalPages > 1 ? (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '8px 0' }}>
+                <button onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0}
+                    style={{ background: 'none', border: 'none', color: page === 0 ? 'var(--text-secondary)' : 'var(--accent-blue)', cursor: page === 0 ? 'default' : 'pointer', padding: 4, opacity: page === 0 ? 0.4 : 1 }}>
+                    <ChevronLeft size={18} />
+                </button>
+                <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{page + 1} / {totalPages}</span>
+                <button onClick={() => setPage(Math.min(totalPages - 1, page + 1))} disabled={page >= totalPages - 1}
+                    style={{ background: 'none', border: 'none', color: page >= totalPages - 1 ? 'var(--text-secondary)' : 'var(--accent-blue)', cursor: page >= totalPages - 1 ? 'default' : 'pointer', padding: 4, opacity: page >= totalPages - 1 ? 0.4 : 1 }}>
+                    <ChevronRight size={18} />
+                </button>
+            </div>
+        ) : null
+    );
 
     return (
         <div>
@@ -107,8 +131,8 @@ const DashboardSekolah = () => {
                 </div>
             )}
 
-            {/* Stat Cards */}
-            <div className="stats-grid" style={{ marginBottom: 20 }}>
+            {/* Stat Cards - 7 columns, 1 row */}
+            <div className="stats-grid" style={{ marginBottom: 20, gridTemplateColumns: 'repeat(7, 1fr)' }}>
                 {statCards.map(s => (
                     <div key={s.label} className="stat-card">
                         <div className="stat-label">
@@ -122,7 +146,8 @@ const DashboardSekolah = () => {
                 ))}
             </div>
 
-            <div className="charts-grid">
+            {/* Data Sarpras (wider) + Proposal & Riwayat (narrower) */}
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
                 {/* Sarpras Data */}
                 <div className="table-container">
                     <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -160,7 +185,6 @@ const DashboardSekolah = () => {
                                             <td style={{ textAlign: 'center' }}><span style={{ color: '#ef4444', fontWeight: 600 }}>{r.rb || '-'}</span></td>
                                         </tr>
                                     ))}
-                                    {/* Total row */}
                                     <tr style={{ borderTop: '2px solid var(--border-color)', fontWeight: 700 }}>
                                         <td>Total</td>
                                         <td style={{ textAlign: 'center' }}>{totalSarpras}</td>
@@ -175,13 +199,14 @@ const DashboardSekolah = () => {
                     )}
                 </div>
 
-                {/* Proposal & Riwayat */}
+                {/* Proposal & Riwayat (narrower, with pagination) */}
                 <div>
                     {/* Proposals */}
                     <div className="table-container" style={{ marginBottom: 16 }}>
                         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: 8 }}>
                             <FileText size={16} style={{ color: '#f59e0b' }} />
                             <h3 style={{ fontSize: '0.9rem', fontWeight: 600, margin: 0 }}>Proposal Terbaru</h3>
+                            {myProposal.length > 0 && <span style={{ marginLeft: 'auto', fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{myProposal.length} data</span>}
                         </div>
 
                         {myProposal.length === 0 ? (
@@ -191,7 +216,7 @@ const DashboardSekolah = () => {
                             </div>
                         ) : (
                             <div style={{ padding: '8px 16px' }}>
-                                {myProposal.slice(0, 5).map(p => {
+                                {proposalSlice.map(p => {
                                     const statusColor = p.status === 'Disetujui' || p.status === 'Diterima' ? '#22c55e'
                                         : p.status === 'Ditolak' ? '#ef4444' : '#f59e0b';
                                     return (
@@ -201,9 +226,8 @@ const DashboardSekolah = () => {
                                             fontSize: '0.85rem'
                                         }}>
                                             <div style={{ flex: 1, minWidth: 0 }}>
-                                                <div style={{ fontWeight: 600 }}>{p.subKegiatan || p.jenisPrasarana || 'Proposal'}</div>
+                                                <div style={{ fontWeight: 600, fontSize: '0.8rem' }}>{p.subKegiatan || p.jenisPrasarana || 'Proposal'}</div>
                                                 <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 2 }}>
-                                                    <span>{p.namaSekolah || namaSekolah}</span>
                                                     <span>{p.createdAt ? new Date(p.createdAt).toLocaleDateString('id-ID') : '-'}</span>
                                                 </div>
                                                 {p.nilaiPengajuan && (
@@ -222,6 +246,7 @@ const DashboardSekolah = () => {
                                         </div>
                                     );
                                 })}
+                                <PaginationControls page={proposalPage} totalPages={proposalTotalPages} setPage={setProposalPage} />
                             </div>
                         )}
                     </div>
@@ -231,6 +256,7 @@ const DashboardSekolah = () => {
                         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: 8 }}>
                             <History size={16} style={{ color: '#22c55e' }} />
                             <h3 style={{ fontSize: '0.9rem', fontWeight: 600, margin: 0 }}>Riwayat Bantuan</h3>
+                            {myRiwayat.length > 0 && <span style={{ marginLeft: 'auto', fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{myRiwayat.length} data</span>}
                         </div>
 
                         {myRiwayat.length === 0 ? (
@@ -240,14 +266,14 @@ const DashboardSekolah = () => {
                             </div>
                         ) : (
                             <div style={{ padding: '8px 16px' }}>
-                                {myRiwayat.map(r => (
+                                {riwayatSlice.map(r => (
                                     <div key={r.id} style={{
                                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                                         padding: '10px 0', borderBottom: '1px solid var(--bg-secondary)',
                                         fontSize: '0.85rem'
                                     }}>
                                         <div>
-                                            <div style={{ fontWeight: 500 }}>{r.namaPaket}</div>
+                                            <div style={{ fontWeight: 500, fontSize: '0.8rem' }}>{r.namaPaket}</div>
                                             <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
                                                 {r.volumePaket}
                                             </div>
@@ -267,6 +293,7 @@ const DashboardSekolah = () => {
                                     <span>Total Bantuan</span>
                                     <span style={{ color: '#22c55e' }}>{formatRupiah(totalBantuan)}</span>
                                 </div>
+                                <PaginationControls page={riwayatPage} totalPages={riwayatTotalPages} setPage={setRiwayatPage} />
                             </div>
                         )}
                     </div>
