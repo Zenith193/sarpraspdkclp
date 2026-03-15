@@ -6,7 +6,7 @@ import { Bar, Pie } from 'react-chartjs-2';
 import { Building2, FileText, Star, Database, CheckCircle, AlertCircle } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import { useKorwilData, useSekolahData } from '../../data/dataProvider';
-import { sarprasApi, proposalApi } from '../../api/index';
+import { sarprasApi, proposalApi, rankingApi } from '../../api/index';
 import { formatNumber } from '../../utils/formatters';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
@@ -90,19 +90,19 @@ const DashboardKorwil = () => {
         return () => { cancelled = true; };
     }, [wilayah, jenjang]);
 
-    // Fetch top 5 proposals from ALL data (no filter) for Top 5 Prioritas
+    // Fetch top 5 from Ranking Prioritas (merged with sekolahList for names)
     useEffect(() => {
-        proposalApi.list({ limit: 99999 }).then(res => {
-            const items = (res.data || res || []).map(item => {
-                if (item.proposal) {
-                    return { ...item.proposal, namaSekolah: item.sekolahNama || '', npsn: item.sekolahNpsn || '', kecamatan: item.sekolahKecamatan || '' };
-                }
-                return item;
+        if (!sekolahList || sekolahList.length === 0) return;
+        rankingApi.getData('all', 'all').then(res => {
+            const items = res?.items || res || [];
+            const sorted = [...items].sort((a, b) => (a.rank || 999) - (b.rank || 999));
+            const top5 = sorted.slice(0, 5).map(item => {
+                const sch = sekolahList.find(s => s.id === item.id);
+                return { ...item, namaSekolah: sch?.nama || sch?.name || '' };
             });
-            const sorted = items.sort((a, b) => (b.bintang || 0) - (a.bintang || 0) || (Number(b.nilaiPengajuan) || 0) - (Number(a.nilaiPengajuan) || 0));
-            setAllProposalsTop5(sorted.slice(0, 5));
+            setAllProposalsTop5(top5);
         }).catch(() => {});
-    }, []);
+    }, [sekolahList]);
 
     const jumlahSekolah = useMemo(() =>
         sekolahList.filter(s => wilayah.includes(s.kecamatan) && s.jenjang === jenjang).length
@@ -201,7 +201,7 @@ const DashboardKorwil = () => {
                     <div className="summary-card-header"><div className="summary-card-title">Top 5 Prioritas</div><div className="summary-card-icon" style={{ background: 'rgba(234,179,8,0.1)', color: 'var(--accent-yellow)' }}><Star size={16} /></div></div>
                     <ul className="summary-card-list">
                         {topProposals.map((p, i) => (
-                            <li key={p.id} style={{ justifyContent: 'space-between' }}><span>{i + 1}. {p.namaSekolah}</span><span style={{ color: 'var(--accent-yellow)' }}>{'★'.repeat(p.bintang || 0)}</span></li>
+                            <li key={p.id || i} style={{ justifyContent: 'space-between' }}><span>{i + 1}. {p.namaSekolah || p.nama || '-'}</span></li>
                         ))}
                         {topProposals.length === 0 && <li style={{ color: 'var(--text-secondary)' }}>{loading ? 'Memuat data...' : 'Belum ada data'}</li>}
                     </ul>

@@ -218,7 +218,7 @@ const VerifikasiSarpras = () => {
                                         </span>
                                     </td>
                                     <td>
-                                        <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: item.fotoCount ? 'var(--color-primary)' : 'var(--text-secondary)' }}>
+                                        <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: item.fotoCount ? 'var(--color-primary)' : 'var(--text-secondary)', cursor: item.fotoCount ? 'pointer' : 'default', textDecoration: item.fotoCount ? 'underline' : 'none' }} onClick={() => item.fotoCount && openDetail(item)} title={item.fotoCount ? 'Klik untuk lihat foto' : ''}>
                                             <Image size={14} /> {item.fotoCount || 0}
                                         </span>
                                     </td>
