@@ -805,7 +805,7 @@ const DataSarpras = ({ readOnly = false }) => {
             {/* ===== UPDATE DATA TAB ===== */}
             {activeTab === 'update' && (() => {
                 const pendingData = data.filter(d => d.status && d.status !== 'Diverifikasi');
-                const canVerify = ['admin', 'verifikator', 'korwil'].includes((user?.role || '').toLowerCase());
+                const canVerify = (user?.role || '').toLowerCase() === 'admin';
                 const getStatusBadge = (st) => {
                     const map = {
                         'Menunggu Verifikasi Korwil': { bg: 'rgba(234,179,8,0.15)', color: '#eab308', icon: <Clock size={12} /> },

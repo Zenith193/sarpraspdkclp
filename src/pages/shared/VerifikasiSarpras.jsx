@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Search, CheckCircle, XCircle, Eye, X, ChevronLeft, ChevronRight, MapPin, Image, Info, Maximize2, CheckCheck } from 'lucide-react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { Search, CheckCircle, XCircle, Eye, X, ChevronLeft, ChevronRight, MapPin, Image, Info, Maximize2, CheckCheck, MoreVertical, RotateCcw } from 'lucide-react';
 import { sarprasApi, korwilApi } from '../../api/index';
 import useAuthStore from '../../store/authStore';
 import toast from 'react-hot-toast';
@@ -19,6 +19,18 @@ const VerifikasiSarpras = () => {
     const [perPage, setPerPage] = useState(15);
     const [currentPage, setCurrentPage] = useState(1);
     const [showBatchConfirm, setShowBatchConfirm] = useState(false);
+    const [openActionId, setOpenActionId] = useState(null);
+    const [alasanModal, setAlasanModal] = useState(null); // { id, type: 'reject'|'revisi' }
+    const actionRef = useRef(null);
+
+    // Close dropdown on outside click
+    useEffect(() => {
+        const handler = (e) => {
+            if (actionRef.current && !actionRef.current.contains(e.target)) setOpenActionId(null);
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
 
     // Fetch data with proper server-side filtering for korwil
     const fetchData = useCallback(async () => {
@@ -90,12 +102,59 @@ const VerifikasiSarpras = () => {
             setData(prev => prev.filter(s => s.sarpras?.id !== id && s.id !== id));
             toast.success(approved ? 'Data sarpras disetujui' : 'Data sarpras ditolak', { style: { background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-color)' } });
             setDetailItem(null);
+            setOpenActionId(null);
         } catch (err) {
             toast.error(err.message || 'Gagal memverifikasi');
         }
     };
 
-    const openDetail = (item) => { setDetailItem(item); setLightboxIdx(-1); };
+    const handleReject = async (id, alasan) => {
+        try {
+            await sarprasApi.reject(id, alasan);
+            setData(prev => prev.filter(s => s.id !== id));
+            toast.error('Data sarpras ditolak');
+            setAlasanModal(null);
+        } catch (err) { toast.error(err.message || 'Gagal menolak'); }
+    };
+
+    const handleRevisi = async (id, alasan) => {
+        try {
+            await sarprasApi.revisi(id, alasan);
+            setData(prev => prev.filter(s => s.id !== id));
+            toast.success('Data diminta revisi');
+            setAlasanModal(null);
+        } catch (err) { toast.error(err.message || 'Gagal revisi'); }
+    };
+
+    const openDetail = async (item) => {
+        setLightboxIdx(-1);
+        try {
+            const full = await sarprasApi.getById(item.id);
+            if (full) {
+                const s = full.sarpras || full;
+                const fotos = (full.fotos || []).map(f => ({
+                    id: f.id,
+                    nama: f.fileName || f.file_name || 'Foto',
+                    url: `/api/file/foto/${f.id}`,
+                    geoLat: f.geoLat || f.geo_lat || null,
+                    geoLng: f.geoLng || f.geo_lng || null,
+                }));
+                setDetailItem({
+                    ...item,
+                    ...s,
+                    namaSekolah: full.sekolahNama || item.namaSekolah,
+                    npsn: full.sekolahNpsn || item.npsn,
+                    kecamatan: full.sekolahKecamatan || item.kecamatan,
+                    foto: fotos,
+                });
+            } else {
+                setDetailItem(item);
+            }
+        } catch (e) {
+            console.error('Failed to load detail:', e);
+            setDetailItem(item);
+        }
+    };
 
     const handleBatchVerify = async () => {
         if (!pending.length) return;
@@ -164,10 +223,44 @@ const VerifikasiSarpras = () => {
                                         </span>
                                     </td>
                                     <td>
-                                        <div style={{ display: 'flex', gap: 4 }}>
-                                            <button className="btn btn-sm btn-primary" onClick={() => openDetail(item)} title="Lihat Detail & Foto"><Eye size={14} /> Detail</button>
-                                            <button className="btn btn-sm btn-success" onClick={() => handleVerify(item.id, true)}><CheckCircle size={14} /> Setujui</button>
-                                            <button className="btn btn-sm btn-danger" onClick={() => handleVerify(item.id, false)}><XCircle size={14} /> Tolak</button>
+                                        <div style={{ position: 'relative' }} ref={openActionId === item.id ? actionRef : null}>
+                                            <button className="btn btn-sm btn-ghost" onClick={(e) => {
+                                                if (openActionId === item.id) { setOpenActionId(null); return; }
+                                                setOpenActionId(item.id);
+                                                const rect = e.currentTarget.getBoundingClientRect();
+                                                setTimeout(() => {
+                                                    const dd = document.getElementById(`vs-dd-${item.id}`);
+                                                    if (dd) {
+                                                        const spaceBelow = window.innerHeight - rect.bottom;
+                                                        if (spaceBelow < 200) {
+                                                            dd.style.bottom = `${window.innerHeight - rect.top + 4}px`;
+                                                            dd.style.top = 'auto';
+                                                        } else {
+                                                            dd.style.top = `${rect.bottom + 4}px`;
+                                                            dd.style.bottom = 'auto';
+                                                        }
+                                                        dd.style.right = `${window.innerWidth - rect.right}px`;
+                                                    }
+                                                }, 0);
+                                            }} style={{ padding: '4px 8px' }}>
+                                                <MoreVertical size={16} />
+                                            </button>
+                                            {openActionId === item.id && (
+                                                <div id={`vs-dd-${item.id}`} className="dropdown-menu" style={{ position: 'fixed', minWidth: 170, zIndex: 9999 }}>
+                                                    <button className="dropdown-item" onClick={() => { openDetail(item); setOpenActionId(null); }}>
+                                                        <Eye size={14} style={{ marginRight: 8, color: 'var(--accent-blue)' }} /> Detail & Foto
+                                                    </button>
+                                                    <button className="dropdown-item" onClick={() => { handleVerify(item.id, true); }}>
+                                                        <CheckCircle size={14} style={{ marginRight: 8, color: '#22c55e' }} /> Setujui
+                                                    </button>
+                                                    <button className="dropdown-item" onClick={() => { setAlasanModal({ id: item.id, type: 'revisi' }); setOpenActionId(null); }}>
+                                                        <RotateCcw size={14} style={{ marginRight: 8, color: '#f97316' }} /> Revisi
+                                                    </button>
+                                                    <button className="dropdown-item" onClick={() => { setAlasanModal({ id: item.id, type: 'reject' }); setOpenActionId(null); }}>
+                                                        <XCircle size={14} style={{ marginRight: 8, color: '#ef4444' }} /> Tolak
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>
@@ -289,6 +382,35 @@ const VerifikasiSarpras = () => {
                 onConfirm={executeBatchVerify}
                 onCancel={() => setShowBatchConfirm(false)}
             />
+
+            {/* ===== ALASAN MODAL (Revisi / Tolak) ===== */}
+            {alasanModal && (
+                <div style={overlayStyle} onClick={() => setAlasanModal(null)}>
+                    <div style={{ ...modalStyle, maxWidth: 420 }} onClick={e => e.stopPropagation()}>
+                        <div style={modalHeaderStyle}>
+                            <h2 style={{ margin: 0, fontSize: 18 }}>{alasanModal.type === 'reject' ? 'Tolak Data' : 'Minta Revisi'}</h2>
+                            <button onClick={() => setAlasanModal(null)} style={closeBtnStyle}><X size={20} /></button>
+                        </div>
+                        <div style={modalBodyStyle}>
+                            <div className="form-group">
+                                <label className="form-label">Alasan {alasanModal.type === 'reject' ? 'Penolakan' : 'Revisi'} *</label>
+                                <textarea id="vs-alasan" className="form-input" rows={3} placeholder={`Tulis alasan ${alasanModal.type === 'reject' ? 'penolakan' : 'revisi'}...`} />
+                            </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', padding: '12px 20px', borderTop: '1px solid var(--border-color)' }}>
+                            <button className="btn btn-ghost" onClick={() => setAlasanModal(null)}>Batal</button>
+                            <button className={`btn ${alasanModal.type === 'reject' ? 'btn-danger' : 'btn-primary'}`} onClick={() => {
+                                const val = document.getElementById('vs-alasan')?.value;
+                                if (!val?.trim()) { toast.error('Alasan wajib diisi'); return; }
+                                if (alasanModal.type === 'reject') handleReject(alasanModal.id, val);
+                                else handleRevisi(alasanModal.id, val);
+                            }}>
+                                {alasanModal.type === 'reject' ? 'Tolak' : 'Kirim Revisi'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
