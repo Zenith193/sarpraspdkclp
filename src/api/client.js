@@ -57,6 +57,53 @@ const api = {
     put: (endpoint, body) => request(endpoint, { method: 'PUT', body: JSON.stringify(body) }),
     delete: (endpoint) => request(endpoint, { method: 'DELETE' }),
     upload: (endpoint, formData, method = 'POST') => request(endpoint, { method, body: formData }),
+
+    /**
+     * Upload with progress callback using XMLHttpRequest.
+     * @param {string} endpoint - API endpoint
+     * @param {FormData} formData - form data to upload
+     * @param {function} onProgress - callback(percent) where percent is 0-100
+     * @param {string} method - HTTP method (default: POST)
+     * @returns {Promise} resolves with parsed JSON response
+     */
+    uploadWithProgress: (endpoint, formData, onProgress, method = 'POST') => {
+        return new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open(method, `${API_BASE}${endpoint}`);
+            xhr.withCredentials = true;
+            xhr.timeout = 120000; // 2 minutes
+
+            xhr.upload.onprogress = (e) => {
+                if (e.lengthComputable && onProgress) {
+                    const percent = Math.round((e.loaded / e.total) * 100);
+                    onProgress(percent);
+                }
+            };
+
+            xhr.onload = () => {
+                if (xhr.status === 401) {
+                    window.location.href = '/login';
+                    reject(new ApiError('Unauthorized', 401));
+                    return;
+                }
+                try {
+                    const data = JSON.parse(xhr.responseText);
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        resolve(data);
+                    } else {
+                        reject(new ApiError(data.error || `Upload gagal (${xhr.status})`, xhr.status, data));
+                    }
+                } catch {
+                    if (xhr.status >= 200 && xhr.status < 300) resolve(null);
+                    else reject(new ApiError(`Upload gagal (${xhr.status})`, xhr.status));
+                }
+            };
+
+            xhr.onerror = () => reject(new ApiError('Network error — koneksi gagal', 0));
+            xhr.ontimeout = () => reject(new ApiError('Upload timeout — koneksi terlalu lambat', 0));
+            xhr.send(formData);
+        });
+    },
 };
 
 export default api;

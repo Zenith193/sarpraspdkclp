@@ -13,8 +13,8 @@ export const sekolahApi = {
     create: (data) => api.post('/sekolah', data),
     update: (id, data) => api.put(`/sekolah/${id}`, data),
     delete: (id) => api.delete(`/sekolah/${id}`),
-    uploadKop: (id, file) => { const fd = new FormData(); fd.append('file', file); return api.upload(`/sekolah/${id}/upload-kop`, fd); },
-    uploadDenah: (id, file) => { const fd = new FormData(); fd.append('file', file); return api.upload(`/sekolah/${id}/upload-denah`, fd); },
+    uploadKop: (id, file, onProgress) => { const fd = new FormData(); fd.append('file', file); return onProgress ? api.uploadWithProgress(`/sekolah/${id}/upload-kop`, fd, onProgress) : api.upload(`/sekolah/${id}/upload-kop`, fd); },
+    uploadDenah: (id, file, onProgress) => { const fd = new FormData(); fd.append('file', file); return onProgress ? api.uploadWithProgress(`/sekolah/${id}/upload-denah`, fd, onProgress) : api.upload(`/sekolah/${id}/upload-denah`, fd); },
     downloadKop: (id) => fetch(`/api/sekolah/${id}/download-kop`, { credentials: 'include' }).then(r => { if (!r.ok) throw new Error('File tidak ditemukan'); return r.blob(); }),
     downloadDenah: (id) => fetch(`/api/sekolah/${id}/download-denah`, { credentials: 'include' }).then(r => { if (!r.ok) throw new Error('File tidak ditemukan'); return r.blob(); }),
     deleteKop: (id) => api.delete(`/sekolah/${id}/kop`),
@@ -24,7 +24,7 @@ export const sekolahApi = {
 export const sarprasApi = {
     list: (params = {}) => { const q = new URLSearchParams(params).toString(); return api.get(`/sarpras?${q}`); },
     getById: (id) => api.get(`/sarpras/${id}`),
-    create: (formData) => api.upload('/sarpras', formData),
+    create: (formData, onProgress) => onProgress ? api.uploadWithProgress('/sarpras', formData, onProgress) : api.upload('/sarpras', formData),
     batchCreate: (data) => api.post('/sarpras/batch', data),
     batchCreateByNpsn: (data) => api.post('/sarpras/batch-by-npsn', data),
     update: (id, data) => api.put(`/sarpras/${id}`, data),
@@ -34,7 +34,7 @@ export const sarprasApi = {
     reject: (id, alasan) => api.post(`/sarpras/${id}/reject`, { alasan }),
     revisi: (id, alasan) => api.post(`/sarpras/${id}/revisi`, { alasan }),
     batchVerify: (ids) => api.post('/sarpras/batch-verify', { ids }),
-    addFoto: (id, formData) => api.upload(`/sarpras/${id}/foto`, formData),
+    addFoto: (id, formData, onProgress) => onProgress ? api.uploadWithProgress(`/sarpras/${id}/foto`, formData, onProgress) : api.upload(`/sarpras/${id}/foto`, formData),
     removeFoto: (sarprasId, fotoId) => api.delete(`/sarpras/${sarprasId}/foto/${fotoId}`),
     stats: () => api.get('/sarpras/stats'),
 };

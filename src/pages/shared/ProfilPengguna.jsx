@@ -30,6 +30,7 @@ const ProfilPengguna = () => {
     const [uploadingKop, setUploadingKop] = useState(false);
     const [uploadingDenah, setUploadingDenah] = useState(false);
     const [uploadingPhoto, setUploadingPhoto] = useState(false);
+    const [uploadProgress, setUploadProgress] = useState({}); // { kop: 0-100, denah: 0-100 }
 
     const isSekolah = user?.role === 'Sekolah';
     const sekolahId = user?.sekolahId;
@@ -193,13 +194,14 @@ const ProfilPengguna = () => {
         if (!['doc', 'docx'].includes(ext)) { toast.error('Format file harus Word (.doc atau .docx)'); return; }
         if (file.size > 1 * 1024 * 1024) { toast.error('Ukuran file maksimal 1MB'); return; }
         setUploadingKop(true);
+        setUploadProgress(p => ({ ...p, kop: 0 }));
         try {
-            await sekolahApi.uploadKop(sekolahId, file);
+            await sekolahApi.uploadKop(sekolahId, file, (pct) => setUploadProgress(p => ({ ...p, kop: pct })));
             toast.success('Kop sekolah berhasil diupload');
             const updated = await sekolahApi.getById(sekolahId);
             setSekolahData(updated);
         } catch (err) { toast.error(err.message || 'Gagal upload kop sekolah'); }
-        finally { setUploadingKop(false); }
+        finally { setUploadingKop(false); setUploadProgress(p => ({ ...p, kop: 0 })); }
     };
 
     const handleUploadDenah = async (e) => {
@@ -209,29 +211,16 @@ const ProfilPengguna = () => {
         if (file.type !== 'application/pdf') { toast.error('Format file harus PDF'); return; }
         if (file.size > 5 * 1024 * 1024) { toast.error('Ukuran file maksimal 5MB'); return; }
         setUploadingDenah(true);
+        setUploadProgress(p => ({ ...p, denah: 0 }));
         try {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minutes for GDrive sync
-            const fd = new FormData(); fd.append('file', file);
-            const res = await fetch(`/api/sekolah/${sekolahId}/upload-denah`, {
-                method: 'POST', body: fd, credentials: 'include', signal: controller.signal,
-            });
-            clearTimeout(timeoutId);
-            if (!res.ok) {
-                const data = await res.json().catch(() => ({}));
-                throw new Error(data.error || `Upload gagal (${res.status})`);
-            }
+            await sekolahApi.uploadDenah(sekolahId, file, (pct) => setUploadProgress(p => ({ ...p, denah: pct })));
             toast.success('Denah sekolah berhasil diupload');
             const updated = await sekolahApi.getById(sekolahId);
             setSekolahData(updated);
         } catch (err) {
-            if (err.name === 'AbortError') {
-                toast.error('Upload timeout — file terlalu besar atau koneksi lambat. Coba lagi.');
-            } else {
-                toast.error(err.message || 'Gagal upload denah sekolah');
-            }
+            toast.error(err.message || 'Gagal upload denah sekolah');
         }
-        finally { setUploadingDenah(false); }
+        finally { setUploadingDenah(false); setUploadProgress(p => ({ ...p, denah: 0 })); }
     };
 
     const handleDownload = async (type) => {
@@ -311,7 +300,27 @@ const ProfilPengguna = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-color)' }}>
                 <FileText size={20} style={{ color: hasFile ? 'var(--accent-green)' : 'var(--text-secondary)' }} />
                 <div style={{ flex: 1 }}>
-                    {hasFile ? (
+                    {uploading ? (
+                        <div>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                                <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--accent-blue)' }}>
+                                    {(uploadProgress[type] || 0) < 100 ? 'Mengunggah...' : 'Menyimpan ke GDrive...'}
+                                </span>
+                                <span style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--accent-blue)' }}>
+                                    {uploadProgress[type] || 0}%
+                                </span>
+                            </div>
+                            <div style={{ height: 4, borderRadius: 2, background: 'rgba(59,130,246,0.15)', overflow: 'hidden' }}>
+                                <div style={{
+                                    height: '100%',
+                                    width: `${uploadProgress[type] || 0}%`,
+                                    background: 'linear-gradient(90deg, #3b82f6, #6366f1)',
+                                    borderRadius: 2,
+                                    transition: 'width 300ms ease',
+                                }} />
+                            </div>
+                        </div>
+                    ) : hasFile ? (
                         <span style={{ fontWeight: 500, color: 'var(--accent-green)', fontSize: '0.875rem' }}>
                             <CheckCircle size={14} style={{ marginRight: 4, verticalAlign: 'middle' }} /> File sudah diupload
                         </span>
@@ -320,18 +329,20 @@ const ProfilPengguna = () => {
                     )}
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
-                    {hasFile && (
+                    {hasFile && !uploading && (
                         <>
                             <button className="btn-icon" onClick={() => handlePreview(type)} title="Preview" style={{ color: 'var(--accent-purple)' }}><Eye size={16} /></button>
                             <button className="btn-icon" onClick={() => handleDownload(type)} title="Download" style={{ color: 'var(--accent-blue)' }}><Download size={16} /></button>
                             <button className="btn-icon" onClick={() => setDeleteConfirm(type)} title="Hapus" style={{ color: 'var(--accent-red)' }}><Trash2 size={16} /></button>
                         </>
                     )}
-                    <label className="btn btn-secondary btn-sm" style={{ cursor: uploading ? 'wait' : 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, opacity: uploading ? 0.6 : 1 }}>
-                        {uploading ? <Loader2 size={14} className="spin" /> : <Upload size={14} />}
-                        <span>{uploading ? 'Uploading...' : (hasFile ? 'Ganti' : 'Upload')}</span>
-                        <input type="file" accept={accept} onChange={type === 'kop' ? handleUploadKop : handleUploadDenah} style={{ display: 'none' }} disabled={uploading} />
-                    </label>
+                    {!uploading && (
+                        <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                            <Upload size={14} />
+                            <span>{hasFile ? 'Ganti' : 'Upload'}</span>
+                            <input type="file" accept={accept} onChange={type === 'kop' ? handleUploadKop : handleUploadDenah} style={{ display: 'none' }} />
+                        </label>
+                    )}
                 </div>
             </div>
             <small style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: 4, display: 'block' }}>
