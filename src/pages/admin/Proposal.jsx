@@ -266,10 +266,14 @@ const Proposal = ({ readOnly = false }) => {
 
     // Handlers Checklist & Rekomendasi
     const handleOpenChecklist = () => {
+        // Auto-populate current user as verifikator if role is Verifikator or Korwil
+        const autoVerifikators = (user?.role === 'Verifikator' || user?.role === 'Korwil')
+            ? [{ id: Date.now(), userId: user.id, nama: user.name || '', nip: user.nip || '-' }]
+            : [];
         setChecklistForm({
             sekolah: null, alamat: '', jenisUsulan: '',
             items: INITIAL_CHECKLIST_ITEMS.map(i => ({ ...i, id: Date.now() + Math.random() })),
-            verifikators: []
+            verifikators: autoVerifikators
         });
         setShowChecklist(true);
     };
