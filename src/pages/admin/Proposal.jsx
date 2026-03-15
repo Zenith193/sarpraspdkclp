@@ -557,7 +557,7 @@ const Proposal = ({ readOnly = false }) => {
                                 {isAdminOrVerifikator && (<div className="form-group"><label className="form-label">Status</label><select className="form-select" value={formData.status || ''} onChange={e => setFormData({ ...formData, status: e.target.value })}>{STATUS_PROPOSAL.map(s => <option key={s} value={s}>{s}</option>)}</select></div>)}
                             </div>
 
-                            {isAdmin && editItem && (
+                            {isAdminOrVerifikator && editItem && (
                                 <div className="form-group">
                                     <label className="form-label">Keranjang Usulan</label>
                                     <select className="form-select" value={formData.keranjang || ''} onChange={e => setFormData({ ...formData, keranjang: e.target.value })}>
