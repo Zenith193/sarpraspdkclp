@@ -101,6 +101,15 @@ router.put('/:id', requireAuth, requireRole('admin', 'sekolah', 'verifikator'), 
 
         // Sanitize empty date strings to null
         if (req.body.tanggalSurat === '') req.body.tanggalSurat = null;
+        // Remove non-editable fields that frontend might send back
+        delete req.body.id;
+        delete req.body.createdAt;
+        delete req.body.updatedAt;
+        delete req.body.namaSekolah;
+        delete req.body.npsn;
+        delete req.body.kecamatan;
+        delete req.body.jenjang;
+        delete req.body.fotoKerusakan;
         const result = await proposalService.update(id, req.body);
         const pRow = await db.select({ sk: proposal.subKegiatan, sid: proposal.sekolahId }).from(proposal).where(eq(proposal.id, id));
         let schNm = '';
