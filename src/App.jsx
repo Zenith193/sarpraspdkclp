@@ -122,7 +122,7 @@ function App() {
         <Route path="/verifikator" element={<ProtectedRoute allowedRoles={['verifikator']}><AppLayout /></ProtectedRoute>}>
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="data-sarpras" element={<DataSarpras readOnly />} />
-          <Route path="proposal" element={<Proposal readOnly />} />
+          <Route path="proposal" element={<Proposal />} />
           <Route path="verifikasi-sarpras" element={<VerifikasiSarpras />} />
           <Route path="verifikasi-proposal" element={<VerifikasiProposal />} />
           <Route path="ranking" element={<RankingPrioritas lockable />} />
