@@ -40,6 +40,7 @@ const VerifikasiSarpras = () => {
 
             // For korwil: get assignment first, then filter server-side
             if (role === 'Korwil' && user?.id) {
+                params.status = 'Menunggu Verifikasi Korwil';
                 try {
                     const korwilList = await korwilApi.list();
                     const myRows = (korwilList || []).filter(row => {
@@ -52,6 +53,8 @@ const VerifikasiSarpras = () => {
                         if (ka.jenjang) params.jenjang = ka.jenjang;
                     }
                 } catch (e) { console.error('Failed to get korwil assignment:', e); }
+            } else if (role === 'Verifikator') {
+                params.status = 'Menunggu Verifikasi';
             }
 
             const apiData = await sarprasApi.list(params);
