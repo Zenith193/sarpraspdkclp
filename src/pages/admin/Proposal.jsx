@@ -195,7 +195,9 @@ const Proposal = ({ readOnly = false }) => {
         const totalPengajuan = src.reduce((sum, p) => sum + (Number(p.nilaiPengajuan) || 0), 0);
         const aktifCount = filteredAktif.length;
         const realisasiCount = filteredRealisasi.length;
-        return { jumlahProposal: src.length, jumlahSekolah: uniqueSchools, totalPengajuan, aktifCount, realisasiCount };
+        const totalAktif = filteredAktif.reduce((sum, p) => sum + (Number(p.nilaiPengajuan) || 0), 0);
+        const totalRealisasi = filteredRealisasi.reduce((sum, p) => sum + (Number(p.nilaiPengajuan) || 0), 0);
+        return { jumlahProposal: src.length, jumlahSekolah: uniqueSchools, totalPengajuan, aktifCount, realisasiCount, totalAktif, totalRealisasi };
     }, [filtered, filteredAktif, filteredRealisasi]);
 
     const paged = useMemo(() => {
@@ -526,7 +528,7 @@ const Proposal = ({ readOnly = false }) => {
 
             {/* Summary Stat Cards */}
             {!isSekolah && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16, marginBottom: 20 }}>
                     <div style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', padding: '16px 20px', border: '1px solid var(--border-color)' }}>
                         <div style={{ fontSize: 12, color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: 0.5 }}>Jumlah Proposal</div>
                         <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--text-primary)', marginTop: 4 }}>{stats.jumlahProposal}</div>
@@ -539,8 +541,18 @@ const Proposal = ({ readOnly = false }) => {
                         <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--accent-blue)', marginTop: 4 }}>{stats.jumlahSekolah}</div>
                     </div>
                     <div style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', padding: '16px 20px', border: '1px solid var(--border-color)' }}>
+                        <div style={{ fontSize: 12, color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: 0.5 }}>Total Aktif</div>
+                        <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--accent-blue)', marginTop: 4 }}>{formatCurrency(stats.totalAktif)}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>{stats.aktifCount} proposal</div>
+                    </div>
+                    <div style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', padding: '16px 20px', border: '1px solid var(--border-color)' }}>
+                        <div style={{ fontSize: 12, color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: 0.5 }}>Total Realisasi</div>
+                        <div style={{ fontSize: 22, fontWeight: 700, color: '#06b6d4', marginTop: 4 }}>{formatCurrency(stats.totalRealisasi)}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 4 }}>{stats.realisasiCount} proposal</div>
+                    </div>
+                    <div style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', padding: '16px 20px', border: '1px solid var(--border-color)' }}>
                         <div style={{ fontSize: 12, color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: 600, letterSpacing: 0.5 }}>Total Pengajuan</div>
-                        <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--accent-green)', marginTop: 4 }}>{formatCurrency(stats.totalPengajuan)}</div>
+                        <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--accent-green)', marginTop: 4 }}>{formatCurrency(stats.totalPengajuan)}</div>
                     </div>
                 </div>
             )}
