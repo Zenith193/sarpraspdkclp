@@ -33,6 +33,16 @@ export const matrikKegiatan = pgTable('matrik_kegiatan', {
     jangkaWaktu: integer('jangka_waktu'),
     tahunAnggaran: integer('tahun_anggaran'),
     honor: bigint('honor', { mode: 'number' }).default(0),
+    // SPL fields
+    noHp: text('no_hp'),
+    konsultanPengawas: text('konsultan_pengawas'),
+    dirKonsultanPengawas: text('dir_konsultan_pengawas'),
+    noMc0: text('no_mc0'),
+    tglMc0: date('tgl_mc0'),
+    noMc100: text('no_mc100'),
+    tglMc100: date('tgl_mc100'),
+    noPcm: text('no_pcm'),
+    tglPcm: date('tgl_pcm'),
     createdAt: timestamp('created_at').defaultNow(),
     updatedAt: timestamp('updated_at').defaultNow(),
 });
@@ -85,3 +95,18 @@ export const bast = pgTable('bast', {
     createdBy: text('created_by').references(() => user.id),
     createdAt: timestamp('created_at').defaultNow(),
 });
+
+// ============================================================
+// SPL GENERATED (Riwayat generate SPL)
+// ============================================================
+export const splGenerated = pgTable('spl_generated', {
+    id: serial('id').primaryKey(),
+    matrikId: integer('matrik_id').notNull().references(() => matrikKegiatan.id, { onDelete: 'cascade' }),
+    templateId: integer('template_id').references(() => bastTemplate.id),
+    namaFile: text('nama_file'),
+    filePath: text('file_path'),
+    uploadStatus: text('upload_status').default('done'),
+    createdBy: text('created_by').references(() => user.id),
+    createdAt: timestamp('created_at').defaultNow(),
+});
+

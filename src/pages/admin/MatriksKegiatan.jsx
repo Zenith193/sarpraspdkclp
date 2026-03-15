@@ -1,10 +1,11 @@
-import { useState, useMemo, useEffect } from 'react';
-import { Search, Download, Plus, Edit, Trash2, ChevronLeft, ChevronRight, X, Save, AlertTriangle, FileSpreadsheet, Building, User, Briefcase, FileText, Settings, DollarSign, Calendar, Truck, PlusCircle, AlertCircle, RefreshCw } from 'lucide-react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
+import { Search, Download, Plus, Edit, Trash2, ChevronLeft, ChevronRight, X, Save, AlertTriangle, FileSpreadsheet, Building, User, Briefcase, FileText, Settings, DollarSign, Calendar, Truck, PlusCircle, AlertCircle, RefreshCw, CheckSquare, Square, FileDown, Info, Printer, Clock, Phone } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 import { SUB_KEGIATAN } from '../../utils/constants';
 import { useSekolahData } from '../../data/dataProvider';
 import SearchableSelect from '../../components/ui/SearchableSelect';
 import useMatrikStore, { generateNoSpk, inferJenjang, fullTerbilang, formatNumberInput, parseFormattedNumber, naturalSort, SUMBER_DANA, JENIS_PENGADAAN, METODE_PEMILIHAN, STATUS_PEMILIK } from '../../store/matrikStore';
+import { matrikApi, templateApi } from '../../api/index';
 import toast from 'react-hot-toast';
 
 // ===== CONSTANTS =====
@@ -142,7 +143,10 @@ const MatriksKegiatan = () => {
         sumberDana: '', metode: '', jenisPengadaan: '',
         penyedia: '', namaPemilik: '', statusPemilik: '', alamatKantor: '',
         noSpk: '', tanggalMulai: '', tanggalSelesai: '', jangkaWaktu: '',
-        tahunAnggaran: currentYear
+        tahunAnggaran: currentYear,
+        noHp: '', konsultanPengawas: '', dirKonsultanPengawas: '',
+        noMc0: '', tglMc0: '', noMc100: '', tglMc100: '',
+        noPcm: '', tglPcm: '',
     });
 
     const resetForm = () => { setFormData(getEmptyForm()); setEditTarget(null); clearDraft(); };
@@ -294,15 +298,35 @@ const MatriksKegiatan = () => {
 
     const activeCols = TABLE_COLUMNS.filter(c => visibleColumns.includes(c.key));
 
+    // ===== TAB STATE =====
+    const [activeTab, setActiveTab] = useState('matrik'); // 'matrik' | 'spl'
+
     return (
         <div>
             <div className="page-header">
                 <div className="page-header-left"><h1>Matriks Kegiatan</h1><p>Manajemen Paket Pekerjaan</p></div>
                 <div className="page-header-right">
-                    <button className="btn btn-secondary" onClick={() => setShowSettings(true)}><Settings size={16} /> Pengaturan</button>
-                    <button className="btn btn-primary" onClick={() => handleOpenModal()}><Plus size={16} /> Tambah Paket</button>
+                    {activeTab === 'matrik' && <>
+                        <button className="btn btn-secondary" onClick={() => setShowSettings(true)}><Settings size={16} /> Pengaturan</button>
+                        <button className="btn btn-primary" onClick={() => handleOpenModal()}><Plus size={16} /> Tambah Paket</button>
+                    </>}
                 </div>
             </div>
+
+            {/* TAB NAVIGATION */}
+            <div style={{ display: 'flex', gap: 0, marginBottom: 16, borderBottom: '2px solid var(--border-color)' }}>
+                {[{ key: 'matrik', label: 'Matriks Kegiatan' }, { key: 'spl', label: 'SPL Isian' }].map(tab => (
+                    <button key={tab.key} onClick={() => setActiveTab(tab.key)} style={{
+                        padding: '10px 24px', border: 'none', background: 'transparent', cursor: 'pointer',
+                        color: activeTab === tab.key ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                        fontWeight: activeTab === tab.key ? 600 : 400, fontSize: '0.9rem',
+                        borderBottom: activeTab === tab.key ? '2px solid var(--accent-blue)' : '2px solid transparent',
+                        marginBottom: -2, transition: 'all 0.2s',
+                    }}>{tab.label}</button>
+                ))}
+            </div>
+
+            {activeTab === 'matrik' && (<>
 
             <div className="table-container">
                 <div className="table-toolbar">
@@ -469,6 +493,28 @@ const MatriksKegiatan = () => {
                                     <div className="form-group"><label>Tanggal Selesai</label><input className="form-input" type="date" value={formData.tanggalSelesai || ''} disabled style={{ background: 'var(--bg-secondary)' }} /></div>
                                 </div>
                             </Section>
+
+                            <div style={{ borderBottom: '1px dashed var(--border-color)', margin: '16px 0' }}></div>
+
+                            <Section title="DATA SPL / MC / PCM" icon={<Phone size={16} />}>
+                                <div className="form-group"><label>No HP Penyedia</label><input className="form-input" value={formData.noHp || ''} onChange={e => handleChange('noHp', e.target.value)} placeholder="Contoh: 08123456789" /></div>
+                                <div className="form-row">
+                                    <div className="form-group"><label>Konsultan Pengawas</label><input className="form-input" value={formData.konsultanPengawas || ''} onChange={e => handleChange('konsultanPengawas', e.target.value)} /></div>
+                                    <div className="form-group"><label>Direktur Konsultan Pengawas</label><input className="form-input" value={formData.dirKonsultanPengawas || ''} onChange={e => handleChange('dirKonsultanPengawas', e.target.value)} /></div>
+                                </div>
+                                <div className="form-row">
+                                    <div className="form-group"><label>No MC 0%</label><input className="form-input" value={formData.noMc0 || ''} onChange={e => handleChange('noMc0', e.target.value)} /></div>
+                                    <div className="form-group"><label>Tanggal MC 0%</label><input className="form-input" type="date" value={formData.tglMc0 || ''} onChange={e => handleChange('tglMc0', e.target.value)} /></div>
+                                </div>
+                                <div className="form-row">
+                                    <div className="form-group"><label>No MC 100%</label><input className="form-input" value={formData.noMc100 || ''} onChange={e => handleChange('noMc100', e.target.value)} /></div>
+                                    <div className="form-group"><label>Tanggal MC 100%</label><input className="form-input" type="date" value={formData.tglMc100 || ''} onChange={e => handleChange('tglMc100', e.target.value)} /></div>
+                                </div>
+                                <div className="form-row">
+                                    <div className="form-group"><label>No PCM</label><input className="form-input" value={formData.noPcm || ''} onChange={e => handleChange('noPcm', e.target.value)} /></div>
+                                    <div className="form-group"><label>Tanggal PCM</label><input className="form-input" type="date" value={formData.tglPcm || ''} onChange={e => handleChange('tglPcm', e.target.value)} /></div>
+                                </div>
+                            </Section>
                         </div>
                         <div className="modal-footer">
                             <button className="btn btn-ghost" onClick={resetForm} title="Hapus draft & kosongkan form"><RefreshCw size={14} /> Reset</button>
@@ -530,7 +576,315 @@ const MatriksKegiatan = () => {
                     </div>
                 </div>
             )}
+
+            {/* CLOSE MATRIK TAB */}
+            </>)}
+
+            {/* ===== SPL ISIAN TAB ===== */}
+            {activeTab === 'spl' && <SplTab />}
         </div>
+    );
+};
+
+// ===== SPL TAB COMPONENT =====
+const SplTab = () => {
+    const [splData, setSplData] = useState([]);
+    const [splLoading, setSplLoading] = useState(true);
+    const [selectedIds, setSelectedIds] = useState(new Set());
+    const [splSearch, setSplSearch] = useState('');
+    const [showGuide, setShowGuide] = useState(false);
+    const [showGenerateModal, setShowGenerateModal] = useState(false);
+    const [templates, setTemplates] = useState([]);
+    const [verifikators, setVerifikators] = useState([]);
+    const [selectedTemplate, setSelectedTemplate] = useState(null);
+    const [selectedVerifikator, setSelectedVerifikator] = useState(null);
+    const [splHistory, setSplHistory] = useState([]);
+    const [showHistory, setShowHistory] = useState(false);
+    const [generating, setGenerating] = useState(false);
+
+    const loadSpl = useCallback(async () => {
+        setSplLoading(true);
+        try {
+            const data = await matrikApi.listSpl();
+            setSplData(data);
+        } catch (e) { toast.error('Gagal memuat data SPL'); }
+        finally { setSplLoading(false); }
+    }, []);
+
+    useEffect(() => { loadSpl(); }, [loadSpl]);
+
+    const loadTemplates = async () => {
+        try { const t = await templateApi.list(); setTemplates(t); } catch { }
+    };
+    const loadVerifikators = async () => {
+        try { const v = await matrikApi.splVerifikator(); setVerifikators(v); } catch { }
+    };
+    const loadHistory = async () => {
+        try { const h = await matrikApi.splHistory(); setSplHistory(h); } catch { }
+    };
+
+    const filteredSpl = useMemo(() => {
+        const q = splSearch.toLowerCase();
+        return splData.filter(d =>
+            d.namaSekolah?.toLowerCase().includes(q) ||
+            d.npsn?.includes(q) ||
+            d.namaPaket?.toLowerCase().includes(q) ||
+            d.noMatrik?.includes(q)
+        );
+    }, [splData, splSearch]);
+
+    const toggleSelect = (id) => {
+        setSelectedIds(prev => {
+            const n = new Set(prev);
+            n.has(id) ? n.delete(id) : n.add(id);
+            return n;
+        });
+    };
+    const toggleAll = () => {
+        if (selectedIds.size === filteredSpl.length) setSelectedIds(new Set());
+        else setSelectedIds(new Set(filteredSpl.map(d => d.id)));
+    };
+
+    const handleOpenGenerate = async () => {
+        if (selectedIds.size === 0) { toast.error('Pilih minimal 1 matrik'); return; }
+        await Promise.all([loadTemplates(), loadVerifikators()]);
+        setShowGenerateModal(true);
+    };
+
+    const handleGenerate = async () => {
+        if (!selectedTemplate) { toast.error('Pilih template'); return; }
+        setGenerating(true);
+        try {
+            const selected = filteredSpl.filter(d => selectedIds.has(d.id));
+            for (const item of selected) {
+                const verif = verifikators.find(v => v.id === selectedVerifikator);
+                await matrikApi.createSplHistory({
+                    matrikId: item.id,
+                    templateId: selectedTemplate,
+                    namaFile: `SPL_${item.noMatrik}_${item.namaSekolah || 'dokumen'}.docx`,
+                });
+            }
+            toast.success(`${selected.length} SPL berhasil di-generate`);
+            setShowGenerateModal(false);
+            setSelectedIds(new Set());
+        } catch (e) { toast.error('Gagal generate SPL'); }
+        finally { setGenerating(false); }
+    };
+
+    const handleOpenHistory = async () => {
+        await loadHistory();
+        setShowHistory(true);
+    };
+
+    const handleDeleteHistory = async (id) => {
+        try {
+            await matrikApi.deleteSplHistory(id);
+            toast.success('Riwayat dihapus');
+            loadHistory();
+        } catch { toast.error('Gagal menghapus'); }
+    };
+
+    const fmtDate = (d) => {
+        if (!d) return '-';
+        const dt = new Date(d);
+        if (isNaN(dt)) return d;
+        return `${dt.getDate()}/${dt.getMonth()+1}/${dt.getFullYear()}`;
+    };
+
+    const SPL_COLS = [
+        { key: 'npsn', label: 'NPSN' },
+        { key: 'namaSekolah', label: 'Nama Sekolah' },
+        { key: 'namaPaket', label: 'Nama Paket Pekerjaan' },
+        { key: 'nilaiKontrak', label: 'Nilai Kontrak', fmt: v => formatCurrency(v) },
+        { key: 'jangkaWaktu', label: 'Jangka Waktu', fmt: v => v ? `${v} HK` : '-' },
+        { key: 'noSpk', label: 'Nomor Kontrak' },
+        { key: 'penyedia', label: 'Penyedia' },
+        { key: 'namaPemilik', label: 'Direktur' },
+        { key: 'noHp', label: 'No HP' },
+        { key: 'alamatKantor', label: 'Alamat Penyedia' },
+        { key: 'kepsek', label: 'Nama KS' },
+        { key: 'nipKs', label: 'NIP KS' },
+        { key: 'konsultanPengawas', label: 'Konsultan Pengawas' },
+        { key: 'dirKonsultanPengawas', label: 'Dir. Konsultan' },
+        { key: 'noMc0', label: 'No MC 0' },
+        { key: 'tglMc0', label: 'Tgl MC 0', fmt: fmtDate },
+        { key: 'noMc100', label: 'No MC 100' },
+        { key: 'tglMc100', label: 'Tgl MC 100', fmt: fmtDate },
+        { key: 'noPcm', label: 'No PCM' },
+        { key: 'tglPcm', label: 'Tgl PCM', fmt: fmtDate },
+    ];
+
+    return (
+        <>
+            {/* GUIDE */}
+            <div style={{ marginBottom: 16 }}>
+                <button className="btn btn-ghost btn-sm" onClick={() => setShowGuide(!showGuide)} style={{ gap: 6 }}>
+                    <Info size={14} /> Petunjuk Pengambilan Data SPL
+                </button>
+                {showGuide && (
+                    <div style={{ marginTop: 8, padding: 16, background: 'var(--bg-secondary)', borderRadius: 8, border: '1px solid var(--border-color)', fontSize: '0.85rem', lineHeight: 1.8 }}>
+                        <strong>📋 Petunjuk Pengambilan Data SPL:</strong>
+                        <ol style={{ marginTop: 8, paddingLeft: 20 }}>
+                            <li>Data diambil otomatis dari <b>Matriks Kegiatan</b> (tab pertama).</li>
+                            <li><b>Nama KS</b> dan <b>NIP KS</b> diambil dari data Sekolah berdasarkan NPSN.</li>
+                            <li><b>Nama Sekretaris</b> dan <b>NIP Sekretaris</b> dipilih dari akun Verifikator saat generate.</li>
+                            <li>Untuk field <b>No HP, Konsultan Pengawas, MC 0/100, PCM</b> — isi melalui form Edit di tab Matriks Kegiatan (bagian "Data SPL/MC/PCM").</li>
+                            <li>Matrik yang memiliki <b>anakan</b>: saat generate, data anakan otomatis diikutkan bersama matrik induknya.</li>
+                            <li>Centang baris yang ingin di-generate, lalu klik tombol <b>"Generate SPL"</b>.</li>
+                        </ol>
+                    </div>
+                )}
+            </div>
+
+            {/* TOOLBAR */}
+            <div className="table-container">
+                <div className="table-toolbar">
+                    <div className="table-toolbar-left">
+                        <div className="table-search"><Search size={16} className="search-icon" /><input placeholder="Cari NPSN, sekolah, paket..." value={splSearch} onChange={e => setSplSearch(e.target.value)} /></div>
+                        {selectedIds.size > 0 && (
+                            <span style={{ fontSize: '0.8rem', color: 'var(--accent-blue)', fontWeight: 600 }}>{selectedIds.size} dipilih</span>
+                        )}
+                    </div>
+                    <div className="table-toolbar-right" style={{ gap: 8 }}>
+                        <button className="btn btn-secondary btn-sm" onClick={handleOpenHistory}><Clock size={14} /> Riwayat</button>
+                        <button className="btn btn-primary btn-sm" onClick={handleOpenGenerate} disabled={selectedIds.size === 0}>
+                            <Printer size={14} /> Generate SPL ({selectedIds.size})
+                        </button>
+                    </div>
+                </div>
+
+                <div style={{ overflowX: 'auto' }}>
+                    <table className="data-table">
+                        <thead>
+                            <tr>
+                                <th style={{ width: 40 }}>
+                                    <button onClick={toggleAll} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-primary)', display: 'flex' }}>
+                                        {selectedIds.size === filteredSpl.length && filteredSpl.length > 0 ? <CheckSquare size={16} /> : <Square size={16} />}
+                                    </button>
+                                </th>
+                                <th>No</th>
+                                {SPL_COLS.map(c => <th key={c.key} style={{ whiteSpace: 'nowrap' }}>{c.label}</th>)}
+                                <th>Anak</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {splLoading ? (
+                                <tr><td colSpan={SPL_COLS.length + 3} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>Memuat data...</td></tr>
+                            ) : filteredSpl.length === 0 ? (
+                                <tr><td colSpan={SPL_COLS.length + 3} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>Tidak ada data</td></tr>
+                            ) : filteredSpl.map((d, i) => (
+                                <tr key={d.id} style={{ background: selectedIds.has(d.id) ? 'rgba(59,130,246,0.08)' : undefined }}>
+                                    <td>
+                                        <button onClick={() => toggleSelect(d.id)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: 'var(--text-primary)', display: 'flex' }}>
+                                            {selectedIds.has(d.id) ? <CheckSquare size={16} style={{ color: 'var(--accent-blue)' }} /> : <Square size={16} />}
+                                        </button>
+                                    </td>
+                                    <td>{i + 1}</td>
+                                    {SPL_COLS.map(c => (
+                                        <td key={c.key} style={{ whiteSpace: 'nowrap', fontSize: '0.82rem' }}>
+                                            {c.fmt ? c.fmt(d[c.key]) : (d[c.key] || '-')}
+                                        </td>
+                                    ))}
+                                    <td>
+                                        {d.children?.length > 0 ? (
+                                            <span className="badge badge-disetujui" style={{ fontSize: 11 }}>{d.children.length} anakan</span>
+                                        ) : '-'}
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
+                <div className="table-pagination">
+                    <div className="table-pagination-info">Total {filteredSpl.length} data (induk)</div>
+                </div>
+            </div>
+
+            {/* GENERATE MODAL */}
+            {showGenerateModal && (
+                <div className="modal-overlay" onClick={() => setShowGenerateModal(false)}>
+                    <div className="modal" style={{ maxWidth: 520 }} onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <div className="modal-title">Generate SPL</div>
+                            <button className="modal-close" onClick={() => setShowGenerateModal(false)}><X size={18} /></button>
+                        </div>
+                        <div className="modal-body">
+                            <p style={{ marginBottom: 16, color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                                {selectedIds.size} matrik dipilih. Matrik yang memiliki anakan akan diikutkan otomatis.
+                            </p>
+                            <div className="form-group">
+                                <label className="form-label">Pilih Template</label>
+                                <select className="form-select" value={selectedTemplate || ''} onChange={e => setSelectedTemplate(Number(e.target.value) || null)}>
+                                    <option value="">-- Pilih Template --</option>
+                                    {templates.map(t => <option key={t.id} value={t.id}>{t.nama}</option>)}
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Sekretaris (Verifikator)</label>
+                                <select className="form-select" value={selectedVerifikator || ''} onChange={e => setSelectedVerifikator(e.target.value || null)}>
+                                    <option value="">-- Pilih Sekretaris --</option>
+                                    {verifikators.map(v => <option key={v.id} value={v.id}>{v.name} {v.nip ? `(${v.nip})` : ''}</option>)}
+                                </select>
+                            </div>
+                        </div>
+                        <div className="modal-footer">
+                            <button className="btn btn-ghost" onClick={() => setShowGenerateModal(false)}>Batal</button>
+                            <button className="btn btn-primary" onClick={handleGenerate} disabled={generating}>
+                                {generating ? 'Memproses...' : 'Generate SPL'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* HISTORY MODAL */}
+            {showHistory && (
+                <div className="modal-overlay" onClick={() => setShowHistory(false)}>
+                    <div className="modal" style={{ maxWidth: 750 }} onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <div className="modal-title">Riwayat Generate SPL</div>
+                            <button className="modal-close" onClick={() => setShowHistory(false)}><X size={18} /></button>
+                        </div>
+                        <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+                            {splHistory.length === 0 ? (
+                                <p style={{ textAlign: 'center', padding: 32, color: 'var(--text-secondary)' }}>Belum ada riwayat generate</p>
+                            ) : (
+                                <table className="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>No</th>
+                                            <th>Matrik</th>
+                                            <th>Sekolah</th>
+                                            <th>Template</th>
+                                            <th>File</th>
+                                            <th>Tanggal</th>
+                                            <th>Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {splHistory.map((h, i) => (
+                                            <tr key={h.spl.id}>
+                                                <td>{i + 1}</td>
+                                                <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{h.matrikNo || '-'}</td>
+                                                <td>{h.namaSekolah || '-'}</td>
+                                                <td>{h.templateNama || '-'}</td>
+                                                <td style={{ fontSize: '0.8rem' }}>{h.spl.namaFile || '-'}</td>
+                                                <td style={{ fontSize: '0.8rem' }}>{fmtDate(h.spl.createdAt)}</td>
+                                                <td>
+                                                    <button className="btn-icon" style={{ color: 'var(--accent-red)' }} onClick={() => handleDeleteHistory(h.spl.id)} title="Hapus">
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
     );
 };
 

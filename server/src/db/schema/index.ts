@@ -3,7 +3,7 @@ export { user, session, account, verification } from './auth';
 export { sekolah } from './sekolah';
 export { sarpras, sarprasFoto } from './sarpras';
 export { proposal, proposalFoto } from './proposal';
-export { matrikKegiatan, pencairan, bastTemplate, bast } from './matrik';
+export { matrikKegiatan, pencairan, bastTemplate, bast, splGenerated } from './matrik';
 export { proyeksiAnggaran, snpAcuan } from './proyeksi';
 export { prestasi, prestasiPointRule } from './prestasi';
 export { formKerusakan } from './kerusakan';

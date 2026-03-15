@@ -73,6 +73,12 @@ export const matrikApi = {
     update: (id, data) => api.put(`/matrik/${id}`, data),
     delete: (id) => api.delete(`/matrik/${id}`),
     bulkCreate: (items) => api.post('/matrik/bulk', { items }),
+    // SPL
+    listSpl: (params = {}) => { const q = new URLSearchParams(params).toString(); return api.get(`/matrik/spl?${q}`); },
+    splVerifikator: () => api.get('/matrik/spl/verifikator'),
+    splHistory: () => api.get('/matrik/spl/history'),
+    createSplHistory: (data) => api.post('/matrik/spl/history', data),
+    deleteSplHistory: (id) => api.delete(`/matrik/spl/history/${id}`),
 };
 
 export const pencairanApi = {
