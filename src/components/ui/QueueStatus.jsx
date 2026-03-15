@@ -3,17 +3,14 @@ import { queueApi } from '../../api/index';
 import useAuthStore from '../../store/authStore';
 
 /**
- * Floating queue status indicator.
- * Auto-appears when there are pending uploads/deletions.
- * Auto-hides when queue is empty.
+ * Compact queue status indicator for the topbar.
+ * Shows a small icon with count when there are pending uploads/failures.
+ * Hidden when queue is empty.
  */
 const QueueStatus = () => {
     const { isAuthenticated } = useAuthStore();
     const [status, setStatus] = useState(null);
-    const [visible, setVisible] = useState(false);
-    const [minimized, setMinimized] = useState(false);
     const intervalRef = useRef(null);
-    const hideTimerRef = useRef(null);
 
     useEffect(() => {
         if (!isAuthenticated) return;
@@ -22,112 +19,64 @@ const QueueStatus = () => {
             try {
                 const data = await queueApi.status();
                 setStatus(data);
-                if (data.totalUploading > 0 || data.totalFailed > 0) {
-                    setVisible(true);
-                    if (hideTimerRef.current) { clearTimeout(hideTimerRef.current); hideTimerRef.current = null; }
-                } else if (visible) {
-                    // Auto-hide after 3 seconds when done
-                    if (!hideTimerRef.current) {
-                        hideTimerRef.current = setTimeout(() => {
-                            setVisible(false);
-                            hideTimerRef.current = null;
-                        }, 3000);
-                    }
-                }
             } catch { /* ignore */ }
         };
 
         poll();
-        intervalRef.current = setInterval(poll, 5000);
+        intervalRef.current = setInterval(poll, 8000);
 
         return () => {
             if (intervalRef.current) clearInterval(intervalRef.current);
-            if (hideTimerRef.current) clearTimeout(hideTimerRef.current);
         };
     }, [isAuthenticated]);
 
-    if (!visible || !status) return null;
+    if (!status) return null;
 
     const { totalUploading, totalFailed } = status;
-    const isDone = totalUploading === 0 && totalFailed === 0;
+    if (totalUploading === 0 && totalFailed === 0) return null;
+
+    const hasFailure = totalFailed > 0;
+    const isUploading = totalUploading > 0;
 
     return (
-        <div style={{
-            position: 'fixed',
-            bottom: '20px',
-            right: '20px',
-            zIndex: 9999,
-            fontFamily: 'Inter, system-ui, sans-serif',
-        }}>
-            {/* Floating indicator */}
-            <div
-                onClick={() => setMinimized(m => !m)}
-                style={{
-                    background: isDone
-                        ? 'linear-gradient(135deg, #10b981, #059669)'
-                        : totalFailed > 0
-                            ? 'linear-gradient(135deg, #f59e0b, #d97706)'
-                            : 'linear-gradient(135deg, #6366f1, #4f46e5)',
-                    color: '#fff',
-                    borderRadius: minimized ? '50%' : '16px',
-                    padding: minimized ? '12px' : '14px 20px',
-                    boxShadow: '0 8px 32px rgba(0,0,0,0.3), 0 0 0 1px rgba(255,255,255,0.1)',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    backdropFilter: 'blur(20px)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
-                    minWidth: minimized ? '48px' : '200px',
-                    maxWidth: '320px',
-                    userSelect: 'none',
-                }}
-            >
-                {/* Sync icon */}
-                <div style={{
-                    width: '24px', height: '24px',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+        <div
+            title={`${isUploading ? `${totalUploading} sedang upload` : ''}${isUploading && hasFailure ? ', ' : ''}${hasFailure ? `${totalFailed} gagal` : ''}`}
+            style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 6,
+                padding: '4px 10px',
+                borderRadius: 'var(--radius-full, 20px)',
+                background: hasFailure
+                    ? 'rgba(249,115,22,0.15)'
+                    : 'rgba(99,102,241,0.15)',
+                color: hasFailure ? '#f97316' : '#818cf8',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                cursor: 'default',
+                whiteSpace: 'nowrap',
+            }}
+        >
+            {/* Sync icon */}
+            {isUploading && (
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" style={{
+                    animation: 'queueSpin 1.5s linear infinite',
                     flexShrink: 0,
                 }}>
-                    {isDone ? (
-                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-                            <path d="M4 10l4 4 8-8" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                    ) : (
-                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style={{
-                            animation: 'queueSpin 1.5s linear infinite',
-                        }}>
-                            <path d="M10 2a8 8 0 018 8" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
-                            <path d="M10 18a8 8 0 01-8-8" stroke="rgba(255,255,255,0.3)" strokeWidth="2.5" strokeLinecap="round" />
-                        </svg>
-                    )}
-                </div>
+                    <path d="M10 2a8 8 0 018 8" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
+                    <path d="M10 18a8 8 0 01-8-8" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" opacity="0.3" />
+                </svg>
+            )}
+            {hasFailure && !isUploading && (
+                <svg width="14" height="14" viewBox="0 0 20 20" fill="none" style={{ flexShrink: 0 }}>
+                    <path d="M10 6v5M10 14h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.5" fill="none" />
+                </svg>
+            )}
 
-                {/* Content */}
-                {!minimized && (
-                    <div style={{ flex: 1, overflow: 'hidden' }}>
-                        {isDone ? (
-                            <div style={{ fontSize: '13px', fontWeight: 600 }}>
-                                ✅ Semua selesai
-                            </div>
-                        ) : (
-                            <>
-                                <div style={{ fontSize: '13px', fontWeight: 600, marginBottom: '2px' }}>
-                                    Sinkronisasi GDrive
-                                </div>
-                                <div style={{ fontSize: '11px', opacity: 0.85, display: 'flex', gap: '10px' }}>
-                                    {totalUploading > 0 && (
-                                        <span>⬆️ {totalUploading} upload</span>
-                                    )}
-                                    {totalFailed > 0 && (
-                                        <span>⚠️ {totalFailed} gagal</span>
-                                    )}
-                                </div>
-                            </>
-                        )}
-                    </div>
-                )}
-            </div>
+            {/* Count */}
+            {isUploading && <span>⬆ {totalUploading}</span>}
+            {hasFailure && <span>⚠ {totalFailed}</span>}
 
             {/* CSS animation */}
             <style>{`

@@ -1,5 +1,6 @@
 import { Sun, Moon, Menu, School } from 'lucide-react';
 import useThemeStore from '../../store/themeStore';
+import QueueStatus from '../ui/QueueStatus';
 
 const Topbar = ({ onToggleSidebar }) => {
     const { theme, toggleTheme } = useThemeStore();
@@ -16,6 +17,7 @@ const Topbar = ({ onToggleSidebar }) => {
                 </div>
             </div>
             <div className="topbar-right">
+                <QueueStatus />
                 <button className="topbar-btn" onClick={toggleTheme} title="Ganti Tema">
                     {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
                 </button>
@@ -25,3 +27,4 @@ const Topbar = ({ onToggleSidebar }) => {
 };
 
 export default Topbar;
+
