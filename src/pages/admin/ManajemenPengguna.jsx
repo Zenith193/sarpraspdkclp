@@ -35,6 +35,7 @@ const ManajemenPengguna = () => {
     }, [usersFromApi]);
     const [search, setSearch] = useState('');
     const [filterRole, setFilterRole] = useState('');
+    const [filterJenjang, setFilterJenjang] = useState('');
     const [showFilters, setShowFilters] = useState(false);
 
     // State untuk Modal Form
@@ -58,6 +59,8 @@ const ManajemenPengguna = () => {
         { key: 'password', label: 'Password', defaultHidden: true },
         { key: 'jenjang', label: 'Jenjang' },
         { key: 'kecamatan', label: 'Kecamatan' },
+        { key: 'kepsek', label: 'Kepala Sekolah', defaultHidden: true },
+        { key: 'nip', label: 'NIP', defaultHidden: true },
         { key: 'status', label: 'Status' },
     ];
     const [visibleCols, setVisibleCols] = useState(() => {
@@ -90,11 +93,13 @@ const ManajemenPengguna = () => {
             const matchSearch = u.namaAkun.toLowerCase().includes(q) ||
                 (u.email || '').toLowerCase().includes(q) ||
                 (u.npsn || '').includes(q) ||
+                (u.kepsek || '').toLowerCase().includes(q) ||
                 (u.alamat || '').toLowerCase().includes(q);
             const matchRole = filterRole ? u.role === filterRole : true;
-            return matchSearch && matchRole;
+            const matchJenjang = filterJenjang ? u.jenjang === filterJenjang : true;
+            return matchSearch && matchRole && matchJenjang;
         });
-    }, [users, search, filterRole]);
+    }, [users, search, filterRole, filterJenjang]);
 
     // ===== LOGIC PAGINASI =====
     const totalPages = Math.ceil(filtered.length / perPage) || 1;
@@ -108,7 +113,7 @@ const ManajemenPengguna = () => {
     // Reset halaman ke 1 jika filter atau jumlah data berubah
     useEffect(() => {
         setCurrentPage(1);
-    }, [search, filterRole, perPage]);
+    }, [search, filterRole, filterJenjang, perPage]);
 
     // ===== HANDLERS =====
     const handleBatchImport = async (e) => {
@@ -482,8 +487,8 @@ const ManajemenPengguna = () => {
                             </select>
                         </div>
 
-                        <button className={`btn ${filterRole ? 'btn-primary' : 'btn-ghost'} btn-sm`} onClick={() => setShowFilters(!showFilters)}>
-                            <Filter size={14} /> Filter {filterRole && <span style={{ marginLeft: 4, background: '#fff', color: 'var(--accent-blue)', borderRadius: '50%', width: 18, height: 18, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11 }}>1</span>}
+                        <button className={`btn ${(filterRole || filterJenjang) ? 'btn-primary' : 'btn-ghost'} btn-sm`} onClick={() => setShowFilters(!showFilters)}>
+                            <Filter size={14} /> Filter {(filterRole || filterJenjang) && <span style={{ marginLeft: 4, background: '#fff', color: 'var(--accent-blue)', borderRadius: '50%', width: 18, height: 18, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11 }}>{(filterRole ? 1 : 0) + (filterJenjang ? 1 : 0)}</span>}
                         </button>
 
                         {/* Column Visibility Toggle */}
@@ -525,12 +530,16 @@ const ManajemenPengguna = () => {
                 </div>
 
                 {showFilters && (
-                    <div className="filter-bar" style={{ padding: '12px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: 12 }}>
-                        <select value={filterRole} onChange={e => setFilterRole(e.target.value)} style={{ minWidth: 200 }}>
+                    <div className="filter-bar" style={{ padding: '12px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+                        <select value={filterRole} onChange={e => setFilterRole(e.target.value)} style={{ minWidth: 160 }}>
                             <option value="">Semua Role</option>
                             {JENIS_AKUN.map(j => <option key={j} value={j}>{j}</option>)}
                         </select>
-                        {filterRole && <button className="btn btn-ghost btn-sm" onClick={() => setFilterRole('')}>Reset</button>}
+                        <select value={filterJenjang} onChange={e => setFilterJenjang(e.target.value)} style={{ minWidth: 160 }}>
+                            <option value="">Semua Jenjang</option>
+                            {JENJANG.map(j => <option key={j} value={j}>{j}</option>)}
+                        </select>
+                        {(filterRole || filterJenjang) && <button className="btn btn-ghost btn-sm" onClick={() => { setFilterRole(''); setFilterJenjang(''); }}>Reset</button>}
                     </div>
                 )}
 
@@ -545,6 +554,8 @@ const ManajemenPengguna = () => {
                                 {isColVisible('password') && <th>Password</th>}
                                 {isColVisible('jenjang') && <th>Jenjang</th>}
                                 {isColVisible('kecamatan') && <th>Kecamatan</th>}
+                                {isColVisible('kepsek') && <th>Kepala Sekolah</th>}
+                                {isColVisible('nip') && <th>NIP</th>}
                                 {isColVisible('status') && <th>Status</th>}
                                 <th style={{ width: 50 }}>Aksi</th>
                             </tr>
@@ -564,6 +575,8 @@ const ManajemenPengguna = () => {
                                     </td>}
                                     {isColVisible('jenjang') && <td>{(u.role === 'Korwil' || u.role === 'Sekolah') ? (u.jenjang || '-') : '-'}</td>}
                                     {isColVisible('kecamatan') && <td>{(u.role === 'Korwil' || u.role === 'Sekolah') ? (u.kecamatan || '-') : '-'}</td>}
+                                    {isColVisible('kepsek') && <td>{u.kepsek || '-'}</td>}
+                                    {isColVisible('nip') && <td style={{ fontFamily: 'monospace', fontSize: '0.82rem' }}>{u.nip || '-'}</td>}
                                     {isColVisible('status') && <td>
                                         {u.aktif ?
                                             <span className="badge badge-baik"><CheckCircle size={12} style={{ marginRight: 4 }} /> Aktif</span> :
