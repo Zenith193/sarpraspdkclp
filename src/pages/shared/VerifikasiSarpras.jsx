@@ -203,7 +203,7 @@ const VerifikasiSarpras = () => {
                 <div style={{ overflowX: 'auto' }}>
                     <table className="data-table">
                         <thead>
-                            <tr><th>No</th><th>Sekolah</th><th>NPSN</th><th>Kecamatan</th><th>Jenjang</th><th>Jenis Prasarana</th><th>Nama Ruang</th><th>Kondisi</th><th>Foto</th><th>Aksi</th></tr>
+                            <tr><th>No</th><th>Sekolah</th><th>NPSN</th><th>Kecamatan</th><th>Jenjang</th><th>Jenis Prasarana</th><th>Nama Ruang</th><th>Kondisi</th><th>Tipe</th><th>Foto</th><th>Aksi</th></tr>
                         </thead>
                         <tbody>
                             {pagedData.map((item, i) => (
@@ -219,6 +219,15 @@ const VerifikasiSarpras = () => {
                                         <span className={`badge ${item.kondisi === 'BAIK' ? 'badge-baik' : item.kondisi === 'RUSAK RINGAN' ? 'badge-rusak-ringan' : item.kondisi === 'RUSAK SEDANG' ? 'badge-rusak-sedang' : 'badge-rusak-berat'}`}>
                                             {item.kondisi}
                                         </span>
+                                    </td>
+                                    <td>
+                                        {(() => {
+                                            const at = (item.actionType || '').toLowerCase();
+                                            if (at === 'tambah') return <span style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e', padding: '2px 10px', borderRadius: 10, fontSize: '0.75rem', fontWeight: 600 }}>Tambah</span>;
+                                            if (at === 'edit') return <span style={{ background: 'rgba(59,130,246,0.15)', color: '#3b82f6', padding: '2px 10px', borderRadius: 10, fontSize: '0.75rem', fontWeight: 600 }}>Edit</span>;
+                                            if (at === 'hapus') return <span style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', padding: '2px 10px', borderRadius: 10, fontSize: '0.75rem', fontWeight: 600 }}>Hapus</span>;
+                                            return <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>-</span>;
+                                        })()}
                                     </td>
                                     <td>
                                         <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: item.fotoCount ? 'var(--color-primary)' : 'var(--text-secondary)', cursor: item.fotoCount ? 'pointer' : 'default', textDecoration: item.fotoCount ? 'underline' : 'none' }} onClick={() => item.fotoCount && openDetail(item)} title={item.fotoCount ? 'Klik untuk lihat foto' : ''}>
