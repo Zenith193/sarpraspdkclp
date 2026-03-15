@@ -9,7 +9,7 @@ import {
     type SekolahInfo, type SarprasInfo
 } from '../utils/storagePaths';
 import { uploadToNas, isNasEnabled } from '../utils/nasClient';
-import { isGDriveEnabled, uploadFileToGDrive } from '../utils/googleDriveClient';
+import { isGDriveEnabled } from '../utils/googleDriveClient';
 
 // ===================================================================
 // Upload strategy:
@@ -101,43 +101,14 @@ export function forwardToNas(
         const processFile = async (file: Express.Multer.File) => {
             try {
                 if (isGDriveEnabled()) {
-                    // Save locally first (safety net)
+                    // Save locally — uploadQueue will handle GDrive upload in background
                     const localDest = getLocalDestination(category, body);
                     const finalLocalPath = path.join(localDest, file.filename);
                     fs.renameSync(file.path, finalLocalPath);
 
-                    // Set local path immediately so request doesn't block
                     (file as any).finalPath = finalLocalPath;
                     (file as any).storedAt = 'local';
                     (file as any).uploadPending = true;
-
-                    // Upload to GDrive in background (fire-and-forget)
-                    let gdriveSubPath: string = category;
-                    if (sekolah) {
-                        const folderName: Record<string, string> = {
-                            'kop-sekolah': 'profil',
-                            'kerusakan': 'form kerusakan',
-                            'sarpras': 'data sarpras',
-                            'proposal': 'proposal',
-                            'prestasi': 'prestasi',
-                            'riwayat-bantuan': 'riwayat bantuan',
-                            'bast': 'bast',
-                            'template': 'template',
-                            'backup': 'backup',
-                        };
-                        gdriveSubPath = `${sekolah.kecamatan || 'unknown'}/${sekolah.nama}_${sekolah.npsn}/${folderName[category] || category}`;
-                        if (extra.masaBangunan) gdriveSubPath += `/${extra.masaBangunan}`;
-                        if (extra.namaRuang) gdriveSubPath += `/${extra.namaRuang}`;
-                    }
-                    // Background upload - don't await
-                    uploadFileToGDrive(finalLocalPath, category, gdriveSubPath)
-                        .then((result: any) => {
-                            console.log(`[Upload] ${file.originalname} → GDrive ✅ ${result.path}`);
-                            try { fs.unlinkSync(finalLocalPath); } catch {}
-                        })
-                        .catch((gErr: any) => {
-                            console.error(`[Upload] GDrive background upload failed for ${file.originalname}:`, gErr.message);
-                        });
                 } else {
                     const result = await uploadToNas(file.path, category, sekolah, extra);
                     (file as any).storedAt = result.stored;
