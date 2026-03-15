@@ -211,6 +211,16 @@ app.get('/api/file/kerusakan/:id', async (req, res) => {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// ===== SARPRAS FOTO PROXY =====
+app.get('/api/file/foto/:id', async (req, res) => {
+    try {
+        const { sarprasFoto } = await import('./db/schema/index.js');
+        const result = await db.select().from(sarprasFoto).where(eq(sarprasFoto.id, Number(req.params.id)));
+        if (!result[0] || !result[0].filePath) { res.status(404).json({ error: 'File not found' }); return; }
+        await serveFileFromPath(result[0].filePath, res);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 // ===== PRESTASI SERTIFIKAT PROXY =====
 app.get('/api/file/prestasi/:id', async (req, res) => {
     try {
