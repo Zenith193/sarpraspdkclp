@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Timer, Save, RotateCcw, Play, Pause, Clock, Users, ShieldAlert, CheckCircle, XCircle, AlertTriangle, MapPin, GraduationCap, Plus, Edit, Trash2, Power, X } from 'lucide-react';
+import { Timer, Save, RotateCcw, Play, Pause, Clock, Users, ShieldAlert, CheckCircle, XCircle, AlertTriangle, MapPin, GraduationCap, Plus, Edit, Trash2, Power, X, MoreHorizontal } from 'lucide-react';
 import useSettingsStore, { AVAILABLE_ACTIONS, createNewTimer } from '../../store/settingsStore';
 import { settingsApi } from '../../api/index';
 import { KECAMATAN, JENJANG } from '../../utils/constants';
@@ -16,6 +16,7 @@ const CountdownSettings = () => {
     const [editTimer, setEditTimer] = useState(null); // null = closed, object = editing
     const [showForm, setShowForm] = useState(false);
     const [previews, setPreviews] = useState({});
+    const [openActionId, setOpenActionId] = useState(null);
 
     // Load from server on mount
     useEffect(() => {
@@ -161,7 +162,7 @@ const CountdownSettings = () => {
                                 <th>Kecamatan</th>
                                 <th>Aksi Dibatasi</th>
                                 <th>Status</th>
-                                <th style={{ width: 130 }}>Aksi</th>
+                                <th style={{ width: 50 }}>Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -199,7 +200,13 @@ const CountdownSettings = () => {
                                             {(timer.filterJenjang || []).length > 0 ? timer.filterJenjang.join(', ') : <span style={{ color: 'var(--text-secondary)' }}>Semua</span>}
                                         </td>
                                         <td style={{ fontSize: '0.78rem' }}>
-                                            {(timer.filterKecamatan || []).length > 0 ? `${timer.filterKecamatan.length} kec.` : <span style={{ color: 'var(--text-secondary)' }}>Semua</span>}
+                                            {(timer.filterKecamatan || []).length > 0 ? (
+                                                <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                                                    {(timer.filterKecamatan || []).map(k => (
+                                                        <span key={k} style={{ background: 'rgba(14,165,233,0.08)', color: '#0ea5e9', padding: '1px 6px', borderRadius: 8, fontSize: 10 }}>{k}</span>
+                                                    ))}
+                                                </div>
+                                            ) : <span style={{ color: 'var(--text-secondary)' }}>Semua</span>}
                                         </td>
                                         <td>
                                             <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
@@ -218,16 +225,23 @@ const CountdownSettings = () => {
                                             )}
                                         </td>
                                         <td>
-                                            <div style={{ display: 'flex', gap: 4 }}>
-                                                <button className="btn-icon" onClick={() => handleToggle(timer.id)} title={timer.enabled ? 'Nonaktifkan' : 'Aktifkan'} style={{ color: timer.enabled ? '#22c55e' : 'var(--text-secondary)' }}>
-                                                    <Power size={15} />
+                                            <div style={{ position: 'relative' }}>
+                                                <button className="btn-icon" onClick={() => setOpenActionId(openActionId === timer.id ? null : timer.id)} title="Aksi">
+                                                    <MoreHorizontal size={16} />
                                                 </button>
-                                                <button className="btn-icon" onClick={() => handleEdit(timer)} title="Edit">
-                                                    <Edit size={15} />
-                                                </button>
-                                                <button className="btn-icon" onClick={() => handleDelete(timer.id)} title="Hapus" style={{ color: 'var(--accent-red)' }}>
-                                                    <Trash2 size={15} />
-                                                </button>
+                                                {openActionId === timer.id && (
+                                                    <div className="dropdown-menu" style={{ right: 0, top: '100%', marginTop: 2, minWidth: 160, padding: 4, zIndex: 60 }}>
+                                                        <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '6px 10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: timer.enabled ? '#22c55e' : 'var(--text-primary)', borderRadius: 6 }} className="dropdown-item" onClick={() => { handleToggle(timer.id); setOpenActionId(null); }}>
+                                                            <Power size={14} /> {timer.enabled ? 'Nonaktifkan' : 'Aktifkan'}
+                                                        </button>
+                                                        <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '6px 10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: 'var(--text-primary)', borderRadius: 6 }} className="dropdown-item" onClick={() => { handleEdit(timer); setOpenActionId(null); }}>
+                                                            <Edit size={14} /> Edit
+                                                        </button>
+                                                        <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '6px 10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: 'var(--accent-red)', borderRadius: 6 }} className="dropdown-item" onClick={() => { handleDelete(timer.id); setOpenActionId(null); }}>
+                                                            <Trash2 size={14} /> Hapus
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>
