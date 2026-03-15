@@ -895,6 +895,9 @@ const DataSarpras = ({ readOnly = false }) => {
                                                             <button className="btn btn-sm" onClick={() => setAlasanModal({ id: d.id, type: 'reject' })} style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: 'none', padding: '4px 8px', fontSize: '0.72rem', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}>
                                                                 Tolak
                                                             </button>
+                                                            <button className="btn btn-sm" onClick={() => setDeleteConfirm(d)} style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: 'none', padding: '4px 8px', fontSize: '0.72rem', borderRadius: 'var(--radius-sm)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}>
+                                                                <Trash2 size={12} /> Hapus
+                                                            </button>
                                                         </div>
                                                     </td>
                                                 )}
