@@ -150,17 +150,35 @@ app.get('/api/foto/:fotoId', async (req, res) => {
 // ===== GENERIC FILE PROXY HELPER =====
 async function serveFileFromPath(filePath: string, res: any) {
     const normalizedPath = filePath.replace(/\\/g, '/');
+    const basename = path.basename(normalizedPath);
+    const uploadDir = process.env.UPLOAD_DIR || './uploads';
 
     // 1. Local file – try multiple path resolutions
     const candidates = [
         filePath,
         path.resolve(filePath),
         path.join(process.cwd(), filePath),
-        path.join(process.cwd(), 'uploads', path.basename(filePath)),
+        path.join(process.cwd(), 'uploads', basename),
+        path.join(uploadDir, 'proposal', basename),
+        path.join(uploadDir, 'fotos', basename),
+        path.join(uploadDir, 'kerusakan', basename),
+        path.join(uploadDir, 'prestasi', basename),
+        path.join(uploadDir, 'template', basename),
+        path.join(uploadDir, 'riwayat-bantuan', basename),
+        path.join(uploadDir, basename),
     ];
+    const uploadsIdx = normalizedPath.indexOf('uploads/');
+    if (uploadsIdx >= 0) {
+        candidates.push(path.resolve(normalizedPath.substring(uploadsIdx)));
+    }
     for (const candidate of candidates) {
         if (fs.existsSync(candidate)) {
-            return res.sendFile(path.resolve(candidate));
+            const resolved = path.resolve(candidate);
+            if (resolved.toLowerCase().endsWith('.pdf')) {
+                res.setHeader('Content-Type', 'application/pdf');
+                res.setHeader('Content-Disposition', `inline; filename="${basename}"`);
+            }
+            return res.sendFile(resolved);
         }
     }
 
@@ -172,6 +190,9 @@ async function serveFileFromPath(filePath: string, res: any) {
         if (gResult) {
             res.setHeader('Content-Type', gResult.mimeType);
             res.setHeader('Cache-Control', 'public, max-age=86400');
+            if (gResult.mimeType === 'application/pdf') {
+                res.setHeader('Content-Disposition', `inline; filename="${basename}"`);
+            }
             gResult.stream.pipe(res);
             return;
         }
@@ -198,6 +219,7 @@ async function serveFileFromPath(filePath: string, res: any) {
         }
     }
 
+    console.error(`[FileProxy] Not found: ${filePath}`);
     res.status(404).json({ error: 'File not found' });
 }
 
