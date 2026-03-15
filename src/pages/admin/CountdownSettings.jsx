@@ -17,6 +17,13 @@ const CountdownSettings = () => {
     const [showForm, setShowForm] = useState(false);
     const [previews, setPreviews] = useState({});
     const [openActionId, setOpenActionId] = useState(null);
+    const [actionPos, setActionPos] = useState({ top: 0, left: 0 });
+    const handleActionClick = (e, id) => {
+        if (openActionId === id) { setOpenActionId(null); return; }
+        const rect = e.currentTarget.getBoundingClientRect();
+        setActionPos({ top: rect.bottom + 4, left: rect.right - 170 });
+        setOpenActionId(id);
+    };
 
     // Load from server on mount
     useEffect(() => {
@@ -225,24 +232,9 @@ const CountdownSettings = () => {
                                             )}
                                         </td>
                                         <td>
-                                            <div style={{ position: 'relative' }}>
-                                                <button className="btn-icon" onClick={() => setOpenActionId(openActionId === timer.id ? null : timer.id)} title="Aksi">
-                                                    <MoreHorizontal size={16} />
-                                                </button>
-                                                {openActionId === timer.id && (
-                                                    <div className="dropdown-menu" style={{ right: 0, bottom: '100%', marginBottom: 2, minWidth: 160, padding: 4, zIndex: 60 }}>
-                                                        <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '6px 10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: timer.enabled ? '#22c55e' : 'var(--text-primary)', borderRadius: 6 }} className="dropdown-item" onClick={() => { handleToggle(timer.id); setOpenActionId(null); }}>
-                                                            <Power size={14} /> {timer.enabled ? 'Nonaktifkan' : 'Aktifkan'}
-                                                        </button>
-                                                        <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '6px 10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: 'var(--text-primary)', borderRadius: 6 }} className="dropdown-item" onClick={() => { handleEdit(timer); setOpenActionId(null); }}>
-                                                            <Edit size={14} /> Edit
-                                                        </button>
-                                                        <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '6px 10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: 'var(--accent-red)', borderRadius: 6 }} className="dropdown-item" onClick={() => { handleDelete(timer.id); setOpenActionId(null); }}>
-                                                            <Trash2 size={14} /> Hapus
-                                                        </button>
-                                                    </div>
-                                                )}
-                                            </div>
+                                            <button className="btn-icon" onClick={(e) => handleActionClick(e, timer.id)} title="Aksi">
+                                                <MoreHorizontal size={16} />
+                                            </button>
                                         </td>
                                     </tr>
                                 );
@@ -259,6 +251,24 @@ const CountdownSettings = () => {
                     </table>
                 </div>
             </div>
+                {/* Fixed-position action dropdown */}
+                {openActionId && (() => {
+                    const timer = countdownTimers.find(t => t.id === openActionId);
+                    if (!timer) return null;
+                    return (
+                        <div className="dropdown-menu" style={{ position: 'fixed', top: actionPos.top, left: actionPos.left, minWidth: 170, padding: 4, zIndex: 9999, boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}>
+                            <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: timer.enabled ? '#22c55e' : 'var(--text-primary)', borderRadius: 6 }} className="dropdown-item" onClick={() => { handleToggle(timer.id); setOpenActionId(null); }}>
+                                <Power size={14} /> {timer.enabled ? 'Nonaktifkan' : 'Aktifkan'}
+                            </button>
+                            <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-primary)', borderRadius: 6 }} className="dropdown-item" onClick={() => { handleEdit(timer); setOpenActionId(null); }}>
+                                <Edit size={14} /> Edit
+                            </button>
+                            <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--accent-red)', borderRadius: 6 }} className="dropdown-item" onClick={() => { handleDelete(timer.id); setOpenActionId(null); }}>
+                                <Trash2 size={14} /> Hapus
+                            </button>
+                        </div>
+                    );
+                })()}
 
             {/* ===== ADD/EDIT MODAL ===== */}
             {showForm && editTimer && (
