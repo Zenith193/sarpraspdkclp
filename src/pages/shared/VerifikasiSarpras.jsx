@@ -64,7 +64,7 @@ const VerifikasiSarpras = () => {
                             npsn: item.sekolahNpsn || '',
                             kecamatan: item.sekolahKecamatan || '',
                             jenjang: item.sekolahJenjang || '',
-                            foto: item.sarpras.foto || [],
+                            fotoCount: item.sarpras.fotoCount || 0,
                         };
                     }
                     return item;
@@ -218,8 +218,8 @@ const VerifikasiSarpras = () => {
                                         </span>
                                     </td>
                                     <td>
-                                        <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: item.foto?.length ? 'var(--color-primary)' : 'var(--text-secondary)' }}>
-                                            <Image size={14} /> {item.foto?.length || 0}
+                                        <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: item.fotoCount ? 'var(--color-primary)' : 'var(--text-secondary)' }}>
+                                            <Image size={14} /> {item.fotoCount || 0}
                                         </span>
                                     </td>
                                     <td>
