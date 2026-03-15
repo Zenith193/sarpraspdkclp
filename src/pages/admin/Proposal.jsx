@@ -1,5 +1,5 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
-import { Plus, Search, Download, Eye, Edit, Trash2, X, Filter, Star, FileSpreadsheet, FileText, Save, Printer, FileCheck, FilePlus, Archive, AlertOctagon, Upload, CheckCircle, RotateCcw } from 'lucide-react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { Plus, Search, Download, Eye, Edit, Trash2, X, Filter, Star, FileSpreadsheet, FileText, Save, Printer, FileCheck, FilePlus, Archive, AlertOctagon, Upload, CheckCircle, RotateCcw, MoreHorizontal, Columns } from 'lucide-react';
 import { useProposalData, useSekolahData, useUsersData, useKorwilData } from '../../data/dataProvider';
 import { proposalApi, arsipDokumenApi } from '../../api/index';
 import { KECAMATAN, JENJANG, SUB_KEGIATAN, KERANJANG, STATUS_PROPOSAL } from '../../utils/constants';
@@ -150,6 +150,9 @@ const Proposal = ({ readOnly = false }) => {
     useEffect(() => {
         const handler = (e) => {
             if (filterPanelRef.current && !filterPanelRef.current.contains(e.target)) setShowFilterPanel(false);
+            if (colMenuRef.current && !colMenuRef.current.contains(e.target)) setShowColMenu(false);
+            // Close action dropdown if click is outside
+            setOpenActionId(null);
         };
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
@@ -167,6 +170,11 @@ const Proposal = ({ readOnly = false }) => {
     const [proposalTab, setProposalTab] = useState('aktif'); // 'aktif' | 'realisasi'
     const [realisasiPage, setRealisasiPage] = useState(1);
     const [realisasiPerPage, setRealisasiPerPage] = useState(10);
+    const [hiddenCols, setHiddenCols] = useState(['npsn', 'prioritas']);
+    const [showColMenu, setShowColMenu] = useState(false);
+    const [openActionId, setOpenActionId] = useState(null);
+    const colMenuRef = React.useRef(null);
+    const toggleCol = (col) => setHiddenCols(prev => prev.includes(col) ? prev.filter(c => c !== col) : [...prev, col]);
 
     // ===== FILTERING =====
     const filtered = useMemo(() => {
@@ -287,6 +295,10 @@ const Proposal = ({ readOnly = false }) => {
             if (d.id === id) return { ...d, bintang: d.bintang === 1 ? 0 : 1 };
             return d;
         }));
+        // Also update viewItem if open
+        if (viewItem && viewItem.id === id) {
+            setViewItem(prev => ({ ...prev, bintang: prev.bintang === 1 ? 0 : 1 }));
+        }
     };
 
     // Handlers Checklist & Rekomendasi
@@ -635,6 +647,30 @@ const Proposal = ({ readOnly = false }) => {
                         )}
                         <button className="btn btn-secondary btn-sm" onClick={() => handleExport('excel')}><FileSpreadsheet size={14} /> Excel</button>
                         <button className="btn btn-secondary btn-sm" onClick={() => handleExport('pdf')}><FileText size={14} /> PDF</button>
+                        {/* Column Visibility Toggle */}
+                        <div style={{ position: 'relative' }} ref={colMenuRef}>
+                            <button className="btn btn-ghost btn-sm" onClick={() => setShowColMenu(!showColMenu)} title="Kolom"><Columns size={14} /> Kolom</button>
+                            {showColMenu && (
+                                <div className="dropdown-menu" style={{ right: 0, top: '100%', marginTop: 4, minWidth: 180, padding: 8, zIndex: 50 }}>
+                                    <div style={{ fontSize: 11, color: 'var(--text-secondary)', padding: '4px 8px', fontWeight: 600, marginBottom: 4 }}>Tampilkan Kolom</div>
+                                    {[
+                                        { key: 'npsn', label: 'NPSN', show: !isSekolah },
+                                        { key: 'kecamatan', label: 'Kecamatan', show: !isSekolah },
+                                        { key: 'subKegiatan', label: 'Sub Kegiatan', show: true },
+                                        { key: 'nilai', label: 'Nilai Pengajuan', show: true },
+                                        { key: 'target', label: 'Target', show: true },
+                                        { key: 'status', label: 'Status', show: true },
+                                        { key: 'prioritas', label: 'Prioritas', show: isAdmin },
+                                        { key: 'keranjang', label: 'Keranjang', show: canManageKeranjang },
+                                    ].filter(c => c.show).map(c => (
+                                        <label key={c.key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 8px', borderRadius: 6, cursor: 'pointer', fontSize: '0.8rem' }}>
+                                            <input type="checkbox" checked={!hiddenCols.includes(c.key)} onChange={() => toggleCol(c.key)} style={{ accentColor: 'var(--accent-blue)', width: 14, height: 14 }} />
+                                            {c.label}
+                                        </label>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </div>
 
@@ -645,15 +681,15 @@ const Proposal = ({ readOnly = false }) => {
                             <tr>
                                 <th>No</th>
                                 <th>Nama Sekolah</th>
-                                {!isSekolah && <th>NPSN</th>}
-                                {!isSekolah && <th>Kecamatan</th>}
-                                <th>Sub Kegiatan</th>
-                                <th>Nilai Pengajuan</th>
-                                <th>Target</th>
-                                <th>Status</th>
-                                {isAdmin && <th>Prioritas</th>}
-                                {canManageKeranjang && <th>Keranjang</th>}
-                                <th>Aksi</th>
+                                {!isSekolah && !hiddenCols.includes('npsn') && <th>NPSN</th>}
+                                {!isSekolah && !hiddenCols.includes('kecamatan') && <th>Kecamatan</th>}
+                                {!hiddenCols.includes('subKegiatan') && <th>Sub Kegiatan</th>}
+                                {!hiddenCols.includes('nilai') && <th>Nilai Pengajuan</th>}
+                                {!hiddenCols.includes('target') && <th>Target</th>}
+                                {!hiddenCols.includes('status') && <th>Status</th>}
+                                {isAdmin && !hiddenCols.includes('prioritas') && <th>Prioritas</th>}
+                                {canManageKeranjang && !hiddenCols.includes('keranjang') && <th>Keranjang</th>}
+                                <th style={{ width: 50 }}>Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -661,14 +697,14 @@ const Proposal = ({ readOnly = false }) => {
                                 <tr key={item.id}>
                                     <td>{(page - 1) * perPage + i + 1}</td>
                                     <td style={{ minWidth: 180, whiteSpace: 'normal' }}>{safeStr(item.namaSekolah)}</td>
-                                    {!isSekolah && <td>{safeStr(item.npsn)}</td>}
-                                    {!isSekolah && <td>{safeStr(item.kecamatan)}</td>}
-                                    <td style={{ minWidth: 220, whiteSpace: 'normal' }}>{item.subKegiatan}</td>
-                                    <td style={{ whiteSpace: 'nowrap' }}>{formatCurrency(item.nilaiPengajuan)}</td>
-                                    <td>{item.target}</td>
-                                    <td>{getStatusBadge(item.status)}</td>
-                                    {isAdmin && <td>{renderPriorityStar(item.bintang === 1, item.id)}</td>}
-                                    {canManageKeranjang && (
+                                    {!isSekolah && !hiddenCols.includes('npsn') && <td>{safeStr(item.npsn)}</td>}
+                                    {!isSekolah && !hiddenCols.includes('kecamatan') && <td>{safeStr(item.kecamatan)}</td>}
+                                    {!hiddenCols.includes('subKegiatan') && <td style={{ minWidth: 220, whiteSpace: 'normal' }}>{item.subKegiatan}</td>}
+                                    {!hiddenCols.includes('nilai') && <td style={{ whiteSpace: 'nowrap' }}>{formatCurrency(item.nilaiPengajuan)}</td>}
+                                    {!hiddenCols.includes('target') && <td>{item.target}</td>}
+                                    {!hiddenCols.includes('status') && <td>{getStatusBadge(item.status)}</td>}
+                                    {isAdmin && !hiddenCols.includes('prioritas') && <td>{renderPriorityStar(item.bintang === 1, item.id)}</td>}
+                                    {canManageKeranjang && !hiddenCols.includes('keranjang') && (
                                         <td>
                                             <span className="badge badge-disetujui" style={{ fontSize: 10 }}>
                                                 {item.keranjang?.replace('Keranjang Usulan ', '') || '-'}
@@ -676,26 +712,36 @@ const Proposal = ({ readOnly = false }) => {
                                         </td>
                                     )}
                                     <td>
-                                        <div style={{ display: 'flex', gap: 4 }}>
-                                            <button className="btn-icon" onClick={() => setViewItem(item)} title="Lihat"><Eye size={16} /></button>
-                                            {!readOnly && (isAdminOrVerifikator || (isSekolah && (item.status === 'Ditolak' || item.status === 'Revisi'))) && (
-                                                <button className="btn-icon" onClick={() => handleOpenModal(item)} title="Edit"><Edit size={16} /></button>
-                                            )}
-                                            {!readOnly && isAdmin && (
-                                                <button
-                                                    className="btn-icon"
-                                                    onClick={() => {
-                                                        if (!guard('hapus')) return;
-                                                        setDeleteConfirm(item);
-                                                    }}
-                                                    title="Hapus"
-                                                    style={{ color: 'var(--accent-red)' }}
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            )}
-                                            {isAdmin && item.status === 'Disetujui' && (
-                                                <button className="btn-icon" onClick={() => handleRealisasi(item)} title="Tandai Terealisasi" style={{ color: 'var(--accent-green)' }}><CheckCircle size={16} /></button>
+                                        <div style={{ position: 'relative' }}>
+                                            <button className="btn-icon" onClick={() => setOpenActionId(openActionId === item.id ? null : item.id)} title="Aksi">
+                                                <MoreHorizontal size={16} />
+                                            </button>
+                                            {openActionId === item.id && (
+                                                <div className="dropdown-menu" style={{ right: 0, top: '100%', marginTop: 2, minWidth: 160, padding: 4, zIndex: 60 }}>
+                                                    <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '6px 10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: 'var(--text-primary)', borderRadius: 6 }} className="dropdown-item" onClick={() => { setViewItem(item); setOpenActionId(null); }}>
+                                                        <Eye size={14} /> Lihat Detail
+                                                    </button>
+                                                    {!readOnly && (isAdminOrVerifikator || (isSekolah && (item.status === 'Ditolak' || item.status === 'Revisi'))) && (
+                                                        <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '6px 10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: 'var(--text-primary)', borderRadius: 6 }} className="dropdown-item" onClick={() => { handleOpenModal(item); setOpenActionId(null); }}>
+                                                            <Edit size={14} /> Edit
+                                                        </button>
+                                                    )}
+                                                    {isAdmin && (
+                                                        <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '6px 10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: item.bintang === 1 ? 'var(--accent-yellow)' : 'var(--text-primary)', borderRadius: 6 }} className="dropdown-item" onClick={() => { handleStar(item.id); setOpenActionId(null); }}>
+                                                            <Star size={14} fill={item.bintang === 1 ? 'currentColor' : 'none'} /> {item.bintang === 1 ? 'Hapus Prioritas' : 'Tandai Prioritas'}
+                                                        </button>
+                                                    )}
+                                                    {isAdmin && item.status === 'Disetujui' && (
+                                                        <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '6px 10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: 'var(--accent-green)', borderRadius: 6 }} className="dropdown-item" onClick={() => { handleRealisasi(item); setOpenActionId(null); }}>
+                                                            <CheckCircle size={14} /> Terealisasi
+                                                        </button>
+                                                    )}
+                                                    {!readOnly && isAdmin && (
+                                                        <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '6px 10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: 'var(--accent-red)', borderRadius: 6 }} className="dropdown-item" onClick={() => { if (!guard('hapus')) return; setDeleteConfirm(item); setOpenActionId(null); }}>
+                                                            <Trash2 size={14} /> Hapus
+                                                        </button>
+                                                    )}
+                                                </div>
                                             )}
                                         </div>
                                     </td>
@@ -895,7 +941,7 @@ const Proposal = ({ readOnly = false }) => {
                                     {viewItem.createdAt ? new Date(viewItem.createdAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }) + ' pukul ' + new Date(viewItem.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-'}
                                 </div>
                             </div>
-                            {isAdmin && <div className="form-group"><label className="form-label">Prioritas</label><div>{renderPriorityStar(viewItem.bintang === 1, viewItem.id)}</div></div>}
+                            {isAdmin && <div className="form-group"><label className="form-label">Prioritas</label><div style={{ display: 'flex', alignItems: 'center', gap: 8 }}><span style={{ fontSize: 28, cursor: 'pointer', color: viewItem.bintang === 1 ? 'var(--accent-yellow)' : 'var(--border-color)', transition: 'color 150ms, transform 150ms', display: 'inline-block' }} onClick={() => handleStar(viewItem.id)} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.2)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>★</span><span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{viewItem.bintang === 1 ? 'Diprioritaskan (klik untuk hapus)' : 'Klik untuk tandai prioritas'}</span></div></div>}
                             {/* Show reason for Revisi/Ditolak */}
                             {viewItem.alasanRevisi && (viewItem.status === 'Ditolak' || viewItem.status === 'Revisi') && (
                                 <div style={{
