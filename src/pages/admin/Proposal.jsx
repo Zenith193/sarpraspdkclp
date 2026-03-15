@@ -163,7 +163,8 @@ const Proposal = ({ readOnly = false }) => {
     const [showBatchModal, setShowBatchModal] = useState(false);
     const [batchData, setBatchData] = useState([]);
     const [batchImporting, setBatchImporting] = useState(false);
-    const [realisasiModal, setRealisasiModal] = useState(null); // { item, namaBantuan }
+    const [realisasiModal, setRealisasiModal] = useState(null);
+    const [proposalTab, setProposalTab] = useState('aktif'); // 'aktif' | 'realisasi'
 
     // ===== FILTERING =====
     const filtered = useMemo(() => {
@@ -544,8 +545,41 @@ const Proposal = ({ readOnly = false }) => {
                 </div>
             )}
 
-            <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start' }}>
-            <div className="table-container" style={{ flex: '1 1 0', minWidth: 0 }}>
+            {/* ===== PROPOSAL TABS ===== */}
+            {isAdminOrVerifikator && (
+                <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid var(--border-color)', marginBottom: 0 }}>
+                    <button
+                        onClick={() => setProposalTab('aktif')}
+                        style={{
+                            padding: '10px 20px', background: 'none', border: 'none', cursor: 'pointer',
+                            fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8,
+                            color: proposalTab === 'aktif' ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                            borderBottom: proposalTab === 'aktif' ? '2px solid var(--accent-blue)' : '2px solid transparent',
+                            marginBottom: -2,
+                        }}
+                    >
+                        <FileSpreadsheet size={16} /> Proposal Aktif
+                        <span style={{ background: 'var(--bg-secondary)', padding: '2px 8px', borderRadius: 'var(--radius-full)', fontSize: 11 }}>{filteredAktif.length}</span>
+                    </button>
+                    <button
+                        onClick={() => setProposalTab('realisasi')}
+                        style={{
+                            padding: '10px 20px', background: 'none', border: 'none', cursor: 'pointer',
+                            fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8,
+                            color: proposalTab === 'realisasi' ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                            borderBottom: proposalTab === 'realisasi' ? '2px solid var(--accent-blue)' : '2px solid transparent',
+                            marginBottom: -2,
+                        }}
+                    >
+                        <CheckCircle size={16} /> Terealisasi
+                        <span style={{ background: 'var(--bg-secondary)', padding: '2px 8px', borderRadius: 'var(--radius-full)', fontSize: 11 }}>{filteredRealisasi.length}</span>
+                    </button>
+                </div>
+            )}
+
+            {/* ===== TAB: PROPOSAL AKTIF ===== */}
+            {proposalTab === 'aktif' && (
+            <div className="table-container" style={{ borderTopLeftRadius: 0, borderTopRightRadius: isAdminOrVerifikator ? 0 : undefined }}>
                 <div className="table-toolbar">
                     <div className="table-toolbar-left">
                         <div className="table-search"><Search size={16} className="search-icon" /><input placeholder="Cari nama sekolah, NPSN..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} /></div>
@@ -667,44 +701,53 @@ const Proposal = ({ readOnly = false }) => {
                     </div>
                 </div>
             </div>
+            )}
 
-            {/* ===== REALISASI TABLE (RIGHT SIDE) ===== */}
-            {isAdminOrVerifikator && (
-                <div className="table-container" style={{ flex: '0 0 380px', maxHeight: 'calc(100vh - 200px)', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border-color)' }}>
-                        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700 }}>Terealisasi</h3>
-                        <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--text-secondary)' }}>{filteredRealisasi.length} proposal</p>
+            {/* ===== TAB: TEREALISASI ===== */}
+            {proposalTab === 'realisasi' && isAdminOrVerifikator && (
+                <div className="table-container" style={{ borderTopLeftRadius: 0, borderTopRightRadius: 0 }}>
+                    <div className="table-toolbar">
+                        <div className="table-toolbar-left">
+                            <div className="table-search"><Search size={16} className="search-icon" /><input placeholder="Cari proposal terealisasi..." value={search} onChange={e => { setSearch(e.target.value); }} /></div>
+                        </div>
+                        <div className="table-toolbar-right">
+                            <button className="btn btn-secondary btn-sm" onClick={() => handleExport('excel')}><FileSpreadsheet size={14} /> Excel</button>
+                        </div>
                     </div>
-                    <div style={{ overflowY: 'auto', flex: 1 }}>
-                        {filteredRealisasi.length === 0 ? (
-                            <div style={{ padding: 24, textAlign: 'center', color: 'var(--text-secondary)', fontSize: 13 }}>Belum ada proposal terealisasi</div>
-                        ) : (
-                            <div style={{ padding: '8px 12px' }}>
+                    <div style={{ overflowX: 'auto' }}>
+                        <table className="data-table">
+                            <thead>
+                                <tr><th>No</th><th>Nama Sekolah</th><th>NPSN</th><th>Kecamatan</th><th>Sub Kegiatan</th><th>Nilai Pengajuan</th><th>Target</th><th>Nama Bantuan</th><th>Aksi</th></tr>
+                            </thead>
+                            <tbody>
                                 {filteredRealisasi.map((item, i) => (
-                                    <div key={item.id} style={{ padding: '10px 12px', marginBottom: 8, background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
-                                            <div style={{ flex: 1, minWidth: 0 }}>
-                                                <div style={{ fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.namaSekolah}</div>
-                                                <div style={{ fontSize: 11, color: 'var(--text-secondary)', marginTop: 2 }}>{item.npsn} • {item.kecamatan}</div>
-                                                <div style={{ fontSize: 12, marginTop: 4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{item.subKegiatan}</div>
-                                                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--accent-green)', marginTop: 2 }}>{formatCurrency(item.nilaiPengajuan)}</div>
-                                                <div style={{ marginTop: 4 }}><span className="badge badge-disetujui" style={{ fontSize: 10 }}>{item.statusUsulan}</span></div>
-                                            </div>
-                                            <div style={{ display: 'flex', flexDirection: 'column', gap: 4, flexShrink: 0 }}>
-                                                <button className="btn-icon" onClick={() => setViewItem(item)} title="Detail" style={{ padding: 4 }}><Eye size={14} /></button>
+                                    <tr key={item.id}>
+                                        <td>{i + 1}</td>
+                                        <td>{item.namaSekolah}</td>
+                                        <td>{item.npsn}</td>
+                                        <td>{item.kecamatan}</td>
+                                        <td style={{ maxWidth: 220, whiteSpace: 'normal' }}>{item.subKegiatan}</td>
+                                        <td style={{ whiteSpace: 'nowrap' }}>{formatCurrency(item.nilaiPengajuan)}</td>
+                                        <td>{item.target}</td>
+                                        <td><span className="badge badge-disetujui">{item.statusUsulan}</span></td>
+                                        <td>
+                                            <div style={{ display: 'flex', gap: 4 }}>
+                                                <button className="btn-icon" onClick={() => setViewItem(item)} title="Detail"><Eye size={16} /></button>
                                                 {isAdmin && (
-                                                    <button className="btn-icon" onClick={() => handleUnrealisasi(item)} title="Kembalikan" style={{ color: 'var(--accent-blue)', padding: 4 }}><RotateCcw size={14} /></button>
+                                                    <button className="btn-icon" onClick={() => handleUnrealisasi(item)} title="Kembalikan ke Aktif" style={{ color: 'var(--accent-blue)' }}><RotateCcw size={16} /></button>
                                                 )}
                                             </div>
-                                        </div>
-                                    </div>
+                                        </td>
+                                    </tr>
                                 ))}
-                            </div>
-                        )}
+                                {filteredRealisasi.length === 0 && (
+                                    <tr><td colSpan={99} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>Belum ada proposal terealisasi</td></tr>
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 </div>
             )}
-            </div>
 
             {/* ===== MODAL PROPOSAL (ADD/EDIT) ===== */}
             {showModal && (
