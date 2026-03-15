@@ -230,7 +230,7 @@ const CountdownSettings = () => {
                                                     <MoreHorizontal size={16} />
                                                 </button>
                                                 {openActionId === timer.id && (
-                                                    <div className="dropdown-menu" style={{ right: 0, top: '100%', marginTop: 2, minWidth: 160, padding: 4, zIndex: 60 }}>
+                                                    <div className="dropdown-menu" style={{ right: 0, bottom: '100%', marginBottom: 2, minWidth: 160, padding: 4, zIndex: 60 }}>
                                                         <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '6px 10px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.8rem', color: timer.enabled ? '#22c55e' : 'var(--text-primary)', borderRadius: 6 }} className="dropdown-item" onClick={() => { handleToggle(timer.id); setOpenActionId(null); }}>
                                                             <Power size={14} /> {timer.enabled ? 'Nonaktifkan' : 'Aktifkan'}
                                                         </button>
