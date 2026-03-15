@@ -585,13 +585,29 @@ const ManajemenPengguna = () => {
                                     </td>}
                                     <td>
                                         <div style={{ position: 'relative' }} ref={openActionId === u.id ? actionDropdownRef : null}>
-                                            <button className="btn-icon" onClick={(e) => { e.stopPropagation(); setOpenActionId(openActionId === u.id ? null : u.id); }}
+                                            <button className="btn-icon" onClick={(e) => {
+                                                e.stopPropagation();
+                                                if (openActionId === u.id) { setOpenActionId(null); return; }
+                                                const rect = e.currentTarget.getBoundingClientRect();
+                                                const spaceBelow = window.innerHeight - rect.bottom;
+                                                const openUp = spaceBelow < 250;
+                                                setOpenActionId(u.id);
+                                                // Store position for fixed dropdown
+                                                setTimeout(() => {
+                                                    const dd = document.getElementById(`action-dd-${u.id}`);
+                                                    if (dd) {
+                                                        dd.style.top = openUp ? 'auto' : `${rect.bottom + 4}px`;
+                                                        dd.style.bottom = openUp ? `${window.innerHeight - rect.top + 4}px` : 'auto';
+                                                        dd.style.right = `${window.innerWidth - rect.right}px`;
+                                                    }
+                                                }, 0);
+                                            }}
                                                 style={{ padding: '4px 6px', borderRadius: 8 }}>
                                                 <MoreVertical size={16} />
                                             </button>
                                             {openActionId === u.id && (
-                                                <div style={{
-                                                    position: 'absolute', right: 0, top: '100%', marginTop: 4, zIndex: 50,
+                                                <div id={`action-dd-${u.id}`} style={{
+                                                    position: 'fixed', zIndex: 9999,
                                                     background: 'var(--bg-card)', border: '1px solid var(--border-color)',
                                                     borderRadius: 10, padding: '4px 0', minWidth: 170,
                                                     boxShadow: '0 8px 30px rgba(0,0,0,0.25)',
