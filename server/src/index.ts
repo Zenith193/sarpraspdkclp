@@ -853,6 +853,45 @@ app.get('/api/health', async (req: any, res: any) => {
 
 
 
+// ===== SPA SERVING WITH AD SCRIPT INJECTION =====
+const distPath = path.resolve(process.cwd(), 'dist');
+app.use(express.static(distPath, { index: false })); // serve static assets but NOT index.html
+
+app.get('*', async (req, res, next) => {
+    // Skip API routes
+    if (req.path.startsWith('/api/')) return next();
+    
+    const indexPath = path.join(distPath, 'index.html');
+    if (!fs.existsSync(indexPath)) return next();
+
+    try {
+        let html = fs.readFileSync(indexPath, 'utf-8');
+
+        // Inject active ad scripts from DB into <head>
+        try {
+            const { iklanService } = await import('./services/iklan.service.js');
+            const scripts = await iklanService.getActiveScripts();
+            if (scripts.length > 0) {
+                const scriptTags = scripts
+                    .filter(s => s.scriptCode && s.posisi === 'head')
+                    .map(s => `<!-- iklan:${s.id} -->\n${s.scriptCode}`)
+                    .join('\n');
+                const bodyTags = scripts
+                    .filter(s => s.scriptCode && s.posisi === 'body')
+                    .map(s => `<!-- iklan:${s.id} -->\n${s.scriptCode}`)
+                    .join('\n');
+                if (scriptTags) html = html.replace('</head>', `${scriptTags}\n</head>`);
+                if (bodyTags) html = html.replace('</body>', `${bodyTags}\n</body>`);
+            }
+        } catch (_e) { /* if iklan fails, serve without ads */ }
+
+        res.setHeader('Content-Type', 'text/html');
+        res.send(html);
+    } catch (_e) {
+        next();
+    }
+});
+
 // ===== ERROR HANDLER =====
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
     // Handle multer file size / file type errors with user-friendly messages
