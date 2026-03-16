@@ -147,12 +147,15 @@ const Proposal = ({ readOnly = false }) => {
     }, [isSekolah, sekolahList, formSekolah]);
 
     // Effects
+    const actionDropdownRef = React.useRef(null);
     useEffect(() => {
         const handler = (e) => {
             if (filterPanelRef.current && !filterPanelRef.current.contains(e.target)) setShowFilterPanel(false);
             if (colMenuRef.current && !colMenuRef.current.contains(e.target)) setShowColMenu(false);
-            // Close action dropdown if click is outside
-            setOpenActionId(null);
+            // Close action dropdown only if click is outside the dropdown and outside the trigger button
+            if (actionDropdownRef.current && !actionDropdownRef.current.contains(e.target) && !e.target.closest('.btn-icon')) {
+                setOpenActionId(null);
+            }
         };
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
@@ -740,7 +743,7 @@ const Proposal = ({ readOnly = false }) => {
                     const item = paged.find(p => p.id === openActionId);
                     if (!item) return null;
                     return (
-                        <div className="dropdown-menu" style={{ position: 'fixed', top: actionPos.top, left: actionPos.left, minWidth: 170, padding: 4, zIndex: 9999, boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}>
+                        <div ref={actionDropdownRef} className="dropdown-menu" style={{ position: 'fixed', top: actionPos.top, left: actionPos.left, minWidth: 170, padding: 4, zIndex: 9999, boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}>
                             <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-primary)', borderRadius: 6 }} className="dropdown-item" onClick={() => { setViewItem(item); setOpenActionId(null); }}>
                                 <Eye size={14} /> Lihat Detail
                             </button>
