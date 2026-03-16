@@ -100,6 +100,7 @@ const MatriksKegiatan = () => {
     const [newConfigItem, setNewConfigItem] = useState('');
     const [newSubKode, setNewSubKode] = useState('');
     const [newSubNama, setNewSubNama] = useState('');
+    const [newSubJenjang, setNewSubJenjang] = useState('SD');
     const fileInputRef = useRef(null);
 
     // ===== LOGIC =====
@@ -746,14 +747,18 @@ const MatriksKegiatan = () => {
                             {/* Tab: Sub Kegiatan */}
                             {settingsTab === 'subkeg' && (
                                 <div>
-                                    <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+                                    <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
                                         <input className="form-input" placeholder="No Sub Kegiatan" value={newSubKode}
                                             onChange={e => setNewSubKode(e.target.value)} style={{ width: 180 }} />
                                         <input className="form-input" placeholder="Nama Sub Kegiatan" value={newSubNama}
                                             onChange={e => setNewSubNama(e.target.value)} style={{ flex: 1 }} />
+                                        <select className="form-select" value={newSubJenjang} onChange={e => setNewSubJenjang(e.target.value)} style={{ width: 80, padding: '6px 8px' }}>
+                                            <option value="SD">SD</option>
+                                            <option value="SMP">SMP</option>
+                                        </select>
                                         <button className="btn btn-primary btn-sm" disabled={!newSubKode.trim() || !newSubNama.trim()}
                                             onClick={() => {
-                                                addConfigItem('configSubKegiatan', { kode: newSubKode.trim(), nama: newSubNama.trim() });
+                                                addConfigItem('configSubKegiatan', { kode: newSubKode.trim(), nama: newSubNama.trim(), jenjang: newSubJenjang });
                                                 setNewSubKode(''); setNewSubNama(''); toast.success('Ditambahkan');
                                             }}>
                                             <Plus size={14} /> Tambah
@@ -763,13 +768,14 @@ const MatriksKegiatan = () => {
                                         </button>
                                     </div>
                                     <table className="data-table" style={{ fontSize: '0.8rem' }}>
-                                        <thead><tr><th style={{ width: 40 }}>No</th><th style={{ width: 180 }}>Kode</th><th>Nama</th><th style={{ width: 60 }}>Aksi</th></tr></thead>
+                                        <thead><tr><th style={{ width: 40 }}>No</th><th style={{ width: 180 }}>Kode</th><th>Nama</th><th style={{ width: 70 }}>Jenjang</th><th style={{ width: 60 }}>Aksi</th></tr></thead>
                                         <tbody>
                                             {subKegiatanList.map((item, i) => (
                                                 <tr key={i}>
                                                     <td>{i + 1}</td>
                                                     <td style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{item.kode}</td>
                                                     <td>{item.nama}</td>
+                                                    <td><span style={{ padding: '2px 8px', borderRadius: 4, fontSize: '0.7rem', fontWeight: 600, background: item.jenjang === 'SD' ? 'rgba(59,130,246,0.15)' : 'rgba(16,185,129,0.15)', color: item.jenjang === 'SD' ? 'var(--accent-blue)' : 'var(--accent-green)' }}>{item.jenjang || '-'}</span></td>
                                                     <td>
                                                         <button className="btn-icon" style={{ color: 'var(--accent-red)' }}
                                                             onClick={() => { removeConfigItem('configSubKegiatan', i); toast.success('Dihapus'); }} title="Hapus">
@@ -778,7 +784,7 @@ const MatriksKegiatan = () => {
                                                     </td>
                                                 </tr>
                                             ))}
-                                            {subKegiatanList.length === 0 && <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: 20 }}>Belum ada data</td></tr>}
+                                            {subKegiatanList.length === 0 && <tr><td colSpan={5} style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: 20 }}>Belum ada data</td></tr>}
                                         </tbody>
                                     </table>
                                 </div>
