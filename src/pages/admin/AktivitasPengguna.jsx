@@ -278,10 +278,10 @@ const AktivitasPengguna = () => {
                                     {activeColumns.map(col => {
                                         switch (col.key) {
                                             case 'no': return <td key={col.key} style={{ textAlign: 'center' }}>{(page - 1) * perPage + i + 1}</td>;
-                                            case 'namaAkun': return <td key={col.key} style={{ textAlign: 'center' }}><div style={{ fontWeight: 500 }}>{a.namaAkun}</div></td>;
+                                            case 'namaAkun': return <td key={col.key} style={{ textAlign: 'left' }}><div style={{ fontWeight: 500 }}>{a.namaAkun}</div></td>;
                                             case 'jenisAkun': return <td key={col.key} style={{ textAlign: 'center' }}><span className="badge badge-disetujui">{a.jenisAkun}</span></td>;
                                             case 'aktivitas': return <td key={col.key} style={{ textAlign: 'center', fontWeight: 600, color: 'var(--accent-blue)' }}>{a.aktivitas}</td>;
-                                            case 'keterangan': return <td key={col.key} style={{ maxWidth: 600, whiteSpace: 'pre-wrap', lineHeight: 1.5, fontSize: '0.8125rem', color: 'var(--text-primary)', textAlign: 'center' }}><span style={{ fontWeight: 600, color: 'var(--accent-blue)' }}>[{a.aktivitas}]</span> {a.keterangan}</td>;
+                                            case 'keterangan': return <td key={col.key} style={{ maxWidth: 600, whiteSpace: 'pre-wrap', lineHeight: 1.5, fontSize: '0.8125rem', color: 'var(--text-primary)', textAlign: 'left' }}><span style={{ fontWeight: 600, color: 'var(--accent-blue)' }}>[{a.aktivitas}]</span> {a.keterangan}</td>;
                                             case 'waktu': return <td key={col.key} style={{ whiteSpace: 'nowrap', fontSize: '0.8125rem', textAlign: 'center' }}>{formatDateTime(a.createdAt)}</td>;
                                             case 'aksi': return <td key={col.key} style={{ textAlign: 'center' }}><div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}><button className="btn-icon" onClick={() => handleOpenEdit(a)} title="Edit"><Edit size={16} /></button><button className="btn-icon" onClick={() => requestDelete(a)} title="Hapus" style={{ color: 'var(--accent-red)' }}><Trash2 size={16} /></button></div></td>;
                                             default: return <td key={col.key}>-</td>;

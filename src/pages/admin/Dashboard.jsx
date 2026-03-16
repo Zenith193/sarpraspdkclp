@@ -5,7 +5,7 @@ import {
     Title, Tooltip, Legend
 } from 'chart.js';
 import { Bar, Pie } from 'react-chartjs-2';
-import { Building2, AlertTriangle, FileText, DollarSign, Download, Search, FileSpreadsheet, FileDown, ChevronDown } from 'lucide-react';
+import { Building2, AlertTriangle, FileText, DollarSign, Download, Search, FileSpreadsheet, FileDown, ChevronDown, Columns } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import { useSarprasData, useProposalData, useAktivitasData, useSekolahData, useProyeksiData } from '../../data/dataProvider';
 import { useApi } from '../../api/hooks';
@@ -31,6 +31,26 @@ const Dashboard = () => {
     const exportRef = useRef(null);
     const exportAktRef = useRef(null);
 
+    // Column visibility for Aktivitas Terkini
+    const DASH_AKT_COLUMNS = [
+        { key: 'no', label: 'No', width: 40, alwaysVisible: true },
+        { key: 'namaAkun', label: 'Nama Pengguna' },
+        { key: 'jenisAkun', label: 'Jenis Akun' },
+        { key: 'aktivitas', label: 'Aktivitas' },
+        { key: 'keterangan', label: 'Keterangan' },
+        { key: 'waktu', label: 'Waktu', width: 160 },
+    ];
+    const dashAktDefaultCols = DASH_AKT_COLUMNS.filter(c => c.key !== 'aktivitas').map(c => c.key);
+    const [dashAktVisibleCols, setDashAktVisibleCols] = useState(dashAktDefaultCols);
+    const [showDashAktColPicker, setShowDashAktColPicker] = useState(false);
+    const dashAktColPickerRef = useRef(null);
+    const toggleDashAktCol = (key) => {
+        const col = DASH_AKT_COLUMNS.find(c => c.key === key);
+        if (col?.alwaysVisible) return;
+        setDashAktVisibleCols(prev => prev.includes(key) ? prev.filter(c => c !== key) : [...prev, key]);
+    };
+    const dashAktActiveCols = DASH_AKT_COLUMNS.filter(c => dashAktVisibleCols.includes(c.key));
+
     const { data: sarprasData } = useSarprasData();
     const { data: proposalData } = useProposalData();
     const isAdmin = user?.role?.toLowerCase() === 'admin';
@@ -44,6 +64,7 @@ const Dashboard = () => {
         const handler = (e) => {
             if (exportRef.current && !exportRef.current.contains(e.target)) setShowExportMenu(false);
             if (exportAktRef.current && !exportAktRef.current.contains(e.target)) setShowExportAktivitas(false);
+            if (dashAktColPickerRef.current && !dashAktColPickerRef.current.contains(e.target)) setShowDashAktColPicker(false);
         };
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
@@ -480,7 +501,7 @@ const Dashboard = () => {
                             </select>
                         </div>
                     </div>
-                    <div className="table-toolbar-right">
+                    <div className="table-toolbar-right" style={{ display: 'flex', gap: 8 }}>
                         <div className="table-search">
                             <Search size={16} className="search-icon" />
                             <input
@@ -489,32 +510,35 @@ const Dashboard = () => {
                                 onChange={e => { setSearchAktivitas(e.target.value); setAktPage(1); }}
                             />
                         </div>
+                        <div style={{ position: 'relative' }} ref={dashAktColPickerRef}>
+                            <button className="btn btn-ghost btn-sm" onClick={() => setShowDashAktColPicker(!showDashAktColPicker)}>
+                                <Columns size={14} /> Kolom
+                            </button>
+                            {showDashAktColPicker && (
+                                <div className="dropdown-menu" style={{ minWidth: 200, right: 0, left: 'auto' }}>
+                                    {DASH_AKT_COLUMNS.filter(c => !c.alwaysVisible).map(c => (
+                                        <label key={c.key} className="dropdown-item" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '7px 14px', fontSize: '0.82rem' }}>
+                                            <input type="checkbox" checked={dashAktVisibleCols.includes(c.key)} onChange={() => toggleDashAktCol(c.key)} style={{ accentColor: 'var(--accent-blue)' }} />
+                                            {c.label}
+                                        </label>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                         <div className="export-dropdown" ref={exportAktRef}>
-                            <button
-                                className="btn btn-secondary btn-sm"
-                                onClick={() => setShowExportAktivitas(!showExportAktivitas)}
-                            >
+                            <button className="btn btn-secondary btn-sm" onClick={() => setShowExportAktivitas(!showExportAktivitas)}>
                                 <Download size={14} /> Ekspor <ChevronDown size={12} />
                             </button>
                             {showExportAktivitas && (
                                 <div className="dropdown-menu">
                                     <button className="dropdown-item" onClick={() => handleExportAktivitas('excel')}>
-                                        <span className="export-icon" style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e' }}>
-                                            <FileSpreadsheet size={14} />
-                                        </span>
-                                        Excel
+                                        <span className="export-icon" style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e' }}><FileSpreadsheet size={14} /></span> Excel
                                     </button>
                                     <button className="dropdown-item" onClick={() => handleExportAktivitas('csv')}>
-                                        <span className="export-icon" style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6' }}>
-                                            <FileDown size={14} />
-                                        </span>
-                                        CSV
+                                        <span className="export-icon" style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6' }}><FileDown size={14} /></span> CSV
                                     </button>
                                     <button className="dropdown-item" onClick={() => handleExportAktivitas('pdf')}>
-                                        <span className="export-icon" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>
-                                            <FileText size={14} />
-                                        </span>
-                                        PDF
+                                        <span className="export-icon" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}><FileText size={14} /></span> PDF
                                     </button>
                                 </div>
                             )}
@@ -525,23 +549,25 @@ const Dashboard = () => {
                     <table className="data-table">
                         <thead>
                             <tr>
-                                <th>No</th>
-                                <th>Nama Pengguna</th>
-                                <th>Jenis Akun</th>
-                                <th>Aktivitas</th>
-                                <th>Keterangan</th>
-                                <th>Waktu</th>
+                                {dashAktActiveCols.map(col => (
+                                    <th key={col.key} style={{ width: col.width, textAlign: 'center', verticalAlign: 'middle' }}>{col.label}</th>
+                                ))}
                             </tr>
                         </thead>
                         <tbody>
                             {pagedAktivitas.map((a, i) => (
                                 <tr key={a.id}>
-                                    <td>{(aktPage - 1) * aktPageSize + i + 1}</td>
-                                    <td>{a.namaAkun}</td>
-                                    <td><span className="badge badge-disetujui">{a.jenisAkun}</span></td>
-                                    <td>{a.aktivitas}</td>
-                                    <td style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', maxWidth: 300 }}>{a.keterangan || '-'}</td>
-                                    <td>{formatDateTime(a.createdAt)}</td>
+                                    {dashAktActiveCols.map(col => {
+                                        switch (col.key) {
+                                            case 'no': return <td key={col.key} style={{ textAlign: 'center' }}>{(aktPage - 1) * aktPageSize + i + 1}</td>;
+                                            case 'namaAkun': return <td key={col.key} style={{ textAlign: 'left' }}>{a.namaAkun}</td>;
+                                            case 'jenisAkun': return <td key={col.key} style={{ textAlign: 'center' }}><span className="badge badge-disetujui">{a.jenisAkun}</span></td>;
+                                            case 'aktivitas': return <td key={col.key} style={{ textAlign: 'center', fontWeight: 600, color: 'var(--accent-blue)' }}>{a.aktivitas}</td>;
+                                            case 'keterangan': return <td key={col.key} style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', maxWidth: 300, textAlign: 'left' }}>{a.keterangan || '-'}</td>;
+                                            case 'waktu': return <td key={col.key} style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>{formatDateTime(a.createdAt)}</td>;
+                                            default: return <td key={col.key}>-</td>;
+                                        }
+                                    })}
                                 </tr>
                             ))}
                         </tbody>
