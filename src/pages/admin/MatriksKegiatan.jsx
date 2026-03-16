@@ -1,5 +1,5 @@
-import { useState, useMemo, useEffect, useCallback } from 'react';
-import { Search, Download, Plus, Edit, Trash2, ChevronLeft, ChevronRight, X, Save, AlertTriangle, FileSpreadsheet, Building, User, Briefcase, FileText, Settings, DollarSign, Calendar, Truck, PlusCircle, AlertCircle, RefreshCw, CheckSquare, Square, FileDown, Info, Printer, Clock, Phone, Columns, Eye, EyeOff } from 'lucide-react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
+import { Search, Download, Plus, Edit, Trash2, ChevronLeft, ChevronRight, X, Save, AlertTriangle, FileSpreadsheet, Building, User, Briefcase, FileText, Settings, DollarSign, Calendar, Truck, PlusCircle, AlertCircle, RefreshCw, CheckSquare, Square, FileDown, Info, Printer, Clock, Phone, Columns, Eye, EyeOff, Upload } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 import { SUB_KEGIATAN } from '../../utils/constants';
 import { useSekolahData } from '../../data/dataProvider';
@@ -7,6 +7,7 @@ import SearchableSelect from '../../components/ui/SearchableSelect';
 import useMatrikStore, { generateNoSpk, inferJenjang, fullTerbilang, formatNumberInput, parseFormattedNumber, naturalSort, SUMBER_DANA, JENIS_PENGADAAN, METODE_PEMILIHAN, STATUS_PEMILIK } from '../../store/matrikStore';
 import { matrikApi, templateApi } from '../../api/index';
 import toast from 'react-hot-toast';
+import * as XLSX from 'xlsx';
 
 // ===== CONSTANTS =====
 // Dinamisasi Tahun Anggaran
@@ -85,6 +86,9 @@ const MatriksKegiatan = () => {
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [showSettings, setShowSettings] = useState(false);
     const [shiftConfirm, setShiftConfirm] = useState(null);
+    const [batchPreview, setBatchPreview] = useState(null);
+    const [batchImporting, setBatchImporting] = useState(false);
+    const fileInputRef = useRef(null);
 
     // ===== LOGIC =====
     const filtered = useMemo(() => {
@@ -134,6 +138,117 @@ const MatriksKegiatan = () => {
         const blob = new Blob([tableHTML], { type: 'application/vnd.ms-excel;charset=utf-8' });
         const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `Data_Matrik.xls`; link.click();
         toast.success("Ekspor berhasil!");
+    };
+
+    // ===== BATCH IMPORT =====
+    const TEMPLATE_COLUMNS = [
+        { header: 'No Matrik*', key: 'noMatrik' },
+        { header: 'NPSN', key: 'npsn' },
+        { header: 'Nama Sekolah', key: 'namaSekolah' },
+        { header: 'Nama Paket Pekerjaan*', key: 'namaPaket' },
+        { header: 'Sub Kegiatan', key: 'subKegiatan' },
+        { header: 'RUP', key: 'rup' },
+        { header: 'Pagu Anggaran', key: 'paguAnggaran' },
+        { header: 'Pagu Paket', key: 'paguPaket' },
+        { header: 'HPS', key: 'hps' },
+        { header: 'Nilai Kontrak', key: 'nilaiKontrak' },
+        { header: 'Sumber Dana', key: 'sumberDana' },
+        { header: 'Metode Pemilihan', key: 'metode' },
+        { header: 'Jenis Pengadaan', key: 'jenisPengadaan' },
+        { header: 'Penyedia', key: 'penyedia' },
+        { header: 'Nama Pemilik', key: 'namaPemilik' },
+        { header: 'Status Pemilik', key: 'statusPemilik' },
+        { header: 'Alamat Kantor', key: 'alamatKantor' },
+        { header: 'Tanggal Mulai (YYYY-MM-DD)', key: 'tanggalMulai' },
+        { header: 'Jangka Waktu (HK)', key: 'jangkaWaktu' },
+        { header: 'Tahun Anggaran', key: 'tahunAnggaran' },
+    ];
+
+    const handleDownloadTemplate = () => {
+        const wb = XLSX.utils.book_new();
+        const headers = TEMPLATE_COLUMNS.map(c => c.header);
+        // Example row
+        const example = ['1', '20301453', 'SD NEGERI CONTOH', 'Pembangunan Ruang Kelas Baru', '', '', '150000000', '100000000', '90000000', '95000000', 'APBD', 'Tender', 'Pekerjaan Konstruksi', 'CV. Contoh', 'H. Budi', 'Direktur', 'Jl. Contoh No. 1', `${currentYear}-01-15`, '90', String(currentYear)];
+        const ws = XLSX.utils.aoa_to_sheet([headers, example]);
+        // Set column widths
+        ws['!cols'] = TEMPLATE_COLUMNS.map((_, i) => ({ wch: i === 3 ? 35 : i === 4 ? 30 : 18 }));
+        XLSX.utils.book_append_sheet(wb, ws, 'Template Matrik');
+        XLSX.writeFile(wb, 'Template_Batch_Matrik.xlsx');
+        toast.success('Template berhasil diunduh');
+    };
+
+    const handleBatchFile = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            try {
+                const wb = XLSX.read(evt.target.result, { type: 'binary' });
+                const ws = wb.Sheets[wb.SheetNames[0]];
+                const rows = XLSX.utils.sheet_to_json(ws, { defval: '' });
+                if (rows.length === 0) { toast.error('File kosong atau format salah'); return; }
+                // Map rows to our format
+                const parsed = rows.map((row, idx) => {
+                    const mapped = {};
+                    TEMPLATE_COLUMNS.forEach(col => {
+                        const val = row[col.header];
+                        if (val !== undefined && val !== '') mapped[col.key] = val;
+                    });
+                    // Auto-fill defaults
+                    mapped.noMatrik = String(mapped.noMatrik || '').replace(/\s/g, '');
+                    mapped.namaSekolah = mapped.namaSekolah || '-';
+                    mapped.subBidang = inferJenjang(mapped.subKegiatan || '');
+                    if (mapped.subKegiatan) {
+                        const parts = String(mapped.subKegiatan).split(' ');
+                        mapped.noSubKegiatan = parts[0] || '';
+                    }
+                    // Numbers
+                    ['paguAnggaran', 'paguPaket', 'hps', 'nilaiKontrak'].forEach(k => {
+                        mapped[k] = mapped[k] ? parseInt(String(mapped[k]).replace(/\D/g, ''), 10) || null : null;
+                    });
+                    mapped.jangkaWaktu = mapped.jangkaWaktu ? parseInt(mapped.jangkaWaktu, 10) || '' : '';
+                    mapped.tahunAnggaran = mapped.tahunAnggaran ? parseInt(mapped.tahunAnggaran, 10) || currentYear : currentYear;
+                    mapped.terbilangKontrak = mapped.nilaiKontrak ? fullTerbilang(mapped.nilaiKontrak) : '-';
+                    mapped.noSpk = generateNoSpk(mapped.noMatrik, mapped.jenisPengadaan, mapped.sumberDana, mapped.tahunAnggaran);
+                    // Auto-fill sekolah
+                    if (mapped.npsn) {
+                        const found = sekolahList.find(s => String(s.npsn) === String(mapped.npsn));
+                        if (found && mapped.namaSekolah === '-') mapped.namaSekolah = found.nama;
+                    }
+                    // tanggal selesai
+                    if (mapped.tanggalMulai && mapped.jangkaWaktu) {
+                        const parts = String(mapped.tanggalMulai).split('-');
+                        if (parts.length === 3) {
+                            const date = new Date(parts[0], parts[1] - 1, parts[2]);
+                            date.setDate(date.getDate() + parseInt(mapped.jangkaWaktu) - 1);
+                            mapped.tanggalSelesai = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+                        }
+                    }
+                    mapped._rowNum = idx + 2;
+                    return mapped;
+                }).filter(m => m.noMatrik && m.namaPaket); // only valid rows
+                if (parsed.length === 0) { toast.error('Tidak ada data valid. Pastikan kolom No Matrik* dan Nama Paket Pekerjaan* terisi.'); return; }
+                setBatchPreview(parsed);
+            } catch (err) {
+                toast.error('Gagal membaca file: ' + err.message);
+            }
+        };
+        reader.readAsBinaryString(file);
+        e.target.value = ''; // reset
+    };
+
+    const executeBatchImport = () => {
+        if (!batchPreview?.length) return;
+        setBatchImporting(true);
+        let added = 0;
+        batchPreview.forEach(item => {
+            const { _rowNum, ...data } = item;
+            addMatrik(data);
+            added++;
+        });
+        toast.success(`${added} data berhasil diimpor`);
+        setBatchPreview(null);
+        setBatchImporting(false);
     };
 
     // ===== FORM HANDLERS =====
@@ -339,7 +454,10 @@ const MatriksKegiatan = () => {
                             </select>
                         </div>
                     </div>
-                    <div className="table-toolbar-right">
+                    <div className="table-toolbar-right" style={{ display: 'flex', gap: 8 }}>
+                        <input type="file" ref={fileInputRef} accept=".xlsx,.xls" style={{ display: 'none' }} onChange={handleBatchFile} />
+                        <button className="btn btn-ghost btn-sm" onClick={handleDownloadTemplate} title="Download template Excel"><FileDown size={14} /> Template</button>
+                        <button className="btn btn-secondary btn-sm" onClick={() => fileInputRef.current?.click()} title="Import batch dari Excel"><Upload size={14} /> Import Batch</button>
                         <button className="btn btn-secondary btn-sm" onClick={handleExport}><FileSpreadsheet size={14} /> Ekspor</button>
                     </div>
                 </div>
@@ -572,6 +690,59 @@ const MatriksKegiatan = () => {
                                 <button className="btn btn-ghost" onClick={() => setDeleteTarget(null)}>Batal</button>
                                 <button className="btn btn-primary" style={{ background: '#dc2626', borderColor: '#dc2626' }} onClick={executeDelete}>Hapus</button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* MODAL BATCH IMPORT PREVIEW */}
+            {batchPreview && (
+                <div className="modal-overlay" onClick={() => setBatchPreview(null)}>
+                    <div className="modal" style={{ maxWidth: 950 }} onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <div className="modal-title">Preview Import Batch — {batchPreview.length} data</div>
+                            <button className="modal-close" onClick={() => setBatchPreview(null)}><X size={18} /></button>
+                        </div>
+                        <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto', padding: '16px 24px' }}>
+                            <div style={{ marginBottom: 12, padding: '10px 14px', background: 'var(--bg-secondary)', borderRadius: 8, fontSize: '0.82rem', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                                <Info size={14} /> Periksa data di bawah sebelum mengimpor. Kolom <b>No SPK</b> dan <b>Terbilang</b> otomatis diisi.
+                            </div>
+                            <div style={{ overflowX: 'auto' }}>
+                                <table className="data-table" style={{ fontSize: '0.75rem' }}>
+                                    <thead><tr>
+                                        <th style={{ width: 30 }}>#</th>
+                                        <th>No Matrik</th>
+                                        <th>NPSN</th>
+                                        <th>Nama Sekolah</th>
+                                        <th>Nama Paket</th>
+                                        <th>Nilai Kontrak</th>
+                                        <th>Sumber Dana</th>
+                                        <th>Jenis Pengadaan</th>
+                                        <th>No SPK</th>
+                                    </tr></thead>
+                                    <tbody>
+                                        {batchPreview.map((item, i) => (
+                                            <tr key={i}>
+                                                <td>{i + 1}</td>
+                                                <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{item.noMatrik}</td>
+                                                <td>{item.npsn || '-'}</td>
+                                                <td>{item.namaSekolah || '-'}</td>
+                                                <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.namaPaket}</td>
+                                                <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{formatCurrency(item.nilaiKontrak)}</td>
+                                                <td>{item.sumberDana || '-'}</td>
+                                                <td>{item.jenisPengadaan || '-'}</td>
+                                                <td style={{ fontFamily: 'monospace', fontSize: '0.7rem', whiteSpace: 'nowrap' }}>{item.noSpk || '-'}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div className="modal-footer">
+                            <button className="btn btn-ghost" onClick={() => setBatchPreview(null)}>Batal</button>
+                            <button className="btn btn-primary" onClick={executeBatchImport} disabled={batchImporting}>
+                                <Upload size={14} /> {batchImporting ? 'Mengimpor...' : `Import ${batchPreview.length} Data`}
+                            </button>
                         </div>
                     </div>
                 </div>
