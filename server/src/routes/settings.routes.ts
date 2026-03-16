@@ -115,27 +115,27 @@ async function applyGDriveConfigFromDb() {
             return;
         }
 
-        // Merge: env vars take priority over DB values
+        // DB values take priority over env vars (user explicitly saved from UI)
         const envCid = process.env.GDRIVE_CLIENT_ID || '';
         const envCs = process.env.GDRIVE_CLIENT_SECRET || '';
         const envRt = process.env.GDRIVE_REFRESH_TOKEN || '';
         const envFid = process.env.GDRIVE_FOLDER_ID || '';
 
         const merged = {
-            enabled: (envCid && envCs && envRt && envFid) ? true : (saved.enabled ?? false),
-            clientId: envCid || saved.clientId || '',
-            clientSecret: envCs || saved.clientSecret || '',
-            refreshToken: envRt || saved.refreshToken || '',
-            folderId: envFid || saved.folderId || '',
+            enabled: saved.enabled ?? (envCid && envCs && envRt && envFid ? true : false),
+            clientId: saved.clientId || envCid || '',
+            clientSecret: saved.clientSecret || envCs || '',
+            refreshToken: saved.refreshToken || envRt || '',
+            folderId: saved.folderId || envFid || '',
         };
 
         console.log('[GDrive] Config:', {
             enabled: merged.enabled,
             clientId: merged.clientId ? 'SET' : 'EMPTY',
             clientSecret: merged.clientSecret ? 'SET' : 'EMPTY',
-            refreshToken: merged.refreshToken ? 'SET' : 'EMPTY',
+            refreshToken: merged.refreshToken ? 'SET(' + merged.refreshToken.slice(0, 10) + ')' : 'EMPTY',
             folderId: merged.folderId || '',
-            source: envCid ? 'ENV+DB' : 'DB',
+            source: saved.clientId ? 'DB' : (envCid ? 'ENV' : 'NONE'),
         });
 
         setGDriveRuntimeConfig(merged);

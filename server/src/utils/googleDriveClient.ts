@@ -75,13 +75,24 @@ function readEnvFile(): Record<string, string> {
 }
 
 function getGDriveConfig(): GDriveConfig {
-    // 1. Environment variables (loaded by dotenv or system)
+    // 1. Runtime config (from DB, set via UI) takes priority
+    if (runtimeConfig && (runtimeConfig.clientId || runtimeConfig.refreshToken)) {
+        return {
+            enabled: runtimeConfig.enabled ?? false,
+            clientId: runtimeConfig.clientId || '',
+            clientSecret: runtimeConfig.clientSecret || '',
+            refreshToken: runtimeConfig.refreshToken || '',
+            folderId: runtimeConfig.folderId || '',
+        };
+    }
+
+    // 2. Environment variables (loaded by dotenv or system)
     let clientId = process.env.GDRIVE_CLIENT_ID || '';
     let clientSecret = process.env.GDRIVE_CLIENT_SECRET || '';
     let refreshToken = process.env.GDRIVE_REFRESH_TOKEN || '';
     let folderId = process.env.GDRIVE_FOLDER_ID || '';
 
-    // 2. If env vars missing, try direct .env file read (PM2 fallback)
+    // 3. If env vars missing, try direct .env file read (PM2 fallback)
     if (!clientId || !clientSecret || !refreshToken) {
         const envFile = readEnvFile();
         clientId = clientId || envFile['GDRIVE_CLIENT_ID'] || '';
@@ -92,23 +103,12 @@ function getGDriveConfig(): GDriveConfig {
 
     const envEnabled = clientId && clientSecret && refreshToken && folderId;
 
-    if (envEnabled) {
-        return {
-            enabled: true,
-            clientId,
-            clientSecret,
-            refreshToken,
-            folderId,
-        };
-    }
-
-    // 3. Fall back to runtime config (from DB)
     return {
-        enabled: runtimeConfig?.enabled ?? false,
-        clientId: runtimeConfig?.clientId || clientId,
-        clientSecret: runtimeConfig?.clientSecret || clientSecret,
-        refreshToken: runtimeConfig?.refreshToken || refreshToken,
-        folderId: runtimeConfig?.folderId || folderId,
+        enabled: !!envEnabled,
+        clientId,
+        clientSecret,
+        refreshToken,
+        folderId,
     };
 }
 
