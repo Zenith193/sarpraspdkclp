@@ -238,7 +238,7 @@ const DataSarpras = ({ readOnly = false }) => {
         if (col?.alwaysVisible) return;
         setVisibleCols(prev => prev.includes(key) ? prev.filter(c => c !== key) : [...prev, key]);
     };
-    const activeColumns = ALL_COLUMNS.filter(c => visibleCols.includes(c.key) && (c.key !== 'aksi' || !readOnly));
+    const activeColumns = ALL_COLUMNS.filter(c => visibleCols.includes(c.key));
 
     // ===== STAR PRIORITY =====
     const handleStar = async (e, item) => {
