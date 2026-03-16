@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
-import { Search, Download, Filter, Edit, Trash2, X, FileSpreadsheet, FileText, FileDown, ChevronDown, Save, AlertTriangle, Radio } from 'lucide-react';
+import { Search, Download, Filter, Edit, Trash2, X, FileSpreadsheet, FileText, FileDown, ChevronDown, Save, AlertTriangle, Radio, Columns } from 'lucide-react';
 import { useAktivitasData } from '../../data/dataProvider';
 import { aktivitasApi } from '../../api/index';
 import { formatDateTime, formatCurrency } from '../../utils/formatters';
@@ -40,6 +40,28 @@ const AktivitasPengguna = () => {
     const [showExport, setShowExport] = useState(false);
     const exportRef = useRef(null);
 
+    // ===== COLUMN VISIBILITY =====
+    const ALL_COLUMNS = [
+        { key: 'no', label: 'No', width: 40, alwaysVisible: true },
+        ...(canViewAll ? [{ key: 'namaAkun', label: 'Nama Pengguna' }] : []),
+        { key: 'jenisAkun', label: 'Jenis Akun' },
+        { key: 'aktivitas', label: 'Aktivitas' },
+        { key: 'keterangan', label: 'Keterangan Detail', minWidth: 400 },
+        { key: 'waktu', label: 'Waktu', width: 160 },
+        ...(isAdmin ? [{ key: 'aksi', label: 'Aksi', width: 90, alwaysVisible: true }] : []),
+    ];
+    // Aktivitas auto-hidden by default
+    const defaultCols = ALL_COLUMNS.filter(c => c.key !== 'aktivitas').map(c => c.key);
+    const [visibleCols, setVisibleCols] = useState(defaultCols);
+    const [showColPicker, setShowColPicker] = useState(false);
+    const colPickerRef = useRef(null);
+    const toggleCol = (key) => {
+        const col = ALL_COLUMNS.find(c => c.key === key);
+        if (col?.alwaysVisible) return;
+        setVisibleCols(prev => prev.includes(key) ? prev.filter(c => c !== key) : [...prev, key]);
+    };
+    const activeColumns = ALL_COLUMNS.filter(c => visibleCols.includes(c.key));
+
     useEffect(() => { if (aktivitasRaw?.length) setData(aktivitasRaw); }, [aktivitasRaw]);
 
     // Auto-refetch real data every 30 seconds for live updates
@@ -58,6 +80,7 @@ const AktivitasPengguna = () => {
     useEffect(() => {
         const handler = (e) => {
             if (exportRef.current && !exportRef.current.contains(e.target)) setShowExport(false);
+            if (colPickerRef.current && !colPickerRef.current.contains(e.target)) setShowColPicker(false);
         };
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
@@ -187,7 +210,22 @@ const AktivitasPengguna = () => {
                             data
                         </div>
                     </div>
-                    <div className="table-toolbar-right">
+                    <div className="table-toolbar-right" style={{ display: 'flex', gap: 8 }}>
+                        <div style={{ position: 'relative' }} ref={colPickerRef}>
+                            <button className="btn btn-ghost btn-sm" onClick={() => setShowColPicker(!showColPicker)}>
+                                <Columns size={14} /> Kolom
+                            </button>
+                            {showColPicker && (
+                                <div className="dropdown-menu" style={{ minWidth: 200, right: 0, left: 'auto' }}>
+                                    {ALL_COLUMNS.filter(c => !c.alwaysVisible).map(c => (
+                                        <label key={c.key} className="dropdown-item" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', padding: '7px 14px', fontSize: '0.82rem' }}>
+                                            <input type="checkbox" checked={visibleCols.includes(c.key)} onChange={() => toggleCol(c.key)} style={{ accentColor: 'var(--accent-blue)' }} />
+                                            {c.label}
+                                        </label>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                         <div className="export-dropdown" ref={exportRef}>
                             <button className="btn btn-secondary btn-sm" onClick={() => setShowExport(!showExport)}>
                                 <Download size={14} /> Ekspor <ChevronDown size={12} />
@@ -229,41 +267,30 @@ const AktivitasPengguna = () => {
                     <table className="data-table">
                         <thead>
                             <tr>
-                                <th style={{ width: 40 }}>No</th>
-                                {/* Sembunyikan kolom Nama Akun jika hanya melihat diri sendiri */}
-                                {canViewAll && <th>Nama Akun</th>}
-                                <th>Jenis Akun</th>
-                                <th style={{ minWidth: 400 }}>Keterangan Detail</th>
-                                <th style={{ width: 160 }}>Waktu</th>
-                                {isAdmin && <th style={{ width: 90 }}>Aksi</th>}
+                                {activeColumns.map(col => (
+                                    <th key={col.key} style={{ width: col.width, minWidth: col.minWidth, textAlign: 'center', verticalAlign: 'middle' }}>{col.label}</th>
+                                ))}
                             </tr>
                         </thead>
                         <tbody>
                             {paged.map((a, i) => (
                                 <tr key={a.id}>
-                                    <td>{(page - 1) * perPage + i + 1}</td>
-                                    {canViewAll && (
-                                        <td>
-                                            <div style={{ fontWeight: 500 }}>{a.namaAkun}</div>
-                                        </td>
-                                    )}
-                                    <td><span className="badge badge-disetujui">{a.jenisAkun}</span></td>
-                                    <td style={{ maxWidth: 600, whiteSpace: 'pre-wrap', lineHeight: 1.5, fontSize: '0.8125rem', color: 'var(--text-primary)' }}>
-                                        <span style={{ fontWeight: 600, color: 'var(--accent-blue)' }}>[{a.aktivitas}]</span> {a.keterangan}
-                                    </td>
-                                    <td style={{ whiteSpace: 'nowrap', fontSize: '0.8125rem' }}>{formatDateTime(a.createdAt)}</td>
-                                    {isAdmin && (
-                                    <td>
-                                        <div style={{ display: 'flex', gap: 4 }}>
-                                            <button className="btn-icon" onClick={() => handleOpenEdit(a)} title="Edit"><Edit size={16} /></button>
-                                            <button className="btn-icon" onClick={() => requestDelete(a)} title="Hapus" style={{ color: 'var(--accent-red)' }}><Trash2 size={16} /></button>
-                                        </div>
-                                    </td>
-                                    )}
+                                    {activeColumns.map(col => {
+                                        switch (col.key) {
+                                            case 'no': return <td key={col.key} style={{ textAlign: 'center' }}>{(page - 1) * perPage + i + 1}</td>;
+                                            case 'namaAkun': return <td key={col.key} style={{ textAlign: 'center' }}><div style={{ fontWeight: 500 }}>{a.namaAkun}</div></td>;
+                                            case 'jenisAkun': return <td key={col.key} style={{ textAlign: 'center' }}><span className="badge badge-disetujui">{a.jenisAkun}</span></td>;
+                                            case 'aktivitas': return <td key={col.key} style={{ textAlign: 'center', fontWeight: 600, color: 'var(--accent-blue)' }}>{a.aktivitas}</td>;
+                                            case 'keterangan': return <td key={col.key} style={{ maxWidth: 600, whiteSpace: 'pre-wrap', lineHeight: 1.5, fontSize: '0.8125rem', color: 'var(--text-primary)', textAlign: 'center' }}><span style={{ fontWeight: 600, color: 'var(--accent-blue)' }}>[{a.aktivitas}]</span> {a.keterangan}</td>;
+                                            case 'waktu': return <td key={col.key} style={{ whiteSpace: 'nowrap', fontSize: '0.8125rem', textAlign: 'center' }}>{formatDateTime(a.createdAt)}</td>;
+                                            case 'aksi': return <td key={col.key} style={{ textAlign: 'center' }}><div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}><button className="btn-icon" onClick={() => handleOpenEdit(a)} title="Edit"><Edit size={16} /></button><button className="btn-icon" onClick={() => requestDelete(a)} title="Hapus" style={{ color: 'var(--accent-red)' }}><Trash2 size={16} /></button></div></td>;
+                                            default: return <td key={col.key}>-</td>;
+                                        }
+                                    })}
                                 </tr>
                             ))}
                             {paged.length === 0 && (
-                                <tr><td colSpan={isAdmin ? (canViewAll ? 6 : 5) : (canViewAll ? 5 : 4)} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>Tidak ada data ditemukan</td></tr>
+                                <tr><td colSpan={activeColumns.length} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>Tidak ada data ditemukan</td></tr>
                             )}
                         </tbody>
                     </table>
