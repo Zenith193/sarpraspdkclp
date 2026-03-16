@@ -940,6 +940,7 @@ textarea {
   gap: 12px;
   border-bottom: 1px solid var(--border-color);
   box-sizing: border-box;
+  background: var(--bg-topbar);
 }
 
 .sidebar-logo {
@@ -961,7 +962,7 @@ textarea {
 .sidebar-brand h2 {
   font-size: 18px;
   font-weight: 700;
-  color: #f1f5f9;
+  color: var(--text-primary);
 }
 
 .sidebar-brand p {
