@@ -644,6 +644,20 @@ app.get('/api/check-session', async (req, res) => {
         res.status(401).json({ error: 'Invalid session' });
     }
 });
+// Block disabled accounts from staff login (before Better Auth processes it)
+app.post('/api/auth/sign-in/email', async (req, res, next) => {
+    try {
+        const email = req.body?.email;
+        if (email) {
+            const rows = await db.select({ aktif: user.aktif }).from(user).where(eq(user.email, email));
+            if (rows[0] && rows[0].aktif === false) {
+                res.status(403).json({ error: 'Akun Anda telah dinonaktifkan. Hubungi administrator.' });
+                return;
+            }
+        }
+    } catch (_e) { /* let it through */ }
+    next();
+});
 // Mount Better Auth on /api/auth/*
 app.all('/api/auth/*splat', toNodeHandler(auth));
 

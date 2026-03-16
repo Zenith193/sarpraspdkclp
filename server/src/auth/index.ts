@@ -36,36 +36,6 @@ export const auth = betterAuth({
             },
         },
     },
-    hooks: {
-        before: [
-            {
-                matcher(context) {
-                    return context.path === '/sign-in/email';
-                },
-                async handler(ctx) {
-                    try {
-                        const body = ctx.body as any;
-                        const email = body?.email;
-                        if (!email) return;
-
-                        const { user: userTable } = await import('../db/schema/index.js');
-                        const { eq } = await import('drizzle-orm');
-                        const rows = await db.select({ aktif: userTable.aktif }).from(userTable).where(eq(userTable.email, email));
-                        if (rows[0] && rows[0].aktif === false) {
-                            return {
-                                response: new Response(
-                                    JSON.stringify({ code: 'ACCOUNT_DISABLED', message: 'Akun Anda telah dinonaktifkan. Hubungi administrator.' }),
-                                    { status: 403, headers: { 'Content-Type': 'application/json' } }
-                                ),
-                            };
-                        }
-                    } catch (e) {
-                        console.error('[Auth] Before hook error:', e);
-                    }
-                },
-            },
-        ],
-    },
     trustedOrigins: [
         'http://localhost:5173',
         'http://localhost:5174',
