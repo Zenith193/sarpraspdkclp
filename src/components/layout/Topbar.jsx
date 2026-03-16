@@ -2,11 +2,11 @@ import { Sun, Moon, Menu, School } from 'lucide-react';
 import useThemeStore from '../../store/themeStore';
 import QueueStatus from '../ui/QueueStatus';
 
-const Topbar = ({ onToggleSidebar }) => {
+const Topbar = ({ onToggleSidebar, sidebarCollapsed, isMobile }) => {
     const { theme, toggleTheme } = useThemeStore();
 
     return (
-        <div className="topbar">
+        <div className={`topbar ${sidebarCollapsed ? 'collapsed' : ''} ${isMobile ? 'mobile' : ''}`}>
             <div className="topbar-left">
                 <button className="topbar-toggle" onClick={onToggleSidebar}>
                     <Menu size={20} />

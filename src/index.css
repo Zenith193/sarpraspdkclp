@@ -1100,6 +1100,14 @@ textarea {
   transition: left var(--transition-normal), background-color var(--transition-normal);
 }
 
+.topbar.collapsed {
+  left: var(--sidebar-collapsed-width);
+}
+
+.topbar.mobile {
+  left: 0;
+}
+
 .topbar-left {
   display: flex;
   align-items: center;

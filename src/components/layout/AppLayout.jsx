@@ -64,7 +64,7 @@ const AppLayout = () => {
                 <div className="sidebar-overlay active" onClick={handleOverlayClick} />
             )}
             <div style={{ flex: 1 }}>
-                <Topbar onToggleSidebar={handleToggle} />
+                <Topbar onToggleSidebar={handleToggle} sidebarCollapsed={!isMobile && sidebarCollapsed} isMobile={isMobile} />
                 <div className="main-content" style={mainContentStyle}>
                     <CountdownBanner />
                     <Outlet />
