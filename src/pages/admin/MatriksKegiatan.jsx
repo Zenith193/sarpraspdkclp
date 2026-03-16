@@ -144,7 +144,6 @@ const MatriksKegiatan = () => {
     const TEMPLATE_COLUMNS = [
         { header: 'No Matrik*', key: 'noMatrik' },
         { header: 'NPSN', key: 'npsn' },
-        { header: 'Nama Sekolah', key: 'namaSekolah' },
         { header: 'Nama Paket Pekerjaan*', key: 'namaPaket' },
         { header: 'Sub Kegiatan', key: 'subKegiatan' },
         { header: 'RUP', key: 'rup' },
@@ -168,7 +167,7 @@ const MatriksKegiatan = () => {
         const wb = XLSX.utils.book_new();
         const headers = TEMPLATE_COLUMNS.map(c => c.header);
         // Example row
-        const example = ['1', '20301453', 'SD NEGERI CONTOH', 'Pembangunan Ruang Kelas Baru', '', '', '150000000', '100000000', '90000000', '95000000', 'APBD', 'Tender', 'Pekerjaan Konstruksi', 'CV. Contoh', 'H. Budi', 'Direktur', 'Jl. Contoh No. 1', `${currentYear}-01-15`, '90', String(currentYear)];
+        const example = ['1', '20301453', 'Pembangunan Ruang Kelas Baru', '', '', '150000000', '100000000', '90000000', '95000000', 'APBD', 'Tender', 'Pekerjaan Konstruksi', 'CV. Contoh', 'H. Budi', 'Direktur', 'Jl. Contoh No. 1', `${currentYear}-01-15`, '90', String(currentYear)];
         const ws = XLSX.utils.aoa_to_sheet([headers, example]);
         // Set column widths
         ws['!cols'] = TEMPLATE_COLUMNS.map((_, i) => ({ wch: i === 3 ? 35 : i === 4 ? 30 : 18 }));
