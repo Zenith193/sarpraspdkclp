@@ -44,7 +44,7 @@ async function request(endpoint, options = {}) {
 
     if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new ApiError(data.error || `Request failed (${res.status})`, res.status, data);
+        throw new ApiError(data.error || data.message || `Request failed (${res.status})`, res.status, data);
     }
 
     if (res.status === 204) return null;

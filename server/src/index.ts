@@ -483,6 +483,12 @@ app.post('/api/npsn-login', async (req, res) => {
             return;
         }
 
+        // Check if account is active BEFORE trying to sign in
+        if (foundUser.aktif === false) {
+            res.status(403).json({ error: 'Akun Anda telah dinonaktifkan. Hubungi administrator.' });
+            return;
+        }
+
         // Verify password against hashed password via Better Auth
         const accounts = await db.select().from(account).where(eq(account.userId, foundUser.id));
         const cred = accounts.find(a => a.providerId === 'credential');
@@ -505,11 +511,6 @@ app.post('/api/npsn-login', async (req, res) => {
                 res.status(401).json({ error: 'Password salah' });
                 return;
             }
-        }
-
-        if (!foundUser.aktif) {
-            res.status(401).json({ error: 'Akun tidak aktif' });
-            return;
         }
 
         // Create session directly
@@ -871,6 +872,8 @@ async function autoMigrate() {
         `ALTER TABLE sekolah ADD COLUMN IF NOT EXISTS denah_sekolah TEXT`,
         `ALTER TABLE sekolah ADD COLUMN IF NOT EXISTS kop_upload_status TEXT DEFAULT 'done'`,
         `ALTER TABLE sekolah ADD COLUMN IF NOT EXISTS denah_upload_status TEXT DEFAULT 'done'`,
+        `ALTER TABLE iklan ALTER COLUMN advertiser SET DEFAULT '-'`,
+        `UPDATE iklan SET advertiser = '-' WHERE advertiser IS NULL`,
     ];
     for (const m of migrations) {
         try { await db.execute(sql.raw(m)); } catch (e: any) {

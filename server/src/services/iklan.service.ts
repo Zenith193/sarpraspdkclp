@@ -20,6 +20,7 @@ export const iklanService = {
         const rows = await db.insert(iklan).values({
             judul: data.judul,
             deskripsi: data.deskripsi || null,
+            advertiser: data.advertiser || '-',
             scriptCode: data.scriptCode,
             posisi: data.posisi || 'head',
             aktif: data.aktif !== false,
