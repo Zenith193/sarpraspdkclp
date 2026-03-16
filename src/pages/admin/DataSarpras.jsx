@@ -1337,8 +1337,25 @@ const DataSarpras = ({ readOnly = false }) => {
                                 <div style={{ gridColumn: '1 / -1' }}><div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: 2 }}>Keterangan</div><div>{viewItem.keterangan || '-'}</div></div>
                                 {canAccessPriority && (
                                     <div><div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginBottom: 2 }}>Prioritas</div>
-                                        <span style={{ fontSize: '1.25rem', color: viewItem.bintang ? 'var(--accent-yellow)' : 'var(--border-color)' }}>★</span>
-                                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginLeft: 6 }}>{viewItem.bintang ? 'Ditandai prioritas' : 'Tidak diprioritaskan'}</span>
+                                        <button
+                                            onClick={async () => {
+                                                const newBintang = viewItem.bintang ? 0 : 1;
+                                                try {
+                                                    setViewItem(prev => ({ ...prev, bintang: newBintang }));
+                                                    setData(prev => prev.map(d => d.id === viewItem.id ? { ...d, bintang: newBintang } : d));
+                                                    await sarprasApi.update(viewItem.id, { bintang: newBintang });
+                                                    toast.success(newBintang ? 'Ditandai prioritas' : 'Prioritas dihapus', { duration: 1500 });
+                                                } catch (e) {
+                                                    setViewItem(prev => ({ ...prev, bintang: viewItem.bintang }));
+                                                    setData(prev => prev.map(d => d.id === viewItem.id ? { ...d, bintang: viewItem.bintang } : d));
+                                                    toast.error('Gagal memperbarui prioritas');
+                                                }
+                                            }}
+                                            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: viewItem.bintang ? 'rgba(251,191,36,0.12)' : 'var(--bg-secondary)', border: `1px solid ${viewItem.bintang ? 'rgba(251,191,36,0.3)' : 'var(--border-color)'}`, borderRadius: 8, padding: '6px 14px', cursor: 'pointer', transition: 'all 0.2s' }}
+                                        >
+                                            <span style={{ fontSize: '1.25rem', color: viewItem.bintang ? 'var(--accent-yellow)' : 'var(--border-color)' }}>★</span>
+                                            <span style={{ fontSize: '0.8rem', color: viewItem.bintang ? 'var(--accent-yellow)' : 'var(--text-secondary)' }}>{viewItem.bintang ? 'Ditandai prioritas' : 'Tandai prioritas'}</span>
+                                        </button>
                                     </div>
                                 )}
                             </div>
