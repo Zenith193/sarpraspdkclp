@@ -2,7 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import useAuthStore from '../store/authStore';
 import toast from 'react-hot-toast';
 
-const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+const IDLE_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
 const EVENTS = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
 
 /**
