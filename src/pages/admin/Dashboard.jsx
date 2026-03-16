@@ -209,6 +209,7 @@ const Dashboard = () => {
         { header: 'Nama Pengguna', key: 'namaAkun' },
         { header: 'Jenis Akun', key: 'jenisAkun' },
         { header: 'Aktivitas', key: 'aktivitas' },
+        { header: 'Keterangan', key: 'keterangan' },
         { header: 'Waktu', accessor: (r) => formatDateTime(r.createdAt) },
     ];
 
@@ -563,7 +564,7 @@ const Dashboard = () => {
                                             case 'namaAkun': return <td key={col.key} style={{ textAlign: 'left' }}>{a.namaAkun}</td>;
                                             case 'jenisAkun': return <td key={col.key} style={{ textAlign: 'center' }}><span className="badge badge-disetujui">{a.jenisAkun}</span></td>;
                                             case 'aktivitas': return <td key={col.key} style={{ textAlign: 'center', fontWeight: 600, color: 'var(--accent-blue)' }}>{a.aktivitas}</td>;
-                                            case 'keterangan': return <td key={col.key} style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', maxWidth: 300, textAlign: 'left' }}>{a.keterangan || '-'}</td>;
+                                            case 'keterangan': return <td key={col.key} style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', maxWidth: 400, textAlign: 'left', whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.5 }}>{a.keterangan || '-'}</td>;
                                             case 'waktu': return <td key={col.key} style={{ textAlign: 'center', whiteSpace: 'nowrap' }}>{formatDateTime(a.createdAt)}</td>;
                                             default: return <td key={col.key}>-</td>;
                                         }

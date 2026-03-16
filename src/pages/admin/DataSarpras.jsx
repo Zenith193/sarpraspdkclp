@@ -688,7 +688,8 @@ const DataSarpras = ({ readOnly = false }) => {
             case 'kondisi': return getConditionBadge(item.kondisi);
             case 'keterangan': return <div style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.keterangan}</div>;
             case 'lastFotoAt': return item.lastFotoAt ? <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{new Date(item.lastFotoAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</span> : <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>-</span>;
-            case 'jenisPrasarana': return <div style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.jenisPrasarana}</div>;
+            case 'jenisPrasarana': return <div style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'left' }}>{item.jenisPrasarana}</div>;
+            case 'namaRuang': return <div style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'left' }}>{item.namaRuang}</div>;
             case 'bintang':
                 return (
                     <button type="button"
