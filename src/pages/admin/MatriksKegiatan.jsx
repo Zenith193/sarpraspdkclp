@@ -1,7 +1,6 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { Search, Download, Plus, Edit, Trash2, ChevronLeft, ChevronRight, X, Save, AlertTriangle, FileSpreadsheet, Building, User, Briefcase, FileText, Settings, DollarSign, Calendar, Truck, PlusCircle, AlertCircle, RefreshCw, CheckSquare, Square, FileDown, Info, Printer, Clock, Phone, Columns, Eye, EyeOff, Upload } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
-import { SUB_KEGIATAN } from '../../utils/constants';
 import { useSekolahData } from '../../data/dataProvider';
 import SearchableSelect from '../../components/ui/SearchableSelect';
 import useMatrikStore, { generateNoSpk, inferJenjang, fullTerbilang, formatNumberInput, parseFormattedNumber, naturalSort, SUMBER_DANA, JENIS_PENGADAAN, METODE_PEMILIHAN, STATUS_PEMILIK } from '../../store/matrikStore';
@@ -73,8 +72,17 @@ const formatDate = (dateString) => {
 
 const MatriksKegiatan = () => {
     // ===== SHARED STORE =====
-    const { matrikData, addMatrik, updateMatrik, deleteMatrik, setMatrikData } = useMatrikStore();
+    const { matrikData, addMatrik, updateMatrik, deleteMatrik, setMatrikData,
+        configSumberDana, configJenisPengadaan, configMetodePemilihan, configSubKegiatan,
+        addConfigItem, removeConfigItem, updateConfigItem, resetConfigList
+    } = useMatrikStore();
     const { data: sekolahList } = useSekolahData();
+
+    // Use store config (fallback to defaults)
+    const sumberDanaList = configSumberDana || SUMBER_DANA;
+    const jenisPengadaanList = configJenisPengadaan || JENIS_PENGADAAN;
+    const metodePemilihanList = configMetodePemilihan || METODE_PEMILIHAN;
+    const subKegiatanList = configSubKegiatan || [];
 
     const [search, setSearch] = useState('');
     const [pageSize, setPageSize] = useState(10);
@@ -88,6 +96,10 @@ const MatriksKegiatan = () => {
     const [shiftConfirm, setShiftConfirm] = useState(null);
     const [batchPreview, setBatchPreview] = useState(null);
     const [batchImporting, setBatchImporting] = useState(false);
+    const [settingsTab, setSettingsTab] = useState('kolom');
+    const [newConfigItem, setNewConfigItem] = useState('');
+    const [newSubKode, setNewSubKode] = useState('');
+    const [newSubNama, setNewSubNama] = useState('');
     const fileInputRef = useRef(null);
 
     // ===== LOGIC =====
@@ -530,7 +542,7 @@ const MatriksKegiatan = () => {
                                     </div>
                                 </div>
                                 <div className="form-row">
-                                    <div className="form-group"><label>Sub Kegiatan</label><SearchableSelect options={SUB_KEGIATAN.map(s => `${s.kode} ${s.nama}`)} value={formData.subKegiatan} onChange={(val) => handleChange('subKegiatan', val)} placeholder="Pilih Sub Kegiatan" /></div>
+                                    <div className="form-group"><label>Sub Kegiatan</label><SearchableSelect options={subKegiatanList.map(s => `${s.kode} ${s.nama}`)} value={formData.subKegiatan} onChange={(val) => handleChange('subKegiatan', val)} placeholder="Pilih Sub Kegiatan" /></div>
                                     <div className="form-group"><label>No Sub Kegiatan</label><input className="form-input" value={formData.noSubKegiatan || '-'} disabled style={{ background: 'var(--bg-secondary)' }} /></div>
                                     <div className="form-group"><label>Sub Bidang</label><input className="form-input" value={formData.subBidang || '-'} disabled style={{ background: 'var(--bg-secondary)' }} /></div>
                                 </div>
@@ -562,21 +574,21 @@ const MatriksKegiatan = () => {
                                         <label>Sumber Dana</label>
                                         <select className="form-select" value={formData.sumberDana || ''} onChange={e => handleChange('sumberDana', e.target.value)}>
                                             <option value="">Pilih</option>
-                                            {SUMBER_DANA.map(s => <option key={s} value={s}>{s}</option>)}
+                                            {sumberDanaList.map(s => <option key={s} value={s}>{s}</option>)}
                                         </select>
                                     </div>
                                     <div className="form-group">
                                         <label>Metode Pemilihan</label>
                                         <select className="form-select" value={formData.metode || ''} onChange={e => handleChange('metode', e.target.value)}>
                                             <option value="">Pilih</option>
-                                            {METODE_PEMILIHAN.map(m => <option key={m} value={m}>{m}</option>)}
+                                            {metodePemilihanList.map(m => <option key={m} value={m}>{m}</option>)}
                                         </select>
                                     </div>
                                     <div className="form-group">
                                         <label>Jenis Pengadaan</label>
                                         <select className="form-select" value={formData.jenisPengadaan || ''} onChange={e => handleChange('jenisPengadaan', e.target.value)}>
                                             <option value="">Pilih</option>
-                                            {JENIS_PENGADAAN.map(j => <option key={j} value={j}>{j}</option>)}
+                                            {jenisPengadaanList.map(j => <option key={j} value={j}>{j}</option>)}
                                         </select>
                                     </div>
                                 </div>
@@ -662,16 +674,115 @@ const MatriksKegiatan = () => {
             {showSettings && (
                 <div className="modal-overlay" onClick={() => setShowSettings(false)}>
                     <div className="modal" style={{ maxWidth: 900 }} onClick={e => e.stopPropagation()}>
-                        <div className="modal-header"><div className="modal-title">Pengaturan Kolom</div><button className="modal-close" onClick={() => setShowSettings(false)}><X size={18} /></button></div>
-                        <div className="modal-body">
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
-                                {TABLE_COLUMNS.map(col => (
-                                    <label key={col.key} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: 8, background: 'var(--bg-secondary)', borderRadius: 4, cursor: col.required ? 'not-allowed' : 'pointer', opacity: col.required ? 0.7 : 1, fontSize: '0.75rem' }}>
-                                        <input type="checkbox" checked={visibleColumns.includes(col.key)} onChange={() => toggleColumn(col.key)} disabled={col.required} style={{ accentColor: 'var(--accent-blue)' }} />
-                                        <span>{col.label}</span>
-                                    </label>
+                        <div className="modal-header"><div className="modal-title">Pengaturan</div><button className="modal-close" onClick={() => setShowSettings(false)}><X size={18} /></button></div>
+                        <div className="modal-body" style={{ maxHeight: '80vh', overflowY: 'auto' }}>
+                            {/* Tabs */}
+                            <div style={{ display: 'flex', gap: 0, marginBottom: 16, borderBottom: '2px solid var(--border-color)', flexWrap: 'wrap' }}>
+                                {[{ key: 'kolom', label: 'Kolom' }, { key: 'metode', label: 'Metode Pemilihan' }, { key: 'jenis', label: 'Jenis Pengadaan' }, { key: 'sumber', label: 'Sumber Dana' }, { key: 'subkeg', label: 'Sub Kegiatan' }].map(tab => (
+                                    <button key={tab.key} onClick={() => setSettingsTab(tab.key)} style={{
+                                        padding: '8px 16px', border: 'none', background: 'transparent', cursor: 'pointer',
+                                        color: settingsTab === tab.key ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                                        fontWeight: settingsTab === tab.key ? 600 : 400, fontSize: '0.82rem',
+                                        borderBottom: settingsTab === tab.key ? '2px solid var(--accent-blue)' : '2px solid transparent', marginBottom: -2,
+                                    }}>{tab.label}</button>
                                 ))}
                             </div>
+
+                            {/* Tab: Kolom */}
+                            {settingsTab === 'kolom' && (
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 10 }}>
+                                    {TABLE_COLUMNS.map(col => (
+                                        <label key={col.key} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: 8, background: 'var(--bg-secondary)', borderRadius: 4, cursor: col.required ? 'not-allowed' : 'pointer', opacity: col.required ? 0.7 : 1, fontSize: '0.75rem' }}>
+                                            <input type="checkbox" checked={visibleColumns.includes(col.key)} onChange={() => toggleColumn(col.key)} disabled={col.required} style={{ accentColor: 'var(--accent-blue)' }} />
+                                            <span>{col.label}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            )}
+
+                            {/* Tab: Simple list config (Metode, Jenis, Sumber) */}
+                            {['metode', 'jenis', 'sumber'].includes(settingsTab) && (() => {
+                                const configMap = { metode: 'configMetodePemilihan', jenis: 'configJenisPengadaan', sumber: 'configSumberDana' };
+                                const labelMap = { metode: 'Metode Pemilihan', jenis: 'Jenis Pengadaan', sumber: 'Sumber Dana' };
+                                const listName = configMap[settingsTab];
+                                const items = settingsTab === 'metode' ? metodePemilihanList : settingsTab === 'jenis' ? jenisPengadaanList : sumberDanaList;
+                                return (
+                                    <div>
+                                        <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+                                            <input className="form-input" placeholder={`Tambah ${labelMap[settingsTab]}...`}
+                                                value={newConfigItem} onChange={e => setNewConfigItem(e.target.value)}
+                                                onKeyDown={e => { if (e.key === 'Enter' && newConfigItem.trim()) { addConfigItem(listName, newConfigItem.trim()); setNewConfigItem(''); toast.success('Ditambahkan'); } }}
+                                                style={{ flex: 1 }} />
+                                            <button className="btn btn-primary btn-sm" disabled={!newConfigItem.trim()}
+                                                onClick={() => { if (newConfigItem.trim()) { addConfigItem(listName, newConfigItem.trim()); setNewConfigItem(''); toast.success('Ditambahkan'); } }}>
+                                                <Plus size={14} /> Tambah
+                                            </button>
+                                            <button className="btn btn-ghost btn-sm" onClick={() => { resetConfigList(listName); toast.success('Direset ke default'); }} title="Reset ke default">
+                                                <RefreshCw size={14} />
+                                            </button>
+                                        </div>
+                                        <table className="data-table" style={{ fontSize: '0.8rem' }}>
+                                            <thead><tr><th style={{ width: 40 }}>No</th><th>Nama</th><th style={{ width: 60 }}>Aksi</th></tr></thead>
+                                            <tbody>
+                                                {items.map((item, i) => (
+                                                    <tr key={i}>
+                                                        <td>{i + 1}</td>
+                                                        <td>{item}</td>
+                                                        <td>
+                                                            <button className="btn-icon" style={{ color: 'var(--accent-red)' }}
+                                                                onClick={() => { removeConfigItem(listName, i); toast.success('Dihapus'); }} title="Hapus">
+                                                                <Trash2 size={14} />
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                                {items.length === 0 && <tr><td colSpan={3} style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: 20 }}>Belum ada data</td></tr>}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                );
+                            })()}
+
+                            {/* Tab: Sub Kegiatan */}
+                            {settingsTab === 'subkeg' && (
+                                <div>
+                                    <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+                                        <input className="form-input" placeholder="No Sub Kegiatan" value={newSubKode}
+                                            onChange={e => setNewSubKode(e.target.value)} style={{ width: 180 }} />
+                                        <input className="form-input" placeholder="Nama Sub Kegiatan" value={newSubNama}
+                                            onChange={e => setNewSubNama(e.target.value)} style={{ flex: 1 }} />
+                                        <button className="btn btn-primary btn-sm" disabled={!newSubKode.trim() || !newSubNama.trim()}
+                                            onClick={() => {
+                                                addConfigItem('configSubKegiatan', { kode: newSubKode.trim(), nama: newSubNama.trim() });
+                                                setNewSubKode(''); setNewSubNama(''); toast.success('Ditambahkan');
+                                            }}>
+                                            <Plus size={14} /> Tambah
+                                        </button>
+                                        <button className="btn btn-ghost btn-sm" onClick={() => { resetConfigList('configSubKegiatan'); toast.success('Direset ke default'); }} title="Reset ke default">
+                                            <RefreshCw size={14} />
+                                        </button>
+                                    </div>
+                                    <table className="data-table" style={{ fontSize: '0.8rem' }}>
+                                        <thead><tr><th style={{ width: 40 }}>No</th><th style={{ width: 180 }}>Kode</th><th>Nama</th><th style={{ width: 60 }}>Aksi</th></tr></thead>
+                                        <tbody>
+                                            {subKegiatanList.map((item, i) => (
+                                                <tr key={i}>
+                                                    <td>{i + 1}</td>
+                                                    <td style={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{item.kode}</td>
+                                                    <td>{item.nama}</td>
+                                                    <td>
+                                                        <button className="btn-icon" style={{ color: 'var(--accent-red)' }}
+                                                            onClick={() => { removeConfigItem('configSubKegiatan', i); toast.success('Dihapus'); }} title="Hapus">
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                            {subKegiatanList.length === 0 && <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: 20 }}>Belum ada data</td></tr>}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>

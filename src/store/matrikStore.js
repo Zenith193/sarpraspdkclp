@@ -11,11 +11,40 @@ const _seedSekolah = [
     { npsn: '20302002', nama: 'SMPN 02 Kesugihan' },
 ];
 
-// ===== SHARED CONSTANTS =====
-const SUMBER_DANA = ['APBD', 'DAK', 'BANKEU', 'APBD Perubahan', 'SG', 'Bantuan Pemerintah'];
-const JENIS_PENGADAAN = ['Jasa Konsultansi Perencanaan', 'Jasa Konsultansi Pengawasan', 'Pekerjaan Konstruksi', 'Pengadaan Barang'];
-const METODE_PEMILIHAN = ['Tender', 'Non Tender', 'Swakelola', 'E-Katalog'];
-const STATUS_PEMILIK = ['Direktur', 'Kepala Cabang'];
+// ===== DEFAULT CONSTANTS =====
+const DEFAULT_SUMBER_DANA = ['APBD', 'DAK', 'BANKEU', 'APBD Perubahan', 'SG', 'Bantuan Pemerintah'];
+const DEFAULT_JENIS_PENGADAAN = ['Jasa Konsultansi Perencanaan', 'Jasa Konsultansi Pengawasan', 'Pekerjaan Konstruksi', 'Pengadaan Barang'];
+const DEFAULT_METODE_PEMILIHAN = ['E-Purchasing', 'Pengadaan Langsung', 'Swakelola', 'Tender'];
+const DEFAULT_STATUS_PEMILIK = ['Direktur', 'Kepala Cabang'];
+const DEFAULT_SUB_KEGIATAN = [
+    { kode: '1.01.02.2.01.0003', nama: 'Pembangunan Ruang Guru/Kepala Sekolah/TU SD' },
+    { kode: '1.01.02.2.01.0006', nama: 'Pembangunan Sarana, Prasarana dan Utilitas Sekolah SD' },
+    { kode: '1.01.02.2.01.0009', nama: 'Rehabilitasi Sedang/Berat Ruang Guru/Kepala Sekolah/TU SD' },
+    { kode: '1.01.02.2.01.0011', nama: 'Rehabilitasi Sedang/Berat Perpustakaan Sekolah SD' },
+    { kode: '1.01.02.2.01.0014', nama: 'Pengadaan Mebel Sekolah SD' },
+    { kode: '1.01.02.2.01.0031', nama: 'Pembangunan Laboratorium Sekolah Dasar SD' },
+    { kode: '1.01.02.2.01.0032', nama: 'Rehabilitasi Sedang/Berat Laboratorium Sekolah Dasar SD' },
+    { kode: '1.01.02.2.01.0047', nama: 'Pembangunan Ruang Kelas Baru SD' },
+    { kode: '1.01.02.2.01.0048', nama: 'Rehabilitasi Sedang/Berat Sarana, Prasarana dan Utilitas Sekolah SD' },
+    { kode: '1.01.02.2.01.0051', nama: 'Rehabilitasi Sedang/Berat Ruang Kelas Sekolah SD' },
+    { kode: '1.01.02.2.01.0055', nama: 'Pengadaan Alat Praktik dan Peraga Peserta Didik SD' },
+    { kode: '1.01.02.2.02.0004', nama: 'Pembangunan Ruang Unit Kesehatan Sekolah SMP' },
+    { kode: '1.01.02.2.02.0006', nama: 'Pembangunan Laboratorium SMP' },
+    { kode: '1.01.02.2.02.0012', nama: 'Pembangunan Sarana, Prasarana dan Utilitas Sekolah SMP' },
+    { kode: '1.01.02.2.02.0014', nama: 'Rehabilitasi Sedang/Berat Ruang Kelas Sekolah SMP' },
+    { kode: '1.01.02.2.02.0018', nama: 'Rehabilitasi Sedang/Berat Laboratorium SMP' },
+    { kode: '1.01.02.2.02.0024', nama: 'Rehabilitasi Sedang/Berat Sarana, Prasarana dan Utilitas Sekolah SMP' },
+    { kode: '1.01.02.2.02.0025', nama: 'Pengadaan Mebel Sekolah SMP' },
+    { kode: '1.01.02.2.02.0027', nama: 'Pengadaan Perlengkapan Sekolah SMP' },
+    { kode: '1.01.02.2.02.0059', nama: 'Pembangunan Ruang Kelas Baru SMP' },
+    { kode: '1.01.02.2.02.0067', nama: 'Pengadaan Alat Praktik dan Peraga Peserta Didik SMP' },
+];
+
+// Backward-compat exports (will be overridden by store getters below)
+let SUMBER_DANA = DEFAULT_SUMBER_DANA;
+let JENIS_PENGADAAN = DEFAULT_JENIS_PENGADAAN;
+let METODE_PEMILIHAN = DEFAULT_METODE_PEMILIHAN;
+let STATUS_PEMILIK = DEFAULT_STATUS_PEMILIK;
 
 export { SUMBER_DANA, JENIS_PENGADAAN, METODE_PEMILIHAN, STATUS_PEMILIK };
 
@@ -177,6 +206,32 @@ const useMatrikStore = create(
             })),
 
             setMatrikData: (data) => set({ matrikData: data }),
+
+            // ===== CONFIGURABLE LISTS =====
+            configSumberDana: DEFAULT_SUMBER_DANA,
+            configJenisPengadaan: DEFAULT_JENIS_PENGADAAN,
+            configMetodePemilihan: DEFAULT_METODE_PEMILIHAN,
+            configSubKegiatan: DEFAULT_SUB_KEGIATAN,
+
+            addConfigItem: (listName, item) => set((state) => ({
+                [listName]: [...(state[listName] || []), item]
+            })),
+            removeConfigItem: (listName, index) => set((state) => ({
+                [listName]: (state[listName] || []).filter((_, i) => i !== index)
+            })),
+            updateConfigItem: (listName, index, newValue) => set((state) => ({
+                [listName]: (state[listName] || []).map((item, i) => i === index ? newValue : item)
+            })),
+            setConfigList: (listName, list) => set({ [listName]: list }),
+            resetConfigList: (listName) => {
+                const defaults = {
+                    configSumberDana: DEFAULT_SUMBER_DANA,
+                    configJenisPengadaan: DEFAULT_JENIS_PENGADAAN,
+                    configMetodePemilihan: DEFAULT_METODE_PEMILIHAN,
+                    configSubKegiatan: DEFAULT_SUB_KEGIATAN,
+                };
+                set({ [listName]: defaults[listName] || [] });
+            },
 
             // ===== PENCAIRAN =====
             getPencairan: (matrikId) => {
