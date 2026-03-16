@@ -543,7 +543,12 @@ const MatriksKegiatan = () => {
                                     </div>
                                 </div>
                                 <div className="form-row">
-                                    <div className="form-group"><label>Sub Kegiatan</label><SearchableSelect options={subKegiatanList.map(s => `${s.kode} ${s.nama}`)} value={formData.subKegiatan} onChange={(val) => handleChange('subKegiatan', val)} placeholder="Pilih Sub Kegiatan" /></div>
+                                    {(() => {
+                                        const detectedSchool = formData.npsn ? sekolahList.find(s => String(s.npsn) === String(formData.npsn).trim()) : null;
+                                        const detectedJenjang = detectedSchool?.jenjang || null;
+                                        const filteredSubKeg = detectedJenjang ? subKegiatanList.filter(s => s.jenjang === detectedJenjang) : subKegiatanList;
+                                        return <div className="form-group"><label>Sub Kegiatan {detectedJenjang && <span style={{ fontSize: '0.7rem', color: 'var(--accent-blue)', fontWeight: 600 }}>({detectedJenjang})</span>}</label><SearchableSelect options={filteredSubKeg.map(s => `${s.kode} ${s.nama}`)} value={formData.subKegiatan} onChange={(val) => handleChange('subKegiatan', val)} placeholder="Pilih Sub Kegiatan" /></div>;
+                                    })()}
                                     <div className="form-group"><label>No Sub Kegiatan</label><input className="form-input" value={formData.noSubKegiatan || '-'} disabled style={{ background: 'var(--bg-secondary)' }} /></div>
                                     <div className="form-group"><label>Sub Bidang</label><input className="form-input" value={formData.subBidang || '-'} disabled style={{ background: 'var(--bg-secondary)' }} /></div>
                                 </div>
