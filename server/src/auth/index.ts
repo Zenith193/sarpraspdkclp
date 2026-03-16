@@ -37,37 +37,30 @@ export const auth = betterAuth({
         },
     },
     hooks: {
-        after: [
+        before: [
             {
                 matcher(context) {
                     return context.path === '/sign-in/email';
                 },
                 async handler(ctx) {
-                    // After sign-in, check if user is disabled
-                    const response = ctx.response;
-                    if (response && response.status === 200) {
-                        try {
-                            const body = ctx.responseBody as any;
-                            const userId = body?.user?.id;
-                            if (userId) {
-                                const { user: userTable } = await import('../db/schema/index.js');
-                                const { eq } = await import('drizzle-orm');
-                                const rows = await db.select({ aktif: userTable.aktif }).from(userTable).where(eq(userTable.id, userId));
-                                if (rows[0] && rows[0].aktif === false) {
-                                    // Delete the session that was just created
-                                    const { session: sessionTable } = await import('../db/schema/index.js');
-                                    await db.delete(sessionTable).where(eq(sessionTable.userId, userId));
-                                    return {
-                                        response: Response.json(
-                                            { code: 'ACCOUNT_DISABLED', message: 'Akun Anda telah dinonaktifkan. Hubungi administrator.' },
-                                            { status: 403 }
-                                        ),
-                                    };
-                                }
-                            }
-                        } catch (e) {
-                            console.error('[Auth] Hook error:', e);
+                    try {
+                        const body = ctx.body as any;
+                        const email = body?.email;
+                        if (!email) return;
+
+                        const { user: userTable } = await import('../db/schema/index.js');
+                        const { eq } = await import('drizzle-orm');
+                        const rows = await db.select({ aktif: userTable.aktif }).from(userTable).where(eq(userTable.email, email));
+                        if (rows[0] && rows[0].aktif === false) {
+                            return {
+                                response: new Response(
+                                    JSON.stringify({ code: 'ACCOUNT_DISABLED', message: 'Akun Anda telah dinonaktifkan. Hubungi administrator.' }),
+                                    { status: 403, headers: { 'Content-Type': 'application/json' } }
+                                ),
+                            };
                         }
+                    } catch (e) {
+                        console.error('[Auth] Before hook error:', e);
                     }
                 },
             },
