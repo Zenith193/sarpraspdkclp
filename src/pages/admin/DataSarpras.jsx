@@ -122,6 +122,7 @@ const DataSarpras = ({ readOnly = false }) => {
 
     const [openActionId, setOpenActionId] = useState(null);
     const [actionPos, setActionPos] = useState({ top: 0, left: 0 });
+    const actionDropdownRef = useRef(null);
     const handleActionClick = (e, id) => {
         if (openActionId === id) { setOpenActionId(null); return; }
         const rect = e.currentTarget.getBoundingClientRect();
@@ -135,7 +136,7 @@ const DataSarpras = ({ readOnly = false }) => {
             if (filterPanelRef.current && !filterPanelRef.current.contains(e.target)) setShowFilterPanel(false);
             if (colPickerRef.current && !colPickerRef.current.contains(e.target)) setShowColPicker(false);
             if (exportRef.current && !exportRef.current.contains(e.target)) setShowExport(false);
-            setOpenActionId(null);
+            if (actionDropdownRef.current && !actionDropdownRef.current.contains(e.target)) setOpenActionId(null);
         };
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
@@ -1091,7 +1092,7 @@ const DataSarpras = ({ readOnly = false }) => {
                     const item = paged.find(p => p.id === openActionId);
                     if (!item) return null;
                     return (
-                        <div className="dropdown-menu" style={{ position: 'fixed', top: actionPos.top, left: actionPos.left, minWidth: 170, padding: 4, zIndex: 9999, boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}>
+                        <div ref={actionDropdownRef} className="dropdown-menu" style={{ position: 'fixed', top: actionPos.top, left: actionPos.left, minWidth: 170, padding: 4, zIndex: 9999, boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}>
                             <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-primary)', borderRadius: 6 }} className="dropdown-item" onClick={() => { handleViewDetail(item); setOpenActionId(null); }}>
                                 <Eye size={14} /> Lihat Detail
                             </button>
