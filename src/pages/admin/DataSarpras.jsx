@@ -20,7 +20,7 @@ const fmtLuas = (v) => { const n = Math.ceil(v * 100) / 100; return n % 1 === 0 
 const DataSarpras = ({ readOnly = false }) => {
     const user = useAuthStore(s => s.user);
     const { guard, isRestricted } = useCountdownGuard();
-    const canAccessPriority = user?.role === 'Admin' || user?.role === 'Verifikator';
+    const canAccessPriority = user?.role === 'Admin';
     const isSekolah = user?.role === 'Sekolah';
     const isKorwil = (user?.role || '').toLowerCase() === 'korwil';
     const isSekolahOrKorwil = user?.role === 'Sekolah' || isKorwil;
