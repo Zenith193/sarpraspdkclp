@@ -172,10 +172,25 @@ const MatriksKegiatan = () => {
     };
 
     // ===== BATCH IMPORT =====
+    // Short code mappings for template
+    const KODE_SUMBER_DANA = { 'A': 'APBD', 'D': 'DAK', 'B': 'BANKEU', 'AP': 'APBD Perubahan', 'S': 'SG', 'BP': 'Bantuan Pemerintah' };
+    const KODE_JENIS_PENGADAAN = { '1': 'Jasa Konsultansi Perencanaan', '2': 'Jasa Konsultansi Pengawasan', '3': 'Pekerjaan Konstruksi', '4': 'Pengadaan Barang' };
+    const KODE_METODE = { 'E': 'E-Purchasing', 'PL': 'Pengadaan Langsung', 'SW': 'Swakelola', 'T': 'Tender' };
+
+    const resolveCode = (value, codeMap) => {
+        if (!value) return value;
+        const v = String(value).trim();
+        // Check if it's a code
+        const upper = v.toUpperCase();
+        if (codeMap[upper]) return codeMap[upper];
+        if (codeMap[v]) return codeMap[v];
+        // Otherwise return original (user typed full name)
+        return v;
+    };
+
     const TEMPLATE_COLUMNS = [
         { header: 'No Matrik*', key: 'noMatrik' },
         { header: 'NPSN', key: 'npsn' },
-        { header: 'Nama Sekolah', key: 'namaSekolah' },
         { header: 'Nama Paket Pekerjaan*', key: 'namaPaket' },
         { header: 'Sub Kegiatan', key: 'subKegiatan' },
         { header: 'RUP', key: 'rup' },
@@ -184,9 +199,9 @@ const MatriksKegiatan = () => {
         { header: 'HPS', key: 'hps' },
         { header: 'Nilai Kontrak', key: 'nilaiKontrak' },
         { header: 'Honor', key: 'honor' },
-        { header: 'Sumber Dana', key: 'sumberDana' },
+        { header: 'Sumber Dana (Kode)', key: 'sumberDana' },
         { header: 'Metode Pemilihan', key: 'metode' },
-        { header: 'Jenis Pengadaan', key: 'jenisPengadaan' },
+        { header: 'Jenis Pengadaan (Kode)', key: 'jenisPengadaan' },
         { header: 'Penyedia', key: 'penyedia' },
         { header: 'Nama Pemilik', key: 'namaPemilik' },
         { header: 'Status Pemilik', key: 'statusPemilik' },
@@ -208,23 +223,56 @@ const MatriksKegiatan = () => {
     const handleDownloadTemplate = () => {
         const wb = XLSX.utils.book_new();
         const headers = TEMPLATE_COLUMNS.map(c => c.header);
-        // Example row
-        const example = [
-            '1', '20301453', 'SDN Sampang 01', 'Pembangunan Ruang Kelas Baru',
+        // Example rows
+        const example1 = [
+            '1', '20301453', 'Pembangunan Ruang Kelas Baru',
             '1.01.02.2.01.0047 Pembangunan Ruang Kelas Baru', 'RUP-2026-001',
             '150000000', '100000000', '90000000', '95000000', '0',
-            'APBD', 'Tender', 'Pekerjaan Konstruksi',
+            'A', 'Tender', '3',
             'CV. Contoh', 'H. Budi', 'Direktur', 'Jl. Contoh No. 1',
             `${currentYear}-01-15`, '90', String(currentYear),
             '081234567890', 'CV. Konsultan Jaya', 'Ir. Ahmad',
             '', '', '', '', '', ''
         ];
-        const ws = XLSX.utils.aoa_to_sheet([headers, example]);
-        // Set column widths
+        const example2 = [
+            '1,1', '20301453', 'Pengawasan Pembangunan Ruang Kelas',
+            '', '',
+            '', '', '', '5000000', '0',
+            'A', 'PL', '2',
+            'CV. Pengawas', 'Ir. Siti', 'Direktur', 'Jl. Mawar No.5',
+            `${currentYear}-01-15`, '90', String(currentYear),
+            '', '', '',
+            '', '', '', '', '', ''
+        ];
+        const ws = XLSX.utils.aoa_to_sheet([headers, example1, example2]);
         ws['!cols'] = TEMPLATE_COLUMNS.map(c => ({
             wch: c.key === 'namaPaket' ? 40 : c.key === 'subKegiatan' ? 50 : c.key === 'alamatKantor' ? 30 : 20
         }));
         XLSX.utils.book_append_sheet(wb, ws, 'Template Matrik');
+
+        // Reference sheet with code mappings
+        const refData = [
+            ['KODE REFERENSI', '', ''],
+            ['', '', ''],
+            ['SUMBER DANA', 'Kode', 'Nama Lengkap'],
+            ...Object.entries(KODE_SUMBER_DANA).map(([k, v]) => ['', k, v]),
+            ['', '', ''],
+            ['JENIS PENGADAAN', 'Kode', 'Nama Lengkap'],
+            ...Object.entries(KODE_JENIS_PENGADAAN).map(([k, v]) => ['', k, v]),
+            ['', '', ''],
+            ['METODE PEMILIHAN', 'Kode', 'Nama Lengkap'],
+            ...Object.entries(KODE_METODE).map(([k, v]) => ['', k, v]),
+            ['', '', ''],
+            ['CATATAN:', '', ''],
+            ['- Nama Sekolah otomatis terisi dari NPSN', '', ''],
+            ['- Bisa isi kode ATAU nama lengkap', '', ''],
+            ['- No SPK otomatis digenerate', '', ''],
+            ['- Tanggal Selesai otomatis dihitung', '', ''],
+        ];
+        const wsRef = XLSX.utils.aoa_to_sheet(refData);
+        wsRef['!cols'] = [{ wch: 35 }, { wch: 10 }, { wch: 35 }];
+        XLSX.utils.book_append_sheet(wb, wsRef, 'Kode Referensi');
+
         XLSX.writeFile(wb, 'Template_Batch_Matrik.xlsx');
         toast.success('Template berhasil diunduh');
     };
@@ -249,6 +297,10 @@ const MatriksKegiatan = () => {
                     // Auto-fill defaults
                     mapped.noMatrik = String(mapped.noMatrik || '').replace(/\s/g, '');
                     mapped.namaSekolah = mapped.namaSekolah || '-';
+                    // Resolve short codes to full names
+                    if (mapped.sumberDana) mapped.sumberDana = resolveCode(mapped.sumberDana, KODE_SUMBER_DANA);
+                    if (mapped.jenisPengadaan) mapped.jenisPengadaan = resolveCode(mapped.jenisPengadaan, KODE_JENIS_PENGADAAN);
+                    if (mapped.metode) mapped.metode = resolveCode(mapped.metode, KODE_METODE);
                     const subKode = mapped.subKegiatan ? String(mapped.subKegiatan).split(' ')[0] : '';
                     const matchedSubImport = subKegiatanList.find(s => s.kode === subKode);
                     mapped.subBidang = matchedSubImport?.jenjang || inferJenjang(mapped.subKegiatan || '');
