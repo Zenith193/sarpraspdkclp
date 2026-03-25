@@ -898,9 +898,15 @@ const SplTab = () => {
     const loadSpl = useCallback(async () => {
         setSplLoading(true);
         try {
-            const data = await matrikApi.listSpl();
-            setSplData(data);
-        } catch (e) { toast.error('Gagal memuat data SPL'); }
+            const res = await matrikApi.listSpl();
+            console.log('[SPL] API response:', res);
+            // Handle both raw array and wrapped { data: [...] } responses
+            const arr = Array.isArray(res) ? res : (res?.data || res || []);
+            setSplData(Array.isArray(arr) ? arr : []);
+        } catch (e) { 
+            console.error('[SPL] Load error:', e);
+            toast.error('Gagal memuat data SPL: ' + (e.message || 'Unknown error')); 
+        }
         finally { setSplLoading(false); }
     }, []);
 

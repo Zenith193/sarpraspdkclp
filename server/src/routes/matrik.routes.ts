@@ -26,8 +26,12 @@ router.get('/spl', requireAuth, requireRole('admin', 'verifikator'), async (req,
         const result = await matrikService.listSpl({
             tahun: req.query.tahun ? Number(req.query.tahun) : undefined,
         });
+        console.log(`[SPL] Returning ${result.length} items`);
         res.json(result);
-    } catch (e: any) { res.status(500).json({ error: e.message }); }
+    } catch (e: any) { 
+        console.error('[SPL] Error:', e.message);
+        res.status(500).json({ error: e.message }); 
+    }
 });
 
 router.get('/spl/verifikator', requireAuth, requireRole('admin', 'verifikator'), async (_req, res) => {
