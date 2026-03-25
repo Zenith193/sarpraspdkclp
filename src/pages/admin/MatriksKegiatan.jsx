@@ -102,6 +102,8 @@ const MatriksKegiatan = () => {
     const [newSubNama, setNewSubNama] = useState('');
     const [newSubJenjang, setNewSubJenjang] = useState('SD');
     const fileInputRef = useRef(null);
+    const [selectedMatrikIds, setSelectedMatrikIds] = useState(new Set());
+    const [bulkDeleting, setBulkDeleting] = useState(false);
 
     // ===== LOGIC =====
     const filtered = useMemo(() => {
@@ -541,7 +543,12 @@ const MatriksKegiatan = () => {
                             </select>
                         </div>
                     </div>
-                    <div className="table-toolbar-right" style={{ display: 'flex', gap: 8 }}>
+                    <div className="table-toolbar-right" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        {selectedMatrikIds.size > 0 && (
+                            <button className="btn btn-sm" style={{ background: 'var(--accent-red)', color: '#fff', border: 'none' }} onClick={() => setBulkDeleting(true)}>
+                                <Trash2 size={14} /> Hapus ({selectedMatrikIds.size})
+                            </button>
+                        )}
                         <input type="file" ref={fileInputRef} accept=".xlsx,.xls" style={{ display: 'none' }} onChange={handleBatchFile} />
                         <button className="btn btn-ghost btn-sm" onClick={handleDownloadTemplate} title="Download template Excel"><FileDown size={14} /> Template</button>
                         <button className="btn btn-secondary btn-sm" onClick={() => fileInputRef.current?.click()} title="Import batch dari Excel"><Upload size={14} /> Import Batch</button>
@@ -551,10 +558,35 @@ const MatriksKegiatan = () => {
 
                 <div style={{ overflowX: 'auto' }}>
                     <table className="data-table">
-                        <thead><tr>{activeCols.map(col => <th key={col.key}>{col.label}</th>)}</tr></thead>
+                        <thead><tr>
+                            <th style={{ width: 40 }}>
+                                <input type="checkbox"
+                                    checked={paginatedData.length > 0 && paginatedData.every(d => selectedMatrikIds.has(d.id))}
+                                    onChange={(e) => {
+                                        const newSet = new Set(selectedMatrikIds);
+                                        if (e.target.checked) paginatedData.forEach(d => newSet.add(d.id));
+                                        else paginatedData.forEach(d => newSet.delete(d.id));
+                                        setSelectedMatrikIds(newSet);
+                                    }}
+                                    style={{ accentColor: 'var(--accent-blue)', width: 16, height: 16 }}
+                                />
+                            </th>
+                            {activeCols.map(col => <th key={col.key}>{col.label}</th>)}
+                        </tr></thead>
                         <tbody>
                             {paginatedData.map((d) => (
-                                <tr key={d.id}>
+                                <tr key={d.id} style={{ background: selectedMatrikIds.has(d.id) ? 'rgba(59,130,246,0.08)' : undefined }}>
+                                    <td>
+                                        <input type="checkbox"
+                                            checked={selectedMatrikIds.has(d.id)}
+                                            onChange={() => {
+                                                const newSet = new Set(selectedMatrikIds);
+                                                if (newSet.has(d.id)) newSet.delete(d.id); else newSet.add(d.id);
+                                                setSelectedMatrikIds(newSet);
+                                            }}
+                                            style={{ accentColor: 'var(--accent-blue)', width: 16, height: 16 }}
+                                        />
+                                    </td>
                                     {activeCols.map(col => {
                                         switch (col.key) {
                                             case 'noMatrik': return <td key={col.key} style={{ fontWeight: 600, fontFamily: 'monospace' }}>{d.noMatrik}</td>;
@@ -589,6 +621,33 @@ const MatriksKegiatan = () => {
                     </div>
                 </div>
             </div>
+
+            {/* BULK DELETE CONFIRM */}
+            {bulkDeleting && (
+                <div className="modal-overlay" onClick={() => setBulkDeleting(false)}>
+                    <div className="modal" style={{ maxWidth: 450 }} onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <div className="modal-title" style={{ color: 'var(--accent-red)' }}><AlertTriangle size={18} style={{ verticalAlign: -3, marginRight: 6 }} />Hapus {selectedMatrikIds.size} Data</div>
+                            <button className="modal-close" onClick={() => setBulkDeleting(false)}><X size={18} /></button>
+                        </div>
+                        <div className="modal-body">
+                            <p>Yakin ingin menghapus <strong>{selectedMatrikIds.size}</strong> data matrik yang dipilih? Aksi ini tidak bisa dibatalkan.</p>
+                        </div>
+                        <div className="modal-footer">
+                            <button className="btn btn-ghost" onClick={() => setBulkDeleting(false)}>Batal</button>
+                            <button className="btn" style={{ background: 'var(--accent-red)', color: '#fff' }} onClick={async () => {
+                                let deleted = 0;
+                                for (const id of selectedMatrikIds) {
+                                    try { await matrikApi.delete(id); deleteMatrik(id); deleted++; } catch (e) { console.warn('Failed to delete', id, e); }
+                                }
+                                toast.success(`${deleted} data berhasil dihapus`);
+                                setSelectedMatrikIds(new Set());
+                                setBulkDeleting(false);
+                            }}>Hapus Semua</button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* ===== MODAL FORM ===== */}
             {showModal && (
