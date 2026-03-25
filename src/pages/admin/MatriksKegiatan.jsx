@@ -209,7 +209,9 @@ const MatriksKegiatan = () => {
                     // Auto-fill defaults
                     mapped.noMatrik = String(mapped.noMatrik || '').replace(/\s/g, '');
                     mapped.namaSekolah = mapped.namaSekolah || '-';
-                    mapped.subBidang = inferJenjang(mapped.subKegiatan || '');
+                    const subKode = mapped.subKegiatan ? String(mapped.subKegiatan).split(' ')[0] : '';
+                    const matchedSubImport = subKegiatanList.find(s => s.kode === subKode);
+                    mapped.subBidang = matchedSubImport?.jenjang || inferJenjang(mapped.subKegiatan || '');
                     if (mapped.subKegiatan) {
                         const parts = String(mapped.subKegiatan).split(' ');
                         mapped.noSubKegiatan = parts[0] || '';
@@ -341,7 +343,10 @@ const MatriksKegiatan = () => {
             if (field === 'subKegiatan') {
                 const parts = value.split(' ');
                 updated.noSubKegiatan = parts[0] || '';
-                updated.subBidang = inferJenjang(value);
+                // Look up jenjang from configured sub kegiatan list (instead of text inference)
+                const kode = parts[0];
+                const matchedSub = subKegiatanList.find(s => s.kode === kode);
+                updated.subBidang = matchedSub?.jenjang || inferJenjang(value);
             }
 
             if (field === 'tanggalMulai' || field === 'jangkaWaktu') {
