@@ -173,6 +173,7 @@ const MatriksKegiatan = () => {
     const TEMPLATE_COLUMNS = [
         { header: 'No Matrik*', key: 'noMatrik' },
         { header: 'NPSN', key: 'npsn' },
+        { header: 'Nama Sekolah', key: 'namaSekolah' },
         { header: 'Nama Paket Pekerjaan*', key: 'namaPaket' },
         { header: 'Sub Kegiatan', key: 'subKegiatan' },
         { header: 'RUP', key: 'rup' },
@@ -180,6 +181,7 @@ const MatriksKegiatan = () => {
         { header: 'Pagu Paket', key: 'paguPaket' },
         { header: 'HPS', key: 'hps' },
         { header: 'Nilai Kontrak', key: 'nilaiKontrak' },
+        { header: 'Honor', key: 'honor' },
         { header: 'Sumber Dana', key: 'sumberDana' },
         { header: 'Metode Pemilihan', key: 'metode' },
         { header: 'Jenis Pengadaan', key: 'jenisPengadaan' },
@@ -190,16 +192,36 @@ const MatriksKegiatan = () => {
         { header: 'Tanggal Mulai (YYYY-MM-DD)', key: 'tanggalMulai' },
         { header: 'Jangka Waktu (HK)', key: 'jangkaWaktu' },
         { header: 'Tahun Anggaran', key: 'tahunAnggaran' },
+        { header: 'No HP Penyedia', key: 'noHp' },
+        { header: 'Konsultan Pengawas', key: 'konsultanPengawas' },
+        { header: 'Dir. Konsultan Pengawas', key: 'dirKonsultanPengawas' },
+        { header: 'No MC 0%', key: 'noMc0' },
+        { header: 'Tgl MC 0% (YYYY-MM-DD)', key: 'tglMc0' },
+        { header: 'No MC 100%', key: 'noMc100' },
+        { header: 'Tgl MC 100% (YYYY-MM-DD)', key: 'tglMc100' },
+        { header: 'No PCM', key: 'noPcm' },
+        { header: 'Tgl PCM (YYYY-MM-DD)', key: 'tglPcm' },
     ];
 
     const handleDownloadTemplate = () => {
         const wb = XLSX.utils.book_new();
         const headers = TEMPLATE_COLUMNS.map(c => c.header);
         // Example row
-        const example = ['1', '20301453', 'Pembangunan Ruang Kelas Baru', '', '', '150000000', '100000000', '90000000', '95000000', 'APBD', 'Tender', 'Pekerjaan Konstruksi', 'CV. Contoh', 'H. Budi', 'Direktur', 'Jl. Contoh No. 1', `${currentYear}-01-15`, '90', String(currentYear)];
+        const example = [
+            '1', '20301453', 'SDN Sampang 01', 'Pembangunan Ruang Kelas Baru',
+            '1.01.02.2.01.0047 Pembangunan Ruang Kelas Baru', 'RUP-2026-001',
+            '150000000', '100000000', '90000000', '95000000', '0',
+            'APBD', 'Tender', 'Pekerjaan Konstruksi',
+            'CV. Contoh', 'H. Budi', 'Direktur', 'Jl. Contoh No. 1',
+            `${currentYear}-01-15`, '90', String(currentYear),
+            '081234567890', 'CV. Konsultan Jaya', 'Ir. Ahmad',
+            '', '', '', '', '', ''
+        ];
         const ws = XLSX.utils.aoa_to_sheet([headers, example]);
         // Set column widths
-        ws['!cols'] = TEMPLATE_COLUMNS.map((_, i) => ({ wch: i === 3 ? 35 : i === 4 ? 30 : 18 }));
+        ws['!cols'] = TEMPLATE_COLUMNS.map(c => ({
+            wch: c.key === 'namaPaket' ? 40 : c.key === 'subKegiatan' ? 50 : c.key === 'alamatKantor' ? 30 : 20
+        }));
         XLSX.utils.book_append_sheet(wb, ws, 'Template Matrik');
         XLSX.writeFile(wb, 'Template_Batch_Matrik.xlsx');
         toast.success('Template berhasil diunduh');
@@ -233,7 +255,7 @@ const MatriksKegiatan = () => {
                         mapped.noSubKegiatan = parts[0] || '';
                     }
                     // Numbers
-                    ['paguAnggaran', 'paguPaket', 'hps', 'nilaiKontrak'].forEach(k => {
+                    ['paguAnggaran', 'paguPaket', 'hps', 'nilaiKontrak', 'honor'].forEach(k => {
                         mapped[k] = mapped[k] ? parseInt(String(mapped[k]).replace(/\D/g, ''), 10) || null : null;
                     });
                     mapped.jangkaWaktu = mapped.jangkaWaktu ? parseInt(mapped.jangkaWaktu, 10) || '' : '';
