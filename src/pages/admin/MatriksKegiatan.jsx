@@ -74,6 +74,7 @@ const MatriksKegiatan = () => {
     // ===== SHARED STORE =====
     const { matrikData, addMatrik, updateMatrik, deleteMatrik, setMatrikData,
         configSumberDana, configJenisPengadaan, configMetodePemilihan, configSubKegiatan,
+        configKodeMap, updateKode,
         addConfigItem, removeConfigItem, updateConfigItem, resetConfigList
     } = useMatrikStore();
     const { data: sekolahList } = useSekolahData();
@@ -172,10 +173,18 @@ const MatriksKegiatan = () => {
     };
 
     // ===== BATCH IMPORT =====
-    // Short code mappings for template
-    const KODE_SUMBER_DANA = { 'A': 'APBD', 'D': 'DAK', 'B': 'BANKEU', 'AP': 'APBD Perubahan', 'S': 'SG', 'BP': 'Bantuan Pemerintah' };
-    const KODE_JENIS_PENGADAAN = { '1': 'Jasa Konsultansi Perencanaan', '2': 'Jasa Konsultansi Pengawasan', '3': 'Pekerjaan Konstruksi', '4': 'Pengadaan Barang' };
-    const KODE_METODE = { 'E': 'E-Purchasing', 'PL': 'Pengadaan Langsung', 'SW': 'Swakelola', 'T': 'Tender' };
+    // Short code mappings - built dynamically from configKodeMap in store
+    const buildCodeMap = (items) => {
+        const map = {};
+        items.forEach(name => {
+            const kode = (configKodeMap || {})[name];
+            if (kode) map[kode.toUpperCase()] = name;
+        });
+        return map;
+    };
+    const KODE_SUMBER_DANA = buildCodeMap(sumberDanaList);
+    const KODE_JENIS_PENGADAAN = buildCodeMap(jenisPengadaanList);
+    const KODE_METODE = buildCodeMap(metodePemilihanList);
 
     const resolveCode = (value, codeMap) => {
         if (!value) return value;
@@ -250,18 +259,19 @@ const MatriksKegiatan = () => {
         }));
         XLSX.utils.book_append_sheet(wb, ws, 'Template Matrik');
 
-        // Reference sheet with code mappings
+        // Reference sheet with code mappings (from store config)
+        const km = configKodeMap || {};
         const refData = [
             ['KODE REFERENSI', '', ''],
             ['', '', ''],
             ['SUMBER DANA', 'Kode', 'Nama Lengkap'],
-            ...Object.entries(KODE_SUMBER_DANA).map(([k, v]) => ['', k, v]),
+            ...sumberDanaList.map(name => ['', km[name] || '-', name]),
             ['', '', ''],
             ['JENIS PENGADAAN', 'Kode', 'Nama Lengkap'],
-            ...Object.entries(KODE_JENIS_PENGADAAN).map(([k, v]) => ['', k, v]),
+            ...jenisPengadaanList.map(name => ['', km[name] || '-', name]),
             ['', '', ''],
             ['METODE PEMILIHAN', 'Kode', 'Nama Lengkap'],
-            ...Object.entries(KODE_METODE).map(([k, v]) => ['', k, v]),
+            ...metodePemilihanList.map(name => ['', km[name] || '-', name]),
             ['', '', ''],
             ['CATATAN:', '', ''],
             ['- Nama Sekolah otomatis terisi dari NPSN', '', ''],
@@ -951,12 +961,21 @@ const MatriksKegiatan = () => {
                                             </button>
                                         </div>
                                         <table className="data-table" style={{ fontSize: '0.8rem' }}>
-                                            <thead><tr><th style={{ width: 40 }}>No</th><th>Nama</th><th style={{ width: 60 }}>Aksi</th></tr></thead>
+                                            <thead><tr><th style={{ width: 40 }}>No</th><th>Nama</th><th style={{ width: 80 }}>Kode</th><th style={{ width: 60 }}>Aksi</th></tr></thead>
                                             <tbody>
                                                 {items.map((item, i) => (
                                                     <tr key={i}>
                                                         <td>{i + 1}</td>
                                                         <td>{item}</td>
+                                                        <td>
+                                                            <input
+                                                                className="form-input"
+                                                                value={(configKodeMap || {})[item] || ''}
+                                                                onChange={e => updateKode(item, e.target.value.toUpperCase())}
+                                                                placeholder="-"
+                                                                style={{ padding: '4px 6px', fontSize: '0.8rem', textAlign: 'center', fontWeight: 600, width: '100%', textTransform: 'uppercase' }}
+                                                            />
+                                                        </td>
                                                         <td>
                                                             <button className="btn-icon" style={{ color: 'var(--accent-red)' }}
                                                                 onClick={() => { removeConfigItem(listName, i); toast.success('Dihapus'); }} title="Hapus">
@@ -965,7 +984,7 @@ const MatriksKegiatan = () => {
                                                         </td>
                                                     </tr>
                                                 ))}
-                                                {items.length === 0 && <tr><td colSpan={3} style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: 20 }}>Belum ada data</td></tr>}
+                                                {items.length === 0 && <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: 20 }}>Belum ada data</td></tr>}
                                             </tbody>
                                         </table>
                                     </div>

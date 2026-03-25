@@ -213,6 +213,17 @@ const useMatrikStore = create(
             configMetodePemilihan: DEFAULT_METODE_PEMILIHAN,
             configSubKegiatan: DEFAULT_SUB_KEGIATAN,
 
+            // Short code map: { 'APBD': 'A', 'DAK': 'D', 'Jasa Konsultansi Perencanaan': '1', ... }
+            configKodeMap: {
+                'APBD': 'A', 'DAK': 'D', 'BANKEU': 'B', 'APBD Perubahan': 'AP', 'SG': 'S', 'Bantuan Pemerintah': 'BP',
+                'Jasa Konsultansi Perencanaan': '1', 'Jasa Konsultansi Pengawasan': '2', 'Pekerjaan Konstruksi': '3', 'Pengadaan Barang': '4',
+                'E-Purchasing': 'E', 'Pengadaan Langsung': 'PL', 'Swakelola': 'SW', 'Tender': 'T',
+            },
+
+            updateKode: (nama, kode) => set((state) => ({
+                configKodeMap: { ...state.configKodeMap, [nama]: kode }
+            })),
+
             addConfigItem: (listName, item) => set((state) => ({
                 [listName]: [...(state[listName] || []), item]
             })),
@@ -230,7 +241,15 @@ const useMatrikStore = create(
                     configMetodePemilihan: DEFAULT_METODE_PEMILIHAN,
                     configSubKegiatan: DEFAULT_SUB_KEGIATAN,
                 };
-                set({ [listName]: defaults[listName] || [] });
+                const defaultKodes = {
+                    'APBD': 'A', 'DAK': 'D', 'BANKEU': 'B', 'APBD Perubahan': 'AP', 'SG': 'S', 'Bantuan Pemerintah': 'BP',
+                    'Jasa Konsultansi Perencanaan': '1', 'Jasa Konsultansi Pengawasan': '2', 'Pekerjaan Konstruksi': '3', 'Pengadaan Barang': '4',
+                    'E-Purchasing': 'E', 'Pengadaan Langsung': 'PL', 'Swakelola': 'SW', 'Tender': 'T',
+                };
+                set((state) => ({
+                    [listName]: defaults[listName] || [],
+                    configKodeMap: { ...state.configKodeMap, ...defaultKodes }
+                }));
             },
 
             // ===== PENCAIRAN =====
