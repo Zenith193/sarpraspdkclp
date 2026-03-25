@@ -73,7 +73,11 @@ router.post('/', requireAuth, requireRole('admin'), async (req, res) => {
 });
 
 router.put('/:id', requireAuth, requireRole('admin'), async (req, res) => {
-    try { res.json(await matrikService.update(Number(req.params.id), req.body)); } catch (e: any) { res.status(500).json({ error: e.message }); }
+    try {
+        const result = await matrikService.update(Number(req.params.id), req.body);
+        if (!result) { res.status(404).json({ error: 'Data tidak ditemukan' }); return; }
+        res.json(result);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {

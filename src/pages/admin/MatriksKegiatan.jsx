@@ -401,13 +401,29 @@ const MatriksKegiatan = () => {
 
     const executeSave = async (dataToSave, target) => {
         try {
-            if (target) {
-                await matrikApi.update(target.id, dataToSave);
-                updateMatrik(target.id, dataToSave);
-                toast.success("Data diperbarui");
+            // Strip local-only fields before sending to server
+            const { _rowNum, ...serverData } = dataToSave;
+            if (target && typeof target.id === 'number' && target.id > 0) {
+                try {
+                    const result = await matrikApi.update(target.id, serverData);
+                    if (result) {
+                        updateMatrik(target.id, result);
+                        toast.success("Data diperbarui");
+                    } else {
+                        // Item not found in DB — create it instead
+                        const created = await matrikApi.create(serverData);
+                        if (created) updateMatrik(target.id, created);
+                        toast.success("Data disimpan ke server");
+                    }
+                } catch (updateErr) {
+                    // Update failed — try create as fallback
+                    const created = await matrikApi.create(serverData);
+                    if (created) updateMatrik(target.id, created);
+                    toast.success("Data disimpan ke server");
+                }
             } else {
-                const result = await matrikApi.create(dataToSave);
-                addMatrik(result || dataToSave);
+                const result = await matrikApi.create(serverData);
+                addMatrik(result || serverData);
                 toast.success("Data ditambahkan");
             }
         } catch (err) {
