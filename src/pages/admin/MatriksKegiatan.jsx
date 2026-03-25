@@ -130,6 +130,22 @@ const MatriksKegiatan = () => {
 
     useEffect(() => { if (showModal) { saveDraft({ formData, editTarget }); } }, [formData, editTarget, showModal]);
 
+    // Load matrik data from server on mount
+    useEffect(() => {
+        const loadFromServer = async () => {
+            try {
+                const res = await matrikApi.list({ limit: 9999 });
+                const serverData = res?.data || res || [];
+                if (Array.isArray(serverData) && serverData.length > 0) {
+                    setMatrikData(serverData);
+                }
+            } catch (err) {
+                console.warn('[Matrik] Failed to load from server:', err.message);
+            }
+        };
+        loadFromServer();
+    }, []);
+
     const handleExport = () => {
         if (sortedData.length === 0) { toast.error("Tidak ada data."); return; }
         const exportColumns = TABLE_COLUMNS.filter(c => c.key !== 'aksi');
@@ -251,16 +267,20 @@ const MatriksKegiatan = () => {
         e.target.value = ''; // reset
     };
 
-    const executeBatchImport = () => {
+    const executeBatchImport = async () => {
         if (!batchPreview?.length) return;
         setBatchImporting(true);
-        let added = 0;
-        batchPreview.forEach(item => {
-            const { _rowNum, ...data } = item;
-            addMatrik(data);
-            added++;
-        });
-        toast.success(`${added} data berhasil diimpor`);
+        try {
+            const items = batchPreview.map(({ _rowNum, ...data }) => data);
+            const result = await matrikApi.bulkCreate(items);
+            // Also update local store with server-returned data (with real IDs)
+            const serverData = result?.data || result || items;
+            if (Array.isArray(serverData)) serverData.forEach(d => addMatrik(d));
+            toast.success(`${items.length} data berhasil diimpor ke server`);
+        } catch (err) {
+            console.error('[Matrik] Batch import error:', err);
+            toast.error('Gagal menyimpan ke server: ' + (err.message || 'Unknown error'));
+        }
         setBatchPreview(null);
         setBatchImporting(false);
     };
@@ -379,13 +399,20 @@ const MatriksKegiatan = () => {
         else { executeSave(formData, editTarget); }
     };
 
-    const executeSave = (dataToSave, target) => {
-        if (target) {
-            updateMatrik(target.id, dataToSave);
-            toast.success("Data diperbarui");
-        } else {
-            addMatrik(dataToSave);
-            toast.success("Data ditambahkan");
+    const executeSave = async (dataToSave, target) => {
+        try {
+            if (target) {
+                await matrikApi.update(target.id, dataToSave);
+                updateMatrik(target.id, dataToSave);
+                toast.success("Data diperbarui");
+            } else {
+                const result = await matrikApi.create(dataToSave);
+                addMatrik(result || dataToSave);
+                toast.success("Data ditambahkan");
+            }
+        } catch (err) {
+            console.error('[Matrik] Save error:', err);
+            toast.error('Gagal menyimpan: ' + (err.message || 'Unknown error'));
         }
         setShowModal(false); setShiftConfirm(null); clearDraft();
     };
@@ -418,10 +445,15 @@ const MatriksKegiatan = () => {
         setShowModal(false); setShiftConfirm(null); clearDraft();
     };
 
-    const executeDelete = () => {
+    const executeDelete = async () => {
         if (deleteTarget) {
-            deleteMatrik(deleteTarget.id);
-            toast.success("Data dihapus");
+            try {
+                await matrikApi.delete(deleteTarget.id);
+                deleteMatrik(deleteTarget.id);
+                toast.success("Data dihapus");
+            } catch (err) {
+                toast.error('Gagal menghapus: ' + (err.message || 'Unknown error'));
+            }
             setDeleteTarget(null);
         }
     };

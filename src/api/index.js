@@ -73,7 +73,7 @@ export const matrikApi = {
     create: (data) => api.post('/matrik', data),
     update: (id, data) => api.put(`/matrik/${id}`, data),
     delete: (id) => api.delete(`/matrik/${id}`),
-    bulkCreate: (items) => api.post('/matrik/bulk', { items }),
+    bulkCreate: (items) => api.post('/matrik/import', { items }),
     // SPL
     listSpl: (params = {}) => { const q = new URLSearchParams(params).toString(); return api.get(`/matrik/spl?${q}`); },
     splVerifikator: () => api.get('/matrik/spl/verifikator'),
