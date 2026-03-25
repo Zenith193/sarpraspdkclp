@@ -670,10 +670,47 @@ const MatriksKegiatan = () => {
 
                             <Section title="DATA SPL / MC / PCM" icon={<Phone size={16} />}>
                                 <div className="form-group"><label>No HP Penyedia</label><input className="form-input" value={formData.noHp || ''} onChange={e => handleChange('noHp', e.target.value)} placeholder="Contoh: 08123456789" /></div>
-                                <div className="form-row">
-                                    <div className="form-group"><label>Konsultan Pengawas</label><input className="form-input" value={formData.konsultanPengawas || ''} onChange={e => handleChange('konsultanPengawas', e.target.value)} /></div>
-                                    <div className="form-group"><label>Direktur Konsultan Pengawas</label><input className="form-input" value={formData.dirKonsultanPengawas || ''} onChange={e => handleChange('dirKonsultanPengawas', e.target.value)} /></div>
-                                </div>
+                                {(() => {
+                                    // Get Jasa Konsultansi packages for dropdown
+                                    const konsultansiPakets = matrikData.filter(d =>
+                                        d.jenisPengadaan && d.jenisPengadaan.toLowerCase().includes('konsultansi') &&
+                                        d.penyedia && d.id !== formData.id
+                                    );
+                                    const uniqueKonsultan = [];
+                                    const seen = new Set();
+                                    konsultansiPakets.forEach(d => {
+                                        const key = d.penyedia.trim();
+                                        if (!seen.has(key)) {
+                                            seen.add(key);
+                                            uniqueKonsultan.push({ penyedia: d.penyedia, direktur: d.namaPemilik || '' });
+                                        }
+                                    });
+                                    return (
+                                        <div className="form-row">
+                                            <div className="form-group">
+                                                <label>Konsultan Pengawas</label>
+                                                {uniqueKonsultan.length > 0 ? (
+                                                    <SearchableSelect
+                                                        options={uniqueKonsultan.map(k => k.penyedia)}
+                                                        value={formData.konsultanPengawas || ''}
+                                                        onChange={(val) => {
+                                                            const matched = uniqueKonsultan.find(k => k.penyedia === val);
+                                                            handleChange('konsultanPengawas', val);
+                                                            if (matched) handleChange('dirKonsultanPengawas', matched.direktur);
+                                                        }}
+                                                        placeholder="Pilih dari Jasa Konsultansi..."
+                                                    />
+                                                ) : (
+                                                    <input className="form-input" value={formData.konsultanPengawas || ''} onChange={e => handleChange('konsultanPengawas', e.target.value)} placeholder="Belum ada data Jasa Konsultansi" />
+                                                )}
+                                            </div>
+                                            <div className="form-group">
+                                                <label>Direktur Konsultan Pengawas</label>
+                                                <input className="form-input" value={formData.dirKonsultanPengawas || ''} onChange={e => handleChange('dirKonsultanPengawas', e.target.value)} placeholder="Otomatis dari konsultan" />
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
                                 <div className="form-row">
                                     <div className="form-group"><label>No MC 0%</label><input className="form-input" value={formData.noMc0 || ''} onChange={e => handleChange('noMc0', e.target.value)} /></div>
                                     <div className="form-group"><label>Tanggal MC 0%</label><input className="form-input" type="date" value={formData.tglMc0 || ''} onChange={e => handleChange('tglMc0', e.target.value)} /></div>
