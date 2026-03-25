@@ -70,9 +70,12 @@ const CountdownSettings = () => {
 
     // Click outside to close dropdown
     useEffect(() => {
-        const handler = () => setOpenActionId(null);
-        document.addEventListener('mousedown', handler);
-        return () => document.removeEventListener('mousedown', handler);
+        const handler = (e) => {
+            if (e.target.closest('.dropdown-menu') || e.target.closest('.btn-icon')) return;
+            setOpenActionId(null);
+        };
+        document.addEventListener('click', handler);
+        return () => document.removeEventListener('click', handler);
     }, []);
 
     const saveToServer = async (timers) => {
