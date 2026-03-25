@@ -234,10 +234,10 @@ const MatriksKegiatan = () => {
         const headers = TEMPLATE_COLUMNS.map(c => c.header);
         // Example rows
         const example1 = [
-            '1', '20301453', 'Pembangunan Ruang Kelas Baru',
-            '1.01.02.2.01.0047 Pembangunan Ruang Kelas Baru', 'RUP-2026-001',
+            '1', '20301453', 'Pembangunan Ruang Kelas Baru SDN Sampang 01',
+            'Pembangunan Ruang Kelas Baru', 'RUP-2026-001',
             '150000000', '100000000', '90000000', '95000000', '0',
-            'A', 'Tender', '3',
+            'A', 'T', '3',
             'CV. Contoh', 'H. Budi', 'Direktur', 'Jl. Contoh No. 1',
             `${currentYear}-01-15`, '90', String(currentYear),
             '081234567890', 'CV. Konsultan Jaya', 'Ir. Ahmad',
@@ -245,7 +245,7 @@ const MatriksKegiatan = () => {
         ];
         const example2 = [
             '1,1', '20301453', 'Pengawasan Pembangunan Ruang Kelas',
-            '', '',
+            'Rehabilitasi Sedang/Berat Ruang Kelas Sekolah', '',
             '', '', '', '5000000', '0',
             'A', 'PL', '2',
             'CV. Pengawas', 'Ir. Siti', 'Direktur', 'Jl. Mawar No.5',
@@ -311,12 +311,58 @@ const MatriksKegiatan = () => {
                     if (mapped.sumberDana) mapped.sumberDana = resolveCode(mapped.sumberDana, KODE_SUMBER_DANA);
                     if (mapped.jenisPengadaan) mapped.jenisPengadaan = resolveCode(mapped.jenisPengadaan, KODE_JENIS_PENGADAAN);
                     if (mapped.metode) mapped.metode = resolveCode(mapped.metode, KODE_METODE);
-                    const subKode = mapped.subKegiatan ? String(mapped.subKegiatan).split(' ')[0] : '';
-                    const matchedSubImport = subKegiatanList.find(s => s.kode === subKode);
-                    mapped.subBidang = matchedSubImport?.jenjang || inferJenjang(mapped.subKegiatan || '');
+
+                    // Auto-resolve Sub Kegiatan: support name-only (e.g. "Pembangunan Ruang Kelas Baru")
                     if (mapped.subKegiatan) {
-                        const parts = String(mapped.subKegiatan).split(' ');
-                        mapped.noSubKegiatan = parts[0] || '';
+                        const subVal = String(mapped.subKegiatan).trim();
+                        const firstPart = subVal.split(' ')[0];
+                        const isFullFormat = /^\d+\.\d+/.test(firstPart); // starts with kode like "1.01.02..."
+
+                        if (isFullFormat) {
+                            // Full format: "kode nama" — existing logic
+                            const matchedSub = subKegiatanList.find(s => s.kode === firstPart);
+                            mapped.noSubKegiatan = firstPart;
+                            mapped.subBidang = matchedSub?.jenjang || inferJenjang(subVal);
+                            mapped.subKegiatan = subVal;
+                        } else {
+                            // Name only: detect jenjang from NPSN, find matching sub kegiatan
+                            const school = mapped.npsn ? sekolahList.find(s => String(s.npsn) === String(mapped.npsn).trim()) : null;
+                            const jenjang = school?.jenjang || null;
+                            const namaLower = subVal.toLowerCase();
+
+                            // Find matching sub kegiatan by name (and jenjang if available)
+                            let matchedSub = null;
+                            if (jenjang) {
+                                matchedSub = subKegiatanList.find(s => s.nama.toLowerCase() === namaLower && s.jenjang === jenjang);
+                            }
+                            if (!matchedSub) {
+                                // Fallback: match by name only (first match)
+                                matchedSub = subKegiatanList.find(s => s.nama.toLowerCase() === namaLower);
+                            }
+                            if (!matchedSub) {
+                                // Partial match
+                                matchedSub = subKegiatanList.find(s => s.nama.toLowerCase().includes(namaLower) || namaLower.includes(s.nama.toLowerCase()));
+                                if (matchedSub && jenjang) {
+                                    const betterMatch = subKegiatanList.find(s => (s.nama.toLowerCase().includes(namaLower) || namaLower.includes(s.nama.toLowerCase())) && s.jenjang === jenjang);
+                                    if (betterMatch) matchedSub = betterMatch;
+                                }
+                            }
+
+                            if (matchedSub) {
+                                mapped.subKegiatan = `${matchedSub.kode} ${matchedSub.nama}`;
+                                mapped.noSubKegiatan = matchedSub.kode;
+                                mapped.subBidang = matchedSub.jenjang;
+                            } else {
+                                mapped.subKegiatan = subVal;
+                                mapped.subBidang = jenjang || inferJenjang(subVal);
+                            }
+                        }
+                    }
+
+                    // Auto-fill sekolah name from NPSN
+                    if (mapped.npsn) {
+                        const found = sekolahList.find(s => String(s.npsn) === String(mapped.npsn).trim());
+                        if (found && (!mapped.namaSekolah || mapped.namaSekolah === '-')) mapped.namaSekolah = found.nama;
                     }
                     // Numbers
                     ['paguAnggaran', 'paguPaket', 'hps', 'nilaiKontrak', 'honor'].forEach(k => {
@@ -326,11 +372,6 @@ const MatriksKegiatan = () => {
                     mapped.tahunAnggaran = mapped.tahunAnggaran ? parseInt(mapped.tahunAnggaran, 10) || currentYear : currentYear;
                     mapped.terbilangKontrak = mapped.nilaiKontrak ? fullTerbilang(mapped.nilaiKontrak) : '-';
                     mapped.noSpk = generateNoSpk(mapped.noMatrik, mapped.jenisPengadaan, mapped.sumberDana, mapped.tahunAnggaran);
-                    // Auto-fill sekolah
-                    if (mapped.npsn) {
-                        const found = sekolahList.find(s => String(s.npsn) === String(mapped.npsn));
-                        if (found && mapped.namaSekolah === '-') mapped.namaSekolah = found.nama;
-                    }
                     // tanggal selesai
                     if (mapped.tanggalMulai && mapped.jangkaWaktu) {
                         const parts = String(mapped.tanggalMulai).split('-');
