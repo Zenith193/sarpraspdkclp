@@ -221,12 +221,12 @@ const MatriksKegiatan = () => {
         { header: 'No HP Penyedia', key: 'noHp' },
         { header: 'Konsultan Pengawas', key: 'konsultanPengawas' },
         { header: 'Dir. Konsultan Pengawas', key: 'dirKonsultanPengawas' },
-        { header: 'No MC 0%', key: 'noMc0' },
-        { header: 'Tgl MC 0% (YYYY-MM-DD)', key: 'tglMc0' },
-        { header: 'No MC 100%', key: 'noMc100' },
-        { header: 'Tgl MC 100% (YYYY-MM-DD)', key: 'tglMc100' },
-        { header: 'No PCM', key: 'noPcm' },
+        { header: 'No PCM (Otomatis)', key: 'noPcm' },
         { header: 'Tgl PCM (YYYY-MM-DD)', key: 'tglPcm' },
+        { header: 'No MC 0% (Otomatis)', key: 'noMc0' },
+        { header: 'Tgl MC 0% (YYYY-MM-DD)', key: 'tglMc0' },
+        { header: 'No MC 100% (Otomatis)', key: 'noMc100' },
+        { header: 'Tgl MC 100% (YYYY-MM-DD)', key: 'tglMc100' },
     ];
 
     const handleDownloadTemplate = () => {
@@ -372,6 +372,16 @@ const MatriksKegiatan = () => {
                     mapped.tahunAnggaran = mapped.tahunAnggaran ? parseInt(mapped.tahunAnggaran, 10) || currentYear : currentYear;
                     mapped.terbilangKontrak = mapped.nilaiKontrak ? fullTerbilang(mapped.nilaiKontrak) : '-';
                     mapped.noSpk = generateNoSpk(mapped.noMatrik, mapped.jenisPengadaan, mapped.sumberDana, mapped.tahunAnggaran);
+                    // Auto-generate PCM/MC numbers from SPK
+                    if (mapped.noSpk) {
+                        const spkParts = mapped.noSpk.split('/');
+                        if (spkParts.length >= 3) {
+                            const genSuffix = (s) => `${spkParts[0]}/${spkParts[1]}${s}/${spkParts.slice(2).join('/')}`;
+                            if (!mapped.noPcm) mapped.noPcm = genSuffix('.f');
+                            if (!mapped.noMc0) mapped.noMc0 = genSuffix('.g');
+                            if (!mapped.noMc100) mapped.noMc100 = genSuffix('.h');
+                        }
+                    }
                     // tanggal selesai
                     if (mapped.tanggalMulai && mapped.jangkaWaktu) {
                         const parts = String(mapped.tanggalMulai).split('-');
@@ -911,18 +921,38 @@ const MatriksKegiatan = () => {
                                         </div>
                                     );
                                 })()}
-                                <div className="form-row">
-                                    <div className="form-group"><label>No MC 0%</label><input className="form-input" value={formData.noMc0 || ''} onChange={e => handleChange('noMc0', e.target.value)} /></div>
-                                    <div className="form-group"><label>Tanggal MC 0%</label><input className="form-input" type="date" value={formData.tglMc0 || ''} onChange={e => handleChange('tglMc0', e.target.value)} /></div>
-                                </div>
-                                <div className="form-row">
-                                    <div className="form-group"><label>No MC 100%</label><input className="form-input" value={formData.noMc100 || ''} onChange={e => handleChange('noMc100', e.target.value)} /></div>
-                                    <div className="form-group"><label>Tanggal MC 100%</label><input className="form-input" type="date" value={formData.tglMc100 || ''} onChange={e => handleChange('tglMc100', e.target.value)} /></div>
-                                </div>
-                                <div className="form-row">
-                                    <div className="form-group"><label>No PCM</label><input className="form-input" value={formData.noPcm || ''} onChange={e => handleChange('noPcm', e.target.value)} /></div>
-                                    <div className="form-group"><label>Tanggal PCM</label><input className="form-input" type="date" value={formData.tglPcm || ''} onChange={e => handleChange('tglPcm', e.target.value)} /></div>
-                                </div>
+                                {(() => {
+                                    // Auto-generate PCM/MC numbers from SPK pattern
+                                    const spk = formData.noSpk || '';
+                                    const genNo = (suffix) => {
+                                        if (!spk) return '';
+                                        // SPK: 400.3.13/074/A3/2025 → insert suffix after matrik part
+                                        const parts = spk.split('/');
+                                        if (parts.length >= 3) {
+                                            return `${parts[0]}/${parts[1]}${suffix}/${parts.slice(2).join('/')}`;
+                                        }
+                                        return '';
+                                    };
+                                    const autoPcm = genNo('.f');
+                                    const autoMc0 = genNo('.g');
+                                    const autoMc100 = genNo('.h');
+                                    return (
+                                        <>
+                                            <div className="form-row">
+                                                <div className="form-group"><label>No PCM (Otomatis)</label><input className="form-input" value={formData.noPcm || autoPcm} onChange={e => handleChange('noPcm', e.target.value)} style={{ fontFamily: 'monospace', letterSpacing: '0.5px' }} /></div>
+                                                <div className="form-group"><label>Tanggal PCM</label><input className="form-input" type="date" value={formData.tglPcm || ''} onChange={e => handleChange('tglPcm', e.target.value)} /></div>
+                                            </div>
+                                            <div className="form-row">
+                                                <div className="form-group"><label>No MC 0% (Otomatis)</label><input className="form-input" value={formData.noMc0 || autoMc0} onChange={e => handleChange('noMc0', e.target.value)} style={{ fontFamily: 'monospace', letterSpacing: '0.5px' }} /></div>
+                                                <div className="form-group"><label>Tanggal MC 0%</label><input className="form-input" type="date" value={formData.tglMc0 || ''} onChange={e => handleChange('tglMc0', e.target.value)} /></div>
+                                            </div>
+                                            <div className="form-row">
+                                                <div className="form-group"><label>No MC 100% (Otomatis)</label><input className="form-input" value={formData.noMc100 || autoMc100} onChange={e => handleChange('noMc100', e.target.value)} style={{ fontFamily: 'monospace', letterSpacing: '0.5px' }} /></div>
+                                                <div className="form-group"><label>Tanggal MC 100%</label><input className="form-input" type="date" value={formData.tglMc100 || ''} onChange={e => handleChange('tglMc100', e.target.value)} /></div>
+                                            </div>
+                                        </>
+                                    );
+                                })()}
                             </Section>
                         </div>
                         <div className="modal-footer">
@@ -1289,12 +1319,12 @@ const SplTab = () => {
         { key: 'kopSekolah', label: 'Kop Sekolah', fmt: v => v ? '✅ Ada' : '❌ Belum' },
         { key: 'konsultanPengawas', label: 'Konsultan Pengawas', defaultHidden: true },
         { key: 'dirKonsultanPengawas', label: 'Dir. Konsultan', defaultHidden: true },
+        { key: 'noPcm', label: 'No PCM', defaultHidden: true },
+        { key: 'tglPcm', label: 'Tgl PCM', fmt: fmtDate, defaultHidden: true },
         { key: 'noMc0', label: 'No MC 0', defaultHidden: true },
         { key: 'tglMc0', label: 'Tgl MC 0', fmt: fmtDate, defaultHidden: true },
         { key: 'noMc100', label: 'No MC 100', defaultHidden: true },
         { key: 'tglMc100', label: 'Tgl MC 100', fmt: fmtDate, defaultHidden: true },
-        { key: 'noPcm', label: 'No PCM', defaultHidden: true },
-        { key: 'tglPcm', label: 'Tgl PCM', fmt: fmtDate, defaultHidden: true },
     ];
 
     const [visibleSplCols, setVisibleSplCols] = useState(() => {
