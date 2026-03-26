@@ -1204,6 +1204,8 @@ const MatriksKegiatan = () => {
 
 // ===== SPL TAB COMPONENT =====
 const SplTab = () => {
+    const { configJenisPengadaan } = useMatrikStore();
+    const jenisPengadaanList = configJenisPengadaan || JENIS_PENGADAAN;
     const [splData, setSplData] = useState([]);
     const [splLoading, setSplLoading] = useState(true);
     const [selectedIds, setSelectedIds] = useState(new Set());
