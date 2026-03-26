@@ -1246,15 +1246,21 @@ const SplTab = () => {
         try { const h = await matrikApi.splHistory(); setSplHistory(h); } catch { }
     };
 
+    const [splJenisFilter, setSplJenisFilter] = useState('Pekerjaan Konstruksi');
+
     const filteredSpl = useMemo(() => {
         const q = splSearch.toLowerCase();
-        return splData.filter(d =>
-            d.namaSekolah?.toLowerCase().includes(q) ||
-            d.npsn?.includes(q) ||
-            d.namaPaket?.toLowerCase().includes(q) ||
-            d.noMatrik?.includes(q)
-        );
-    }, [splData, splSearch]);
+        return splData.filter(d => {
+            // Jenis Pengadaan filter
+            if (splJenisFilter && d.jenisPengadaan !== splJenisFilter) return false;
+            // Search filter
+            if (!q) return true;
+            return d.namaSekolah?.toLowerCase().includes(q) ||
+                d.npsn?.includes(q) ||
+                d.namaPaket?.toLowerCase().includes(q) ||
+                d.noMatrik?.includes(q);
+        });
+    }, [splData, splSearch, splJenisFilter]);
 
     const toggleSelect = (id) => {
         setSelectedIds(prev => {
@@ -1315,19 +1321,19 @@ const SplTab = () => {
     };
 
     const SPL_COLS = [
-        { key: 'npsn', label: 'NPSN' },
-        { key: 'namaSekolah', label: 'Nama Sekolah' },
         { key: 'namaPaket', label: 'Nama Paket Pekerjaan' },
-        { key: 'nilaiKontrak', label: 'Nilai Kontrak', fmt: v => formatCurrency(v) },
-        { key: 'jangkaWaktu', label: 'Jangka Waktu', fmt: v => v ? `${v} HK` : '-' },
-        { key: 'noSpk', label: 'Nomor Kontrak' },
-        { key: 'penyedia', label: 'Penyedia' },
-        { key: 'namaPemilik', label: 'Direktur' },
-        { key: 'noHp', label: 'No HP' },
-        { key: 'alamatKantor', label: 'Alamat Penyedia' },
-        { key: 'kepsek', label: 'Nama KS' },
-        { key: 'nipKs', label: 'NIP KS' },
         { key: 'kopSekolah', label: 'Kop Sekolah', fmt: v => v ? '✅ Ada' : '❌ Belum' },
+        { key: 'npsn', label: 'NPSN', defaultHidden: true },
+        { key: 'namaSekolah', label: 'Nama Sekolah', defaultHidden: true },
+        { key: 'nilaiKontrak', label: 'Nilai Kontrak', fmt: v => formatCurrency(v), defaultHidden: true },
+        { key: 'jangkaWaktu', label: 'Jangka Waktu', fmt: v => v ? `${v} HK` : '-', defaultHidden: true },
+        { key: 'noSpk', label: 'Nomor Kontrak', defaultHidden: true },
+        { key: 'penyedia', label: 'Penyedia', defaultHidden: true },
+        { key: 'namaPemilik', label: 'Direktur', defaultHidden: true },
+        { key: 'noHp', label: 'No HP', defaultHidden: true },
+        { key: 'alamatKantor', label: 'Alamat Penyedia', defaultHidden: true },
+        { key: 'kepsek', label: 'Nama KS', defaultHidden: true },
+        { key: 'nipKs', label: 'NIP KS', defaultHidden: true },
         { key: 'konsultanPengawas', label: 'Konsultan Pengawas', defaultHidden: true },
         { key: 'dirKonsultanPengawas', label: 'Dir. Konsultan', defaultHidden: true },
         { key: 'noPcm', label: 'No PCM', defaultHidden: true },
@@ -1372,8 +1378,12 @@ const SplTab = () => {
             {/* TOOLBAR */}
             <div className="table-container">
                 <div className="table-toolbar">
-                    <div className="table-toolbar-left">
+                    <div className="table-toolbar-left" style={{ gap: 8, flexWrap: 'wrap' }}>
                         <div className="table-search"><Search size={16} className="search-icon" /><input placeholder="Cari NPSN, sekolah, paket..." value={splSearch} onChange={e => setSplSearch(e.target.value)} /></div>
+                        <select value={splJenisFilter} onChange={e => setSplJenisFilter(e.target.value)} style={{ padding: '6px 10px', background: 'var(--bg-input)', border: '1px solid var(--border-input)', borderRadius: 'var(--radius-sm)', fontSize: '0.82rem', color: 'var(--text-primary)' }}>
+                            <option value="">Semua Jenis</option>
+                            {jenisPengadaanList.map(j => <option key={j} value={j}>{j}</option>)}
+                        </select>
                         {selectedIds.size > 0 && (
                             <span style={{ fontSize: '0.8rem', color: 'var(--accent-blue)', fontWeight: 600 }}>{selectedIds.size} dipilih</span>
                         )}
