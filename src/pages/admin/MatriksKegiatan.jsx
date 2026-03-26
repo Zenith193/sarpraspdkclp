@@ -404,11 +404,21 @@ const MatriksKegiatan = () => {
         e.target.value = ''; // reset
     };
 
+    // Sanitize data before sending to server — convert empty strings to null for integer/date columns
+    const INT_FIELDS = ['paguAnggaran', 'paguPaket', 'hps', 'nilaiKontrak', 'honor', 'jangkaWaktu', 'tahunAnggaran'];
+    const DATE_FIELDS = ['tanggalMulai', 'tanggalSelesai', 'tglMc0', 'tglMc100', 'tglPcm'];
+    const sanitizeForServer = (data) => {
+        const clean = { ...data };
+        INT_FIELDS.forEach(k => { if (clean[k] === '' || clean[k] === undefined) clean[k] = null; });
+        DATE_FIELDS.forEach(k => { if (clean[k] === '' || clean[k] === undefined) clean[k] = null; });
+        return clean;
+    };
+
     const executeBatchImport = async () => {
         if (!batchPreview?.length) return;
         setBatchImporting(true);
         try {
-            const items = batchPreview.map(({ _rowNum, ...data }) => data);
+            const items = batchPreview.map(({ _rowNum, ...data }) => sanitizeForServer(data));
             const result = await matrikApi.bulkCreate(items);
             // Also update local store with server-returned data (with real IDs)
             const serverData = result?.data || result || items;
@@ -538,8 +548,9 @@ const MatriksKegiatan = () => {
 
     const executeSave = async (dataToSave, target) => {
         try {
-            // Strip local-only fields before sending to server
-            const { _rowNum, ...serverData } = dataToSave;
+            // Strip local-only fields and sanitize for server
+            const { _rowNum, ...raw } = dataToSave;
+            const serverData = sanitizeForServer(raw);
             if (target && typeof target.id === 'number' && target.id > 0) {
                 try {
                     const result = await matrikApi.update(target.id, serverData);
