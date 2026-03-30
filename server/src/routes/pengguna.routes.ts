@@ -27,7 +27,7 @@ const avatarUpload = multer({
 
 const router = Router();
 
-router.get('/', requireAuth, requireRole('admin'), async (req, res) => {
+router.get('/', requireAuth, requireRole('admin', 'verifikator', 'korwil'), async (req, res) => {
     try {
         const result = await penggunaService.list({
             search: req.query.search as string,
