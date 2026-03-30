@@ -5,6 +5,7 @@ import { useSekolahData } from '../../data/dataProvider';
 import SearchableSelect from '../../components/ui/SearchableSelect';
 import useMatrikStore, { generateNoSpk, inferJenjang, fullTerbilang, formatNumberInput, parseFormattedNumber, naturalSort, SUMBER_DANA, JENIS_PENGADAAN, METODE_PEMILIHAN, STATUS_PEMILIK } from '../../store/matrikStore';
 import { matrikApi, templateApi } from '../../api/index';
+import { generateSplHtml } from '../../utils/splGenerator';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 
@@ -1283,17 +1284,28 @@ const SplTab = () => {
     };
 
     const handleGenerate = async () => {
-        if (!selectedTemplate) { toast.error('Pilih template'); return; }
         setGenerating(true);
         try {
             const selected = filteredSpl.filter(d => selectedIds.has(d.id));
+            const verif = verifikators.find(v => v.id === selectedVerifikator) || {};
+            // Generate HTML for each selected item and open in new window
             for (const item of selected) {
-                const verif = verifikators.find(v => v.id === selectedVerifikator);
-                await matrikApi.createSplHistory({
-                    matrikId: item.id,
-                    templateId: selectedTemplate,
-                    namaFile: `SPL_${item.noMatrik}_${item.namaSekolah || 'dokumen'}.docx`,
-                });
+                const html = generateSplHtml(item, verif);
+                const w = window.open('', '_blank');
+                if (w) {
+                    w.document.write(html);
+                    w.document.close();
+                    w.focus();
+                    w.print();
+                }
+                // Save history record
+                try {
+                    await matrikApi.createSplHistory({
+                        matrikId: item.id,
+                        templateId: selectedTemplate || null,
+                        namaFile: `SPL_${item.noMatrik}_${item.namaSekolah || 'dokumen'}.html`,
+                    });
+                } catch { /* history save is best-effort */ }
             }
             toast.success(`${selected.length} SPL berhasil di-generate`);
             setShowGenerateModal(false);
@@ -1494,15 +1506,8 @@ const SplTab = () => {
                         </div>
                         <div className="modal-body">
                             <p style={{ marginBottom: 16, color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                                {selectedIds.size} matrik dipilih. Matrik yang memiliki anakan akan diikutkan otomatis.
+                                {selectedIds.size} matrik dipilih. Dokumen SPL lengkap (9 halaman) akan di-generate untuk setiap matrik.
                             </p>
-                            <div className="form-group">
-                                <label className="form-label">Pilih Template</label>
-                                <select className="form-select" value={selectedTemplate || ''} onChange={e => setSelectedTemplate(Number(e.target.value) || null)}>
-                                    <option value="">-- Pilih Template --</option>
-                                    {templates.map(t => <option key={t.id} value={t.id}>{t.nama}</option>)}
-                                </select>
-                            </div>
                             <div className="form-group">
                                 <label className="form-label">Sekretaris (Verifikator)</label>
                                 <select className="form-select" value={selectedVerifikator || ''} onChange={e => setSelectedVerifikator(e.target.value || null)}>
