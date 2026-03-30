@@ -88,7 +88,7 @@ const MatriksKegiatan = () => {
     const [search, setSearch] = useState('');
     const [pageSize, setPageSize] = useState(10);
     const [currentPage, setCurrentPage] = useState(1);
-    const [visibleColumns, setVisibleColumns] = useState(['noMatrik', 'namaPaket', 'npsn', 'namaSekolah', 'nilaiKontrak', 'sumberDana', 'aksi']);
+    const [visibleColumns, setVisibleColumns] = useState(['noMatrik', 'namaPaket', 'nilaiKontrak', 'aksi']);
     const [showModal, setShowModal] = useState(false);
     const [editTarget, setEditTarget] = useState(null);
     const [formData, setFormData] = useState({});
