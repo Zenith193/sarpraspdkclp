@@ -30,8 +30,14 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
     try {
         const tpl = await templateService.getById(Number(req.params.id));
         if (!tpl) return res.status(404).json({ error: 'Template not found' });
-        if (!tpl.filePath || !fs.existsSync(tpl.filePath)) {
-            return res.status(404).json({ error: 'File DOCX template tidak ditemukan di server' });
+        if (!tpl.filePath) {
+            return res.status(404).json({ error: 'Template belum memiliki file DOCX. Silakan upload file DOCX di Manajemen Template.' });
+        }
+        if (!fs.existsSync(tpl.filePath)) {
+            console.error(`[Template Generate] File not found: ${tpl.filePath}`);
+            return res.status(404).json({ 
+                error: `File DOCX tidak ditemukan di server (path: ${tpl.filePath}). Silakan upload ulang file DOCX di Manajemen Template.` 
+            });
         }
 
         const { item, sekretaris } = req.body;
