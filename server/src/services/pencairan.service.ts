@@ -17,7 +17,7 @@ export const pencairanService = {
 
     async getByMatrikId(matrikId: number) {
         const result = await db.select().from(pencairan).where(eq(pencairan.matrikId, matrikId));
-        return result[0] || { pencairanPersen: 0, status: 'Belum Masuk', noRegister: '', noSp2d: '', hariKalender: 0 };
+        return result[0] || { pencairanPersen: 0, status: 'Belum Masuk', noRegister: '', noSp2d: '', tanggalSp2d: '' };
     },
 
     async upsert(matrikId: number, data: Partial<typeof pencairan.$inferInsert>) {

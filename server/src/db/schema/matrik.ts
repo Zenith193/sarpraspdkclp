@@ -57,7 +57,7 @@ export const pencairan = pgTable('pencairan', {
     status: text('status').default('Belum Masuk'),  // Belum Masuk | Masuk | Keuangan | Clear
     noRegister: text('no_register'),
     noSp2d: text('no_sp2d'),
-    hariKalender: integer('hari_kalender').default(0),
+    tanggalSp2d: date('tanggal_sp2d'),
     updatedAt: timestamp('updated_at').defaultNow(),
 });
 

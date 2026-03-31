@@ -57,14 +57,14 @@ const Pencairan = () => {
         return matrikData
             .filter(m => isIndukan(m.noMatrik))
             .map(m => {
-                const p = pencairanMap[m.id] || { pencairanPersen: 0, status: 'Belum Masuk', noRegister: '', noSp2d: '', hariKalender: 0 };
+                const p = pencairanMap[m.id] || { pencairanPersen: 0, status: 'Belum Masuk', noRegister: '', noSp2d: '', tanggalSp2d: '' };
                 return {
                     ...m,
                     pencairanPersen: p.pencairanPersen ?? 0,
                     status: p.status || 'Belum Masuk',
                     noRegister: p.noRegister || '',
                     noSp2d: p.noSp2d || '',
-                    hariKalender: p.hariKalender || 0,
+                    tanggalSp2d: p.tanggalSp2d || '',
                     cv: m.penyedia || '-',
                     subBidang: m.subBidang || '-',
                 };
@@ -83,7 +83,7 @@ const Pencairan = () => {
         { key: 'cv', label: 'CV' },
         { key: 'subBidang', label: 'Sub Bidang' },
         { key: 'sumberDana', label: 'Sumber Dana' },
-        { key: 'hariKalender', label: 'Hari Kalender' },
+        { key: 'tanggalSp2d', label: 'Tanggal SP2D' },
         { key: 'status', label: 'Status', editable: true },
         { key: 'noRegister', label: 'No Register' },
         { key: 'noSp2d', label: 'No SP2D' },
@@ -209,12 +209,12 @@ const Pencairan = () => {
                 status: item.status,
                 noRegister: item.noRegister,
                 noSp2d: item.noSp2d,
-                hariKalender: item.hariKalender
+                tanggalSp2d: item.tanggalSp2d
             });
         } else {
             setEditItem(null);
             setFormData({
-                pencairanPersen: 0, status: 'Belum Masuk', noRegister: '', noSp2d: '', hariKalender: 0
+                pencairanPersen: 0, status: 'Belum Masuk', noRegister: '', noSp2d: '', tanggalSp2d: ''
             });
         }
         setShowModal(true);
@@ -230,7 +230,7 @@ const Pencairan = () => {
 
     const executeDelete = () => {
         if (deleteTarget) {
-            updatePencairan(deleteTarget.id, { pencairanPersen: 0, status: 'Belum Masuk', noRegister: '', noSp2d: '', hariKalender: 0 });
+            updatePencairan(deleteTarget.id, { pencairanPersen: 0, status: 'Belum Masuk', noRegister: '', noSp2d: '', tanggalSp2d: '' });
             toast.success('Data pencairan direset');
             setDeleteTarget(null);
         }
@@ -448,7 +448,7 @@ const Pencairan = () => {
                         <thead>
                             <tr>
                                 {activeColumns.map(col => (
-                                    <th key={col.key} style={{ whiteSpace: 'nowrap', textAlign: ['nilaiKontrak', 'penyerapan', 'pencairan', 'hariKalender'].includes(col.key) ? 'right' : 'left', fontSize: '0.85rem' }}>
+                                    <th key={col.key} style={{ whiteSpace: 'nowrap', textAlign: ['nilaiKontrak', 'penyerapan', 'pencairan'].includes(col.key) ? 'right' : 'left', fontSize: '0.85rem' }}>
                                         {col.label}
                                     </th>
                                 ))}
@@ -479,8 +479,8 @@ const Pencairan = () => {
                                                             </select>
                                                         </td>
                                                     );
-                                                case 'hariKalender':
-                                                    return <td key={col.key} style={{ textAlign: 'right', fontSize: '0.85rem' }}>{d.hariKalender || 0}</td>;
+                                                case 'tanggalSp2d':
+                                                    return <td key={col.key} style={{ fontSize: '0.85rem', whiteSpace: 'nowrap' }}>{d.tanggalSp2d || '-'}</td>;
                                                 case 'status':
                                                     if (effectiveStatus === 'SP2D') {
                                                         return <td key={col.key}>{getStatusBadge(effectiveStatus)}</td>;
@@ -506,7 +506,7 @@ const Pencairan = () => {
                                                         </td>
                                                     );
                                                 default:
-                                                    return <td key={col.key} style={{ whiteSpace: 'nowrap', fontSize: '0.85rem' }}>{d[col.key] || '-'}</td>;
+                                                    return <td key={col.key} style={{ whiteSpace: col.key === 'namaPaket' ? 'normal' : 'nowrap', fontSize: '0.85rem', maxWidth: col.key === 'namaPaket' ? 320 : undefined, wordBreak: col.key === 'namaPaket' ? 'break-word' : undefined }}>{d[col.key] || '-'}</td>;
                                             }
                                         })}
                                     </tr>
@@ -572,8 +572,8 @@ const Pencairan = () => {
                                     <input className="form-input" value={formData.noSp2d || ''} onChange={e => setFormData({ ...formData, noSp2d: e.target.value })} placeholder="Otomatis jadi SP2D jika terisi" />
                                 </div>
                                 <div className="form-group">
-                                    <label className="form-label">Hari Kalender</label>
-                                    <input className="form-input" type="number" value={formData.hariKalender || ''} onChange={e => setFormData({ ...formData, hariKalender: parseInt(e.target.value) || 0 })} />
+                                    <label className="form-label">Tanggal SP2D</label>
+                                    <input className="form-input" type="date" value={formData.tanggalSp2d || ''} onChange={e => setFormData({ ...formData, tanggalSp2d: e.target.value })} />
                                 </div>
                             </div>
                         </div>

@@ -137,7 +137,7 @@ const generatePencairanSeed = () => {
             status: statuses[i - 1],
             noRegister: pencairanVals[i - 1] === 100 ? `REG-00${i}` : '',
             noSp2d: pencairanVals[i - 1] === 100 ? `SP2D-00${i}` : '',
-            hariKalender: 20 + i * 5
+            tanggalSp2d: ''
         };
     }
     return map;
@@ -255,7 +255,7 @@ const useMatrikStore = create(
             // ===== PENCAIRAN =====
             getPencairan: (matrikId) => {
                 const map = get().pencairanMap;
-                return map[matrikId] || { pencairanPersen: 0, status: 'Belum Masuk', noRegister: '', noSp2d: '', hariKalender: 0 };
+                return map[matrikId] || { pencairanPersen: 0, status: 'Belum Masuk', noRegister: '', noSp2d: '', tanggalSp2d: '' };
             },
 
             updatePencairan: (matrikId, updates) => set((state) => ({
