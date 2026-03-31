@@ -191,11 +191,18 @@ router.put('/:id', requireAuth, requireRole('admin'), uploadTemplate.single('fil
 // Delete template
 router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
     try {
-        const tpl = await templateService.getById(Number(req.params.id));
+        const templateId = Number(req.params.id);
+        const tpl = await templateService.getById(templateId);
         if (tpl?.filePath && fs.existsSync(tpl.filePath)) {
             try { fs.unlinkSync(tpl.filePath); } catch {}
         }
-        await templateService.delete(Number(req.params.id));
+        // Nullify references in spl_generated to avoid FK constraint
+        const { db: database } = await import('../db/index.js');
+        const { splGenerated } = await import('../db/schema/index.js');
+        const { eq } = await import('drizzle-orm');
+        await database.update(splGenerated).set({ templateId: null }).where(eq(splGenerated.templateId, templateId));
+        
+        await templateService.delete(templateId);
         res.json({ success: true });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
