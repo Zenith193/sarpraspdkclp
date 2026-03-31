@@ -4,6 +4,8 @@ import { requireAuth, requireRole } from '../middleware/auth.js';
 import { uploadTemplate } from '../middleware/upload.js';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
+import { execSync } from 'child_process';
 
 const router = Router();
 
@@ -25,8 +27,10 @@ router.get('/download/:id', requireAuth, async (req, res) => {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// ===== GENERATE: fill DOCX template with matrik data and return filled DOCX =====
+// ===== GENERATE: fill DOCX → convert to PDF → return PDF for print preview =====
 router.post('/generate/:id', requireAuth, async (req, res) => {
+    let tempDocxPath = '';
+    let tempPdfPath = '';
     try {
         const tpl = await templateService.getById(Number(req.params.id));
         if (!tpl) return res.status(404).json({ error: 'Template not found' });
@@ -34,9 +38,8 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
             return res.status(404).json({ error: 'Template belum memiliki file DOCX. Silakan upload file DOCX di Manajemen Template.' });
         }
         if (!fs.existsSync(tpl.filePath)) {
-            console.error(`[Template Generate] File not found: ${tpl.filePath}`);
-            return res.status(404).json({ 
-                error: `File DOCX tidak ditemukan di server (path: ${tpl.filePath}). Silakan upload ulang file DOCX di Manajemen Template.` 
+            return res.status(404).json({
+                error: `File DOCX tidak ditemukan di server (path: ${tpl.filePath}). Silakan upload ulang file DOCX di Manajemen Template.`
             });
         }
 
@@ -45,8 +48,9 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
 
         // Build variable map
         const vars = buildVariableMap(item, sekretaris || {});
+        console.log('[Template] Variables:', JSON.stringify(vars, null, 2).substring(0, 500));
 
-        // Fill DOCX template
+        // Fill DOCX template with docxtemplater
         const PizZip = (await import('pizzip')).default;
         const Docxtemplater = (await import('docxtemplater')).default;
 
@@ -60,24 +64,62 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
 
         doc.render(vars);
 
-        const buf = doc.getZip().generate({
+        const filledBuf = doc.getZip().generate({
             type: 'nodebuffer',
             compression: 'DEFLATE',
         });
 
-        const filename = `SPL_${item.noMatrik || ''}_${(item.namaSekolah || 'dokumen').replace(/[^a-zA-Z0-9]/g, '_')}.docx`;
-        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-        res.setHeader('Content-Length', buf.length);
-        res.send(buf);
+        // Save filled DOCX to temp file
+        const tempDir = path.join(os.tmpdir(), 'spl-generate');
+        if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
+        const basename = `SPL_${Date.now()}_${item.noMatrik || 'doc'}`;
+        tempDocxPath = path.join(tempDir, `${basename}.docx`);
+        fs.writeFileSync(tempDocxPath, filledBuf);
+
+        // Convert DOCX → PDF using LibreOffice
+        try {
+            execSync(`libreoffice --headless --convert-to pdf --outdir "${tempDir}" "${tempDocxPath}"`, {
+                timeout: 30000,
+                stdio: 'pipe',
+            });
+        } catch (loErr: any) {
+            console.error('[Template] LibreOffice conversion failed:', loErr.stderr?.toString() || loErr.message);
+            // Fallback: return the DOCX directly
+            const filename = `${basename}.docx`;
+            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+            res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+            res.setHeader('Content-Length', filledBuf.length);
+            return res.send(filledBuf);
+        }
+
+        tempPdfPath = path.join(tempDir, `${basename}.pdf`);
+        if (!fs.existsSync(tempPdfPath)) {
+            // Fallback: return DOCX
+            const filename = `${basename}.docx`;
+            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+            res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+            res.setHeader('Content-Length', filledBuf.length);
+            return res.send(filledBuf);
+        }
+
+        // Send PDF for print preview
+        const pdfBuf = fs.readFileSync(tempPdfPath);
+        const pdfFilename = `SPL_${item.noMatrik || ''}_${(item.namaSekolah || 'dokumen').replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `inline; filename="${pdfFilename}"`);
+        res.setHeader('Content-Length', pdfBuf.length);
+        res.send(pdfBuf);
     } catch (e: any) {
         console.error('[Template Generate]', e);
-        // Check for template errors (unresolved tags, etc.)
         if (e.properties && e.properties.errors) {
             const errMessages = e.properties.errors.map((err: any) => `${err.properties?.id}: ${err.message}`).join('; ');
             return res.status(400).json({ error: `Error template: ${errMessages}` });
         }
         res.status(500).json({ error: e.message });
+    } finally {
+        // Cleanup temp files
+        try { if (tempDocxPath && fs.existsSync(tempDocxPath)) fs.unlinkSync(tempDocxPath); } catch {}
+        try { if (tempPdfPath && fs.existsSync(tempPdfPath)) fs.unlinkSync(tempPdfPath); } catch {}
     }
 });
 
@@ -103,7 +145,6 @@ router.put('/:id', requireAuth, requireRole('admin'), uploadTemplate.single('fil
         if (req.body.name || req.body.nama) data.nama = req.body.name || req.body.nama;
         if (req.body.type || req.body.jenisCocok) data.jenisCocok = req.body.type || req.body.jenisCocok;
         if (req.file) {
-            // Delete old file
             const existing = await templateService.getById(Number(req.params.id));
             if (existing?.filePath && fs.existsSync(existing.filePath)) {
                 try { fs.unlinkSync(existing.filePath); } catch {}
@@ -195,6 +236,6 @@ function buildVariableMap(item: any, sekretaris: any = {}) {
         alamatPpkom: PPKOM.alamat,
         ketuaTimTeknis: TIM_TEKNIS_KETUA.nama,
         nipKetuaTimTeknis: TIM_TEKNIS_KETUA.nip,
-        tahunTerbilang: 'Dua Ribu Dua Puluh Lima',
+        tahunTerbilang: 'Dua Ribu Dua Puluh Enam',
     };
 }

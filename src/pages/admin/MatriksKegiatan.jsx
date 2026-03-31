@@ -1291,21 +1291,26 @@ const SplTab = () => {
             const verif = verifikators.find(v => v.id === selectedVerifikator) || {};
             
             for (const item of selected) {
-                // Generate filled DOCX on server
+                // Generate filled PDF on server
                 const blob = await templateApi.generate(selectedTemplate, item, verif);
                 
-                // Download DOCX
-                const filename = `SPL_${item.noMatrik || ''}_${(item.namaSekolah || 'dokumen').replace(/[^a-zA-Z0-9]/g, '_')}.docx`;
+                // Open PDF in new tab for print preview
                 const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
+                const w = window.open(url, '_blank');
+                if (!w) {
+                    // Popup blocked - fallback to download
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `SPL_${item.noMatrik || ''}.pdf`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                }
+                // Don't revoke immediately — new tab needs the URL
+                setTimeout(() => URL.revokeObjectURL(url), 60000);
                 
                 // Save history
+                const filename = `SPL_${item.noMatrik || ''}_${(item.namaSekolah || 'dokumen').replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
                 try {
                     await matrikApi.createSplHistory({
                         matrikId: item.id,
@@ -1314,7 +1319,7 @@ const SplTab = () => {
                     });
                 } catch { /* best-effort */ }
             }
-            toast.success(`${selected.length} SPL berhasil di-generate (file DOCX terunduh)`);
+            toast.success(`${selected.length} SPL berhasil di-generate`);
             setShowGenerateModal(false);
             setSelectedIds(new Set());
         } catch (e) { toast.error('Gagal generate SPL: ' + (e.message || '')); }
