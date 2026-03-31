@@ -32,6 +32,7 @@ router.post('/', requireAuth, requireRole('admin'), uploadTemplate.single('file'
             nama: req.body.name || req.body.nama,
             jenisCocok: req.body.type || req.body.jenisCocok,
         };
+        if (req.body.content) data.content = req.body.content;
         if (req.file) {
             data.filePath = f?.finalPath || req.file.path;
             data.uploadStatus = isGDriveEnabled() ? 'uploading' : 'done';
@@ -46,10 +47,22 @@ router.put('/:id', requireAuth, requireRole('admin'), uploadTemplate.single('fil
         const data: any = {};
         if (req.body.name || req.body.nama) data.nama = req.body.name || req.body.nama;
         if (req.body.type || req.body.jenisCocok) data.jenisCocok = req.body.type || req.body.jenisCocok;
+        if (req.body.content !== undefined) data.content = req.body.content;
         if (req.file) {
             data.filePath = f?.finalPath || req.file.path;
             data.uploadStatus = isGDriveEnabled() ? 'uploading' : 'done';
         }
+        res.json(await templateService.update(Number(req.params.id), data));
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// JSON-only update for content (no file upload needed)
+router.patch('/:id', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+        const data: any = {};
+        if (req.body.nama) data.nama = req.body.nama;
+        if (req.body.jenisCocok) data.jenisCocok = req.body.jenisCocok;
+        if (req.body.content !== undefined) data.content = req.body.content;
         res.json(await templateService.update(Number(req.params.id), data));
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });

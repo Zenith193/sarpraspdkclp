@@ -5,7 +5,7 @@ import { useSekolahData } from '../../data/dataProvider';
 import SearchableSelect from '../../components/ui/SearchableSelect';
 import useMatrikStore, { generateNoSpk, inferJenjang, fullTerbilang, formatNumberInput, parseFormattedNumber, naturalSort, SUMBER_DANA, JENIS_PENGADAAN, METODE_PEMILIHAN, STATUS_PEMILIK } from '../../store/matrikStore';
 import { matrikApi, templateApi } from '../../api/index';
-import { generateSplHtml } from '../../utils/splGenerator';
+import { generateFromTemplate, getAvailableVariables } from '../../utils/splGenerator';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 
@@ -1284,13 +1284,18 @@ const SplTab = () => {
     };
 
     const handleGenerate = async () => {
+        if (!selectedTemplate) { toast.error('Pilih template terlebih dahulu'); return; }
         setGenerating(true);
         try {
+            // Get template content
+            const tpl = templates.find(t => t.id === selectedTemplate);
+            if (!tpl || !tpl.content) { toast.error('Template tidak memiliki konten HTML. Silakan isi konten pada Manajemen Template.'); setGenerating(false); return; }
+            
             const selected = filteredSpl.filter(d => selectedIds.has(d.id));
             const verif = verifikators.find(v => v.id === selectedVerifikator) || {};
-            // Generate HTML for each selected item and open in new window
+            
             for (const item of selected) {
-                const html = generateSplHtml(item, verif);
+                const html = generateFromTemplate(tpl.content, item, verif);
                 const w = window.open('', '_blank');
                 if (w) {
                     w.document.write(html);
@@ -1302,15 +1307,15 @@ const SplTab = () => {
                 try {
                     await matrikApi.createSplHistory({
                         matrikId: item.id,
-                        templateId: selectedTemplate || null,
+                        templateId: selectedTemplate,
                         namaFile: `SPL_${item.noMatrik}_${item.namaSekolah || 'dokumen'}.html`,
                     });
-                } catch { /* history save is best-effort */ }
+                } catch { /* best-effort */ }
             }
             toast.success(`${selected.length} SPL berhasil di-generate`);
             setShowGenerateModal(false);
             setSelectedIds(new Set());
-        } catch (e) { toast.error('Gagal generate SPL'); }
+        } catch (e) { toast.error('Gagal generate SPL: ' + (e.message || '')); }
         finally { setGenerating(false); }
     };
 
@@ -1506,8 +1511,18 @@ const SplTab = () => {
                         </div>
                         <div className="modal-body">
                             <p style={{ marginBottom: 16, color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                                {selectedIds.size} matrik dipilih. Dokumen SPL lengkap (9 halaman) akan di-generate untuk setiap matrik.
+                                {selectedIds.size} matrik dipilih. Variabel <code>{`{{namaPaket}}`}</code>, <code>{`{{namaSekolah}}`}</code>, dll akan otomatis diganti dengan data matrik.
                             </p>
+                            <div className="form-group">
+                                <label className="form-label">Pilih Template <span style={{ color: 'var(--accent-red)' }}>*</span></label>
+                                <select className="form-select" value={selectedTemplate || ''} onChange={e => setSelectedTemplate(Number(e.target.value) || null)}>
+                                    <option value="">-- Pilih Template --</option>
+                                    {templates.filter(t => t.content).map(t => <option key={t.id} value={t.id}>{t.nama} {t.jenisCocok ? `(${t.jenisCocok})` : ''}</option>)}
+                                </select>
+                                {templates.length > 0 && templates.filter(t => t.content).length === 0 && (
+                                    <p style={{ color: 'var(--accent-orange)', fontSize: '0.8rem', marginTop: 6 }}>⚠️ Belum ada template yang memiliki konten HTML. Silakan isi konten pada Manajemen Template.</p>
+                                )}
+                            </div>
                             <div className="form-group">
                                 <label className="form-label">Sekretaris (Verifikator)</label>
                                 <select className="form-select" value={selectedVerifikator || ''} onChange={e => setSelectedVerifikator(e.target.value || null)}>
@@ -1515,6 +1530,22 @@ const SplTab = () => {
                                     {verifikators.map(v => <option key={v.id} value={v.id}>{v.name} {v.nip ? `(${v.nip})` : ''}</option>)}
                                 </select>
                             </div>
+                            <details style={{ marginTop: 8 }}>
+                                <summary style={{ cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>📋 Daftar Variabel Template</summary>
+                                <div style={{ marginTop: 8, maxHeight: 200, overflowY: 'auto', fontSize: '0.78rem', background: 'var(--bg-secondary)', padding: 10, borderRadius: 6 }}>
+                                    {getAvailableVariables().map(g => (
+                                        <div key={g.group} style={{ marginBottom: 8 }}>
+                                            <div style={{ fontWeight: 600, marginBottom: 2 }}>{g.group}</div>
+                                            {g.vars.map(v => (
+                                                <div key={v.name} style={{ display: 'flex', gap: 8, padding: '1px 0' }}>
+                                                    <code style={{ color: 'var(--accent-blue)', minWidth: 180 }}>{`{{${v.name}}}`}</code>
+                                                    <span>{v.desc}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ))}
+                                </div>
+                            </details>
                         </div>
                         <div className="modal-footer">
                             <button className="btn btn-ghost" onClick={() => setShowGenerateModal(false)}>Batal</button>
