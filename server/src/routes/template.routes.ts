@@ -36,17 +36,22 @@ router.get('/content/:id', requireAuth, async (req, res) => {
             return res.json({ content: tpl.content });
         }
 
-        // Otherwise try reading the file if it's HTML
-        if (tpl.filePath && fs.existsSync(tpl.filePath)) {
-            const ext = tpl.filePath.toLowerCase();
-            if (ext.endsWith('.html') || ext.endsWith('.htm')) {
-                const fileContent = fs.readFileSync(tpl.filePath, 'utf-8');
-                return res.json({ content: fileContent });
+        // Try reading the uploaded file
+        if (tpl.filePath) {
+            console.log(`[Template] Reading file: ${tpl.filePath}`);
+            if (fs.existsSync(tpl.filePath)) {
+                try {
+                    const fileContent = fs.readFileSync(tpl.filePath, 'utf-8');
+                    return res.json({ content: fileContent });
+                } catch (readErr: any) {
+                    return res.status(500).json({ error: `Gagal membaca file: ${readErr.message}` });
+                }
+            } else {
+                return res.status(404).json({ error: `File tidak ditemukan di server: ${tpl.filePath}` });
             }
-            return res.status(400).json({ error: 'File bukan format HTML. Upload template dalam format .html untuk bisa digunakan.' });
         }
 
-        return res.status(404).json({ error: 'Template belum memiliki konten. Silakan upload file HTML atau isi konten di Manajemen Template.' });
+        return res.status(404).json({ error: 'Template belum memiliki konten atau file. Silakan upload file HTML di Manajemen Template.' });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
