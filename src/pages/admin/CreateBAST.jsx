@@ -4,7 +4,12 @@ import { formatCurrency } from '../../utils/formatters';
 import { exportToExcel, exportToCSV, exportToPDF } from '../../utils/exportUtils';
 import useMatrikStore, { naturalSort, formatNumberInput, parseFormattedNumber, fullTerbilang, generateNoBAST } from '../../store/matrikStore';
 import { useSekolahData } from '../../data/dataProvider';
+import { templateApi } from '../../api/index';
+import { useApi } from '../../api/hooks';
 import toast from 'react-hot-toast';
+
+// Only show these jenisPengadaan in BAST
+const BAST_JENIS_FILTER = ['Pekerjaan Konstruksi', 'Pengadaan Barang'];
 
 // ===== Helpers =====
 const currentYear = new Date().getFullYear();
@@ -136,8 +141,10 @@ const generateBASTDocument = (item, template) => {
 
 // ===== COMPONENT =====
 const CreateBAST = () => {
-    const { matrikData, bastData, bastTemplates, addBAST, updateBAST, revertBAST } = useMatrikStore();
+    const { matrikData, bastData, addBAST, updateBAST, revertBAST } = useMatrikStore();
     const { data: sekolahList } = useSekolahData();
+    const { data: templatesData } = useApi(() => templateApi.list(), []);
+    const templates = useMemo(() => (templatesData?.data || templatesData || []).filter(t => t && t.id), [templatesData]);
 
     const [search, setSearch] = useState('');
     const [pageSize, setPageSize] = useState(15);
@@ -182,9 +189,10 @@ const CreateBAST = () => {
         return map;
     }, [bastData]);
 
-    // ===== Build enriched BAST data from ALL matrik entries =====
+    // ===== Build enriched BAST data — only Pekerjaan Konstruksi & Pengadaan Barang =====
     const enrichedData = useMemo(() => {
         return matrikData
+            .filter(m => BAST_JENIS_FILTER.includes(m.jenisPengadaan))
             .slice()
             .sort((a, b) => naturalSort(String(a.noMatrik), String(b.noMatrik)))
             .map(m => {
@@ -245,64 +253,31 @@ const CreateBAST = () => {
     useEffect(() => { setCurrentPage(1); }, [search, pageSize]);
 
     // ===== GENERATE BAST =====
+    const [generating, setGenerating] = useState(false);
+
     const handleOpenGenerate = (item) => {
         setGenerateTarget(item);
-        // Auto-select matching template
-        const match = bastTemplates.find(t =>
+        // Auto-select matching template from Manajemen Template
+        const match = templates.find(t =>
             item.jenisPengadaan?.includes(t.jenisCocok) || t.jenisCocok?.includes(item.jenisPengadaan?.split(' ')[0])
         );
-        setSelectedTemplateId(match?.id || bastTemplates[0]?.id || null);
+        setSelectedTemplateId(match?.id || templates[0]?.id || null);
     };
 
-    const handleConfirmGenerate = () => {
-        if (!generateTarget) return;
-        const template = bastTemplates.find(t => t.id === selectedTemplateId);
-        const item = generateTarget;
-        const n = (bastCountMap[item.id] || 0) + 1;
-        const noBAST = generateNoBAST(item.noMatrik, item.jenisPengadaan, item.sumberDana, item.tahunAnggaran || currentYear, n);
-
-        const bastEntry = {
-            matrikId: item.id,
-            npsn: item.npsn,
-            namaSekolah: item.namaSekolah,
-            namaPaket: item.namaPaket,
-            noMatrik: item.noMatrik,
-            noBAST,
-            kepsek: item.kepsek,
-            nipKepsek: item.nipKepsek,
-            nilaiBAST: item.nilaiBAST,
-            nilaiKontrak: item.nilaiKontrak,
-            volume: item.volume || '',
-            honor: item.honor || 0,
-            jenisPengadaan: item.jenisPengadaan,
-            sumberDana: item.sumberDana,
-            penyedia: item.penyedia,
-            terbilangBAST: item.terbilangBAST,
-            tanggalGenerate: new Date().toISOString(),
-            templateId: selectedTemplateId,
-            templateNama: template?.nama || 'Default',
-            bastN: n,
-        };
-
-        addBAST(bastEntry);
-        toast.success(`BAST ${noBAST} berhasil di-generate!`);
-        setGenerateTarget(null);
-
-        // Open PDF template
-        generateBASTDocument({ ...item, noBAST, bastN: n }, template);
-    };
-
-    // ===== BATCH GENERATE =====
-    const handleBatchGenerate = () => {
-        if (!batchTemplateId || selectedIds.length === 0) return;
-        const template = bastTemplates.find(t => t.id === batchTemplateId);
-        let count = 0;
-        selectedIds.forEach(id => {
-            const item = enrichedData.find(d => d.id === id);
-            if (!item || item.isGenerated) return;
+    const handleConfirmGenerate = async () => {
+        if (!generateTarget || !selectedTemplateId) return;
+        setGenerating(true);
+        try {
+            const template = templates.find(t => t.id === selectedTemplateId);
+            const item = generateTarget;
             const n = (bastCountMap[item.id] || 0) + 1;
             const noBAST = generateNoBAST(item.noMatrik, item.jenisPengadaan, item.sumberDana, item.tahunAnggaran || currentYear, n);
-            addBAST({
+
+            // Generate via server (docxtemplater → PDF)
+            const result = await templateApi.generate(selectedTemplateId, { ...item, noBAST }, {});
+
+            // Save to local BAST store
+            const bastEntry = {
                 matrikId: item.id,
                 npsn: item.npsn,
                 namaSekolah: item.namaSekolah,
@@ -320,15 +295,75 @@ const CreateBAST = () => {
                 penyedia: item.penyedia,
                 terbilangBAST: item.terbilangBAST,
                 tanggalGenerate: new Date().toISOString(),
-                templateId: batchTemplateId,
+                templateId: selectedTemplateId,
                 templateNama: template?.nama || 'Default',
                 bastN: n,
-            });
-            count++;
-        });
-        toast.success(`${count} BAST berhasil di-generate!`);
-        setSelectedIds([]);
-        setShowBatchGenerate(false);
+            };
+            addBAST(bastEntry);
+
+            // Open PDF preview
+            if (result.pdfUrl) {
+                window.open(result.pdfUrl, '_blank');
+            } else if (result.docxUrl) {
+                window.open(result.docxUrl, '_blank');
+            }
+
+            toast.success(`BAST ${noBAST} berhasil di-generate!`);
+            setGenerateTarget(null);
+        } catch (e) {
+            toast.error('Gagal generate BAST: ' + (e.message || ''));
+        } finally {
+            setGenerating(false);
+        }
+    };
+
+    // ===== BATCH GENERATE =====
+    const handleBatchGenerate = async () => {
+        if (!batchTemplateId || selectedIds.length === 0) return;
+        setGenerating(true);
+        try {
+            const template = templates.find(t => t.id === batchTemplateId);
+            let count = 0;
+            for (const id of selectedIds) {
+                const item = enrichedData.find(d => d.id === id);
+                if (!item || item.isGenerated) continue;
+                const n = (bastCountMap[item.id] || 0) + 1;
+                const noBAST = generateNoBAST(item.noMatrik, item.jenisPengadaan, item.sumberDana, item.tahunAnggaran || currentYear, n);
+                try {
+                    await templateApi.generate(batchTemplateId, { ...item, noBAST }, {});
+                } catch { /* best-effort */ }
+                addBAST({
+                    matrikId: item.id,
+                    npsn: item.npsn,
+                    namaSekolah: item.namaSekolah,
+                    namaPaket: item.namaPaket,
+                    noMatrik: item.noMatrik,
+                    noBAST,
+                    kepsek: item.kepsek,
+                    nipKepsek: item.nipKepsek,
+                    nilaiBAST: item.nilaiBAST,
+                    nilaiKontrak: item.nilaiKontrak,
+                    volume: item.volume || '',
+                    honor: item.honor || 0,
+                    jenisPengadaan: item.jenisPengadaan,
+                    sumberDana: item.sumberDana,
+                    penyedia: item.penyedia,
+                    terbilangBAST: item.terbilangBAST,
+                    tanggalGenerate: new Date().toISOString(),
+                    templateId: batchTemplateId,
+                    templateNama: template?.nama || 'Default',
+                    bastN: n,
+                });
+                count++;
+            }
+            toast.success(`${count} BAST berhasil di-generate!`);
+            setSelectedIds([]);
+            setShowBatchGenerate(false);
+        } catch (e) {
+            toast.error('Gagal batch generate: ' + (e.message || ''));
+        } finally {
+            setGenerating(false);
+        }
     };
 
     const toggleSelect = (id) => {
@@ -480,7 +515,7 @@ const CreateBAST = () => {
                         <span style={{ fontSize: '0.85rem', fontWeight: 500 }}>{selectedIds.length} item dipilih</span>
                         <div style={{ display: 'flex', gap: 8 }}>
                             <button className="btn btn-ghost btn-sm" onClick={() => setSelectedIds([])}>Batal Pilih</button>
-                            <button className="btn btn-primary btn-sm" onClick={() => { setBatchTemplateId(bastTemplates[0]?.id || null); setShowBatchGenerate(true); }}>
+                            <button className="btn btn-primary btn-sm" onClick={() => { setBatchTemplateId(templates[0]?.id || null); setShowBatchGenerate(true); }}>
                                 <Printer size={14} /> Generate All Selected
                             </button>
                         </div>
@@ -559,9 +594,17 @@ const CreateBAST = () => {
                                                     </button>
                                                 ) : (
                                                     <>
-                                                        <button className="btn-icon" onClick={() => {
-                                                            const tpl = bastTemplates.find(t => t.id === (generatedMap[d.id]?.templateId));
-                                                            generateBASTDocument(d, tpl);
+                                                        <button className="btn-icon" onClick={async () => {
+                                                            try {
+                                                                const tplId = generatedMap[d.id]?.templateId;
+                                                                if (tplId) {
+                                                                    const result = await templateApi.generate(tplId, d, {});
+                                                                    if (result.pdfUrl) window.open(result.pdfUrl, '_blank');
+                                                                    else if (result.docxUrl) window.open(result.docxUrl, '_blank');
+                                                                } else {
+                                                                    toast.error('Template tidak ditemukan. Pilih template baru.');
+                                                                }
+                                                            } catch (e) { toast.error('Gagal cetak: ' + (e.message || '')); }
                                                         }} title="Cetak Ulang" style={{ color: 'var(--accent-blue)' }}>
                                                             <Printer size={16} />
                                                         </button>
@@ -617,9 +660,14 @@ const CreateBAST = () => {
                                 </div>
                             </div>
 
-                            <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: 8 }}>Pilih Template:</div>
+                            <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: 8 }}>Pilih Template (dari Manajemen Template):</div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                {bastTemplates.map(t => (
+                                {templates.length === 0 && (
+                                    <div style={{ padding: 16, textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                                        Belum ada template. Upload di Manajemen Template.
+                                    </div>
+                                )}
+                                {templates.map(t => (
                                     <label key={t.id} style={{
                                         display: 'flex', alignItems: 'flex-start', gap: 10, padding: 12,
                                         borderRadius: 8, cursor: 'pointer',
@@ -634,7 +682,7 @@ const CreateBAST = () => {
                                             <div style={{ fontWeight: 600, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 6 }}>
                                                 <FileCheck size={14} /> {t.nama}
                                             </div>
-                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 2 }}>{t.deskripsi}</div>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 2 }}>{t.jenisCocok || 'Template DOCX'}</div>
                                         </div>
                                     </label>
                                 ))}
@@ -642,8 +690,8 @@ const CreateBAST = () => {
                         </div>
                         <div className="modal-footer">
                             <button className="btn btn-ghost" onClick={() => setGenerateTarget(null)}>Batal</button>
-                            <button className="btn btn-primary" onClick={handleConfirmGenerate} disabled={!selectedTemplateId}>
-                                <Printer size={14} /> Generate BAST
+                            <button className="btn btn-primary" onClick={handleConfirmGenerate} disabled={!selectedTemplateId || generating}>
+                                <Printer size={14} /> {generating ? 'Generating...' : 'Generate BAST'}
                             </button>
                         </div>
                     </div>
@@ -662,9 +710,9 @@ const CreateBAST = () => {
                             <div style={{ background: 'var(--bg-secondary)', padding: 12, borderRadius: 8, marginBottom: 16, fontSize: '0.85rem' }}>
                                 <strong>{selectedIds.length} item</strong> akan di-generate BAST dengan template yang sama.
                             </div>
-                            <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: 8 }}>Pilih Template:</div>
+                            <div style={{ fontSize: '0.85rem', fontWeight: 600, marginBottom: 8 }}>Pilih Template (dari Manajemen Template):</div>
                             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                                {bastTemplates.map(t => (
+                                {templates.map(t => (
                                     <label key={t.id} style={{
                                         display: 'flex', alignItems: 'flex-start', gap: 10, padding: 12,
                                         borderRadius: 8, cursor: 'pointer',
@@ -679,7 +727,7 @@ const CreateBAST = () => {
                                             <div style={{ fontWeight: 600, fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 6 }}>
                                                 <FileCheck size={14} /> {t.nama}
                                             </div>
-                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 2 }}>{t.deskripsi}</div>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 2 }}>{t.jenisCocok || 'Template DOCX'}</div>
                                         </div>
                                     </label>
                                 ))}
@@ -687,8 +735,8 @@ const CreateBAST = () => {
                         </div>
                         <div className="modal-footer">
                             <button className="btn btn-ghost" onClick={() => setShowBatchGenerate(false)}>Batal</button>
-                            <button className="btn btn-primary" onClick={handleBatchGenerate} disabled={!batchTemplateId}>
-                                <Printer size={14} /> Generate {selectedIds.length} BAST
+                            <button className="btn btn-primary" onClick={handleBatchGenerate} disabled={!batchTemplateId || generating}>
+                                <Printer size={14} /> {generating ? 'Generating...' : `Generate ${selectedIds.length} BAST`}
                             </button>
                         </div>
                     </div>
