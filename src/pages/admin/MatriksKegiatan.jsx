@@ -1469,7 +1469,7 @@ const SplTab = () => {
                                 </th>
                                 <th>No</th>
                                 {activeSplCols.map(c => <th key={c.key} style={{ whiteSpace: 'nowrap' }}>{c.label}</th>)}
-                                <th>Anak</th>
+
                             </tr>
                         </thead>
                         <tbody>
@@ -1490,11 +1490,7 @@ const SplTab = () => {
                                             {c.fmt ? c.fmt(d[c.key]) : (d[c.key] || '-')}
                                         </td>
                                     ))}
-                                    <td>
-                                        {d.children?.length > 0 ? (
-                                            <span className="badge badge-disetujui" style={{ fontSize: 11 }}>{d.children.length} anakan</span>
-                                        ) : '-'}
-                                    </td>
+
                                 </tr>
                             ))}
                         </tbody>
