@@ -221,7 +221,32 @@ export const uploadDenahSekolah = multer({
     limits: { fileSize: 5 * 1024 * 1024 },
 });
 
+const docxFilter = (_req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const allowedMimes = [
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'application/msword',
+        'application/octet-stream', // some browsers send this for docx
+    ];
+    if (ext === '.docx' || ext === '.doc' || allowedMimes.includes(file.mimetype)) {
+        cb(null, true);
+    } else {
+        cb(new Error('Hanya file DOCX/DOC yang diperbolehkan'));
+    }
+};
+
+// Template storage: save directly to local template folder (no GDrive/NAS)
+const templateDir = ensureDir(getTemplatePath());
+const templateStorage = multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, templateDir),
+    filename: (_req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        cb(null, uniqueSuffix + path.extname(file.originalname));
+    },
+});
+
 export const uploadTemplate = multer({
-    storage: tempStorage,
-    limits: { fileSize: 1 * 1024 * 1024 },
+    storage: templateStorage,
+    fileFilter: docxFilter,
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
 });

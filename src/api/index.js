@@ -104,6 +104,7 @@ export const templateApi = {
     create: (data) => api.upload('/template', data),
     update: (id, data) => api.upload(`/template/${id}`, data, 'PUT'),
     updateContent: (id, content) => api.patch(`/template/${id}`, { content }),
+    reconvert: (id) => api.post(`/template/${id}/reconvert`),
     delete: (id) => api.delete(`/template/${id}`),
 };
 
