@@ -1287,15 +1287,22 @@ const SplTab = () => {
         if (!selectedTemplate) { toast.error('Pilih template terlebih dahulu'); return; }
         setGenerating(true);
         try {
-            // Get template content
-            const tpl = templates.find(t => t.id === selectedTemplate);
-            if (!tpl || !tpl.content) { toast.error('Template tidak memiliki konten HTML. Silakan isi konten pada Manajemen Template.'); setGenerating(false); return; }
+            // Fetch template content from server
+            let tplContent;
+            try {
+                const res = await templateApi.getContent(selectedTemplate);
+                tplContent = res.content;
+            } catch (e) {
+                toast.error(e.message || 'Gagal memuat konten template');
+                setGenerating(false);
+                return;
+            }
             
             const selected = filteredSpl.filter(d => selectedIds.has(d.id));
             const verif = verifikators.find(v => v.id === selectedVerifikator) || {};
             
             for (const item of selected) {
-                const html = generateFromTemplate(tpl.content, item, verif);
+                const html = generateFromTemplate(tplContent, item, verif);
                 const w = window.open('', '_blank');
                 if (w) {
                     w.document.write(html);
@@ -1303,7 +1310,6 @@ const SplTab = () => {
                     w.focus();
                     w.print();
                 }
-                // Save history record
                 try {
                     await matrikApi.createSplHistory({
                         matrikId: item.id,
@@ -1517,11 +1523,8 @@ const SplTab = () => {
                                 <label className="form-label">Pilih Template <span style={{ color: 'var(--accent-red)' }}>*</span></label>
                                 <select className="form-select" value={selectedTemplate || ''} onChange={e => setSelectedTemplate(Number(e.target.value) || null)}>
                                     <option value="">-- Pilih Template --</option>
-                                    {templates.filter(t => t.content).map(t => <option key={t.id} value={t.id}>{t.nama} {t.jenisCocok ? `(${t.jenisCocok})` : ''}</option>)}
+                                    {templates.map(t => <option key={t.id} value={t.id}>{t.nama} {t.jenisCocok ? `(${t.jenisCocok})` : ''}</option>)}
                                 </select>
-                                {templates.length > 0 && templates.filter(t => t.content).length === 0 && (
-                                    <p style={{ color: 'var(--accent-orange)', fontSize: '0.8rem', marginTop: 6 }}>⚠️ Belum ada template yang memiliki konten HTML. Silakan isi konten pada Manajemen Template.</p>
-                                )}
                             </div>
                             <div className="form-group">
                                 <label className="form-label">Sekretaris (Verifikator)</label>

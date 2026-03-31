@@ -25,6 +25,31 @@ router.get('/download/:id', requireAuth, async (req, res) => {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// Get template content for SPL generation
+router.get('/content/:id', requireAuth, async (req, res) => {
+    try {
+        const tpl = await templateService.getById(Number(req.params.id));
+        if (!tpl) return res.status(404).json({ error: 'Template not found' });
+
+        // If content is stored in DB, use that
+        if (tpl.content) {
+            return res.json({ content: tpl.content });
+        }
+
+        // Otherwise try reading the file if it's HTML
+        if (tpl.filePath && fs.existsSync(tpl.filePath)) {
+            const ext = tpl.filePath.toLowerCase();
+            if (ext.endsWith('.html') || ext.endsWith('.htm')) {
+                const fileContent = fs.readFileSync(tpl.filePath, 'utf-8');
+                return res.json({ content: fileContent });
+            }
+            return res.status(400).json({ error: 'File bukan format HTML. Upload template dalam format .html untuk bisa digunakan.' });
+        }
+
+        return res.status(404).json({ error: 'Template belum memiliki konten. Silakan upload file HTML atau isi konten di Manajemen Template.' });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 router.post('/', requireAuth, requireRole('admin'), uploadTemplate.single('file'), forwardToNas('template'), async (req, res) => {
     try {
         const f = req.file as any;
