@@ -216,25 +216,15 @@ async function processUploadQueue() {
         }
     }
 
-    // 6. bast_template
-    const pendingTemplate = await db.select().from(bastTemplate).where(needsGDriveSync(bastTemplate.uploadStatus, bastTemplate.filePath)).limit(5);
-    for (const item of pendingTemplate) {
-        if (!item.filePath || !fs.existsSync(item.filePath)) {
-            await db.update(bastTemplate).set({ uploadStatus: 'failed' }).where(eq(bastTemplate.id, item.id));
-            continue;
+    // 6. bast_template — SKIP: templates are stored locally only (not sent to GDrive)
+    // Set any pending templates to 'done' so queue doesn't keep trying
+    try {
+        const pendingTpl = await db.select().from(bastTemplate).where(eq(bastTemplate.uploadStatus, 'uploading')).limit(20);
+        for (const item of pendingTpl) {
+            await db.update(bastTemplate).set({ uploadStatus: 'done' }).where(eq(bastTemplate.id, item.id));
+            console.log(`[Queue] Template #${item.id} set to 'done' (local only, skipping GDrive)`);
         }
-        try {
-            const subPath = 'admin';
-            const result = await uploadFileToGDrive(item.filePath, 'template', subPath);
-            const oldPath = item.filePath;
-            await db.update(bastTemplate).set({ filePath: result.path, uploadStatus: 'done' }).where(eq(bastTemplate.id, item.id));
-            try { fs.unlinkSync(oldPath); } catch { }
-            console.log(`[Queue] Upload template #${item.id} → ${subPath} ✅`);
-        } catch (e: any) {
-            console.error(`[Queue] Upload template #${item.id} failed:`, e.message);
-            await db.update(bastTemplate).set({ uploadStatus: 'failed' }).where(eq(bastTemplate.id, item.id));
-        }
-    }
+    } catch {}
 
     // 6b. riwayat_bantuan
     const pendingRiwayat = await db.select().from(riwayatBantuan).where(needsGDriveSync(riwayatBantuan.uploadStatus, riwayatBantuan.filePath)).limit(5);
