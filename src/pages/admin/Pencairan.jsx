@@ -100,36 +100,71 @@ const Pencairan = () => {
         return (item.nilaiKontrak || 0) * ((item.pencairanPersen || 0) / 100);
     };
 
-    // ===== RECAPITULATION =====
+    const [filterJenis, setFilterJenis] = useState('all');
+    const [filterSumber, setFilterSumber] = useState('all');
+
+    // ===== FILTERING (with jenis + sumber) =====
+    const filteredCombined = useMemo(() => {
+        return combinedData.filter(d => {
+            if (filterJenis !== 'all' && d.jenisPengadaan !== filterJenis) return false;
+            if (filterSumber !== 'all' && d.sumberDana !== filterSumber) return false;
+            return true;
+        });
+    }, [combinedData, filterJenis, filterSumber]);
+
+    // Recalculate global stats based on filtered data
     const globalStats = useMemo(() => {
-        const totalKontrak = combinedData.reduce((sum, item) => sum + (item.nilaiKontrak || 0), 0);
-        const totalPenyerapan = combinedData.reduce((sum, item) => sum + calculatePenyerapan(item), 0);
-        const totalPaket = combinedData.length;
-        const paketSelesai = combinedData.filter(d => ['Clear', 'SP2D'].includes(getEffectiveStatus(d))).length;
+        const totalKontrak = filteredCombined.reduce((sum, item) => sum + (item.nilaiKontrak || 0), 0);
+        const totalPenyerapan = filteredCombined.reduce((sum, item) => sum + calculatePenyerapan(item), 0);
+        const totalPaket = filteredCombined.length;
+        const paketSelesai = filteredCombined.filter(d => ['Clear', 'SP2D'].includes(getEffectiveStatus(d))).length;
         const paketSisa = totalPaket - paketSelesai;
+        const pctSerap = totalKontrak > 0 ? ((totalPenyerapan / totalKontrak) * 100) : 0;
         const jenisStats = {};
-        combinedData.forEach(item => {
+        filteredCombined.forEach(item => {
             const jenis = item.jenisPengadaan || 'Lainnya';
             if (!jenisStats[jenis]) jenisStats[jenis] = { total: 0, clear: 0 };
             jenisStats[jenis].total++;
             if (['Clear', 'SP2D'].includes(getEffectiveStatus(item))) jenisStats[jenis].clear++;
         });
-        return { totalKontrak, totalPenyerapan, totalPaket, paketSisa, jenisStats };
-    }, [combinedData]);
+        return { totalKontrak, totalPenyerapan, totalPaket, paketSisa, paketSelesai, pctSerap, jenisStats };
+    }, [filteredCombined]);
 
     const recapStatusStats = useMemo(() => {
         const stats = {};
         STATUS_OPTIONS.forEach(s => stats[s] = 0);
-        combinedData.forEach(item => {
+        filteredCombined.forEach(item => {
             const status = getEffectiveStatus(item);
             if (stats.hasOwnProperty(status)) stats[status]++;
         });
         return stats;
-    }, [combinedData]);
+    }, [filteredCombined]);
 
-    // ===== FILTERING =====
+    // Unique sumber dana & jenis from data
+    const sumberDanaList = useMemo(() => [...new Set(combinedData.map(d => d.sumberDana).filter(Boolean))], [combinedData]);
+    const jenisPengadaanList = useMemo(() => [...new Set(combinedData.map(d => d.jenisPengadaan).filter(Boolean))], [combinedData]);
+
+    // Penyerapan circle SVG helper
+    const PenyerapanCircle = ({ pct }) => {
+        const r = 38, c = 2 * Math.PI * r;
+        const offset = c - (pct / 100) * c;
+        return (
+            <svg width="90" height="90" viewBox="0 0 90 90" style={{ display: 'block', margin: '0 auto 8px' }}>
+                <circle cx="45" cy="45" r={r} fill="none" stroke="rgba(100,116,139,0.15)" strokeWidth="7" />
+                <circle cx="45" cy="45" r={r} fill="none" stroke="url(#penyerapanGrad)" strokeWidth="7"
+                    strokeDasharray={c} strokeDashoffset={offset} strokeLinecap="round"
+                    style={{ transition: 'stroke-dashoffset 1s ease', transform: 'rotate(-90deg)', transformOrigin: 'center' }} />
+                <defs><linearGradient id="penyerapanGrad" x1="0" y1="0" x2="1" y2="1">
+                    <stop offset="0%" stopColor="#22c55e" /><stop offset="100%" stopColor="#10b981" />
+                </linearGradient></defs>
+                <text x="45" y="49" textAnchor="middle" fill="var(--text-primary)" fontSize="16" fontWeight="700">{pct.toFixed(0)}%</text>
+            </svg>
+        );
+    };
+
+    // ===== SEARCH FILTERING =====
     const filtered = useMemo(() => {
-        return combinedData.filter(d => {
+        return filteredCombined.filter(d => {
             if (search) {
                 const q = search.toLowerCase();
                 return d.namaPaket?.toLowerCase().includes(q) ||
@@ -139,7 +174,7 @@ const Pencairan = () => {
             }
             return true;
         });
-    }, [combinedData, search]);
+    }, [filteredCombined, search]);
 
     // ===== PAGINATION =====
     const totalPages = Math.ceil(filtered.length / pageSize) || 1;
@@ -148,7 +183,7 @@ const Pencairan = () => {
         return filtered.slice(start, start + pageSize);
     }, [filtered, currentPage, pageSize]);
 
-    useEffect(() => { setCurrentPage(1); }, [search, pageSize]);
+    useEffect(() => { setCurrentPage(1); }, [search, pageSize, filterJenis, filterSumber]);
 
     // ===== HANDLERS =====
     const toggleCol = (key) => {
@@ -195,7 +230,6 @@ const Pencairan = () => {
 
     const executeDelete = () => {
         if (deleteTarget) {
-            // Reset pencairan data for this matrik
             updatePencairan(deleteTarget.id, { pencairanPersen: 0, status: 'Belum Masuk', noRegister: '', noSp2d: '', hariKalender: 0 });
             toast.success('Data pencairan direset');
             setDeleteTarget(null);
@@ -245,65 +279,117 @@ const Pencairan = () => {
 
     return (
         <div>
+            {/* ===== PAGE HEADER ===== */}
+            <div className="page-header">
+                <div className="page-header-left">
+                    <h1>Pencairan</h1>
+                    <p>Monitoring pencairan anggaran dari Matriks Kegiatan</p>
+                </div>
+            </div>
+
+            {/* ===== FILTER CHIPS ===== */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontWeight: 600 }}>Filter:</span>
+                <button onClick={() => { setFilterJenis('all'); setFilterSumber('all'); }}
+                    style={{
+                        padding: '5px 14px', borderRadius: 20, fontSize: '0.78rem', fontWeight: 600,
+                        border: filterJenis === 'all' && filterSumber === 'all' ? '2px solid var(--accent-blue)' : '1px solid var(--border-color)',
+                        background: filterJenis === 'all' && filterSumber === 'all' ? 'rgba(59,130,246,0.12)' : 'var(--bg-secondary)',
+                        color: filterJenis === 'all' && filterSumber === 'all' ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                        cursor: 'pointer', transition: 'all 0.2s'
+                    }}>Semua</button>
+                {jenisPengadaanList.map(j => (
+                    <button key={j} onClick={() => setFilterJenis(filterJenis === j ? 'all' : j)}
+                        style={{
+                            padding: '5px 14px', borderRadius: 20, fontSize: '0.78rem', fontWeight: 600,
+                            border: filterJenis === j ? '2px solid var(--accent-purple)' : '1px solid var(--border-color)',
+                            background: filterJenis === j ? 'rgba(168,85,247,0.12)' : 'var(--bg-secondary)',
+                            color: filterJenis === j ? 'var(--accent-purple)' : 'var(--text-secondary)',
+                            cursor: 'pointer', transition: 'all 0.2s'
+                        }}>{j}</button>
+                ))}
+                <span style={{ width: 1, height: 20, background: 'var(--border-color)' }} />
+                {sumberDanaList.map(s => (
+                    <button key={s} onClick={() => setFilterSumber(filterSumber === s ? 'all' : s)}
+                        style={{
+                            padding: '5px 14px', borderRadius: 20, fontSize: '0.78rem', fontWeight: 600,
+                            border: filterSumber === s ? '2px solid var(--accent-orange)' : '1px solid var(--border-color)',
+                            background: filterSumber === s ? 'rgba(249,115,22,0.12)' : 'var(--bg-secondary)',
+                            color: filterSumber === s ? 'var(--accent-orange)' : 'var(--text-secondary)',
+                            cursor: 'pointer', transition: 'all 0.2s'
+                        }}>{s}</button>
+                ))}
+            </div>
+
             {/* ===== FINANCIAL RECAP ===== */}
-            <div className="stats-grid" style={{ marginBottom: '1rem' }}>
-                <div className="stat-card" style={{ borderLeft: '4px solid var(--accent-blue)' }}>
-                    <div className="stat-label" style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center' }}>
-                        <Wallet size={14} style={{ marginRight: 4 }} /> Total Nilai Kontrak
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 16, marginBottom: 20 }}>
+                <div className="stat-card" style={{ position: 'relative', overflow: 'hidden', padding: '20px 16px' }}>
+                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg, #3b82f6, #6366f1)' }} />
+                    <div className="stat-label" style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+                        <Wallet size={14} style={{ marginRight: 6 }} /> Total Nilai Kontrak
                     </div>
-                    <div className="stat-value" style={{ fontSize: '1.25rem' }}>{formatCurrency(globalStats.totalKontrak)}</div>
+                    <div className="stat-value" style={{ fontSize: '1.15rem', marginTop: 4 }}>{formatCurrency(globalStats.totalKontrak)}</div>
                 </div>
-                <div className="stat-card" style={{ borderLeft: '4px solid var(--accent-green)' }}>
-                    <div className="stat-label" style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center' }}>
-                        <TrendingUp size={14} style={{ marginRight: 4 }} /> Total Penyerapan
+                <div className="stat-card" style={{ position: 'relative', overflow: 'hidden', padding: '20px 16px' }}>
+                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg, #22c55e, #10b981)' }} />
+                    <PenyerapanCircle pct={globalStats.pctSerap} />
+                    <div style={{ textAlign: 'center', fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Penyerapan</div>
+                    <div style={{ textAlign: 'center', fontSize: '0.9rem', fontWeight: 700, color: 'var(--accent-green)', marginTop: 2 }}>{formatCurrency(globalStats.totalPenyerapan)}</div>
+                </div>
+                <div className="stat-card" style={{ position: 'relative', overflow: 'hidden', padding: '20px 16px' }}>
+                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg, #a855f7, #ec4899)' }} />
+                    <div className="stat-label" style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600, display: 'flex', alignItems: 'center' }}>
+                        <Package size={14} style={{ marginRight: 6 }} /> Total Paket
                     </div>
-                    <div className="stat-value" style={{ color: 'var(--accent-green)', fontSize: '1.25rem' }}>
-                        {formatCurrency(globalStats.totalPenyerapan)}
-                    </div>
-                    <div className="stat-subtitle" style={{ fontSize: '0.75rem' }}>
-                        {((globalStats.totalPenyerapan / globalStats.totalKontrak) * 100 || 0).toFixed(1)}% Terserap
+                    <div className="stat-value" style={{ fontSize: '1.8rem', marginTop: 4 }}>{globalStats.totalPaket}</div>
+                    <div style={{ display: 'flex', gap: 12, marginTop: 6, fontSize: '0.75rem' }}>
+                        <span style={{ color: '#22c55e' }}>✓ {globalStats.paketSelesai} Clear</span>
+                        <span style={{ color: 'var(--accent-red)' }}>✗ {globalStats.paketSisa} Sisa</span>
                     </div>
                 </div>
-                <div className="stat-card" style={{ borderLeft: '4px solid var(--accent-purple)' }}>
-                    <div className="stat-label" style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center' }}>
-                        <Package size={14} style={{ marginRight: 4 }} /> Total Paket
+                <div className="stat-card" style={{ position: 'relative', overflow: 'hidden', padding: '20px 16px' }}>
+                    <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg, #f59e0b, #ef4444)' }} />
+                    <div className="stat-label" style={{ fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>Progress Status</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8 }}>
+                        {Object.entries(recapStatusStats).filter(([, c]) => c > 0).map(([status, count]) => {
+                            const pct = globalStats.totalPaket > 0 ? (count / globalStats.totalPaket * 100) : 0;
+                            const colorMap = { 'SP2D': '#16a34a', 'Clear': '#22c55e', 'Keuangan': '#6366f1', 'Masuk': '#3b82f6', 'Belum Masuk': '#ef4444', 'Revisi Admin 1': '#f59e0b', 'Revisi Admin 2': '#f59e0b' };
+                            return (
+                                <div key={status} style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.72rem' }}>
+                                    <span style={{ width: 70, color: 'var(--text-secondary)', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{status}</span>
+                                    <div style={{ flex: 1, height: 5, borderRadius: 3, background: 'rgba(100,116,139,0.12)', overflow: 'hidden' }}>
+                                        <div style={{ height: '100%', borderRadius: 3, background: colorMap[status] || '#64748b', width: `${pct}%`, transition: 'width 0.8s ease' }} />
+                                    </div>
+                                    <span style={{ fontWeight: 700, color: colorMap[status] || '#64748b', minWidth: 18, textAlign: 'right' }}>{count}</span>
+                                </div>
+                            );
+                        })}
                     </div>
-                    <div className="stat-value" style={{ fontSize: '1.25rem' }}>{globalStats.totalPaket}</div>
-                    <div className="stat-subtitle" style={{ fontSize: '0.75rem' }}>{globalStats.paketSisa} Paket Belum Clear</div>
                 </div>
             </div>
 
             {/* ===== JENIS PENGADAAN RECAP ===== */}
             {Object.keys(globalStats.jenisStats).length > 0 && (
-                <div className="stats-grid" style={{ marginBottom: '1.5rem', gridTemplateColumns: `repeat(${Object.keys(globalStats.jenisStats).length}, 1fr)` }}>
-                    {Object.entries(globalStats.jenisStats).map(([jenis, stats]) => (
-                        <div key={jenis} className="stat-card" style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', padding: '0.625rem 1rem' }}>
-                            <div style={{ fontSize: '0.8rem', fontWeight: 500, color: 'var(--text-secondary)' }}>{jenis}</div>
-                            <div style={{ fontSize: '1rem', fontWeight: 600 }}>
-                                {stats.clear} clear / {stats.total} total
+                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(Object.keys(globalStats.jenisStats).length, 4)}, 1fr)`, gap: 12, marginBottom: 20 }}>
+                    {Object.entries(globalStats.jenisStats).map(([jenis, stats]) => {
+                        const pct = stats.total > 0 ? (stats.clear / stats.total * 100) : 0;
+                        return (
+                            <div key={jenis} className="stat-card" style={{ padding: '12px 16px', position: 'relative', overflow: 'hidden' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                                    <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-secondary)' }}>{jenis}</span>
+                                    <span style={{ fontSize: '0.72rem', fontWeight: 700, color: pct === 100 ? '#22c55e' : 'var(--text-primary)' }}>{pct.toFixed(0)}%</span>
+                                </div>
+                                <div style={{ height: 6, borderRadius: 3, background: 'rgba(100,116,139,0.12)', overflow: 'hidden', marginBottom: 6 }}>
+                                    <div style={{ height: '100%', borderRadius: 3, background: pct === 100 ? '#22c55e' : pct > 50 ? '#3b82f6' : '#f59e0b', width: `${pct}%`, transition: 'width 0.8s ease' }} />
+                                </div>
+                                <div style={{ fontSize: '0.82rem', fontWeight: 600 }}>
+                                    <span style={{ color: '#22c55e' }}>{stats.clear}</span> <span style={{ color: 'var(--text-secondary)' }}>/ {stats.total} clear</span>
+                                </div>
                             </div>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
             )}
-
-            {/* ===== STATUS RECAP ===== */}
-            <div className="stats-grid" style={{ marginBottom: '1.5rem', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))' }}>
-                {Object.entries(recapStatusStats).map(([status, count]) => (
-                    <div key={status} className="stat-card" style={{ borderLeft: `3px solid ${status === 'SP2D' ? '#16a34a' : status === 'Belum Masuk' ? '#ef4444' : '#3b82f6'}`, padding: '0.625rem 0.75rem' }}>
-                        <div className="stat-label" style={{ fontSize: '0.7rem', fontWeight: 500 }}>{status}</div>
-                        <div className="stat-value" style={{ fontSize: '1rem' }}>{count}</div>
-                    </div>
-                ))}
-            </div>
-
-            {/* ===== PAGE HEADER ===== */}
-            <div className="page-header">
-                <div className="page-header-left">
-                    <h1>Pencairan</h1>
-                    <p>Data pencairan anggaran dari Matriks Kegiatan</p>
-                </div>
-            </div>
 
             <div className="table-container">
                 <div className="table-toolbar">

@@ -266,10 +266,10 @@ const ProyeksiAnggaran = () => {
     }, [snpRekapData, filterJenjang, searchQuery, snpRekapFilter]);
 
     const snpRekapStats = useMemo(() => {
-        const total = snpRekapData.length;
-        const lengkap = snpRekapData.filter(s => s.snpComplete).length;
+        const total = filteredSnpRekap.length;
+        const lengkap = filteredSnpRekap.filter(s => s.snpComplete).length;
         return { total, lengkap, belum: total - lengkap };
-    }, [snpRekapData]);
+    }, [filteredSnpRekap]);
 
     // =========================================================================
     // PAGINATION COMPUTED DATA
@@ -817,19 +817,40 @@ const ProyeksiAnggaran = () => {
             {/* TAB 5: REKAP SNP */}
             {tab === 'rekap-snp' && (
                 <div>
+                    {/* Jenjang Tab Pills */}
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 20, flexWrap: 'wrap' }}>
+                        {['all', ...JENJANG].map(j => (
+                            <button key={j} onClick={() => setFilterJenjang(j)}
+                                style={{
+                                    padding: '6px 18px', borderRadius: 20, fontWeight: 600, fontSize: '0.82rem',
+                                    border: filterJenjang === j ? '2px solid var(--accent-blue)' : '1px solid var(--border-color)',
+                                    background: filterJenjang === j ? 'rgba(59,130,246,0.12)' : 'var(--bg-secondary)',
+                                    color: filterJenjang === j ? 'var(--accent-blue)' : 'var(--text-secondary)',
+                                    cursor: 'pointer', transition: 'all 0.2s',
+                                }}>
+                                {j === 'all' ? '🏫 Semua Jenjang' : j}
+                            </button>
+                        ))}
+                    </div>
+
                     {/* Summary Cards */}
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 20 }}>
-                        <div className="table-container" style={{ padding: 16, textAlign: 'center', cursor: 'pointer', border: snpRekapFilter === 'all' ? '2px solid var(--accent-blue)' : undefined }} onClick={() => setSnpRekapFilter('all')}>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 4 }}>Total Sekolah</div>
-                            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-primary)' }}>{snpRekapStats.total}</div>
+                        <div className="table-container" style={{ padding: 20, textAlign: 'center', cursor: 'pointer', border: snpRekapFilter === 'all' ? '2px solid var(--accent-blue)' : undefined, position: 'relative', overflow: 'hidden' }} onClick={() => setSnpRekapFilter('all')}>
+                            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg, var(--accent-blue), var(--accent-purple))' }} />
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>Total Sekolah {filterJenjang !== 'all' ? `(${filterJenjang})` : ''}</div>
+                            <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--text-primary)' }}>{snpRekapStats.total}</div>
                         </div>
-                        <div className="table-container" style={{ padding: 16, textAlign: 'center', cursor: 'pointer', border: snpRekapFilter === 'lengkap' ? '2px solid #22c55e' : undefined }} onClick={() => setSnpRekapFilter('lengkap')}>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 4 }}>Sudah Lengkap SNP</div>
-                            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: '#22c55e' }}>{snpRekapStats.lengkap}</div>
+                        <div className="table-container" style={{ padding: 20, textAlign: 'center', cursor: 'pointer', border: snpRekapFilter === 'lengkap' ? '2px solid #22c55e' : undefined, position: 'relative', overflow: 'hidden' }} onClick={() => setSnpRekapFilter('lengkap')}>
+                            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg, #22c55e, #10b981)' }} />
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>✅ Sudah Lengkap SNP</div>
+                            <div style={{ fontSize: '2rem', fontWeight: 700, color: '#22c55e' }}>{snpRekapStats.lengkap}</div>
+                            {snpRekapStats.total > 0 && <div style={{ fontSize: '0.72rem', color: '#22c55e', marginTop: 2 }}>{((snpRekapStats.lengkap / snpRekapStats.total) * 100).toFixed(1)}%</div>}
                         </div>
-                        <div className="table-container" style={{ padding: 16, textAlign: 'center', cursor: 'pointer', border: snpRekapFilter === 'belum' ? '2px solid var(--accent-red)' : undefined }} onClick={() => setSnpRekapFilter('belum')}>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 4 }}>Belum Lengkap SNP</div>
-                            <div style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--accent-red)' }}>{snpRekapStats.belum}</div>
+                        <div className="table-container" style={{ padding: 20, textAlign: 'center', cursor: 'pointer', border: snpRekapFilter === 'belum' ? '2px solid var(--accent-red)' : undefined, position: 'relative', overflow: 'hidden' }} onClick={() => setSnpRekapFilter('belum')}>
+                            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 3, background: 'linear-gradient(90deg, #ef4444, #f97316)' }} />
+                            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>❌ Belum Lengkap SNP</div>
+                            <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--accent-red)' }}>{snpRekapStats.belum}</div>
+                            {snpRekapStats.total > 0 && <div style={{ fontSize: '0.72rem', color: 'var(--accent-red)', marginTop: 2 }}>{((snpRekapStats.belum / snpRekapStats.total) * 100).toFixed(1)}%</div>}
                         </div>
                     </div>
 
