@@ -5,7 +5,7 @@ import { useSekolahData } from '../../data/dataProvider';
 import SearchableSelect from '../../components/ui/SearchableSelect';
 import useMatrikStore, { generateNoSpk, inferJenjang, fullTerbilang, formatNumberInput, parseFormattedNumber, naturalSort, SUMBER_DANA, JENIS_PENGADAAN, METODE_PEMILIHAN, STATUS_PEMILIK } from '../../store/matrikStore';
 import { matrikApi, templateApi } from '../../api/index';
-import { generateFromTemplate, getAvailableVariables } from '../../utils/splGenerator';
+import { getAvailableVariables } from '../../utils/splGenerator';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 
@@ -1287,38 +1287,34 @@ const SplTab = () => {
         if (!selectedTemplate) { toast.error('Pilih template terlebih dahulu'); return; }
         setGenerating(true);
         try {
-            // Fetch template content from server
-            let tplContent;
-            try {
-                const res = await templateApi.getContent(selectedTemplate);
-                tplContent = res.content;
-            } catch (e) {
-                toast.error(e.message || 'Gagal memuat konten template');
-                setGenerating(false);
-                return;
-            }
-            
             const selected = filteredSpl.filter(d => selectedIds.has(d.id));
             const verif = verifikators.find(v => v.id === selectedVerifikator) || {};
             
             for (const item of selected) {
-                const html = generateFromTemplate(tplContent, item, verif);
-                const w = window.open('', '_blank');
-                if (w) {
-                    w.document.write(html);
-                    w.document.close();
-                    w.focus();
-                    w.print();
-                }
+                // Generate filled DOCX on server
+                const blob = await templateApi.generate(selectedTemplate, item, verif);
+                
+                // Download DOCX
+                const filename = `SPL_${item.noMatrik || ''}_${(item.namaSekolah || 'dokumen').replace(/[^a-zA-Z0-9]/g, '_')}.docx`;
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                // Save history
                 try {
                     await matrikApi.createSplHistory({
                         matrikId: item.id,
                         templateId: selectedTemplate,
-                        namaFile: `SPL_${item.noMatrik}_${item.namaSekolah || 'dokumen'}.html`,
+                        namaFile: filename,
                     });
                 } catch { /* best-effort */ }
             }
-            toast.success(`${selected.length} SPL berhasil di-generate`);
+            toast.success(`${selected.length} SPL berhasil di-generate (file DOCX terunduh)`);
             setShowGenerateModal(false);
             setSelectedIds(new Set());
         } catch (e) { toast.error('Gagal generate SPL: ' + (e.message || '')); }
@@ -1517,7 +1513,7 @@ const SplTab = () => {
                         </div>
                         <div className="modal-body">
                             <p style={{ marginBottom: 16, color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                                {selectedIds.size} matrik dipilih. Variabel <code>{`{{namaPaket}}`}</code>, <code>{`{{namaSekolah}}`}</code>, dll akan otomatis diganti dengan data matrik.
+                                {selectedIds.size} matrik dipilih. Template DOCX akan diisi dengan data matrik lalu diunduh sebagai file DOCX.
                             </p>
                             <div className="form-group">
                                 <label className="form-label">Pilih Template <span style={{ color: 'var(--accent-red)' }}>*</span></label>

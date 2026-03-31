@@ -7,67 +7,75 @@ import path from 'path';
 
 const router = Router();
 
-/**
- * Convert DOCX file to HTML using mammoth
- */
-async function docxToHtml(filePath: string): Promise<string> {
-    const mammoth = await import('mammoth');
-    const result = await mammoth.default.convertToHtml({ path: filePath });
-    if (result.messages?.length) {
-        console.log('[Template] mammoth warnings:', result.messages.map(m => m.message).join('; '));
-    }
-    return result.value; // HTML string
-}
-
 // List all templates
 router.get('/', requireAuth, requireRole('admin', 'verifikator'), async (_req, res) => {
     try { res.json(await templateService.list()); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// Download template file
+// Download original template file
 router.get('/download/:id', requireAuth, async (req, res) => {
     try {
         const tpl = await templateService.getById(Number(req.params.id));
         if (!tpl || !tpl.filePath) return res.status(404).json({ error: 'File not found' });
-
         if (fs.existsSync(tpl.filePath)) {
-            res.download(tpl.filePath, tpl.nama || 'template');
+            res.download(tpl.filePath, (tpl.nama || 'template') + path.extname(tpl.filePath));
         } else {
             res.status(404).json({ error: 'File not found on disk' });
         }
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// Get template content (HTML) for SPL generation
-router.get('/content/:id', requireAuth, async (req, res) => {
+// ===== GENERATE: fill DOCX template with matrik data and return filled DOCX =====
+router.post('/generate/:id', requireAuth, async (req, res) => {
     try {
         const tpl = await templateService.getById(Number(req.params.id));
         if (!tpl) return res.status(404).json({ error: 'Template not found' });
-
-        // 1. If HTML content stored in DB, use that
-        if (tpl.content) {
-            return res.json({ content: tpl.content });
+        if (!tpl.filePath || !fs.existsSync(tpl.filePath)) {
+            return res.status(404).json({ error: 'File DOCX template tidak ditemukan di server' });
         }
 
-        // 2. Try converting DOCX file to HTML
-        if (tpl.filePath && fs.existsSync(tpl.filePath)) {
-            try {
-                const html = await docxToHtml(tpl.filePath);
-                // Auto-save to DB for future use
-                await templateService.update(tpl.id, { content: html });
-                return res.json({ content: html });
-            } catch (convErr: any) {
-                return res.status(500).json({ error: `Gagal konversi DOCX ke HTML: ${convErr.message}` });
-            }
-        }
+        const { item, sekretaris } = req.body;
+        if (!item) return res.status(400).json({ error: 'Data matrik diperlukan' });
 
-        return res.status(404).json({
-            error: 'Template belum memiliki file. Silakan upload file DOCX di Manajemen Template.'
+        // Build variable map
+        const vars = buildVariableMap(item, sekretaris || {});
+
+        // Fill DOCX template
+        const PizZip = (await import('pizzip')).default;
+        const Docxtemplater = (await import('docxtemplater')).default;
+
+        const content = fs.readFileSync(tpl.filePath, 'binary');
+        const zip = new PizZip(content);
+        const doc = new Docxtemplater(zip, {
+            paragraphLoop: true,
+            linebreaks: true,
+            delimiters: { start: '{{', end: '}}' },
         });
-    } catch (e: any) { res.status(500).json({ error: e.message }); }
+
+        doc.render(vars);
+
+        const buf = doc.getZip().generate({
+            type: 'nodebuffer',
+            compression: 'DEFLATE',
+        });
+
+        const filename = `SPL_${item.noMatrik || ''}_${(item.namaSekolah || 'dokumen').replace(/[^a-zA-Z0-9]/g, '_')}.docx`;
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.setHeader('Content-Length', buf.length);
+        res.send(buf);
+    } catch (e: any) {
+        console.error('[Template Generate]', e);
+        // Check for template errors (unresolved tags, etc.)
+        if (e.properties && e.properties.errors) {
+            const errMessages = e.properties.errors.map((err: any) => `${err.properties?.id}: ${err.message}`).join('; ');
+            return res.status(400).json({ error: `Error template: ${errMessages}` });
+        }
+        res.status(500).json({ error: e.message });
+    }
 });
 
-// Create template (upload DOCX, auto-convert to HTML)
+// Create template
 router.post('/', requireAuth, requireRole('admin'), uploadTemplate.single('file'), async (req, res) => {
     try {
         const data: any = {
@@ -77,25 +85,17 @@ router.post('/', requireAuth, requireRole('admin'), uploadTemplate.single('file'
         if (req.file) {
             data.filePath = req.file.path;
             data.uploadStatus = 'done';
-            // Auto-convert DOCX to HTML
-            try {
-                data.content = await docxToHtml(req.file.path);
-            } catch (convErr: any) {
-                console.error('[Template] DOCX conversion error:', convErr.message);
-            }
         }
-        if (req.body.content) data.content = req.body.content;
         res.status(201).json(await templateService.create(data));
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// Update template (upload new DOCX, auto-convert to HTML)
+// Update template
 router.put('/:id', requireAuth, requireRole('admin'), uploadTemplate.single('file'), async (req, res) => {
     try {
         const data: any = {};
         if (req.body.name || req.body.nama) data.nama = req.body.name || req.body.nama;
         if (req.body.type || req.body.jenisCocok) data.jenisCocok = req.body.type || req.body.jenisCocok;
-        if (req.body.content !== undefined) data.content = req.body.content;
         if (req.file) {
             // Delete old file
             const existing = await templateService.getById(Number(req.params.id));
@@ -104,42 +104,12 @@ router.put('/:id', requireAuth, requireRole('admin'), uploadTemplate.single('fil
             }
             data.filePath = req.file.path;
             data.uploadStatus = 'done';
-            // Auto-convert DOCX to HTML
-            try {
-                data.content = await docxToHtml(req.file.path);
-            } catch (convErr: any) {
-                console.error('[Template] DOCX conversion error:', convErr.message);
-            }
         }
         res.json(await templateService.update(Number(req.params.id), data));
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// JSON-only update for content (no file upload)
-router.patch('/:id', requireAuth, requireRole('admin'), async (req, res) => {
-    try {
-        const data: any = {};
-        if (req.body.nama) data.nama = req.body.nama;
-        if (req.body.jenisCocok) data.jenisCocok = req.body.jenisCocok;
-        if (req.body.content !== undefined) data.content = req.body.content;
-        res.json(await templateService.update(Number(req.params.id), data));
-    } catch (e: any) { res.status(500).json({ error: e.message }); }
-});
-
-// Re-convert existing template DOCX to HTML (refresh content)
-router.post('/:id/reconvert', requireAuth, requireRole('admin'), async (req, res) => {
-    try {
-        const tpl = await templateService.getById(Number(req.params.id));
-        if (!tpl) return res.status(404).json({ error: 'Template not found' });
-        if (!tpl.filePath || !fs.existsSync(tpl.filePath)) {
-            return res.status(404).json({ error: 'File DOCX tidak ditemukan di server' });
-        }
-        const html = await docxToHtml(tpl.filePath);
-        const updated = await templateService.update(tpl.id, { content: html });
-        res.json(updated);
-    } catch (e: any) { res.status(500).json({ error: e.message }); }
-});
-
+// Delete template
 router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
     try {
         const tpl = await templateService.getById(Number(req.params.id));
@@ -152,3 +122,73 @@ router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
 });
 
 export default router;
+
+// ===== VARIABLE MAP =====
+const PPKOM = {
+    nama: 'SUNGEB, S.Sos,. M.M.',
+    nip: '19780908 199703 1 001',
+    jabatan: 'Pejabat Pembuat Komitmen pada Bidang Sarpras Dinas P dan K Kab. Cilacap',
+    alamat: 'Jl. Kalimantan No.51 Cilacap',
+};
+const TIM_TEKNIS_KETUA = {
+    nama: 'M. TAKHMILUDDIN, ST.MT',
+    nip: '19840525 200903 1 005',
+};
+
+function fmtRp(v: any) { return v ? Number(v).toLocaleString('id-ID') : '0'; }
+function fmtDate(d: any) {
+    if (!d) return '';
+    const dt = new Date(d);
+    if (isNaN(dt.getTime())) return String(d);
+    const bulan = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+    return `${dt.getDate()} ${bulan[dt.getMonth()]} ${dt.getFullYear()}`;
+}
+
+function buildVariableMap(item: any, sekretaris: any = {}) {
+    const d = item;
+    const sek = { nama: sekretaris.name || sekretaris.nama || '', nip: sekretaris.nip || '' };
+    const tahun = d.tahunAnggaran || new Date().getFullYear();
+
+    return {
+        noMatrik: d.noMatrik || '',
+        namaPaket: d.namaPaket || '',
+        namaSekolah: d.namaSekolah || '',
+        namaSekolahUpper: (d.namaSekolah || '').toUpperCase(),
+        npsn: d.npsn || '',
+        nilaiKontrak: fmtRp(d.nilaiKontrak),
+        nilaiKontrakRaw: String(d.nilaiKontrak || 0),
+        terbilangKontrak: d.terbilangKontrak || '',
+        jangkaWaktu: String(d.jangkaWaktu || ''),
+        jangkaWaktuText: d.jangkaWaktu ? `${d.jangkaWaktu} Hari Kalender` : '',
+        sumberDana: d.sumberDana || 'APBD',
+        tahunAnggaran: String(tahun),
+        noSpk: d.noSpk || '',
+        penyedia: d.penyedia || '',
+        namaPemilik: d.namaPemilik || '',
+        statusPemilik: d.statusPemilik || '',
+        alamatKantor: d.alamatKantor || '',
+        noHp: d.noHp || '',
+        metode: d.metode || '',
+        tanggalMulai: fmtDate(d.tanggalMulai),
+        tanggalSelesai: fmtDate(d.tanggalSelesai),
+        noPcm: d.noPcm || '',
+        tglPcm: fmtDate(d.tglPcm),
+        noMc0: d.noMc0 || '',
+        tglMc0: fmtDate(d.tglMc0),
+        noMc100: d.noMc100 || '',
+        tglMc100: fmtDate(d.tglMc100),
+        konsultanPengawas: d.konsultanPengawas || '',
+        dirKonsultanPengawas: d.dirKonsultanPengawas || '',
+        kepsek: d.kepsek || '',
+        nipKs: d.nipKs || '',
+        sekretaris: sek.nama,
+        nipSekretaris: sek.nip,
+        ppkom: PPKOM.nama,
+        nipPpkom: PPKOM.nip,
+        jabatanPpkom: PPKOM.jabatan,
+        alamatPpkom: PPKOM.alamat,
+        ketuaTimTeknis: TIM_TEKNIS_KETUA.nama,
+        nipKetuaTimTeknis: TIM_TEKNIS_KETUA.nip,
+        tahunTerbilang: 'Dua Ribu Dua Puluh Lima',
+    };
+}

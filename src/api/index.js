@@ -100,12 +100,22 @@ export const bastApi = {
 
 export const templateApi = {
     list: () => api.get('/template'),
-    getContent: (id) => api.get(`/template/content/${id}`),
     create: (data) => api.upload('/template', data),
     update: (id, data) => api.upload(`/template/${id}`, data, 'PUT'),
-    updateContent: (id, content) => api.patch(`/template/${id}`, { content }),
-    reconvert: (id) => api.post(`/template/${id}/reconvert`),
     delete: (id) => api.delete(`/template/${id}`),
+    // Generate filled DOCX — returns blob
+    generate: (id, item, sekretaris) => fetch(`/api/template/generate/${id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ item, sekretaris }),
+    }).then(async r => {
+        if (!r.ok) {
+            const err = await r.json().catch(() => ({}));
+            throw new Error(err.error || `Generate failed (${r.status})`);
+        }
+        return r.blob();
+    }),
 };
 
 export const riwayatBantuanApi = {
