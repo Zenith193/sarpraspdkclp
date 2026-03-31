@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { templateService } from '../services/bast.service.js';
+import { splHistoryService } from '../services/matrik.service.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { uploadTemplate } from '../middleware/upload.js';
 import fs from 'fs';
@@ -8,6 +9,10 @@ import os from 'os';
 import { execSync } from 'child_process';
 
 const router = Router();
+
+// Generated SPL output directory
+const SPL_OUTPUT_DIR = path.resolve(process.env.UPLOAD_DIR || './uploads', '_sistem', 'spl-output');
+if (!fs.existsSync(SPL_OUTPUT_DIR)) fs.mkdirSync(SPL_OUTPUT_DIR, { recursive: true });
 
 // List all templates
 router.get('/', requireAuth, requireRole('admin', 'verifikator'), async (_req, res) => {
@@ -27,10 +32,37 @@ router.get('/download/:id', requireAuth, async (req, res) => {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// ===== GENERATE: fill DOCX → convert to PDF → return PDF for print preview =====
+// ===== DOWNLOAD GENERATED SPL FILE (PDF or DOCX) =====
+router.get('/spl-file/:format/:historyId', requireAuth, async (req, res) => {
+    try {
+        const format = req.params.format as string;
+        const historyId = req.params.historyId as string;
+        if (!['pdf', 'docx'].includes(format)) return res.status(400).json({ error: 'Format harus pdf atau docx' });
+
+        // Find the file in spl-output directory
+        const files = fs.readdirSync(SPL_OUTPUT_DIR).filter(f => f.startsWith(`spl_${historyId}_`) && f.endsWith(`.${format}`));
+        if (files.length === 0) return res.status(404).json({ error: `File ${(format as string).toUpperCase()} tidak ditemukan` });
+
+        const filePath = path.join(SPL_OUTPUT_DIR, files[0]);
+        if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'File tidak ditemukan di server' });
+
+        if (format === 'pdf') {
+            // Inline for preview
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `inline; filename="${files[0]}"`);
+        } else {
+            // Download DOCX
+            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+            res.setHeader('Content-Disposition', `attachment; filename="${files[0]}"`);
+        }
+        const buf = fs.readFileSync(filePath);
+        res.setHeader('Content-Length', buf.length);
+        res.send(buf);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ===== GENERATE: fill DOCX → save both DOCX & PDF → auto-save history → return JSON =====
 router.post('/generate/:id', requireAuth, async (req, res) => {
-    let tempDocxPath = '';
-    let tempPdfPath = '';
     try {
         const tpl = await templateService.getById(Number(req.params.id));
         if (!tpl) return res.status(404).json({ error: 'Template not found' });
@@ -48,7 +80,6 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
 
         // Build variable map
         const vars = buildVariableMap(item, sekretaris || {});
-        console.log('[Template] Variables:', JSON.stringify(vars, null, 2).substring(0, 500));
 
         // Fill DOCX template with docxtemplater
         const PizZip = (await import('pizzip')).default;
@@ -69,46 +100,51 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
             compression: 'DEFLATE',
         });
 
-        // Save filled DOCX to temp file
-        const tempDir = path.join(os.tmpdir(), 'spl-generate');
-        if (!fs.existsSync(tempDir)) fs.mkdirSync(tempDir, { recursive: true });
-        const basename = `SPL_${Date.now()}_${item.noMatrik || 'doc'}`;
-        tempDocxPath = path.join(tempDir, `${basename}.docx`);
-        fs.writeFileSync(tempDocxPath, filledBuf);
+        // Create history record first to get the ID
+        const userId = (req as any).user?.id;
+        const namaFile = `SPL_${item.noMatrik || ''}_${(item.namaSekolah || 'dokumen').replace(/[^a-zA-Z0-9]/g, '_')}`;
+        const historyRecord = await splHistoryService.create({
+            matrikId: item.id,
+            templateId: Number(req.params.id),
+            namaFile: namaFile,
+            createdBy: userId,
+        });
+
+        const historyId = historyRecord.id;
+        const safeBasename = `spl_${historyId}_${(item.noMatrik || '').replace(/[^a-zA-Z0-9]/g, '_')}`;
+
+        // Save DOCX permanently  
+        const docxPath = path.join(SPL_OUTPUT_DIR, `${safeBasename}.docx`);
+        fs.writeFileSync(docxPath, filledBuf);
+        console.log(`[Template] Saved DOCX: ${docxPath}`);
 
         // Convert DOCX → PDF using LibreOffice
+        let hasPdf = false;
         try {
-            execSync(`libreoffice --headless --convert-to pdf --outdir "${tempDir}" "${tempDocxPath}"`, {
+            execSync(`libreoffice --headless --convert-to pdf --outdir "${SPL_OUTPUT_DIR}" "${docxPath}"`, {
                 timeout: 30000,
                 stdio: 'pipe',
             });
+            const pdfPath = path.join(SPL_OUTPUT_DIR, `${safeBasename}.pdf`);
+            hasPdf = fs.existsSync(pdfPath);
+            if (hasPdf) console.log(`[Template] Saved PDF: ${pdfPath}`);
         } catch (loErr: any) {
-            console.error('[Template] LibreOffice conversion failed:', loErr.stderr?.toString() || loErr.message);
-            // Fallback: return the DOCX directly
-            const filename = `${basename}.docx`;
-            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-            res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-            res.setHeader('Content-Length', filledBuf.length);
-            return res.send(filledBuf);
+            console.error('[Template] LibreOffice conversion failed:', loErr.stderr?.toString()?.substring(0, 200) || loErr.message);
         }
 
-        tempPdfPath = path.join(tempDir, `${basename}.pdf`);
-        if (!fs.existsSync(tempPdfPath)) {
-            // Fallback: return DOCX
-            const filename = `${basename}.docx`;
-            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-            res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
-            res.setHeader('Content-Length', filledBuf.length);
-            return res.send(filledBuf);
-        }
+        // Update history with file path
+        await splHistoryService.update(historyId, { filePath: docxPath });
 
-        // Send PDF for print preview
-        const pdfBuf = fs.readFileSync(tempPdfPath);
-        const pdfFilename = `SPL_${item.noMatrik || ''}_${(item.namaSekolah || 'dokumen').replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `inline; filename="${pdfFilename}"`);
-        res.setHeader('Content-Length', pdfBuf.length);
-        res.send(pdfBuf);
+        // Return JSON with history info (not blob)
+        res.json({
+            success: true,
+            historyId,
+            namaFile,
+            hasPdf,
+            hasDocx: true,
+            pdfUrl: hasPdf ? `/api/template/spl-file/pdf/${historyId}` : null,
+            docxUrl: `/api/template/spl-file/docx/${historyId}`,
+        });
     } catch (e: any) {
         console.error('[Template Generate]', e);
         if (e.properties && e.properties.errors) {
@@ -116,10 +152,6 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
             return res.status(400).json({ error: `Error template: ${errMessages}` });
         }
         res.status(500).json({ error: e.message });
-    } finally {
-        // Cleanup temp files
-        try { if (tempDocxPath && fs.existsSync(tempDocxPath)) fs.unlinkSync(tempDocxPath); } catch {}
-        try { if (tempPdfPath && fs.existsSync(tempPdfPath)) fs.unlinkSync(tempPdfPath); } catch {}
     }
 });
 

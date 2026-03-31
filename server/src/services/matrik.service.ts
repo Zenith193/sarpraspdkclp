@@ -121,5 +121,10 @@ export const splHistoryService = {
     async delete(id: number) {
         await db.delete(splGenerated).where(eq(splGenerated.id, id));
     },
+
+    async update(id: number, data: Partial<typeof splGenerated.$inferInsert>) {
+        const result = await db.update(splGenerated).set(data).where(eq(splGenerated.id, id)).returning();
+        return result[0];
+    },
 };
 

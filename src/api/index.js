@@ -103,7 +103,7 @@ export const templateApi = {
     create: (data) => api.upload('/template', data),
     update: (id, data) => api.upload(`/template/${id}`, data, 'PUT'),
     delete: (id) => api.delete(`/template/${id}`),
-    // Generate filled DOCX — returns blob
+    // Generate filled SPL — returns JSON with download URLs
     generate: (id, item, sekretaris) => fetch(`/api/template/generate/${id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -113,6 +113,16 @@ export const templateApi = {
         if (!r.ok) {
             const err = await r.json().catch(() => ({}));
             throw new Error(err.error || `Generate failed (${r.status})`);
+        }
+        return r.json();
+    }),
+    // Get SPL file (PDF or DOCX) as blob
+    getSplFile: (format, historyId) => fetch(`/api/template/spl-file/${format}/${historyId}`, {
+        credentials: 'include',
+    }).then(async r => {
+        if (!r.ok) {
+            const err = await r.json().catch(() => ({}));
+            throw new Error(err.error || `Download failed (${r.status})`);
         }
         return r.blob();
     }),

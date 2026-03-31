@@ -1291,37 +1291,30 @@ const SplTab = () => {
             const verif = verifikators.find(v => v.id === selectedVerifikator) || {};
             
             for (const item of selected) {
-                // Generate filled PDF on server
-                const blob = await templateApi.generate(selectedTemplate, item, verif);
+                // Generate SPL on server (saves both DOCX & PDF, auto-creates history)
+                const result = await templateApi.generate(selectedTemplate, item, verif);
                 
-                // Open PDF in new tab for print preview
-                const url = URL.createObjectURL(blob);
-                const w = window.open(url, '_blank');
-                if (!w) {
-                    // Popup blocked - fallback to download
+                // Open PDF preview in new tab
+                if (result.pdfUrl) {
+                    window.open(result.pdfUrl, '_blank');
+                } else if (result.docxUrl) {
+                    // Fallback: download DOCX if PDF not available
+                    const blob = await templateApi.getSplFile('docx', result.historyId);
+                    const url = URL.createObjectURL(blob);
                     const a = document.createElement('a');
                     a.href = url;
-                    a.download = `SPL_${item.noMatrik || ''}.pdf`;
+                    a.download = `${result.namaFile}.docx`;
                     document.body.appendChild(a);
                     a.click();
                     document.body.removeChild(a);
+                    setTimeout(() => URL.revokeObjectURL(url), 10000);
                 }
-                // Don't revoke immediately — new tab needs the URL
-                setTimeout(() => URL.revokeObjectURL(url), 60000);
-                
-                // Save history
-                const filename = `SPL_${item.noMatrik || ''}_${(item.namaSekolah || 'dokumen').replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
-                try {
-                    await matrikApi.createSplHistory({
-                        matrikId: item.id,
-                        templateId: selectedTemplate,
-                        namaFile: filename,
-                    });
-                } catch { /* best-effort */ }
             }
-            toast.success(`${selected.length} SPL berhasil di-generate`);
+            toast.success(`${selected.length} SPL berhasil di-generate (tersimpan di Riwayat)`);
             setShowGenerateModal(false);
             setSelectedIds(new Set());
+            // Auto-refresh history
+            loadHistory();
         } catch (e) { toast.error('Gagal generate SPL: ' + (e.message || '')); }
         finally { setGenerating(false); }
     };
@@ -1564,7 +1557,7 @@ const SplTab = () => {
             {/* HISTORY MODAL */}
             {showHistory && (
                 <div className="modal-overlay" onClick={() => setShowHistory(false)}>
-                    <div className="modal" style={{ maxWidth: 750 }} onClick={e => e.stopPropagation()}>
+                    <div className="modal" style={{ maxWidth: 800 }} onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
                             <div className="modal-title">Riwayat Generate SPL</div>
                             <button className="modal-close" onClick={() => setShowHistory(false)}><X size={18} /></button>
@@ -1580,9 +1573,8 @@ const SplTab = () => {
                                             <th>Matrik</th>
                                             <th>Sekolah</th>
                                             <th>Template</th>
-                                            <th>File</th>
                                             <th>Tanggal</th>
-                                            <th>Aksi</th>
+                                            <th style={{ width: 130 }}>Aksi</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -1592,12 +1584,41 @@ const SplTab = () => {
                                                 <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{h.matrikNo || '-'}</td>
                                                 <td>{h.namaSekolah || '-'}</td>
                                                 <td>{h.templateNama || '-'}</td>
-                                                <td style={{ fontSize: '0.8rem' }}>{h.spl.namaFile || '-'}</td>
                                                 <td style={{ fontSize: '0.8rem' }}>{fmtDate(h.spl.createdAt)}</td>
                                                 <td>
-                                                    <button className="btn-icon" style={{ color: 'var(--accent-red)' }} onClick={() => handleDeleteHistory(h.spl.id)} title="Hapus">
-                                                        <Trash2 size={14} />
-                                                    </button>
+                                                    <div style={{ display: 'flex', gap: 4 }}>
+                                                        <button 
+                                                            className="btn btn-sm btn-primary" 
+                                                            style={{ padding: '3px 8px', fontSize: '0.75rem' }}
+                                                            onClick={() => window.open(`/api/template/spl-file/pdf/${h.spl.id}`, '_blank')}
+                                                            title="Preview PDF"
+                                                        >
+                                                            PDF
+                                                        </button>
+                                                        <button 
+                                                            className="btn btn-sm btn-secondary" 
+                                                            style={{ padding: '3px 8px', fontSize: '0.75rem' }}
+                                                            onClick={async () => {
+                                                                try {
+                                                                    const blob = await templateApi.getSplFile('docx', h.spl.id);
+                                                                    const url = URL.createObjectURL(blob);
+                                                                    const a = document.createElement('a');
+                                                                    a.href = url;
+                                                                    a.download = `${h.spl.namaFile || 'SPL'}.docx`;
+                                                                    document.body.appendChild(a);
+                                                                    a.click();
+                                                                    document.body.removeChild(a);
+                                                                    setTimeout(() => URL.revokeObjectURL(url), 10000);
+                                                                } catch (e) { toast.error('Gagal download DOCX: ' + (e.message || '')); }
+                                                            }}
+                                                            title="Download DOCX"
+                                                        >
+                                                            DOCX
+                                                        </button>
+                                                        <button className="btn-icon" style={{ color: 'var(--accent-red)' }} onClick={() => handleDeleteHistory(h.spl.id)} title="Hapus">
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}
