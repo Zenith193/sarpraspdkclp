@@ -71,6 +71,7 @@ router.get('/:id', requireAuth, requireRole('admin', 'verifikator'), async (req,
 router.post('/', requireAuth, requireRole('admin'), async (req, res) => {
     try {
         const data = { ...req.body };
+        delete data.createdAt; delete data.updatedAt; delete data.id;
         const dateFields = ['tanggalMulai', 'tanggalSelesai', 'tglMc0', 'tglMc100', 'tglPcm'];
         for (const f of dateFields) {
             if (f in data) {
@@ -92,6 +93,10 @@ router.post('/', requireAuth, requireRole('admin'), async (req, res) => {
 router.put('/:id', requireAuth, requireRole('admin'), async (req, res) => {
     try {
         const data = { ...req.body };
+        // Remove timestamp fields — these are managed server-side
+        delete data.createdAt;
+        delete data.updatedAt;
+        delete data.id; // don't overwrite PK
         // Sanitize date fields — convert empty strings to null, invalid dates to null
         const dateFields = ['tanggalMulai', 'tanggalSelesai', 'tglMc0', 'tglMc100', 'tglPcm'];
         for (const f of dateFields) {
@@ -121,7 +126,20 @@ router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
 
 router.post('/import', requireAuth, requireRole('admin'), async (req, res) => {
     try {
-        const result = await matrikService.bulkCreate(req.body.items);
+        const dateFields = ['tanggalMulai', 'tanggalSelesai', 'tglMc0', 'tglMc100', 'tglPcm'];
+        const items = (req.body.items || []).map((item: any) => {
+            const data = { ...item };
+            delete data.createdAt; delete data.updatedAt; delete data.id;
+            for (const f of dateFields) {
+                if (f in data) {
+                    if (!data[f] || data[f] === '') { data[f] = null; }
+                    else { const d = new Date(data[f]); data[f] = isNaN(d.getTime()) ? null : d.toISOString().split('T')[0]; }
+                }
+            }
+            if (data.noMatrik != null) data.noMatrik = String(data.noMatrik).replace(/(\.\d+?)0{5,}\d*$/, '$1');
+            return data;
+        });
+        const result = await matrikService.bulkCreate(items);
         res.status(201).json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
