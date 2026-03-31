@@ -306,7 +306,11 @@ const MatriksKegiatan = () => {
                         if (val !== undefined && val !== '') mapped[col.key] = val;
                     });
                     // Auto-fill defaults
-                    mapped.noMatrik = String(mapped.noMatrik || '').replace(/\s/g, '');
+                    // Fix floating-point noise: Excel 71.8 → JS 71.80000000000001 → clean back to "71.8"
+                    let rawMatrik = mapped.noMatrik ?? '';
+                    if (typeof rawMatrik === 'number') rawMatrik = parseFloat(rawMatrik.toPrecision(15)).toString();
+                    else rawMatrik = String(rawMatrik).replace(/(\.\d+?)0{5,}\d*$/, '$1');
+                    mapped.noMatrik = rawMatrik.replace(/\s/g, '');
                     mapped.namaSekolah = mapped.namaSekolah || '-';
                     // Resolve short codes to full names
                     if (mapped.sumberDana) mapped.sumberDana = resolveCode(mapped.sumberDana, KODE_SUMBER_DANA);

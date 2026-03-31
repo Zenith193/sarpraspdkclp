@@ -69,12 +69,47 @@ router.get('/:id', requireAuth, requireRole('admin', 'verifikator'), async (req,
 });
 
 router.post('/', requireAuth, requireRole('admin'), async (req, res) => {
-    try { res.status(201).json(await matrikService.create(req.body)); } catch (e: any) { res.status(500).json({ error: e.message }); }
+    try {
+        const data = { ...req.body };
+        const dateFields = ['tanggalMulai', 'tanggalSelesai', 'tglMc0', 'tglMc100', 'tglPcm'];
+        for (const f of dateFields) {
+            if (f in data) {
+                if (!data[f] || data[f] === '' || data[f] === 'Invalid Date') {
+                    data[f] = null;
+                } else {
+                    const d = new Date(data[f]);
+                    data[f] = isNaN(d.getTime()) ? null : d.toISOString().split('T')[0];
+                }
+            }
+        }
+        if (data.noMatrik != null) {
+            data.noMatrik = String(data.noMatrik).replace(/(\.\d+?)0{5,}\d*$/, '$1');
+        }
+        res.status(201).json(await matrikService.create(data));
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 router.put('/:id', requireAuth, requireRole('admin'), async (req, res) => {
     try {
-        const result = await matrikService.update(Number(req.params.id), req.body);
+        const data = { ...req.body };
+        // Sanitize date fields — convert empty strings to null, invalid dates to null
+        const dateFields = ['tanggalMulai', 'tanggalSelesai', 'tglMc0', 'tglMc100', 'tglPcm'];
+        for (const f of dateFields) {
+            if (f in data) {
+                if (!data[f] || data[f] === '' || data[f] === 'Invalid Date') {
+                    data[f] = null;
+                } else {
+                    // Ensure it's a valid date string (YYYY-MM-DD)
+                    const d = new Date(data[f]);
+                    data[f] = isNaN(d.getTime()) ? null : d.toISOString().split('T')[0];
+                }
+            }
+        }
+        // Ensure noMatrik is a clean string (fix floating point like 71.8000000000001)
+        if (data.noMatrik != null) {
+            data.noMatrik = String(data.noMatrik).replace(/(\.\d+?)0{5,}\d*$/, '$1');
+        }
+        const result = await matrikService.update(Number(req.params.id), data);
         if (!result) { res.status(404).json({ error: 'Data tidak ditemukan' }); return; }
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
