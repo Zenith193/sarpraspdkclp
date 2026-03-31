@@ -69,30 +69,78 @@ router.get('/content/:id', requireAuth, async (req, res) => {
             return res.json({ content: tpl.content });
         }
 
-        // 2. Try reading the uploaded file
+        // 2. Try reading the file
         if (tpl.filePath) {
-            if (!fs.existsSync(tpl.filePath)) {
-                return res.status(404).json({ error: `File tidak ditemukan di server: ${tpl.filePath}` });
+            const normalizedPath = tpl.filePath.replace(/\\/g, '/');
+
+            // 2a. Google Drive file
+            if (normalizedPath.startsWith('gdrive://')) {
+                try {
+                    const { streamFromGDrive } = await import('../utils/googleDriveClient.js');
+                    const fileId = normalizedPath.replace('gdrive://', '');
+                    const gResult = await streamFromGDrive(fileId);
+                    if (!gResult) {
+                        return res.status(404).json({ error: 'File tidak ditemukan di Google Drive' });
+                    }
+
+                    // Check mime type - reject binary formats
+                    const mime = gResult.mimeType || '';
+                    if (mime === 'application/pdf') {
+                        return res.status(400).json({
+                            error: 'File template adalah PDF. Tidak bisa digunakan. Silakan download dari Google Docs sebagai HTML (File → Download → Halaman Web / .html) lalu upload ulang.'
+                        });
+                    }
+                    if (mime.includes('officedocument') || mime.includes('msword')) {
+                        return res.status(400).json({
+                            error: 'File template adalah DOCX/DOC. Tidak bisa digunakan. Silakan download dari Google Docs sebagai HTML (File → Download → Halaman Web / .html) lalu upload ulang.'
+                        });
+                    }
+
+                    // Read stream as text
+                    const chunks: Buffer[] = [];
+                    await new Promise<void>((resolve, reject) => {
+                        gResult.stream.on('data', (chunk: Buffer) => chunks.push(chunk));
+                        gResult.stream.on('end', resolve);
+                        gResult.stream.on('error', reject);
+                    });
+                    const fileContent = Buffer.concat(chunks).toString('utf-8');
+
+                    // Check for binary content (starts with %PDF, PK, etc.)
+                    if (fileContent.startsWith('%PDF') || fileContent.startsWith('PK')) {
+                        return res.status(400).json({
+                            error: 'File template adalah binary (PDF/DOCX). Silakan upload file .html dengan variabel {{namaPaket}}, {{namaSekolah}}, dll.'
+                        });
+                    }
+
+                    // Auto-save to DB for future use
+                    try { await templateService.update(tpl.id, { content: fileContent }); } catch {}
+
+                    return res.json({ content: fileContent });
+                } catch (gErr: any) {
+                    return res.status(500).json({ error: `Gagal membaca file dari Google Drive: ${gErr.message}` });
+                }
             }
 
-            // Check if it's a binary file (PDF, DOCX, etc.)
-            const binaryType = isBinaryFile(tpl.filePath);
-            if (binaryType) {
-                const ext = path.extname(tpl.filePath).toLowerCase();
-                return res.status(400).json({
-                    error: `File template adalah ${binaryType} (${ext}). Tidak bisa digunakan langsung. Silakan simpan template sebagai file .html dari Google Docs (File → Download → Halaman Web / .html) lalu upload ulang.`
-                });
+            // 2b. Local file
+            if (fs.existsSync(tpl.filePath)) {
+                // Check binary
+                const binaryType = isBinaryFile(tpl.filePath);
+                if (binaryType) {
+                    return res.status(400).json({
+                        error: `File template adalah ${binaryType}. Silakan download dari Google Docs sebagai HTML (File → Download → Halaman Web / .html) lalu upload ulang.`
+                    });
+                }
+                try {
+                    const fileContent = fs.readFileSync(tpl.filePath, 'utf-8');
+                    // Auto-save to DB
+                    try { await templateService.update(tpl.id, { content: fileContent }); } catch {}
+                    return res.json({ content: fileContent });
+                } catch (readErr: any) {
+                    return res.status(500).json({ error: `Gagal membaca file: ${readErr.message}` });
+                }
             }
 
-            // Read as text (HTML/HTM/TXT)
-            try {
-                const fileContent = fs.readFileSync(tpl.filePath, 'utf-8');
-                // Auto-save to DB for faster future access
-                await templateService.update(tpl.id, { content: fileContent });
-                return res.json({ content: fileContent });
-            } catch (readErr: any) {
-                return res.status(500).json({ error: `Gagal membaca file: ${readErr.message}` });
-            }
+            return res.status(404).json({ error: `File tidak ditemukan: ${tpl.filePath}` });
         }
 
         return res.status(404).json({
