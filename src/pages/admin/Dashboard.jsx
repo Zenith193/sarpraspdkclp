@@ -129,6 +129,9 @@ const Dashboard = () => {
             sk.prasaranaCount[sp.jenisPrasarana] = (sk.prasaranaCount[sp.jenisPrasarana] || 0) + 1;
             if (sp.kondisi === 'RUSAK SEDANG' || sp.kondisi === 'RUSAK BERAT') {
                 const isBerat = sp.kondisi === 'RUSAK BERAT';
+                // Only count rehab if jenisPrasarana exists in SNP for this jenjang (same as ProyeksiAnggaran)
+                const snpMatch = snpData.find(s => s.jenisPrasarana === sp.jenisPrasarana && s.jenjang === sk.jenjang);
+                if (!snpMatch) return;
                 const key = `${sp.jenisPrasarana}|${isBerat ? 'berat' : 'sedang'}`;
                 const angg = anggaranData.find(a => a.jenisPrasarana === sp.jenisPrasarana && a.jenjang === sk.jenjang);
                 const unitCost = angg ? angg[isBerat ? 'rusakBerat' : 'rusakSedang'] : (isBerat ? 100_000_000 : 75_000_000);
