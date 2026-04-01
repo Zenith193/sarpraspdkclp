@@ -89,7 +89,13 @@ export const parseFormattedNumber = (value) => { if (!value) return null; const 
 
 export const naturalSort = (a, b) => a.localeCompare(b, undefined, { numeric: true, sensitivity: 'base' });
 
-export const isIndukan = (noMatrik) => !String(noMatrik || '').includes(',');
+export const isIndukan = (noMatrik) => {
+    const nm = String(noMatrik || '');
+    if (nm.includes(',')) return false;
+    // Dot-separated child: "87.1", "87.2" etc.
+    if (/^\d+\.\d+$/.test(nm)) return false;
+    return true;
+};
 
 // ===== SEED DATA =====
 const generateSeedData = () => {

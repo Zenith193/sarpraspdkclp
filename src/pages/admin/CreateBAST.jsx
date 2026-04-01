@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { Search, Download, Eye, Edit, FileSpreadsheet, FileDown, FileText, ChevronDown, ChevronLeft, ChevronRight, Package, Wallet, Save, X, CheckCircle, Clock, Printer, RotateCcw, AlertTriangle, FileCheck } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 import { exportToExcel, exportToCSV, exportToPDF } from '../../utils/exportUtils';
-import useMatrikStore, { naturalSort, formatNumberInput, parseFormattedNumber, fullTerbilang, generateNoBAST } from '../../store/matrikStore';
+import useMatrikStore, { naturalSort, formatNumberInput, parseFormattedNumber, fullTerbilang, generateNoBAST, isIndukan } from '../../store/matrikStore';
 import { useSekolahData } from '../../data/dataProvider';
 import { templateApi } from '../../api/index';
 import { useApi } from '../../api/hooks';
@@ -192,7 +192,7 @@ const CreateBAST = () => {
     // ===== Build enriched BAST data — only Pekerjaan Konstruksi & Pengadaan Barang =====
     const enrichedData = useMemo(() => {
         return matrikData
-            .filter(m => BAST_JENIS_FILTER.includes(m.jenisPengadaan))
+            .filter(m => BAST_JENIS_FILTER.includes(m.jenisPengadaan) && isIndukan(m.noMatrik))
             .slice()
             .sort((a, b) => naturalSort(String(a.noMatrik), String(b.noMatrik)))
             .map(m => {
