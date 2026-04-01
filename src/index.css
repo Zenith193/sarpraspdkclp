@@ -1865,6 +1865,8 @@ textarea {
   gap: 8px;
   padding: 16px 24px;
   border-top: 1px solid var(--border-color);
+  position: relative;
+  z-index: 10;
 }
 
 @keyframes fadeIn {

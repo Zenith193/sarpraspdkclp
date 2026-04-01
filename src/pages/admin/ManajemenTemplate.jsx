@@ -384,8 +384,8 @@ const ManajemenTemplate = () => {
                             </div>
                         </div>
                         <div className="modal-footer">
-                            <button className="btn btn-ghost" onClick={() => setShowModal(false)}>Batal</button>
-                            <button className="btn btn-primary" onClick={handleSave}><Save size={14} /> Simpan</button>
+                            <button type="button" className="btn btn-ghost" onClick={() => setShowModal(false)}>Batal</button>
+                            <button type="button" className="btn btn-primary" style={{ cursor: 'pointer' }} onClick={handleSave}><Save size={14} /> Simpan</button>
                         </div>
                     </div>
                 </div>
