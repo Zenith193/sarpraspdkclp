@@ -64,12 +64,29 @@ export const matrikService = {
             .orderBy(matrikKegiatan.noMatrik);
 
         // Group: parent items + their children
+        // noMatrik child format: "87,1" or "87.1" — detect both separators
         const parentMap = new Map<string, any>();
         const children: any[] = [];
 
+        // Detect if a noMatrik is a child: contains , or has a . followed by digits at the end
+        // But a pure integer like "87" is a parent, "87.1" is a child
+        const isChildNoMatrik = (nm: string) => {
+            if (nm.includes(',')) return true;
+            // Check for dot-separated child: "87.1", "87.2" etc.
+            const dotMatch = nm.match(/^(\d+)\.(\d+)$/);
+            return !!dotMatch;
+        };
+
+        const getParentNo = (nm: string) => {
+            if (nm.includes(',')) return nm.split(',').slice(0, -1).join(',');
+            const dotMatch = nm.match(/^(\d+)\.(\d+)$/);
+            if (dotMatch) return dotMatch[1];
+            return nm;
+        };
+
         for (const row of allMatrik) {
             const noMatrik = row.matrik.noMatrik;
-            const isChild = noMatrik.includes(',');
+            const isChild = isChildNoMatrik(noMatrik);
             const item = {
                 ...row.matrik,
                 kepsek: row.kepsek || '',
@@ -87,7 +104,7 @@ export const matrikService = {
 
         // Attach children to parents
         for (const child of children) {
-            const parentNo = child.noMatrik.split(',').slice(0, -1).join(',');
+            const parentNo = getParentNo(child.noMatrik);
             const parent = parentMap.get(parentNo);
             if (parent) {
                 parent.children.push(child);
