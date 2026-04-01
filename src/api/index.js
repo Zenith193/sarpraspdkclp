@@ -98,6 +98,7 @@ export const bastApi = {
     getByNpsn: (npsn) => api.get(`/bast/by-npsn/${npsn}`),
     uploadFisik: (matrikId, file) => { const fd = new FormData(); fd.append('file', file); return api.upload(`/bast/by-matrik/${matrikId}/upload-fisik`, fd); },
     downloadFisik: (matrikId) => fetch(`/api/bast/by-matrik/${matrikId}/download-fisik`, { credentials: 'include' }).then(r => { if (!r.ok) throw new Error('File tidak ditemukan'); return r.blob(); }),
+    previewFisikUrl: (matrikId) => `/api/bast/by-matrik/${matrikId}/preview-fisik`,
 };
 
 export const templateApi = {

@@ -205,8 +205,11 @@ const RiwayatBantuan = ({ readOnly = false }) => {
                                     <td style={{ fontSize: '0.85rem' }}>{d.volume || '-'}</td>
                                     <td>
                                         {d.bastFisikPath ? (
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                                                <CheckCircle size={14} style={{ color: 'var(--accent-green)' }} />
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+                                                <CheckCircle size={14} style={{ color: 'var(--accent-green)', flexShrink: 0 }} />
+                                                <button className="btn-icon" onClick={() => window.open(bastApi.previewFisikUrl(d.matrikId), '_blank')} title="Preview BAST Fisik" style={{ color: 'var(--accent-purple)' }}>
+                                                    <Eye size={14} />
+                                                </button>
                                                 <button className="btn-icon" onClick={() => handleDownloadFisik(d)} title="Download BAST Fisik" style={{ color: 'var(--accent-blue)' }}>
                                                     <Download size={14} />
                                                 </button>
