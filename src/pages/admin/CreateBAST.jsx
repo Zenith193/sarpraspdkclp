@@ -3,13 +3,12 @@ import { Search, Download, Eye, Edit, FileSpreadsheet, FileDown, FileText, Chevr
 import { formatCurrency } from '../../utils/formatters';
 import { exportToExcel, exportToCSV, exportToPDF } from '../../utils/exportUtils';
 import useMatrikStore, { naturalSort, formatNumberInput, parseFormattedNumber, fullTerbilang, generateNoBAST, isIndukan } from '../../store/matrikStore';
-import { useSekolahData } from '../../data/dataProvider';
-import { templateApi } from '../../api/index';
+import { templateApi, matrikApi } from '../../api/index';
 import { useApi } from '../../api/hooks';
 import toast from 'react-hot-toast';
 
-// Only show these jenisPengadaan in BAST
-const BAST_JENIS_FILTER = ['Pekerjaan Konstruksi', 'Pengadaan Barang'];
+// Jenis Pengadaan options for filter
+const JENIS_OPTIONS = ['Pekerjaan Konstruksi', 'Pengadaan Barang', 'Jasa Konsultansi Perencanaan', 'Jasa Konsultansi Pengawasan'];
 
 // ===== Helpers =====
 const currentYear = new Date().getFullYear();
@@ -142,9 +141,17 @@ const generateBASTDocument = (item, template) => {
 // ===== COMPONENT =====
 const CreateBAST = () => {
     const { matrikData, bastData, addBAST, updateBAST, revertBAST } = useMatrikStore();
-    const { data: sekolahList } = useSekolahData();
     const { data: templatesData } = useApi(() => templateApi.list(), []);
     const templates = useMemo(() => (templatesData?.data || templatesData || []).filter(t => t && t.id), [templatesData]);
+
+    // Fetch SPL data (includes kepsek, nip, children from backend JOIN)
+    const [splData, setSplData] = useState([]);
+    useEffect(() => {
+        matrikApi.listSpl().then(res => {
+            const arr = Array.isArray(res) ? res : (res?.data || []);
+            setSplData(arr);
+        }).catch(() => {});
+    }, [matrikData]);
 
     const [search, setSearch] = useState('');
     const [pageSize, setPageSize] = useState(15);
@@ -154,6 +161,7 @@ const CreateBAST = () => {
     const [revertTarget, setRevertTarget] = useState(null);
     const [showExport, setShowExport] = useState(false);
     const exportRef = useRef(null);
+    const [jenisFilter, setJenisFilter] = useState('Pekerjaan Konstruksi');
 
     // Generate dialog state
     const [generateTarget, setGenerateTarget] = useState(null);
@@ -189,23 +197,20 @@ const CreateBAST = () => {
         return map;
     }, [bastData]);
 
-    // ===== Build enriched BAST data — only Pekerjaan Konstruksi & Pengadaan Barang =====
+    // ===== Build enriched BAST data from SPL data (has kepsek/nip/children) =====
     const enrichedData = useMemo(() => {
-        return matrikData
-            .filter(m => BAST_JENIS_FILTER.includes(m.jenisPengadaan) && isIndukan(m.noMatrik))
-            .slice()
+        // Use splData which already has kepsek, nipKs, children from backend JOIN
+        return splData
             .sort((a, b) => naturalSort(String(a.noMatrik), String(b.noMatrik)))
             .map(m => {
-                const info = getKepsekInfo(m.npsn, sekolahList);
                 const bast = generatedMap[m.id];
                 const overrides = bast ? { nilaiKontrak: bast.nilaiKontrak, honor: bast.honor } : {};
                 const nilaiBAST = computeNilaiBAST(m, matrikData, overrides);
                 const n = bast?.bastN || 1;
                 return {
                     ...m,
-                    kepsek: info.kepsek,
-                    nipKepsek: info.nipKepsek,
-                    namaSekolah: m.namaSekolah || info.namaSekolah,
+                    kepsek: m.kepsek || '-',
+                    nipKepsek: m.nipKs || '-',
                     noBAST: generateNoBAST(m.noMatrik, m.jenisPengadaan, m.sumberDana, m.tahunAnggaran || currentYear, n),
                     nilaiBAST,
                     nilaiKontrak: bast?.nilaiKontrak ?? m.nilaiKontrak,
@@ -219,7 +224,7 @@ const CreateBAST = () => {
                     tanggalGenerate: bast?.tanggalGenerate || null,
                 };
             });
-    }, [matrikData, generatedMap]);
+    }, [splData, matrikData, generatedMap]);
 
     // ===== STATS =====
     const stats = useMemo(() => {
@@ -232,16 +237,19 @@ const CreateBAST = () => {
     // ===== FILTER =====
     const filtered = useMemo(() => {
         const q = search.toLowerCase();
-        if (!q) return enrichedData;
-        return enrichedData.filter(d =>
-            d.namaPaket?.toLowerCase().includes(q) ||
-            d.noMatrik?.toLowerCase().includes(q) ||
-            d.npsn?.includes(q) ||
-            d.namaSekolah?.toLowerCase().includes(q) ||
-            d.kepsek?.toLowerCase().includes(q) ||
-            d.noBAST?.toLowerCase().includes(q)
-        );
-    }, [enrichedData, search]);
+        return enrichedData.filter(d => {
+            // Jenis filter
+            if (jenisFilter && d.jenisPengadaan !== jenisFilter) return false;
+            // Search
+            if (!q) return true;
+            return d.namaPaket?.toLowerCase().includes(q) ||
+                d.noMatrik?.toLowerCase().includes(q) ||
+                d.npsn?.includes(q) ||
+                d.namaSekolah?.toLowerCase().includes(q) ||
+                d.kepsek?.toLowerCase().includes(q) ||
+                d.noBAST?.toLowerCase().includes(q);
+        });
+    }, [enrichedData, search, jenisFilter]);
 
     // ===== PAGINATION =====
     const totalPages = Math.ceil(filtered.length / pageSize) || 1;
@@ -480,11 +488,15 @@ const CreateBAST = () => {
 
             <div className="table-container">
                 <div className="table-toolbar">
-                    <div className="table-toolbar-left">
+                    <div className="table-toolbar-left" style={{ gap: 8, flexWrap: 'wrap' }}>
                         <div className="table-search">
                             <Search size={16} className="search-icon" />
                             <input placeholder="Cari paket, NPSN, sekolah, kepsek..." value={search} onChange={e => setSearch(e.target.value)} />
                         </div>
+                        <select value={jenisFilter} onChange={e => setJenisFilter(e.target.value)} style={{ padding: '6px 10px', background: 'var(--bg-input)', border: '1px solid var(--border-input)', borderRadius: 'var(--radius-sm)', fontSize: '0.82rem', color: 'var(--text-primary)' }}>
+                            <option value="">Semua Jenis</option>
+                            {JENIS_OPTIONS.map(j => <option key={j} value={j}>{j}</option>)}
+                        </select>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Tampil:</span>
                             <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}
