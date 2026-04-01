@@ -3,7 +3,7 @@ import { Search, Download, Eye, Edit, FileSpreadsheet, FileDown, FileText, Chevr
 import { formatCurrency } from '../../utils/formatters';
 import { exportToExcel, exportToCSV, exportToPDF } from '../../utils/exportUtils';
 import useMatrikStore, { naturalSort, formatNumberInput, parseFormattedNumber, fullTerbilang, generateNoBAST, isIndukan } from '../../store/matrikStore';
-import { templateApi, matrikApi } from '../../api/index';
+import { templateApi, matrikApi, bastApi } from '../../api/index';
 import { useApi } from '../../api/hooks';
 import toast from 'react-hot-toast';
 
@@ -338,6 +338,22 @@ const CreateBAST = () => {
             };
             addBAST(bastEntry);
 
+            // Also persist to database for file uploads etc
+            try {
+                await bastApi.create({
+                    matrikId: item.id,
+                    npsn: item.npsn,
+                    namaSekolah: item.namaSekolah,
+                    namaPaket: item.namaPaket,
+                    noBast: noBAST,
+                    nilaiKontrak: item.nilaiKontrak || 0,
+                    penyedia: item.penyedia || '',
+                    templateId: selectedTemplateId,
+                });
+            } catch (dbErr) {
+                console.warn('[BAST] DB save skipped:', dbErr.message);
+            }
+
             // Open PDF preview
             if (result.pdfUrl) {
                 window.open(result.pdfUrl, '_blank');
@@ -391,6 +407,19 @@ const CreateBAST = () => {
                     templateNama: template?.nama || 'Default',
                     bastN: n,
                 });
+                // Persist to DB
+                try {
+                    await bastApi.create({
+                        matrikId: item.id,
+                        npsn: item.npsn,
+                        namaSekolah: item.namaSekolah,
+                        namaPaket: item.namaPaket,
+                        noBast: noBAST,
+                        nilaiKontrak: item.nilaiKontrak || 0,
+                        penyedia: item.penyedia || '',
+                        templateId: batchTemplateId,
+                    });
+                } catch (dbErr) { console.warn('[BAST] batch DB save:', dbErr.message); }
                 count++;
             }
             toast.success(`${count} BAST berhasil di-generate!`);

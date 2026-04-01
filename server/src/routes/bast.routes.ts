@@ -36,8 +36,13 @@ router.post('/revert/:matrikId', requireAuth, requireRole('admin'), async (req, 
 router.post('/by-matrik/:matrikId/upload-fisik', requireAuth, requireRole('admin'), uploadBast.single('file'), forwardToNas('bast'), async (req, res) => {
     try {
         const matrikId = Number(req.params.matrikId);
-        const existing = await bastService.getByMatrikId(matrikId);
-        if (!existing) return res.status(404).json({ error: 'BAST untuk matrik ini tidak ditemukan' });
+        const userId = (req as any).user?.id;
+        let existing = await bastService.getByMatrikId(matrikId);
+
+        // Auto-create bast record if not exists (legacy data migration)
+        if (!existing) {
+            existing = await bastService.create({ matrikId } as any, userId);
+        }
 
         const file = req.file as any;
         const finalPath = file?.finalPath || file?.path || '';
