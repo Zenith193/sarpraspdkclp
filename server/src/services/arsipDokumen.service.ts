@@ -11,6 +11,10 @@ export const arsipDokumenService = {
         const r = await db.insert(arsipRekomendasi).values(data).returning();
         return r[0];
     },
+    async updateRekomendasi(id: number, data: Partial<typeof arsipRekomendasi.$inferInsert>) {
+        const r = await db.update(arsipRekomendasi).set(data).where(eq(arsipRekomendasi.id, id)).returning();
+        return r[0];
+    },
     async deleteRekomendasi(id: number) {
         await db.delete(arsipRekomendasi).where(eq(arsipRekomendasi.id, id));
     },
@@ -21,6 +25,10 @@ export const arsipDokumenService = {
     },
     async createChecklist(data: typeof arsipChecklist.$inferInsert) {
         const r = await db.insert(arsipChecklist).values(data).returning();
+        return r[0];
+    },
+    async updateChecklist(id: number, data: Partial<typeof arsipChecklist.$inferInsert>) {
+        const r = await db.update(arsipChecklist).set(data).where(eq(arsipChecklist.id, id)).returning();
         return r[0];
     },
     async deleteChecklist(id: number) {

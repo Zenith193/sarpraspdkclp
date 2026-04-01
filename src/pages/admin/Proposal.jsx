@@ -128,10 +128,12 @@ const Proposal = ({ readOnly = false }) => {
 
     // Checklist & Rekomendasi State
     const [showChecklist, setShowChecklist] = useState(false);
+    const [editChecklistId, setEditChecklistId] = useState(null);
     const [checklistForm, setChecklistForm] = useState({
         sekolah: null, alamat: '', jenisUsulan: '', items: INITIAL_CHECKLIST_ITEMS, verifikators: []
     });
     const [showRekomendasi, setShowRekomendasi] = useState(false);
+    const [editRekomendasiId, setEditRekomendasiId] = useState(null);
     const [rekomendasiForm, setRekomendasiForm] = useState(INITIAL_REKOMENDASI);
 
     // Form State
@@ -336,10 +338,17 @@ const Proposal = ({ readOnly = false }) => {
     const handleSaveRekomendasi = async () => {
         if (!rekomendasiForm.namaSekolah) { toast.error('Nama sekolah wajib diisi'); return; }
         try {
-            const saved = await arsipDokumenApi.createRekomendasi(rekomendasiForm);
-            setRekomendasiList(prev => [saved, ...prev]);
-            toast.success('Rekomendasi berhasil disimpan');
+            if (editRekomendasiId) {
+                const updated = await arsipDokumenApi.updateRekomendasi(editRekomendasiId, rekomendasiForm);
+                setRekomendasiList(prev => prev.map(r => r.id === editRekomendasiId ? { ...r, ...updated } : r));
+                toast.success('Rekomendasi berhasil diperbarui');
+            } else {
+                const saved = await arsipDokumenApi.createRekomendasi(rekomendasiForm);
+                setRekomendasiList(prev => [saved, ...prev]);
+                toast.success('Rekomendasi berhasil disimpan');
+            }
             setShowRekomendasi(false);
+            setEditRekomendasiId(null);
             setRekomendasiForm(INITIAL_REKOMENDASI);
         } catch (err) {
             toast.error(err?.message || 'Gagal menyimpan rekomendasi');
@@ -356,15 +365,49 @@ const Proposal = ({ readOnly = false }) => {
                 items: checklistForm.items,
                 verifikators: checklistForm.verifikators,
             };
-            const saved = await arsipDokumenApi.createChecklist(payload);
-            // Keep sekolah object for print
-            saved._sekolah = checklistForm.sekolah;
-            setChecklistList(prev => [saved, ...prev]);
-            toast.success('Checklist berhasil disimpan');
+            if (editChecklistId) {
+                const updated = await arsipDokumenApi.updateChecklist(editChecklistId, payload);
+                updated._sekolah = checklistForm.sekolah;
+                setChecklistList(prev => prev.map(c => c.id === editChecklistId ? { ...c, ...updated } : c));
+                toast.success('Checklist berhasil diperbarui');
+            } else {
+                const saved = await arsipDokumenApi.createChecklist(payload);
+                saved._sekolah = checklistForm.sekolah;
+                setChecklistList(prev => [saved, ...prev]);
+                toast.success('Checklist berhasil disimpan');
+            }
             setShowChecklist(false);
+            setEditChecklistId(null);
         } catch (err) {
             toast.error(err?.message || 'Gagal menyimpan checklist');
         }
+    };
+
+    const handleEditRekomendasi = (item) => {
+        setEditRekomendasiId(item.id);
+        setRekomendasiForm({
+            namaSekolah: item.namaSekolah || '', kecamatan: item.kecamatan || '', jenjang: item.jenjang || '',
+            subKegiatan: item.subKegiatan || '', perihal: item.perihal || '',
+            nilai: item.nilai || '', target: item.target || '', noAgenda: item.noAgenda || '',
+            suratMasuk: item.suratMasuk || '', tanggalSurat: item.tanggalSurat || '',
+            nomorSurat: item.nomorSurat || '', kondisi: item.kondisi || '', sumber: item.sumber || ''
+        });
+        setShowRekomendasi(true);
+        setShowDaftarModal(false);
+    };
+
+    const handleEditChecklist = (item) => {
+        setEditChecklistId(item.id);
+        const sch = sekolahList.find(s => s.nama === (item._sekolah?.nama || item.sekolahNama));
+        setChecklistForm({
+            sekolah: sch || { nama: item._sekolah?.nama || item.sekolahNama || '', alamat: item.sekolahAlamat || '' },
+            alamat: item.sekolahAlamat || sch?.alamat || '',
+            jenisUsulan: item.jenisUsulan || '',
+            items: item.items || INITIAL_CHECKLIST_ITEMS,
+            verifikators: item.verifikators || [],
+        });
+        setShowChecklist(true);
+        setShowDaftarModal(false);
     };
 
     const handlePrintChecklist = () => {
@@ -1056,7 +1099,7 @@ const Proposal = ({ readOnly = false }) => {
             {showChecklist && (
                 <div className="modal-overlay" onClick={() => setShowChecklist(false)}>
                     <div className="modal" style={{ maxWidth: 900, maxHeight: '90vh', overflowY: 'auto' }} onClick={e => e.stopPropagation()}>
-                        <div className="modal-header"><div className="modal-title">Checklist Proposal - Instrumen Verifikasi Proposal</div><button className="modal-close" onClick={() => setShowChecklist(false)}><X size={18} /></button></div>
+                        <div className="modal-header"><div className="modal-title">{editChecklistId ? 'Edit Checklist' : 'Checklist Proposal'} - Instrumen Verifikasi Proposal</div><button className="modal-close" onClick={() => { setShowChecklist(false); setEditChecklistId(null); }}><X size={18} /></button></div>
                         <div className="modal-body">
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
                                 <div className="form-group"><label className="form-label">Cari Sekolah</label><SearchableSelect options={schoolNames} value={checklistForm.sekolah?.nama || ''} onChange={handleChecklistSchoolChange} placeholder="Ketik nama sekolah..." /></div>
@@ -1105,7 +1148,7 @@ const Proposal = ({ readOnly = false }) => {
             {showRekomendasi && (
                 <div className="modal-overlay" onClick={() => setShowRekomendasi(false)}>
                     <div className="modal" style={{ maxWidth: 800 }} onClick={e => e.stopPropagation()}>
-                        <div className="modal-header"><div className="modal-title">Form Rekomendasi</div><button className="modal-close" onClick={() => setShowRekomendasi(false)}><X size={18} /></button></div>
+                        <div className="modal-header"><div className="modal-title">{editRekomendasiId ? 'Edit Rekomendasi' : 'Form Rekomendasi'}</div><button className="modal-close" onClick={() => { setShowRekomendasi(false); setEditRekomendasiId(null); setRekomendasiForm(INITIAL_REKOMENDASI); }}><X size={18} /></button></div>
                         <div className="modal-body">
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
                                 <div className="form-group"><label className="form-label">Nama Sekolah</label><SearchableSelect options={schoolNames} value={rekomendasiForm.namaSekolah} onChange={handleRekomendasiSchoolChange} placeholder="Cari Sekolah..." /></div>
@@ -1200,6 +1243,7 @@ const Proposal = ({ readOnly = false }) => {
                                                     <td>{item.sumber}</td>
                                                     <td>
                                                         <div style={{ display: 'flex', gap: 4 }}>
+                                                            <button className="btn-icon" title="Edit" style={{ color: 'var(--accent-blue)' }} onClick={() => handleEditRekomendasi(item)}><Edit size={16} /></button>
                                                             <button className="btn-icon" title="Hapus" style={{ color: 'var(--accent-red)' }} onClick={async () => { try { await arsipDokumenApi.deleteRekomendasi(item.id); setRekomendasiList(prev => prev.filter(d => d.id !== item.id)); toast.success('Rekomendasi dihapus'); } catch { toast.error('Gagal menghapus'); } }}><Trash2 size={16} /></button>
                                                         </div>
                                                     </td>
@@ -1238,6 +1282,7 @@ const Proposal = ({ readOnly = false }) => {
                                                     <td>{item.verifikators?.length || 0} Orang</td>
                                                     <td>
                                                         <div style={{ display: 'flex', gap: 4 }}>
+                                                            <button className="btn-icon" title="Edit" style={{ color: 'var(--accent-blue)' }} onClick={() => handleEditChecklist(item)}><Edit size={16} /></button>
                                                             <button className="btn-icon" title="Cetak" onClick={() => handlePrintSavedChecklist(item)}><Printer size={16} /></button>
                                                             <button className="btn-icon" title="Hapus" style={{ color: 'var(--accent-red)' }} onClick={async () => { try { await arsipDokumenApi.deleteChecklist(item.id); setChecklistList(prev => prev.filter(d => d.id !== item.id)); toast.success('Checklist dihapus'); } catch { toast.error('Gagal menghapus'); } }}><Trash2 size={16} /></button>
                                                         </div>

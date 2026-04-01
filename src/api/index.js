@@ -242,9 +242,11 @@ export const queueApi = {
 export const arsipDokumenApi = {
     listRekomendasi: () => api.get('/arsip-dokumen/rekomendasi'),
     createRekomendasi: (data) => api.post('/arsip-dokumen/rekomendasi', data),
+    updateRekomendasi: (id, data) => api.put(`/arsip-dokumen/rekomendasi/${id}`, data),
     deleteRekomendasi: (id) => api.delete(`/arsip-dokumen/rekomendasi/${id}`),
     listChecklist: () => api.get('/arsip-dokumen/checklist'),
     createChecklist: (data) => api.post('/arsip-dokumen/checklist', data),
+    updateChecklist: (id, data) => api.put(`/arsip-dokumen/checklist/${id}`, data),
     deleteChecklist: (id) => api.delete(`/arsip-dokumen/checklist/${id}`),
 };
 

@@ -17,6 +17,12 @@ router.post('/rekomendasi', requireAuth, requireRole('admin', 'verifikator'), as
 router.delete('/rekomendasi/:id', requireAuth, requireRole('admin'), async (req, res) => {
     try { await arsipDokumenService.deleteRekomendasi(Number(req.params.id)); res.json({ success: true }); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
+router.put('/rekomendasi/:id', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
+    try {
+        const updated = await arsipDokumenService.updateRekomendasi(Number(req.params.id), req.body);
+        res.json(updated);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
 
 // ===== CHECKLIST =====
 router.get('/checklist', requireAuth, async (_req, res) => {
@@ -30,6 +36,12 @@ router.post('/checklist', requireAuth, requireRole('admin', 'verifikator'), asyn
 });
 router.delete('/checklist/:id', requireAuth, requireRole('admin'), async (req, res) => {
     try { await arsipDokumenService.deleteChecklist(Number(req.params.id)); res.json({ success: true }); } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+router.put('/checklist/:id', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
+    try {
+        const updated = await arsipDokumenService.updateChecklist(Number(req.params.id), req.body);
+        res.json(updated);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 export default router;
