@@ -92,6 +92,7 @@ export const bast = pgTable('bast', {
     penyedia: text('penyedia'),
     tanggalBast: date('tanggal_bast'),
     bastFisikPath: text('bast_fisik_path'),
+    splHistoryId: integer('spl_history_id'),
     generatedHtml: text('generated_html'),
     createdBy: text('created_by').references(() => user.id),
     createdAt: timestamp('created_at').defaultNow(),

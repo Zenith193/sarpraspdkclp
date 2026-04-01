@@ -349,6 +349,7 @@ const CreateBAST = () => {
                     nilaiKontrak: item.nilaiKontrak || 0,
                     penyedia: item.penyedia || '',
                     templateId: selectedTemplateId,
+                    splHistoryId: result.historyId || null,
                 });
             } catch (dbErr) {
                 console.warn('[BAST] DB save skipped:', dbErr.message);
