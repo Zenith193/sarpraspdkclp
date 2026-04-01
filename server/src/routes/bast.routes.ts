@@ -33,7 +33,19 @@ router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
     try { await bastService.delete(Number(req.params.id)); res.json({ success: true }); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.post('/revert/:matrikId', requireAuth, requireRole('admin'), async (req, res) => {
-    try { await bastService.revertByMatrikId(Number(req.params.matrikId)); res.json({ success: true }); } catch (e: any) { res.status(500).json({ error: e.message }); }
+    try {
+        const matrikId = Number(req.params.matrikId);
+        console.log('[BAST] Revert request for matrikId:', matrikId);
+        // First check if record exists
+        const existing = await bastService.getByMatrikId(matrikId);
+        console.log('[BAST] Existing record:', existing ? `id=${existing.id}` : 'none');
+        await bastService.revertByMatrikId(matrikId);
+        console.log('[BAST] Revert completed for matrikId:', matrikId);
+        res.json({ success: true, deleted: !!existing });
+    } catch (e: any) {
+        console.error('[BAST] Revert error:', e.message);
+        res.status(500).json({ error: e.message });
+    }
 });
 
 // ===== Middleware: inject school info into req.body for GDrive folder routing =====

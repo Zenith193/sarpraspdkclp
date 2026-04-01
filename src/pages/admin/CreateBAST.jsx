@@ -449,14 +449,15 @@ const CreateBAST = () => {
     // ===== REVERT =====
     const handleRevert = async () => {
         if (!revertTarget) return;
+        const matrikId = revertTarget.matrikId || revertTarget.id;
+        console.log('[BAST REVERT] target:', { id: revertTarget.id, matrikId: revertTarget.matrikId, bastId: revertTarget.bastId, resolved: matrikId });
         revertBAST(revertTarget.id);
         // Also delete from database
-        const matrikId = revertTarget.matrikId || revertTarget.id;
         try {
-            await bastApi.revert(matrikId);
-            console.log('[BAST] DB record deleted for matrikId:', matrikId);
+            const res = await bastApi.revert(matrikId);
+            console.log('[BAST REVERT] API response:', res);
         } catch (e) {
-            console.warn('[BAST] DB revert skipped:', e.message);
+            console.warn('[BAST REVERT] DB revert failed:', e.message);
         }
         toast.success(`BAST ${revertTarget.noBAST} dikembalikan ke "Belum"`);
         setRevertTarget(null);
