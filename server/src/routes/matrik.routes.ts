@@ -116,6 +116,49 @@ router.put('/:id', requireAuth, requireRole('admin'), async (req, res) => {
         }
         const result = await matrikService.update(Number(req.params.id), data);
         if (!result) { res.status(404).json({ error: 'Data tidak ditemukan' }); return; }
+
+        // ===== CASCADE: propagate shared fields to children =====
+        const noMatrik = result.noMatrik;
+        const isParent = noMatrik && !noMatrik.includes(',') && !/^\d+\.\d+$/.test(noMatrik);
+        if (isParent) {
+            // Fields that cascade from parent to children
+            const CASCADABLE_FIELDS = [
+                'subBidang', 'noSubKegiatan', 'subKegiatan', 'rup',
+                'sumberDana', 'metode', 'jenisPengadaan',
+                'penyedia', 'namaPemilik', 'statusPemilik', 'alamatKantor',
+                'tanggalMulai', 'tanggalSelesai', 'jangkaWaktu', 'tahunAnggaran',
+                'noHp', 'konsultanPengawas', 'dirKonsultanPengawas',
+                'noMc0', 'tglMc0', 'noMc100', 'tglMc100', 'noPcm', 'tglPcm',
+            ];
+            const cascadeData: Record<string, any> = {};
+            for (const f of CASCADABLE_FIELDS) {
+                if (f in data) cascadeData[f] = data[f];
+            }
+            if (Object.keys(cascadeData).length > 0) {
+                try {
+                    const { matrikKegiatan } = await import('../db/schema/index.js');
+                    const { like } = await import('drizzle-orm');
+                    // Find children: noMatrik starts with "87." or "87,"
+                    const allItems = await db.select({ id: matrikKegiatan.id, noMatrik: matrikKegiatan.noMatrik })
+                        .from(matrikKegiatan);
+                    const childIds = allItems
+                        .filter(c => {
+                            const nm = c.noMatrik;
+                            return nm.startsWith(noMatrik + ',') || nm.startsWith(noMatrik + '.');
+                        })
+                        .map(c => c.id);
+                    if (childIds.length > 0) {
+                        for (const childId of childIds) {
+                            await matrikService.update(childId, cascadeData);
+                        }
+                        console.log(`[Matrik] Cascaded ${Object.keys(cascadeData).length} fields to ${childIds.length} children of ${noMatrik}`);
+                    }
+                } catch (cascErr: any) {
+                    console.error('[Matrik] Cascade error:', cascErr.message);
+                }
+            }
+        }
+
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
