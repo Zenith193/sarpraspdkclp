@@ -69,22 +69,21 @@ const RiwayatBantuan = ({ readOnly = false }) => {
         if (!file || !uploadTargetRef.current) return;
 
         const item = uploadTargetRef.current;
-        // Need server-side BAST id — use the item's bastDbId if available
-        const bastId = item.bastDbId || item.id;
-        if (!bastId) {
-            toast.error('ID BAST tidak ditemukan');
+        const matrikId = item.matrikId;
+        if (!matrikId) {
+            toast.error('Matrik ID tidak ditemukan');
             e.target.value = '';
             return;
         }
 
-        setUploading(bastId);
+        setUploading(matrikId);
         try {
-            await bastApi.uploadFisik(bastId, file);
+            await bastApi.uploadFisik(matrikId, file);
             toast.success('BAST Fisik berhasil diupload');
             // Update local state
             const store = useMatrikStore.getState();
-            if (store.updateBastItem) {
-                store.updateBastItem(bastId, { bastFisikPath: 'uploaded' });
+            if (store.updateBAST) {
+                store.updateBAST(item.id, { bastFisikPath: 'uploaded' });
             }
         } catch (err) {
             toast.error(err.message || 'Upload gagal');
@@ -95,9 +94,9 @@ const RiwayatBantuan = ({ readOnly = false }) => {
     };
 
     const handleDownloadFisik = async (item) => {
-        const bastId = item.bastDbId || item.id;
+        const matrikId = item.matrikId;
         try {
-            const blob = await bastApi.downloadFisik(bastId);
+            const blob = await bastApi.downloadFisik(matrikId);
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
@@ -213,15 +212,15 @@ const RiwayatBantuan = ({ readOnly = false }) => {
                                                 </button>
                                                 <button className="btn btn-sm" onClick={() => handleUploadClick(d)}
                                                     style={{ fontSize: '0.7rem', padding: '2px 6px', background: 'var(--bg-input)', color: 'var(--text-secondary)', border: '1px solid var(--border-input)' }}
-                                                    disabled={uploading === (d.bastDbId || d.id)}>
+                                                    disabled={uploading === d.matrikId}>
                                                     Ganti
                                                 </button>
                                             </div>
                                         ) : (
                                             <button className="btn btn-sm" onClick={() => handleUploadClick(d)}
                                                 style={{ fontSize: '0.72rem', padding: '3px 8px' }}
-                                                disabled={uploading === (d.bastDbId || d.id)}>
-                                                {uploading === (d.bastDbId || d.id) ? (
+                                                disabled={uploading === d.matrikId}>
+                                                {uploading === d.matrikId ? (
                                                     <span>Uploading...</span>
                                                 ) : (
                                                     <><Upload size={12} /> Upload</>

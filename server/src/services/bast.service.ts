@@ -34,6 +34,16 @@ export const bastService = {
     async getByNpsn(npsn: string) {
         return db.select().from(bast).where(eq(bast.npsn, npsn));
     },
+
+    async getByMatrikId(matrikId: number) {
+        const result = await db.select().from(bast).where(eq(bast.matrikId, matrikId));
+        return result[0] || null;
+    },
+
+    async updateByMatrikId(matrikId: number, data: Partial<typeof bast.$inferInsert>) {
+        const result = await db.update(bast).set(data).where(eq(bast.matrikId, matrikId)).returning();
+        return result[0];
+    },
 };
 
 export const templateService = {

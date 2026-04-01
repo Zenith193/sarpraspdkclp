@@ -96,8 +96,8 @@ export const bastApi = {
     delete: (id) => api.delete(`/bast/${id}`),
     revert: (matrikId) => api.post(`/bast/revert/${matrikId}`),
     getByNpsn: (npsn) => api.get(`/bast/by-npsn/${npsn}`),
-    uploadFisik: (id, file) => { const fd = new FormData(); fd.append('file', file); return api.upload(`/bast/${id}/upload-fisik`, fd); },
-    downloadFisik: (id) => fetch(`/api/bast/${id}/download-fisik`, { credentials: 'include' }).then(r => { if (!r.ok) throw new Error('File tidak ditemukan'); return r.blob(); }),
+    uploadFisik: (matrikId, file) => { const fd = new FormData(); fd.append('file', file); return api.upload(`/bast/by-matrik/${matrikId}/upload-fisik`, fd); },
+    downloadFisik: (matrikId) => fetch(`/api/bast/by-matrik/${matrikId}/download-fisik`, { credentials: 'include' }).then(r => { if (!r.ok) throw new Error('File tidak ditemukan'); return r.blob(); }),
 };
 
 export const templateApi = {

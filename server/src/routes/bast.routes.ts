@@ -32,25 +32,25 @@ router.post('/revert/:matrikId', requireAuth, requireRole('admin'), async (req, 
     try { await bastService.revertByMatrikId(Number(req.params.matrikId)); res.json({ success: true }); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// ===== Upload BAST Fisik PDF =====
-router.post('/:id/upload-fisik', requireAuth, requireRole('admin'), uploadBast.single('file'), forwardToNas('bast'), async (req, res) => {
+// ===== Upload BAST Fisik PDF (by matrikId) =====
+router.post('/by-matrik/:matrikId/upload-fisik', requireAuth, requireRole('admin'), uploadBast.single('file'), forwardToNas('bast'), async (req, res) => {
     try {
-        const id = Number(req.params.id);
-        const existing = await bastService.getById(id);
-        if (!existing) return res.status(404).json({ error: 'BAST tidak ditemukan' });
+        const matrikId = Number(req.params.matrikId);
+        const existing = await bastService.getByMatrikId(matrikId);
+        if (!existing) return res.status(404).json({ error: 'BAST untuk matrik ini tidak ditemukan' });
 
         const file = req.file as any;
         const finalPath = file?.finalPath || file?.path || '';
 
-        const result = await bastService.update(id, { bastFisikPath: finalPath });
+        const result = await bastService.updateByMatrikId(matrikId, { bastFisikPath: finalPath });
         res.json({ success: true, bastFisikPath: finalPath, data: result });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// ===== Download BAST Fisik PDF =====
-router.get('/:id/download-fisik', requireAuth, async (req, res) => {
+// ===== Download BAST Fisik PDF (by matrikId) =====
+router.get('/by-matrik/:matrikId/download-fisik', requireAuth, async (req, res) => {
     try {
-        const existing = await bastService.getById(Number(req.params.id));
+        const existing = await bastService.getByMatrikId(Number(req.params.matrikId));
         if (!existing?.bastFisikPath) return res.status(404).json({ error: 'File tidak ditemukan' });
         if (!fs.existsSync(existing.bastFisikPath)) return res.status(404).json({ error: 'File tidak ditemukan di server' });
         res.download(existing.bastFisikPath);
