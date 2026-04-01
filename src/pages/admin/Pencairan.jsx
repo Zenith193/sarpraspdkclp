@@ -36,7 +36,7 @@ const Pencairan = () => {
     const [showColPicker, setShowColPicker] = useState(false);
     const colPickerRef = useRef(null);
     const [visibleCols, setVisibleCols] = useState([
-        'no', 'namaPaket', 'penyerapan', 'nilaiKontrak', 'pencairan', 'status', 'noRegister', 'noSp2d', 'aksi'
+        'no', 'namaPaket', 'penyerapan', 'nilaiKontrak', 'pencairan', 'status', 'aksi'
     ]);
 
     const [showExport, setShowExport] = useState(false);
