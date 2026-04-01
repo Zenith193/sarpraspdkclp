@@ -89,7 +89,7 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
         const zip = new PizZip(content);
         const doc = new Docxtemplater(zip, {
             paragraphLoop: true,
-            linebreaks: true,
+            linebreaks: false,
             delimiters: { start: '{{', end: '}}' },
         });
 
