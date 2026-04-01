@@ -156,15 +156,15 @@ export const generateNoBAST = (noMatrik, jenis, sumber, tahun, n = 1) => {
     if (jenis === 'Pengadaan Barang') { kode = KODE_BARANG_MAP[sumber] || 'X4'; } else { kode = KODE_JENIS_MAP[jenis] || 'XX'; }
     const cleanMatrik = String(noMatrik).replace(/\s/g, '');
 
-    // Check if this is an anakan (e.g. "67.1", "67,2")
+    // Check if this is an anakan (e.g. "65.1", "67,2")
     const dotMatch = cleanMatrik.match(/^(\d+)[.,](\d+)$/);
     if (dotMatch) {
-        // Anakan: use noMatrik directly → 400.3.13/067.1/A3/2026
+        // Anakan: 400.3.13/065.1.n/A3/2026
         const mainPart = dotMatch[1].padStart(3, '0');
-        return `400.3.13/${mainPart}.${dotMatch[2]}/${kode}/${tahun}`;
+        return `400.3.13/${mainPart}.${dotMatch[2]}.${n}/${kode}/${tahun}`;
     }
 
-    // Indukan: append .n sequence → 400.3.13/068.n/A3/2026
+    // Indukan: 400.3.13/063.n/A3/2026
     const mainPart = cleanMatrik.padStart(3, '0');
     return `400.3.13/${mainPart}.${n}/${kode}/${tahun}`;
 };
