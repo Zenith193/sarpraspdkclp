@@ -1,5 +1,6 @@
-import { useState, useMemo, useEffect } from 'react';
-import { Plus, Search, Download, Upload, Edit, Trash2, Save, X, FileText, AlertTriangle, Code, Copy, CheckCheck, Info, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { Plus, Search, Download, Upload, Edit, Trash2, Save, X, FileText, AlertTriangle, Code, Copy, CheckCheck, Info, ChevronLeft, ChevronRight, MoreHorizontal, Eye } from 'lucide-react';
+import ReactDOM from 'react-dom';
 import toast from 'react-hot-toast';
 import { templateApi } from '../../api/index';
 import { useApi } from '../../api/hooks';
@@ -136,6 +137,22 @@ const ManajemenTemplate = () => {
     // State Modal Hapus
     const [deleteTarget, setDeleteTarget] = useState(null);
 
+    // Action dropdown state
+    const [openActionId, setOpenActionId] = useState(null);
+    const [actionPos, setActionPos] = useState({ top: 0, left: 0 });
+    const actionDropdownRef = useRef(null);
+
+    // Close dropdown on outside click
+    useEffect(() => {
+        const handler = (e) => {
+            if (actionDropdownRef.current && !actionDropdownRef.current.contains(e.target) && !e.target.closest('.btn-icon')) {
+                setOpenActionId(null);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
     // State Modal Panduan
     const [showGuide, setShowGuide] = useState(false);
     const [activeGuideTab, setActiveGuideTab] = useState("Data Sekolah");
@@ -172,11 +189,21 @@ const ManajemenTemplate = () => {
     };
 
     const openEditModal = (item) => {
-        setFormData({ name: item.name || item.nama || '', type: item.type || item.jenisCocok || '' });
+        setFormData({
+            name: item.name || item.nama || '',
+            type: item.type || item.jenisCocok || '',
+            existingFileName: item.filePath ? (item.filePath.split('/').pop() || item.filePath.split('\\').pop() || '') : '',
+        });
         setFormFile(null);
         setEditId(item.id);
         setModalType('edit');
         setShowModal(true);
+    };
+
+    const handleActionClick = (e, id) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        setActionPos({ top: rect.bottom + 4, left: rect.right - 170 });
+        setOpenActionId(openActionId === id ? null : id);
     };
 
     const handleSave = async () => {
@@ -300,13 +327,7 @@ const ManajemenTemplate = () => {
                                         <td><span className="badge badge-baik">{t.type}</span></td>
                                         <td style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>{formatDate(t.lastUpdated)}</td>
                                         <td>
-                                            <div style={{ display: 'flex', gap: 4 }}>
-                                                {t.filePath && (
-                                                    <a href={`/api/template/download/${t.id}`} target="_blank" rel="noopener noreferrer" className="btn-icon" title="Download" style={{ color: 'var(--accent-green)' }}><Download size={16} /></a>
-                                                )}
-                                                <button className="btn-icon" onClick={() => openEditModal(t)} title="Edit"><Edit size={16} /></button>
-                                                <button className="btn-icon" onClick={() => setDeleteTarget(t)} style={{ color: 'var(--accent-red)' }} title="Hapus"><Trash2 size={16} /></button>
-                                            </div>
+                                            <button className="btn-icon" onClick={(e) => handleActionClick(e, t.id)} title="Aksi"><MoreHorizontal size={16} /></button>
                                         </td>
                                     </tr>
                                 ))
@@ -333,6 +354,28 @@ const ManajemenTemplate = () => {
                     </div>
                 </div>
             </div>
+
+            {/* ===== FIXED-POSITION ACTION DROPDOWN ===== */}
+            {openActionId && (() => {
+                const item = pagedData.find(t => t.id === openActionId);
+                if (!item) return null;
+                return ReactDOM.createPortal(
+                    <div ref={actionDropdownRef} className="dropdown-menu" style={{ position: 'fixed', top: actionPos.top, left: actionPos.left, minWidth: 170, padding: 4, zIndex: 9999, boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}>
+                        {item.filePath && (
+                            <a href={`/api/template/download/${item.id}`} target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--accent-green)', borderRadius: 6, textDecoration: 'none' }} className="dropdown-item" onClick={() => setOpenActionId(null)}>
+                                <Eye size={14} /> Preview / Download
+                            </a>
+                        )}
+                        <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-primary)', borderRadius: 6 }} className="dropdown-item" onClick={() => { openEditModal(item); setOpenActionId(null); }}>
+                            <Edit size={14} /> Edit
+                        </button>
+                        <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--accent-red)', borderRadius: 6 }} className="dropdown-item" onClick={() => { setDeleteTarget(item); setOpenActionId(null); }}>
+                            <Trash2 size={14} /> Hapus
+                        </button>
+                    </div>,
+                    document.body
+                );
+            })()}
 
             {/* ===== MODAL FORM (Tambah/Edit) ===== */}
             {showModal && (
@@ -371,6 +414,14 @@ const ManajemenTemplate = () => {
                                             <FileText size={20} style={{ color: 'var(--accent-blue)' }} />
                                             <span style={{ fontWeight: 500, fontSize: '0.875rem' }}>{formFile.name}</span>
                                             <button className="btn-icon" onClick={e => { e.stopPropagation(); setFormFile(null); }} style={{ color: 'var(--accent-red)' }}><X size={14} /></button>
+                                        </div>
+                                    ) : modalType === 'edit' && formData.existingFileName ? (
+                                        <div>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 8 }}>
+                                                <FileText size={20} style={{ color: 'var(--accent-green)' }} />
+                                                <span style={{ fontWeight: 500, fontSize: '0.85rem', color: 'var(--accent-green)' }}>{formData.existingFileName}</span>
+                                            </div>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Klik untuk mengganti file</div>
                                         </div>
                                     ) : (
                                         <div>
