@@ -95,7 +95,42 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
 
         doc.render(vars);
 
-        const filledBuf = doc.getZip().generate({
+        // Post-process: strip empty Word Header sections that cause extra top spacing
+        const generatedZip = doc.getZip();
+        try {
+            // Check each header file; remove if it only has empty paragraphs
+            const headerFiles = Object.keys(generatedZip.files).filter(f => /^word\/header\d*\.xml$/i.test(f));
+            const emptyHeaders: string[] = [];
+            for (const hf of headerFiles) {
+                const hxml = generatedZip.file(hf)?.asText() || '';
+                // Strip all XML tags and check if any visible text remains
+                const textOnly = hxml.replace(/<[^>]+>/g, '').trim();
+                if (!textOnly) emptyHeaders.push(hf);
+            }
+            if (emptyHeaders.length > 0) {
+                // Remove empty header files and their references from document.xml
+                const docXml = generatedZip.file('word/document.xml')?.asText() || '';
+                let cleaned = docXml;
+                for (const hf of emptyHeaders) {
+                    const basename = hf.replace('word/', '');
+                    // Remove headerReference tags pointing to this file
+                    const rIdRegex = new RegExp(`<w:headerReference[^>]*r:id="(rId\\d+)"[^>]*/?>`, 'g');
+                    const relsXml = generatedZip.file('word/_rels/document.xml.rels')?.asText() || '';
+                    // Find rId matching this header file
+                    const relMatch = relsXml.match(new RegExp(`Id="(rId\\d+)"[^>]*Target="${basename}"`));
+                    if (relMatch) {
+                        const rId = relMatch[1];
+                        cleaned = cleaned.replace(new RegExp(`<w:headerReference[^>]*r:id="${rId}"[^>]*/?>`, 'g'), '');
+                    }
+                    generatedZip.remove(hf);
+                }
+                generatedZip.file('word/document.xml', cleaned);
+            }
+        } catch (stripErr) {
+            console.log('[Template] Header strip skipped:', (stripErr as any).message);
+        }
+
+        const filledBuf = generatedZip.generate({
             type: 'nodebuffer',
             compression: 'DEFLATE',
         });
