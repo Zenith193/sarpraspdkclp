@@ -321,6 +321,9 @@ export function getAvailableVariables() {
             { name: 'ketuaTimTeknis', desc: 'Nama Ketua Tim Teknis' },
             { name: 'nipKetuaTimTeknis', desc: 'NIP Ketua Tim Teknis' },
         ]},
+        { group: 'BAST', vars: [
+            { name: 'noBAST', desc: 'Nomor BAST (400.3.13/063.n/A3/2026)' },
+        ]},
         { group: 'Anakan (Sub Paket)', vars: [
             { name: 'jumlahAnakan', desc: 'Jumlah anakan (angka)' },
             { name: 'anakan1KopSekolah', desc: 'Kop Sekolah anakan ke-1' },
@@ -329,11 +332,13 @@ export function getAvailableVariables() {
             { name: 'anakan1Kecamatan', desc: 'Kecamatan anakan ke-1' },
             { name: 'anakan1NamaSekolah', desc: 'Nama Sekolah anakan ke-1' },
             { name: 'anakan1NamaPaket', desc: 'Nama Paket anakan ke-1' },
+            { name: 'anakan1NoBAST', desc: 'Nomor BAST anakan ke-1 (400.3.13/065.1.n/A3/2026)' },
         ]},
         { group: 'Anakan 2-15 (pola sama)', vars: [
             { name: 'anakan2KopSekolah', desc: 'Kop Sekolah anakan ke-2 (dst sampai 15)' },
             { name: 'anakan2Kepsek', desc: 'Kepala Sekolah anakan ke-2' },
             { name: 'anakan2Kecamatan', desc: 'Kecamatan anakan ke-2' },
+            { name: 'anakan2NoBAST', desc: 'Nomor BAST anakan ke-2' },
             { name: 'anakan3Kepsek', desc: '...dst: anakan3, anakan4, ... anakan15' },
         ]},
         { group: 'Utilitas', vars: [

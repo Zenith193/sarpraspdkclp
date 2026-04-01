@@ -392,14 +392,37 @@ function buildVariableMap(item: any, sekretaris: any = {}) {
         kopSekolah: d.kopSekolah || '',
         kopSekolahAda: d.kopSekolah ? 'Ada' : 'Belum',
 
+        // ===== BAST =====
+        noBAST: generateNoBAST(d.noMatrik, d.jenisPengadaan, d.sumberDana, tahun),
+
         // ===== ANAKAN (children) =====
         jumlahAnakan: String((d.children || []).length),
-        ...buildChildrenVars(d.children || []),
+        ...buildChildrenVars(d.children || [], d, tahun),
     };
 }
 
+// BAST kode mapping (same as frontend)
+const KODE_JENIS_MAP: Record<string, string> = { 'Jasa Konsultansi Perencanaan': 'A1', 'Jasa Konsultansi Pengawasan': 'A2', 'Pekerjaan Konstruksi': 'A3' };
+const KODE_BARANG_MAP: Record<string, string> = { 'APBD': 'A4', 'APBD Perubahan': 'A4', 'BANKEU': 'B4', 'DAK': 'D4', 'SG': 'S4', 'Bantuan Pemerintah': 'BP4' };
+
+function generateNoBAST(noMatrik: string, jenis: string, sumber: string, tahun: string | number, n = 1) {
+    if (!noMatrik || !jenis) return '';
+    let kode = 'XX';
+    if (jenis === 'Pengadaan Barang') { kode = KODE_BARANG_MAP[sumber] || 'X4'; } else { kode = KODE_JENIS_MAP[jenis] || 'XX'; }
+    const cleanMatrik = String(noMatrik).replace(/\s/g, '');
+    // Anakan: "65.1" → 400.3.13/065.1.n/kode/tahun
+    const dotMatch = cleanMatrik.match(/^(\d+)[.,](\d+)$/);
+    if (dotMatch) {
+        const mainPart = dotMatch[1].padStart(3, '0');
+        return `400.3.13/${mainPart}.${dotMatch[2]}.${n}/${kode}/${tahun}`;
+    }
+    // Indukan: "63" → 400.3.13/063.n/kode/tahun
+    const mainPart = cleanMatrik.padStart(3, '0');
+    return `400.3.13/${mainPart}.${n}/${kode}/${tahun}`;
+}
+
 // Build variables for up to 15 children (school data only)
-function buildChildrenVars(children: any[]) {
+function buildChildrenVars(children: any[], parent: any, tahun: string | number) {
     const vars: Record<string, string> = {};
     const MAX = 15;
     for (let i = 0; i < MAX; i++) {
@@ -411,6 +434,7 @@ function buildChildrenVars(children: any[]) {
         vars[`anakan${idx}Kecamatan`]     = c?.kecamatan || '';
         vars[`anakan${idx}NamaSekolah`]   = c?.namaSekolah || '';
         vars[`anakan${idx}NamaPaket`]     = c?.namaPaket || '';
+        vars[`anakan${idx}NoBAST`]        = c ? generateNoBAST(c.noMatrik, c.jenisPengadaan || parent?.jenisPengadaan, c.sumberDana || parent?.sumberDana, tahun) : '';
     }
 
     return vars;
