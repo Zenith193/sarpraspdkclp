@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, Download, Eye, ChevronLeft, ChevronRight, FileText, Wallet, Package, Upload, CheckCircle, Printer } from 'lucide-react';
+import { Search, Download, Eye, ChevronLeft, ChevronRight, FileText, Wallet, Package, Upload, CheckCircle, Printer, MoreVertical } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { formatCurrency } from '../../utils/formatters';
 import useMatrikStore from '../../store/matrikStore';
@@ -19,8 +19,19 @@ const RiwayatBantuan = ({ readOnly = false }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [viewItem, setViewItem] = useState(null);
     const [uploading, setUploading] = useState(null);
+    const [openMenu, setOpenMenu] = useState(null); // matrikId of open dropdown
     const fileInputRef = useRef(null);
     const uploadTargetRef = useRef(null);
+    const menuRef = useRef(null);
+
+    // Close dropdown on outside click
+    useEffect(() => {
+        const handleClick = (e) => {
+            if (menuRef.current && !menuRef.current.contains(e.target)) setOpenMenu(null);
+        };
+        if (openMenu) document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, [openMenu]);
 
     const isSekolah = role === 'sekolah';
     const isKorwil = role === 'korwil';
@@ -192,7 +203,7 @@ const RiwayatBantuan = ({ readOnly = false }) => {
                                 <col style={{ width: '18%' }} />
                                 <col style={{ width: '12%' }} />
                                 <col style={{ width: isAdmin ? '14%' : '18%' }} />
-                                <col style={{ width: isAdmin ? 90 : 110 }} />
+                                <col style={{ width: isAdmin ? 45 : 45 }} />
                             </colgroup>
                             <thead>
                                 <tr>
@@ -254,38 +265,52 @@ const RiwayatBantuan = ({ readOnly = false }) => {
                                             )}
                                         </td>
 
-                                        {/* Aksi column — all buttons here */}
+                                        {/* Aksi — single dropdown button */}
                                         <td>
-                                            <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
-                                                {isAdmin ? (
-                                                    /* Admin actions */
-                                                    <>
-                                                        {d.bastFisikPath && (
-                                                            <>
-                                                                <button className="btn-icon" onClick={() => window.open(bastApi.previewFisikUrl(d.matrikId), '_blank')} title="Preview Fisik" style={{ color: 'var(--accent-purple)' }}><Eye size={15} /></button>
-                                                                <button className="btn-icon" onClick={() => handleDownloadFisik(d)} title="Download Fisik" style={{ color: 'var(--accent-blue)' }}><Download size={15} /></button>
-                                                            </>
-                                                        )}
-                                                        <button className="btn-icon" onClick={() => setViewItem(d)} title="Detail"><Eye size={15} /></button>
-                                                    </>
-                                                ) : (
-                                                    /* Sekolah/Korwil actions */
-                                                    <>
-                                                        {d.bastFisikPath ? (
-                                                            <>
-                                                                <button className="btn-icon" onClick={() => window.open(bastApi.previewFisikUrl(d.matrikId), '_blank')} title="Preview" style={{ color: 'var(--accent-purple)' }}><Eye size={15} /></button>
-                                                                <button className="btn-icon" onClick={() => handleDownloadFisik(d)} title="Download" style={{ color: 'var(--accent-blue)' }}><Download size={15} /></button>
-                                                                <button className="btn-icon" onClick={() => { const w = window.open(bastApi.previewFisikUrl(d.matrikId), '_blank'); setTimeout(() => w?.print(), 1000); }} title="Print" style={{ color: 'var(--text-secondary)' }}><Printer size={15} /></button>
-                                                            </>
-                                                        ) : getSoftfileUrl(d) ? (
-                                                            <>
-                                                                <button className="btn-icon" onClick={() => window.open(getSoftfileUrl(d), '_blank')} title="Preview" style={{ color: 'var(--accent-purple)' }}><Eye size={15} /></button>
-                                                                <button className="btn-icon" onClick={() => { const a = document.createElement('a'); a.href = getSoftfileUrl(d); a.download = `BAST_${d.noBAST || ''}.pdf`; a.click(); }} title="Download" style={{ color: 'var(--accent-blue)' }}><Download size={15} /></button>
-                                                                <button className="btn-icon" onClick={() => { const w = window.open(getSoftfileUrl(d), '_blank'); setTimeout(() => w?.print(), 1000); }} title="Print" style={{ color: 'var(--text-secondary)' }}><Printer size={15} /></button>
-                                                            </>
-                                                        ) : null}
-                                                        <button className="btn-icon" onClick={() => setViewItem(d)} title="Detail"><Eye size={15} /></button>
-                                                    </>
+                                            <div style={{ position: 'relative' }}>
+                                                <button className="btn-icon" onClick={() => setOpenMenu(openMenu === (d.matrikId || d.id) ? null : (d.matrikId || d.id))} title="Aksi"
+                                                    style={{ color: 'var(--text-primary)' }}>
+                                                    <MoreVertical size={16} />
+                                                </button>
+                                                {openMenu === (d.matrikId || d.id) && (
+                                                    <div ref={menuRef} style={{
+                                                        position: 'absolute', right: 0, top: '100%', zIndex: 50,
+                                                        background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+                                                        borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+                                                        minWidth: 160, padding: '4px 0',
+                                                    }}>
+                                                        {(() => {
+                                                            const items = [];
+                                                            const fileUrl = d.bastFisikPath ? bastApi.previewFisikUrl(d.matrikId) : getSoftfileUrl(d);
+                                                            const fileLabel = d.bastFisikPath ? 'BAST Fisik' : 'Softfile';
+                                                            if (fileUrl) {
+                                                                items.push({ icon: <Eye size={14} />, label: `Preview ${fileLabel}`, onClick: () => window.open(fileUrl, '_blank') });
+                                                                items.push({ icon: <Download size={14} />, label: `Download ${fileLabel}`, onClick: () => {
+                                                                    if (d.bastFisikPath) { handleDownloadFisik(d); }
+                                                                    else { const a = document.createElement('a'); a.href = fileUrl; a.download = `BAST_${d.noBAST || ''}.pdf`; a.click(); }
+                                                                }});
+                                                                if (!isAdmin) {
+                                                                    items.push({ icon: <Printer size={14} />, label: 'Print', onClick: () => { const w = window.open(fileUrl, '_blank'); setTimeout(() => w?.print(), 1000); }});
+                                                                }
+                                                            }
+                                                            items.push({ icon: <Eye size={14} />, label: 'Detail', onClick: () => setViewItem(d) });
+                                                            return items.map((item, idx) => (
+                                                                <button key={idx} onClick={() => { item.onClick(); setOpenMenu(null); }}
+                                                                    style={{
+                                                                        display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+                                                                        padding: '8px 14px', background: 'none', border: 'none',
+                                                                        color: 'var(--text-primary)', fontSize: '0.8rem', cursor: 'pointer',
+                                                                        textAlign: 'left', transition: 'background 0.15s',
+                                                                    }}
+                                                                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
+                                                                    onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                                                                >
+                                                                    <span style={{ color: 'var(--text-secondary)', flexShrink: 0 }}>{item.icon}</span>
+                                                                    {item.label}
+                                                                </button>
+                                                            ));
+                                                        })()}
+                                                    </div>
                                                 )}
                                             </div>
                                         </td>
