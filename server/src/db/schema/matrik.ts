@@ -91,6 +91,7 @@ export const bast = pgTable('bast', {
     nilaiKontrak: bigint('nilai_kontrak', { mode: 'number' }),
     penyedia: text('penyedia'),
     tanggalBast: date('tanggal_bast'),
+    bastFisikPath: text('bast_fisik_path'),
     generatedHtml: text('generated_html'),
     createdBy: text('created_by').references(() => user.id),
     createdAt: timestamp('created_at').defaultNow(),
