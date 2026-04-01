@@ -387,5 +387,52 @@ function buildVariableMap(item: any, sekretaris: any = {}) {
         ketuaTimTeknis: TIM_TEKNIS_KETUA.nama,
         nipKetuaTimTeknis: TIM_TEKNIS_KETUA.nip,
         tahunTerbilang: ucFirst(terbilang(Number(tahun) || 2026)),
+
+        // ===== KOP SEKOLAH =====
+        kopSekolah: d.kopSekolah || '',
+        kopSekolahAda: d.kopSekolah ? 'Ada' : 'Belum',
+
+        // ===== ANAKAN (children) =====
+        jumlahAnakan: String((d.children || []).length),
+        ...buildChildrenVars(d.children || []),
     };
 }
+
+// Build variables for up to 15 children
+function buildChildrenVars(children: any[]) {
+    const vars: Record<string, string> = {};
+    const MAX = 15;
+    for (let i = 0; i < MAX; i++) {
+        const idx = i + 1;
+        const c = children[i];
+        vars[`anakan${idx}NamaPaket`]     = c?.namaPaket || '';
+        vars[`anakan${idx}NamaSekolah`]   = c?.namaSekolah || '';
+        vars[`anakan${idx}Npsn`]          = c?.npsn || '';
+        vars[`anakan${idx}NoMatrik`]      = c?.noMatrik || '';
+        vars[`anakan${idx}NilaiKontrak`]  = c ? fmtRp(c.nilaiKontrak) : '';
+        vars[`anakan${idx}NilaiKontrakRaw`] = c ? String(c.nilaiKontrak || 0) : '';
+        vars[`anakan${idx}TerbilangKontrak`] = c?.terbilangKontrak || '';
+        vars[`anakan${idx}PaguAnggaran`]  = c ? fmtRp(c.paguAnggaran) : '';
+        vars[`anakan${idx}Hps`]           = c ? fmtRp(c.hps) : '';
+        vars[`anakan${idx}NoSpk`]         = c?.noSpk || '';
+        vars[`anakan${idx}Penyedia`]      = c?.penyedia || '';
+        vars[`anakan${idx}NamaPemilik`]   = c?.namaPemilik || '';
+        vars[`anakan${idx}JangkaWaktu`]   = c ? String(c.jangkaWaktu || '') : '';
+        vars[`anakan${idx}TanggalMulai`]  = c ? fmtDate(c.tanggalMulai) : '';
+        vars[`anakan${idx}TanggalSelesai`] = c ? fmtDate(c.tanggalSelesai) : '';
+        vars[`anakan${idx}Kepsek`]        = c?.kepsek || '';
+        vars[`anakan${idx}NipKs`]         = c?.nipKs || '';
+        vars[`anakan${idx}KopSekolah`]    = c?.kopSekolah || '';
+    }
+
+    // Totals
+    const totalNilaiKontrak = children.reduce((sum, c) => sum + (Number(c?.nilaiKontrak) || 0), 0);
+    const totalPagu = children.reduce((sum, c) => sum + (Number(c?.paguAnggaran) || 0), 0);
+    const totalHps = children.reduce((sum, c) => sum + (Number(c?.hps) || 0), 0);
+    vars['totalNilaiKontrakAnakan'] = fmtRp(totalNilaiKontrak);
+    vars['totalPaguAnggaranAnakan'] = fmtRp(totalPagu);
+    vars['totalHpsAnakan'] = fmtRp(totalHps);
+
+    return vars;
+}
+
