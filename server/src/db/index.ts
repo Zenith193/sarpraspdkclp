@@ -49,6 +49,12 @@ export async function ensureIndexes() {
         // Auto-add bast fisik path column
         await db.execute(sql`ALTER TABLE bast ADD COLUMN IF NOT EXISTS bast_fisik_path TEXT`);
         await db.execute(sql`ALTER TABLE bast ADD COLUMN IF NOT EXISTS spl_history_id INTEGER`);
+        // One-time: remove duplicate bast records, keep only the latest per matrik_id
+        await db.execute(sql`
+            DELETE FROM bast WHERE id NOT IN (
+                SELECT MAX(id) FROM bast GROUP BY matrik_id
+            )
+        `);
         console.log('[DB] Performance indexes ensured ✅');
     } catch (e: any) {
         console.error('[DB] Index creation warning:', e.message);
