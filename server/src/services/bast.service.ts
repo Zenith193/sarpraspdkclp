@@ -32,7 +32,21 @@ export const bastService = {
     },
 
     async getByNpsn(npsn: string) {
-        return db.select().from(bast).where(eq(bast.npsn, npsn));
+        const rows = await db.select({
+            bast: bast,
+            matrikNilaiKontrak: matrikKegiatan.nilaiKontrak,
+            matrikHonor: matrikKegiatan.honor,
+            matrikNamaPaket: matrikKegiatan.namaPaket,
+        }).from(bast)
+          .leftJoin(matrikKegiatan, eq(bast.matrikId, matrikKegiatan.id))
+          .where(eq(bast.npsn, npsn));
+        return rows.map(r => ({
+            ...r.bast,
+            // Use matrik nilaiKontrak if bast nilaiKontrak is 0 or null
+            nilaiKontrak: (r.bast.nilaiKontrak && r.bast.nilaiKontrak > 0) ? r.bast.nilaiKontrak : (r.matrikNilaiKontrak || 0),
+            honor: r.matrikHonor || 0,
+            namaPaket: r.bast.namaPaket || r.matrikNamaPaket,
+        }));
     },
 
     async getByMatrikId(matrikId: number) {
