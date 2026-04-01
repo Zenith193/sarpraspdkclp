@@ -1467,7 +1467,7 @@ const SplTab = () => {
                                         {selectedIds.size === filteredSpl.length && filteredSpl.length > 0 ? <CheckSquare size={16} /> : <Square size={16} />}
                                     </button>
                                 </th>
-                                <th>No</th>
+                                <th>No Matrik</th>
                                 {activeSplCols.map(c => <th key={c.key} style={{ whiteSpace: 'nowrap' }}>{c.label}</th>)}
 
                             </tr>
@@ -1484,7 +1484,7 @@ const SplTab = () => {
                                             {selectedIds.has(d.id) ? <CheckSquare size={16} style={{ color: 'var(--accent-blue)' }} /> : <Square size={16} />}
                                         </button>
                                     </td>
-                                    <td>{i + 1}</td>
+                                    <td style={{ fontWeight: 600, fontSize: '0.82rem' }}>{d.noMatrik}</td>
                                     {activeSplCols.map(c => (
                                         <td key={c.key} style={{ whiteSpace: 'nowrap', fontSize: '0.82rem' }}>
                                             {c.fmt ? c.fmt(d[c.key]) : (d[c.key] || '-')}
