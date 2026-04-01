@@ -46,6 +46,8 @@ export async function ensureIndexes() {
         await db.execute(sql`ALTER TABLE iklan ADD COLUMN IF NOT EXISTS script_code TEXT`);
         await db.execute(sql`ALTER TABLE iklan ADD COLUMN IF NOT EXISTS posisi TEXT DEFAULT 'head'`);
         await db.execute(sql`ALTER TABLE iklan ADD COLUMN IF NOT EXISTS aktif BOOLEAN DEFAULT true`);
+        // Auto-add bast fisik path column
+        await db.execute(sql`ALTER TABLE bast ADD COLUMN IF NOT EXISTS bast_fisik_path TEXT`);
         console.log('[DB] Performance indexes ensured ✅');
     } catch (e: any) {
         console.error('[DB] Index creation warning:', e.message);
