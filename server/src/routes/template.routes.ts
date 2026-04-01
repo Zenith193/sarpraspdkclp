@@ -405,7 +405,7 @@ function buildVariableMap(item: any, sekretaris: any = {}) {
 const KODE_JENIS_MAP: Record<string, string> = { 'Jasa Konsultansi Perencanaan': 'A1', 'Jasa Konsultansi Pengawasan': 'A2', 'Pekerjaan Konstruksi': 'A3' };
 const KODE_BARANG_MAP: Record<string, string> = { 'APBD': 'A4', 'APBD Perubahan': 'A4', 'BANKEU': 'B4', 'DAK': 'D4', 'SG': 'S4', 'Bantuan Pemerintah': 'BP4' };
 
-function generateNoBAST(noMatrik: string, jenis: string, sumber: string, tahun: string | number, n = 1) {
+function generateNoBAST(noMatrik: string, jenis: string, sumber: string, tahun: string | number) {
     if (!noMatrik || !jenis) return '';
     let kode = 'XX';
     if (jenis === 'Pengadaan Barang') { kode = KODE_BARANG_MAP[sumber] || 'X4'; } else { kode = KODE_JENIS_MAP[jenis] || 'XX'; }
@@ -414,11 +414,11 @@ function generateNoBAST(noMatrik: string, jenis: string, sumber: string, tahun: 
     const dotMatch = cleanMatrik.match(/^(\d+)[.,](\d+)$/);
     if (dotMatch) {
         const mainPart = dotMatch[1].padStart(3, '0');
-        return `400.3.13/${mainPart}.${dotMatch[2]}.${n}/${kode}/${tahun}`;
+        return `400.3.13/${mainPart}.${dotMatch[2]}.n/${kode}/${tahun}`;
     }
     // Indukan: "63" → 400.3.13/063.n/kode/tahun
     const mainPart = cleanMatrik.padStart(3, '0');
-    return `400.3.13/${mainPart}.${n}/${kode}/${tahun}`;
+    return `400.3.13/${mainPart}.n/${kode}/${tahun}`;
 }
 
 // Build variables for up to 15 children (school data only)
