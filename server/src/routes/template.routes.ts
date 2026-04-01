@@ -394,6 +394,10 @@ function buildVariableMap(item: any, sekretaris: any = {}) {
 
         // ===== BAST =====
         noBAST: generateNoBAST(d.noMatrik, d.jenisPengadaan, d.sumberDana, tahun),
+        volume: d.volume || '',
+        nilaiBAST: fmtRp(d.nilaiBAST),
+        nilaiBastRaw: String(d.nilaiBAST || 0),
+        terbilangBAST: d.terbilangBAST || (d.nilaiBAST ? ucFirst(terbilang(Number(d.nilaiBAST))) + ' rupiah' : ''),
 
         // ===== ANAKAN (children) =====
         jumlahAnakan: String((d.children || []).length),
@@ -435,6 +439,10 @@ function buildChildrenVars(children: any[], parent: any, tahun: string | number)
         vars[`anakan${idx}NamaSekolah`]   = c?.namaSekolah || '';
         vars[`anakan${idx}NamaPaket`]     = c?.namaPaket || '';
         vars[`anakan${idx}NoBAST`]        = c ? generateNoBAST(c.noMatrik, c.jenisPengadaan || parent?.jenisPengadaan, c.sumberDana || parent?.sumberDana, tahun) : '';
+        vars[`anakan${idx}Volume`]         = c?.volume || '';
+        vars[`anakan${idx}NilaiBAST`]      = c?.nilaiKontrak ? fmtRp(c.nilaiKontrak) : '';
+        vars[`anakan${idx}NilaiBastRaw`]   = String(c?.nilaiKontrak || 0);
+        vars[`anakan${idx}TerbilangBAST`]  = c?.nilaiKontrak ? ucFirst(terbilang(Number(c.nilaiKontrak))) + ' rupiah' : '';
     }
 
     return vars;
