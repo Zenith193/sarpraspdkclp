@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
-import { GripVertical, Save, Search, Lock, Unlock } from 'lucide-react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { GripVertical, Save, Search, Lock, Unlock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { sekolahApi, korwilApi, rankingApi } from '../../api/index';
 import { KECAMATAN, JENJANG } from '../../utils/constants';
 import useAuthStore from '../../store/authStore';
@@ -31,6 +31,10 @@ const RankingPrioritas = () => {
     const [myJenjang, setMyJenjang] = useState('');
     const dragItem = useRef(null);
     const dragOverItem = useRef(null);
+
+    // Pagination
+    const [pageSize, setPageSize] = useState(20);
+    const [currentPage, setCurrentPage] = useState(1);
 
     // Admin filter state
     const [filterJenjang, setFilterJenjang] = useState('');
@@ -190,6 +194,14 @@ const RankingPrioritas = () => {
         ? schools.filter(s => s.nama.toLowerCase().includes(search.toLowerCase()) || s.npsn.includes(search))
         : schools;
 
+    const totalPages = Math.ceil(filtered.length / pageSize) || 1;
+    const paginatedData = useMemo(() => {
+        const start = (currentPage - 1) * pageSize;
+        return filtered.slice(start, start + pageSize);
+    }, [filtered, currentPage, pageSize]);
+
+    useEffect(() => { setCurrentPage(1); }, [search, pageSize, filterJenjang, filterKecamatan]);
+
     const canEdit = isAdmin || !currentlyLocked;
 
     return (
@@ -218,6 +230,15 @@ const RankingPrioritas = () => {
                         <div className="table-search">
                             <Search size={16} className="search-icon" />
                             <input placeholder="Cari sekolah..." value={search} onChange={e => setSearch(e.target.value)} />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Tampil:</span>
+                            <select value={pageSize} onChange={e => setPageSize(Number(e.target.value))}
+                                style={{ padding: '6px 10px', fontSize: 13, borderRadius: 8, background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', cursor: 'pointer' }}>
+                                <option value={20}>20</option>
+                                <option value={50}>50</option>
+                                <option value={100}>100</option>
+                            </select>
                         </div>
                         {isAdmin && (
                             <>
@@ -286,7 +307,7 @@ const RankingPrioritas = () => {
                                 <tr><td colSpan={isAdmin ? 8 : 6} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>
                                     {search ? 'Tidak ditemukan' : 'Belum ada data sekolah'}
                                 </td></tr>
-                            ) : filtered.map((s) => {
+                            ) : paginatedData.map((s) => {
                                 const rowLocked = isLockedFor(locks, s.kecamatan, s.jenjang);
                                 const editable = isAdmin || !rowLocked;
                                 return (
@@ -349,6 +370,17 @@ const RankingPrioritas = () => {
                             })}
                         </tbody>
                     </table>
+                </div>
+
+                <div className="table-pagination">
+                    <div className="table-pagination-info">
+                        Menampilkan {filtered.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}-{Math.min(currentPage * pageSize, filtered.length)} dari {filtered.length} data
+                    </div>
+                    <div className="table-pagination-controls">
+                        <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}><ChevronLeft size={16} /></button>
+                        <span style={{ padding: '0 10px', fontSize: '0.875rem' }}>Hal {currentPage} dari {totalPages}</span>
+                        <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}><ChevronRight size={16} /></button>
+                    </div>
                 </div>
             </div>
         </div>
