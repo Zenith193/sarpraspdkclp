@@ -39,8 +39,8 @@ router.get('/spl-file/:format/:historyId', requireAuth, async (req, res) => {
         const historyId = req.params.historyId as string;
         if (!['pdf', 'docx'].includes(format)) return res.status(400).json({ error: 'Format harus pdf atau docx' });
 
-        // Find the file in spl-output directory
-        const files = fs.readdirSync(SPL_OUTPUT_DIR).filter(f => f.startsWith(`spl_${historyId}_`) && f.endsWith(`.${format}`));
+        // Find the file in spl-output directory (support both old spl_ and new naming)
+        const files = fs.readdirSync(SPL_OUTPUT_DIR).filter(f => (f.startsWith(`${historyId}_`) || f.startsWith(`spl_${historyId}_`)) && f.endsWith(`.${format}`));
         if (files.length === 0) return res.status(404).json({ error: `File ${(format as string).toUpperCase()} tidak ditemukan` });
 
         const filePath = path.join(SPL_OUTPUT_DIR, files[0]);
@@ -137,7 +137,8 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
 
         // Create history record first to get the ID
         const userId = (req as any).user?.id;
-        const namaFile = `SPL_${item.noMatrik || ''}_${(item.namaSekolah || 'dokumen').replace(/[^a-zA-Z0-9]/g, '_')}`;
+        const sanitize = (s: string) => (s || '').replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+        const namaFile = `${sanitize(item.noMatrik)}_${sanitize(item.namaSekolah)}_${sanitize(item.namaPaket)}`;
         const historyRecord = await splHistoryService.create({
             matrikId: item.id,
             templateId: Number(req.params.id),
@@ -146,7 +147,7 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
         });
 
         const historyId = historyRecord.id;
-        const safeBasename = `spl_${historyId}_${(item.noMatrik || '').replace(/[^a-zA-Z0-9]/g, '_')}`;
+        const safeBasename = `${historyId}_${namaFile}`.substring(0, 200);
 
         // Save DOCX permanently  
         const docxPath = path.join(SPL_OUTPUT_DIR, `${safeBasename}.docx`);
