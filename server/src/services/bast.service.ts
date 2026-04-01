@@ -37,16 +37,23 @@ export const bastService = {
             matrikNilaiKontrak: matrikKegiatan.nilaiKontrak,
             matrikHonor: matrikKegiatan.honor,
             matrikNamaPaket: matrikKegiatan.namaPaket,
+            matrikJenisPengadaan: matrikKegiatan.jenisPengadaan,
         }).from(bast)
           .leftJoin(matrikKegiatan, eq(bast.matrikId, matrikKegiatan.id))
           .where(eq(bast.npsn, npsn));
-        return rows.map(r => ({
-            ...r.bast,
-            // Use matrik nilaiKontrak if bast nilaiKontrak is 0 or null
-            nilaiKontrak: (r.bast.nilaiKontrak && r.bast.nilaiKontrak > 0) ? r.bast.nilaiKontrak : (r.matrikNilaiKontrak || 0),
-            honor: r.matrikHonor || 0,
-            namaPaket: r.bast.namaPaket || r.matrikNamaPaket,
-        }));
+        return rows.map(r => {
+            const rawKontrak = (r.bast.nilaiKontrak && r.bast.nilaiKontrak > 0) ? r.bast.nilaiKontrak : (r.matrikNilaiKontrak || 0);
+            const honor = r.matrikHonor || 0;
+            // For Pekerjaan Konstruksi, nilaiBAST includes honor
+            const nilaiBAST = r.matrikJenisPengadaan === 'Pekerjaan Konstruksi' ? rawKontrak + honor : rawKontrak;
+            return {
+                ...r.bast,
+                nilaiKontrak: nilaiBAST,
+                honor,
+                namaPaket: r.bast.namaPaket || r.matrikNamaPaket,
+                jenisPengadaan: r.matrikJenisPengadaan,
+            };
+        });
     },
 
     async getByMatrikId(matrikId: number) {

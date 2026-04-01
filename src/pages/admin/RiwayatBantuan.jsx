@@ -19,7 +19,8 @@ const RiwayatBantuan = ({ readOnly = false }) => {
     const [currentPage, setCurrentPage] = useState(1);
     const [viewItem, setViewItem] = useState(null);
     const [uploading, setUploading] = useState(null);
-    const [openMenu, setOpenMenu] = useState(null); // matrikId of open dropdown
+    const [openMenu, setOpenMenu] = useState(null);
+    const [menuPos, setMenuPos] = useState({ top: 0, right: 0 });
     const fileInputRef = useRef(null);
     const uploadTargetRef = useRef(null);
     const menuRef = useRef(null);
@@ -268,50 +269,15 @@ const RiwayatBantuan = ({ readOnly = false }) => {
                                         {/* Aksi — single dropdown button */}
                                         <td>
                                             <div style={{ position: 'relative' }}>
-                                                <button className="btn-icon" onClick={() => setOpenMenu(openMenu === (d.matrikId || d.id) ? null : (d.matrikId || d.id))} title="Aksi"
-                                                    style={{ color: 'var(--text-primary)' }}>
+                                                <button className="btn-icon" onClick={(e) => {
+                                                    const key = d.matrikId || d.id;
+                                                    if (openMenu === key) { setOpenMenu(null); return; }
+                                                    const rect = e.currentTarget.getBoundingClientRect();
+                                                    setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+                                                    setOpenMenu(key);
+                                                }} title="Aksi" style={{ color: 'var(--text-primary)' }}>
                                                     <MoreVertical size={16} />
                                                 </button>
-                                                {openMenu === (d.matrikId || d.id) && (
-                                                    <div ref={menuRef} style={{
-                                                        position: 'absolute', right: 0, top: '100%', zIndex: 50,
-                                                        background: 'var(--bg-card)', border: '1px solid var(--border-color)',
-                                                        borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
-                                                        minWidth: 160, padding: '4px 0',
-                                                    }}>
-                                                        {(() => {
-                                                            const items = [];
-                                                            const fileUrl = d.bastFisikPath ? bastApi.previewFisikUrl(d.matrikId) : getSoftfileUrl(d);
-                                                            const fileLabel = d.bastFisikPath ? 'BAST Fisik' : 'Softfile';
-                                                            if (fileUrl) {
-                                                                items.push({ icon: <Eye size={14} />, label: `Preview ${fileLabel}`, onClick: () => window.open(fileUrl, '_blank') });
-                                                                items.push({ icon: <Download size={14} />, label: `Download ${fileLabel}`, onClick: () => {
-                                                                    if (d.bastFisikPath) { handleDownloadFisik(d); }
-                                                                    else { const a = document.createElement('a'); a.href = fileUrl; a.download = `BAST_${d.noBAST || ''}.pdf`; a.click(); }
-                                                                }});
-                                                                if (!isAdmin) {
-                                                                    items.push({ icon: <Printer size={14} />, label: 'Print', onClick: () => { const w = window.open(fileUrl, '_blank'); setTimeout(() => w?.print(), 1000); }});
-                                                                }
-                                                            }
-                                                            items.push({ icon: <Eye size={14} />, label: 'Detail', onClick: () => setViewItem(d) });
-                                                            return items.map((item, idx) => (
-                                                                <button key={idx} onClick={() => { item.onClick(); setOpenMenu(null); }}
-                                                                    style={{
-                                                                        display: 'flex', alignItems: 'center', gap: 8, width: '100%',
-                                                                        padding: '8px 14px', background: 'none', border: 'none',
-                                                                        color: 'var(--text-primary)', fontSize: '0.8rem', cursor: 'pointer',
-                                                                        textAlign: 'left', transition: 'background 0.15s',
-                                                                    }}
-                                                                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
-                                                                    onMouseLeave={e => e.currentTarget.style.background = 'none'}
-                                                                >
-                                                                    <span style={{ color: 'var(--text-secondary)', flexShrink: 0 }}>{item.icon}</span>
-                                                                    {item.label}
-                                                                </button>
-                                                            ));
-                                                        })()}
-                                                    </div>
-                                                )}
                                             </div>
                                         </td>
                                     </tr>
@@ -341,6 +307,53 @@ const RiwayatBantuan = ({ readOnly = false }) => {
                     </div>
                 </div>
             </div>
+
+            {/* Fixed dropdown menu portal */}
+            {openMenu && (() => {
+                const d = data.find(item => (item.matrikId || item.id) === openMenu);
+                if (!d) return null;
+                const items = [];
+                const fileUrl = d.bastFisikPath ? bastApi.previewFisikUrl(d.matrikId) : getSoftfileUrl(d);
+                const fileLabel = d.bastFisikPath ? 'BAST Fisik' : 'Softfile';
+                if (fileUrl) {
+                    items.push({ icon: <Eye size={14} />, label: `Preview ${fileLabel}`, onClick: () => window.open(fileUrl, '_blank') });
+                    items.push({ icon: <Download size={14} />, label: `Download ${fileLabel}`, onClick: () => {
+                        if (d.bastFisikPath) handleDownloadFisik(d);
+                        else { const a = document.createElement('a'); a.href = fileUrl; a.download = `BAST_${d.noBAST || ''}.pdf`; a.click(); }
+                    }});
+                    if (!isAdmin) {
+                        items.push({ icon: <Printer size={14} />, label: 'Print', onClick: () => { const w = window.open(fileUrl, '_blank'); setTimeout(() => w?.print(), 1000); }});
+                    }
+                }
+                items.push({ icon: <Eye size={14} />, label: 'Detail', onClick: () => setViewItem(d) });
+                return (
+                    <>
+                        <div style={{ position: 'fixed', inset: 0, zIndex: 99 }} onClick={() => setOpenMenu(null)} />
+                        <div ref={menuRef} style={{
+                            position: 'fixed', top: menuPos.top, right: menuPos.right, zIndex: 100,
+                            background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+                            borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.35)',
+                            minWidth: 170, padding: '4px 0',
+                        }}>
+                            {items.map((item, idx) => (
+                                <button key={idx} onClick={() => { item.onClick(); setOpenMenu(null); }}
+                                    style={{
+                                        display: 'flex', alignItems: 'center', gap: 8, width: '100%',
+                                        padding: '8px 14px', background: 'none', border: 'none',
+                                        color: 'var(--text-primary)', fontSize: '0.8rem', cursor: 'pointer',
+                                        textAlign: 'left',
+                                    }}
+                                    onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-secondary)'}
+                                    onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                                >
+                                    <span style={{ color: 'var(--text-secondary)', flexShrink: 0 }}>{item.icon}</span>
+                                    {item.label}
+                                </button>
+                            ))}
+                        </div>
+                    </>
+                );
+            })()}
 
             {/* Detail Modal */}
             {viewItem && (
