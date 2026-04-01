@@ -451,8 +451,10 @@ const CreateBAST = () => {
         if (!revertTarget) return;
         revertBAST(revertTarget.id);
         // Also delete from database
+        const matrikId = revertTarget.matrikId || revertTarget.id;
         try {
-            await bastApi.revert(revertTarget.matrikId);
+            await bastApi.revert(matrikId);
+            console.log('[BAST] DB record deleted for matrikId:', matrikId);
         } catch (e) {
             console.warn('[BAST] DB revert skipped:', e.message);
         }
