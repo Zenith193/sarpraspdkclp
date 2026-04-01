@@ -199,31 +199,60 @@ const CreateBAST = () => {
 
     // ===== Build enriched BAST data from SPL data (has kepsek/nip/children) =====
     const enrichedData = useMemo(() => {
-        // Use splData which already has kepsek, nipKs, children from backend JOIN
-        return splData
-            .sort((a, b) => naturalSort(String(a.noMatrik), String(b.noMatrik)))
-            .map(m => {
-                const bast = generatedMap[m.id];
-                const overrides = bast ? { nilaiKontrak: bast.nilaiKontrak, honor: bast.honor } : {};
-                const nilaiBAST = computeNilaiBAST(m, matrikData, overrides);
-                const n = bast?.bastN || 1;
-                return {
-                    ...m,
-                    kepsek: m.kepsek || '-',
-                    nipKepsek: m.nipKs || '-',
-                    noBAST: generateNoBAST(m.noMatrik, m.jenisPengadaan, m.sumberDana, m.tahunAnggaran || currentYear, n),
-                    nilaiBAST,
-                    nilaiKontrak: bast?.nilaiKontrak ?? m.nilaiKontrak,
-                    honor: bast?.honor ?? m.honor ?? 0,
-                    terbilangBAST: fullTerbilang(nilaiBAST),
-                    volume: bast?.volume || '',
-                    isGenerated: !!bast,
-                    bastId: bast?.id,
-                    bastN: n,
-                    templateNama: bast?.templateNama || null,
-                    tanggalGenerate: bast?.tanggalGenerate || null,
-                };
+        const rows = [];
+        const sorted = [...splData].sort((a, b) => naturalSort(String(a.noMatrik), String(b.noMatrik)));
+        for (const m of sorted) {
+            // Enrich parent
+            const bast = generatedMap[m.id];
+            const overrides = bast ? { nilaiKontrak: bast.nilaiKontrak, honor: bast.honor } : {};
+            const nilaiBAST = computeNilaiBAST(m, matrikData, overrides);
+            const n = bast?.bastN || 1;
+            rows.push({
+                ...m,
+                kepsek: m.kepsek || '-',
+                nipKepsek: m.nipKs || '-',
+                noBAST: generateNoBAST(m.noMatrik, m.jenisPengadaan, m.sumberDana, m.tahunAnggaran || currentYear, n),
+                nilaiBAST,
+                nilaiKontrak: bast?.nilaiKontrak ?? m.nilaiKontrak,
+                honor: bast?.honor ?? m.honor ?? 0,
+                terbilangBAST: fullTerbilang(nilaiBAST),
+                volume: bast?.volume || '',
+                isGenerated: !!bast,
+                bastId: bast?.id,
+                bastN: n,
+                templateNama: bast?.templateNama || null,
+                tanggalGenerate: bast?.tanggalGenerate || null,
+                isAnakan: false,
             });
+            // Flatten children (anakan) below parent
+            if (m.children && m.children.length > 0) {
+                for (const c of m.children) {
+                    const cBast = generatedMap[c.id];
+                    const cOverrides = cBast ? { nilaiKontrak: cBast.nilaiKontrak, honor: cBast.honor } : {};
+                    const cNilaiBAST = computeNilaiBAST(c, matrikData, cOverrides);
+                    const cn = cBast?.bastN || 1;
+                    rows.push({
+                        ...c,
+                        kepsek: c.kepsek || '-',
+                        nipKepsek: c.nipKs || '-',
+                        noBAST: generateNoBAST(c.noMatrik, c.jenisPengadaan || m.jenisPengadaan, c.sumberDana || m.sumberDana, c.tahunAnggaran || m.tahunAnggaran || currentYear, cn),
+                        nilaiBAST: cNilaiBAST,
+                        nilaiKontrak: cBast?.nilaiKontrak ?? c.nilaiKontrak,
+                        honor: cBast?.honor ?? c.honor ?? 0,
+                        terbilangBAST: fullTerbilang(cNilaiBAST),
+                        volume: cBast?.volume || '',
+                        isGenerated: !!cBast,
+                        bastId: cBast?.id,
+                        bastN: cn,
+                        templateNama: cBast?.templateNama || null,
+                        tanggalGenerate: cBast?.tanggalGenerate || null,
+                        isAnakan: true,
+                        jenisPengadaan: c.jenisPengadaan || m.jenisPengadaan,
+                    });
+                }
+            }
+        }
+        return rows;
     }, [splData, matrikData, generatedMap]);
 
     // ===== STATS =====
@@ -559,10 +588,10 @@ const CreateBAST = () => {
                         </thead>
                         <tbody>
                             {pagedData.map((d, i) => {
-                                const anakan = isAnakan(d.noMatrik);
+                                const anakan = d.isAnakan;
                                 return (
                                     <tr key={d.id} style={{
-                                        background: anakan ? 'var(--bg-secondary)' : selectedIds.includes(d.id) ? 'rgba(59,130,246,0.04)' : undefined,
+                                        background: anakan ? 'rgba(59,130,246,0.03)' : selectedIds.includes(d.id) ? 'rgba(59,130,246,0.04)' : undefined,
                                         fontSize: '0.85rem'
                                     }}>
                                         <td>
