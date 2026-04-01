@@ -447,9 +447,15 @@ const CreateBAST = () => {
     };
 
     // ===== REVERT =====
-    const handleRevert = () => {
+    const handleRevert = async () => {
         if (!revertTarget) return;
         revertBAST(revertTarget.id);
+        // Also delete from database
+        try {
+            await bastApi.revert(revertTarget.matrikId);
+        } catch (e) {
+            console.warn('[BAST] DB revert skipped:', e.message);
+        }
         toast.success(`BAST ${revertTarget.noBAST} dikembalikan ke "Belum"`);
         setRevertTarget(null);
     };

@@ -14,6 +14,10 @@ export const bastService = {
     },
 
     async create(data: typeof bast.$inferInsert, userId: string) {
+        // Delete any existing BAST for this matrikId to prevent duplicates
+        if (data.matrikId) {
+            await db.delete(bast).where(eq(bast.matrikId, data.matrikId));
+        }
         const result = await db.insert(bast).values({ ...data, createdBy: userId }).returning();
         return result[0];
     },
