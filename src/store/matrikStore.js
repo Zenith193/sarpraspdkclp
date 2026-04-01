@@ -155,11 +155,18 @@ export const generateNoBAST = (noMatrik, jenis, sumber, tahun, n = 1) => {
     let kode = 'XX';
     if (jenis === 'Pengadaan Barang') { kode = KODE_BARANG_MAP[sumber] || 'X4'; } else { kode = KODE_JENIS_MAP[jenis] || 'XX'; }
     const cleanMatrik = String(noMatrik).replace(/\s/g, '');
-    const parts = cleanMatrik.split(',');
-    const mainPart = parts[0].padStart(3, '0');
-    let formattedMatrik = mainPart;
-    if (parts.length > 1) formattedMatrik = mainPart + ',' + parts.slice(1).join(',');
-    return `400.3.13/${formattedMatrik}.${n}/${kode}/${tahun}`;
+
+    // Check if this is an anakan (e.g. "67.1", "67,2")
+    const dotMatch = cleanMatrik.match(/^(\d+)[.,](\d+)$/);
+    if (dotMatch) {
+        // Anakan: use noMatrik directly → 400.3.13/067.1/A3/2026
+        const mainPart = dotMatch[1].padStart(3, '0');
+        return `400.3.13/${mainPart}.${dotMatch[2]}/${kode}/${tahun}`;
+    }
+
+    // Indukan: append .n sequence → 400.3.13/068.n/A3/2026
+    const mainPart = cleanMatrik.padStart(3, '0');
+    return `400.3.13/${mainPart}.${n}/${kode}/${tahun}`;
 };
 
 // ===== DEFAULT BAST TEMPLATES =====
