@@ -346,7 +346,7 @@ const CreateBAST = () => {
                     namaSekolah: item.namaSekolah,
                     namaPaket: item.namaPaket,
                     noBast: noBAST,
-                    nilaiKontrak: item.nilaiKontrak || 0,
+                    nilaiKontrak: bastEntry.nilaiBAST || item.nilaiKontrak || 0,
                     penyedia: item.penyedia || '',
                     templateId: selectedTemplateId,
                     splHistoryId: result.historyId || null,

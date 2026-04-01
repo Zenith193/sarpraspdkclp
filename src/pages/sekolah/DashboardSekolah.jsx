@@ -1,7 +1,9 @@
-import { useMemo, useState } from 'react';
-import { School, Database, FileText, History, AlertCircle, CheckCircle, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useMemo, useState, useEffect } from 'react';
+import { School, Database, FileText, History, AlertCircle, CheckCircle, Clock, ChevronLeft, ChevronRight, Download, Eye } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import { useSarprasData, useProposalData, useRiwayatBantuanData, useSekolahData } from '../../data/dataProvider';
+import { bastApi } from '../../api/index';
+import { formatCurrency } from '../../utils/formatters';
 
 const ITEMS_PER_PAGE = 3;
 
@@ -19,6 +21,25 @@ const DashboardSekolah = () => {
     const { data: proposalData } = useProposalData();
     const { data: riwayatData } = useRiwayatBantuanData();
 
+    // Fetch BAST data from DB
+    const [bastData, setBastData] = useState([]);
+    useEffect(() => {
+        if (matchNpsn) {
+            bastApi.getByNpsn(matchNpsn)
+                .then(items => setBastData((items || []).map(b => ({
+                    id: b.id,
+                    namaPaket: b.namaPaket || b.nama_paket,
+                    noBast: b.noBast || b.no_bast,
+                    nilaiKontrak: b.nilaiKontrak || b.nilai_kontrak || 0,
+                    bastFisikPath: b.bastFisikPath || b.bast_fisik_path,
+                    splHistoryId: b.splHistoryId || b.spl_history_id,
+                    matrikId: b.matrikId || b.matrik_id,
+                    createdAt: b.createdAt || b.created_at,
+                }))))
+                .catch(() => setBastData([]));
+        }
+    }, [matchNpsn]);
+
     const [proposalPage, setProposalPage] = useState(0);
     const [riwayatPage, setRiwayatPage] = useState(0);
 
@@ -26,8 +47,18 @@ const DashboardSekolah = () => {
         (sarprasData || []).filter(s => (s.sekolahId === sekolahId || s.npsn === matchNpsn) && (!s.status || s.status === 'Diverifikasi')), [sarprasData, sekolahId, matchNpsn]);
     const myProposal = useMemo(() =>
         (proposalData || []).filter(p => p.sekolahId === sekolahId || p.npsn === matchNpsn), [proposalData, sekolahId, matchNpsn]);
-    const myRiwayat = useMemo(() =>
+    // Merge riwayat_bantuan + bast data
+    const myRiwayatLegacy = useMemo(() =>
         (riwayatData || []).filter(r => r.sekolahId === sekolahId || r.npsn === matchNpsn), [riwayatData, sekolahId, matchNpsn]);
+    const myBast = bastData;
+    // Combined: BAST data takes priority, plus riwayat_bantuan legacy
+    const myRiwayat = useMemo(() => {
+        const combined = [
+            ...myBast.map(b => ({ ...b, source: 'bast', nilaiPaket: b.nilaiKontrak })),
+            ...myRiwayatLegacy.map(r => ({ ...r, source: 'riwayat' })),
+        ];
+        return combined;
+    }, [myBast, myRiwayatLegacy]);
 
     const totalSarpras = mySarpras.length;
     const baik = mySarpras.filter(s => (s.kondisi || '').toUpperCase() === 'BAIK').length;
@@ -36,7 +67,7 @@ const DashboardSekolah = () => {
     const rusakBerat = mySarpras.filter(s => (s.kondisi || '').toUpperCase() === 'RUSAK BERAT').length;
     const proposalPending = myProposal.filter(p => !p.status || p.status === 'Menunggu Verifikasi' || p.status === 'Pending' || p.status === 'Diajukan').length;
     const proposalDisetujui = myProposal.filter(p => p.status === 'Disetujui' || p.status === 'Diterima').length;
-    const totalBantuan = myRiwayat.reduce((sum, r) => sum + (r.nilaiPaket || 0), 0);
+    const totalBantuan = myRiwayat.reduce((sum, r) => sum + (r.nilaiPaket || r.nilaiKontrak || 0), 0);
 
     const sarprasRecap = useMemo(() => {
         const map = {};
@@ -265,20 +296,40 @@ const DashboardSekolah = () => {
                         ) : (
                             <div style={{ padding: '8px 16px' }}>
                                 {riwayatSlice.map(r => (
-                                    <div key={r.id} style={{
+                                    <div key={`${r.source}_${r.id}`} style={{
                                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
                                         padding: '10px 0', borderBottom: '1px solid var(--bg-secondary)',
-                                        fontSize: '0.85rem'
+                                        fontSize: '0.85rem', gap: 8
                                     }}>
-                                        <div>
+                                        <div style={{ flex: 1, minWidth: 0 }}>
                                             <div style={{ fontWeight: 500, fontSize: '0.8rem' }}>{r.namaPaket}</div>
-                                            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>
-                                                {r.volumePaket}
+                                            <div style={{ fontSize: '0.68rem', color: 'var(--text-secondary)', display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 2 }}>
+                                                {r.noBast && <span>No: {r.noBast}</span>}
+                                                {r.volumePaket && <span>{r.volumePaket}</span>}
+                                                {r.source === 'bast' && (
+                                                    r.bastFisikPath
+                                                        ? <span style={{ color: '#22c55e' }}>✅ Fisik</span>
+                                                        : r.splHistoryId
+                                                            ? <span style={{ color: '#3b82f6' }}>📄 Softfile</span>
+                                                            : null
+                                                )}
                                             </div>
                                         </div>
-                                        <span style={{ fontWeight: 600, color: '#22c55e', fontSize: '0.82rem' }}>
-                                            {formatRupiah(r.nilaiPaket)}
-                                        </span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                            <span style={{ fontWeight: 600, color: '#22c55e', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>
+                                                {formatCurrency(r.nilaiPaket || r.nilaiKontrak || 0)}
+                                            </span>
+                                            {r.source === 'bast' && (r.bastFisikPath || r.splHistoryId) && (
+                                                <button className="btn-icon" onClick={() => {
+                                                    const url = r.bastFisikPath
+                                                        ? bastApi.previewFisikUrl(r.matrikId)
+                                                        : `/api/template/spl-file/pdf/${r.splHistoryId}`;
+                                                    window.open(url, '_blank');
+                                                }} title="Preview" style={{ color: '#3b82f6', padding: 2 }}>
+                                                    <Eye size={14} />
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
                                 ))}
 
@@ -289,7 +340,7 @@ const DashboardSekolah = () => {
                                     borderTop: '2px solid var(--border-color)', marginTop: 4
                                 }}>
                                     <span>Total Bantuan</span>
-                                    <span style={{ color: '#22c55e' }}>{formatRupiah(totalBantuan)}</span>
+                                    <span style={{ color: '#22c55e' }}>{formatCurrency(totalBantuan)}</span>
                                 </div>
                                 <PaginationControls page={riwayatPage} totalPages={riwayatTotalPages} setPage={setRiwayatPage} />
                             </div>
