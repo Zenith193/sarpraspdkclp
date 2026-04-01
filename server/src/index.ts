@@ -381,7 +381,7 @@ app.get('/api/queue/files', async (req, res) => {
             .from(formKerusakan).where(statusFilter(formKerusakan.uploadStatus)).limit(5);
         kerusakans.forEach(f => files.push({ type: 'Form Kerusakan', name: f.fileName || `kerusakan_${f.id}`, status: f.status }));
 
-        const prestasis = await database.select({ id: prestasi.id, fileName: sql<string>`COALESCE(${prestasi.nama}, 'prestasi_' || ${prestasi.id}::text)`, status: prestasi.uploadStatus })
+        const prestasis = await database.select({ id: prestasi.id, fileName: sql<string>`COALESCE(${prestasi.jenisPrestasi}, 'prestasi_' || ${prestasi.id}::text)`, status: prestasi.uploadStatus })
             .from(prestasi).where(statusFilter(prestasi.uploadStatus)).limit(5);
         prestasis.forEach(f => files.push({ type: 'Prestasi', name: (f as any).fileName || `prestasi_${f.id}`, status: f.status }));
 

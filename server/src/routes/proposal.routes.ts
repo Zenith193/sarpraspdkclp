@@ -194,8 +194,7 @@ router.post('/batch', requireAuth, requireRole('admin', 'verifikator'), async (r
                     keterangan: item.keterangan || '',
                     status: 'Menunggu Verifikasi',
                     keranjang: 'Keranjang Usulan Sekolah',
-                    createdBy: req.user!.id,
-                });
+                }, req.user!.id);
                 created++;
             } catch (e: any) { errors.push(`Row error: ${e.message}`); }
         }
