@@ -29,6 +29,13 @@ const DashboardPenyedia = () => {
     const [noBahpl, setNoBahpl] = useState('');
     const [tanggalBahpl, setTanggalBahpl] = useState('');
     const [berkasPenawaran, setBerkasPenawaran] = useState(null);
+    // Lampiran step
+    const [showLampiran, setShowLampiran] = useState(false);
+    const [agreedLampiran, setAgreedLampiran] = useState(false);
+    const emptyTim = { nama: '', posisi: '', statusTenaga: '', pendidikan: '', pengalaman: '', sertifikasi: '', keterangan: '', jadwal: Array(12).fill(false) };
+    const emptyPeralatan = { nama: '', merk: '', type: '', kapasitas: '', jumlah: '', kondisi: '', statusKepemilikan: '', keterangan: '' };
+    const [timRows, setTimRows] = useState([{ ...emptyTim }]);
+    const [peralatanRows, setPeralatanRows] = useState([{ ...emptyPeralatan }]);
 
     useEffect(() => {
         const load = async () => {
@@ -102,6 +109,8 @@ const DashboardPenyedia = () => {
             setStep(1); setKodeSirup(''); setNamaPaket(''); setMetodePengadaan(''); setJenisPengadaan('');
             setSearchResult(null); setNoDppl(''); setTanggalDppl(''); setNoBahpl(''); setTanggalBahpl('');
             setBerkasPenawaran(null); setMatrikId(null);
+            setShowLampiran(false); setAgreedLampiran(false);
+            setTimRows([{ ...emptyTim }]); setPeralatanRows([{ ...emptyPeralatan }]);
             const lRes = await kontrakApi.listPermohonan().catch(() => []);
             setPermohonanAktif(Array.isArray(lRes) ? lRes.filter(p => p.status === 'Menunggu') : []);
             alert('Permohonan kontrak berhasil dikirim!');
@@ -279,9 +288,122 @@ const DashboardPenyedia = () => {
                         <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: 10 }}>ℹ️ Maksimum ukuran file 10MB dalam format PDF</div>
                     </div>
 
-                    <button onClick={handleSubmit} disabled={submitting}
+                    <button onClick={() => setShowLampiran(true)}
                         style={{ width: '100%', padding: '14px 0', border: 'none', borderRadius: 10, background: 'var(--accent-blue)', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                        <Send size={18} /> {submitting ? 'Mengirim...' : '💾 Simpan Data Permohonan'}
+                        <Send size={18} /> 💾 Simpan Data Permohonan
+                    </button>
+                </div>
+            )}
+
+            {/* ===== LAMPIRAN DOKUMEN ===== */}
+            {showLampiran && step >= 2 && (
+                <div style={{ marginTop: 30 }}>
+                    <h3 style={{ margin: '0 0 16px', fontSize: '1.05rem' }}>Lampiran Dokumen</h3>
+
+                    {/* KOMPOSISI TIM */}
+                    <h4 style={{ margin: '0 0 10px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}>👥 KOMPOSISI TIM DAN PENUGASAN</h4>
+                    <div style={{ overflowX: 'auto', marginBottom: 24 }}>
+                        <table className="data-table" style={{ fontSize: '0.78rem' }}>
+                            <thead>
+                                <tr>
+                                    <th>Nama</th><th>Posisi</th><th>Status Tenaga</th><th>Pendidikan</th>
+                                    <th>Pengalaman (tahun)</th><th>Sertifikasi</th><th>Keterangan</th>
+                                    <th colSpan={12} style={{ textAlign: 'center' }}>Jadwal Pelaksanaan Kegiatan (Bulan)</th>
+                                    <th>Aksi</th>
+                                </tr>
+                                <tr>
+                                    <th colSpan={7}></th>
+                                    {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => <th key={m} style={{ textAlign: 'center', padding: '4px 2px', minWidth: 28 }}>{m}</th>)}
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {timRows.map((row, i) => (
+                                    <tr key={i}>
+                                        <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={row.nama} onChange={e => { const r = [...timRows]; r[i] = { ...r[i], nama: e.target.value }; setTimRows(r); }} /></td>
+                                        <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={row.posisi} onChange={e => { const r = [...timRows]; r[i] = { ...r[i], posisi: e.target.value }; setTimRows(r); }} /></td>
+                                        <td>
+                                            <select style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={row.statusTenaga} onChange={e => { const r = [...timRows]; r[i] = { ...r[i], statusTenaga: e.target.value }; setTimRows(r); }}>
+                                                <option value="">Pilih Status Tenaga</option><option>Tetap</option><option>Tidak Tetap</option>
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <select style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={row.pendidikan} onChange={e => { const r = [...timRows]; r[i] = { ...r[i], pendidikan: e.target.value }; setTimRows(r); }}>
+                                                <option value="">Pilih Pendidikan</option><option>SD</option><option>SMP</option><option>SMA/SMK</option><option>D3</option><option>S1</option><option>S2</option><option>S3</option>
+                                            </select>
+                                        </td>
+                                        <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={row.pengalaman} onChange={e => { const r = [...timRows]; r[i] = { ...r[i], pengalaman: e.target.value }; setTimRows(r); }} /></td>
+                                        <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={row.sertifikasi} onChange={e => { const r = [...timRows]; r[i] = { ...r[i], sertifikasi: e.target.value }; setTimRows(r); }} /></td>
+                                        <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={row.keterangan} onChange={e => { const r = [...timRows]; r[i] = { ...r[i], keterangan: e.target.value }; setTimRows(r); }} /></td>
+                                        {row.jadwal.map((checked, j) => (
+                                            <td key={j} style={{ textAlign: 'center' }}>
+                                                <input type="checkbox" checked={checked} onChange={() => { const r = [...timRows]; const jd = [...r[i].jadwal]; jd[j] = !jd[j]; r[i] = { ...r[i], jadwal: jd }; setTimRows(r); }} />
+                                            </td>
+                                        ))}
+                                        <td>
+                                            <button onClick={() => setTimRows(r => [...r, { ...emptyTim }])} style={{ background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '50%', width: 28, height: 28, cursor: 'pointer', fontSize: '1rem' }}>+</button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* PERALATAN UTAMA */}
+                    <h4 style={{ margin: '0 0 10px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}>🔧 PERALATAN UTAMA (Apabila dipersyaratkan)</h4>
+                    <div style={{ overflowX: 'auto', marginBottom: 30 }}>
+                        <table className="data-table" style={{ fontSize: '0.78rem' }}>
+                            <thead>
+                                <tr>
+                                    <th>Nama Peralatan</th><th>Merk</th><th>Type</th><th>Kapasitas</th>
+                                    <th>Jumlah</th><th>Kondisi</th><th>Status Kepemilikan</th><th>Keterangan</th><th>Aksi</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {peralatanRows.map((row, i) => (
+                                    <tr key={i}>
+                                        <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={row.nama} onChange={e => { const r = [...peralatanRows]; r[i] = { ...r[i], nama: e.target.value }; setPeralatanRows(r); }} /></td>
+                                        <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={row.merk} onChange={e => { const r = [...peralatanRows]; r[i] = { ...r[i], merk: e.target.value }; setPeralatanRows(r); }} /></td>
+                                        <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={row.type} onChange={e => { const r = [...peralatanRows]; r[i] = { ...r[i], type: e.target.value }; setPeralatanRows(r); }} /></td>
+                                        <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={row.kapasitas} onChange={e => { const r = [...peralatanRows]; r[i] = { ...r[i], kapasitas: e.target.value }; setPeralatanRows(r); }} /></td>
+                                        <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={row.jumlah} onChange={e => { const r = [...peralatanRows]; r[i] = { ...r[i], jumlah: e.target.value }; setPeralatanRows(r); }} /></td>
+                                        <td>
+                                            <select style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={row.kondisi} onChange={e => { const r = [...peralatanRows]; r[i] = { ...r[i], kondisi: e.target.value }; setPeralatanRows(r); }}>
+                                                <option value="">Pilih Kondisi</option><option>Baik</option><option>Rusak Ringan</option><option>Rusak Berat</option>
+                                            </select>
+                                        </td>
+                                        <td>
+                                            <select style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={row.statusKepemilikan} onChange={e => { const r = [...peralatanRows]; r[i] = { ...r[i], statusKepemilikan: e.target.value }; setPeralatanRows(r); }}>
+                                                <option value="">Pilih Status Kepemilikan</option><option>Milik Sendiri</option><option>Sewa</option><option>Pinjam</option>
+                                            </select>
+                                        </td>
+                                        <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={row.keterangan} onChange={e => { const r = [...peralatanRows]; r[i] = { ...r[i], keterangan: e.target.value }; setPeralatanRows(r); }} /></td>
+                                        <td>
+                                            <button onClick={() => setPeralatanRows(r => [...r, { ...emptyPeralatan }])} style={{ background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '50%', width: 28, height: 28, cursor: 'pointer', fontSize: '1rem' }}>+</button>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    {/* PERNYATAAN KESANGGUPAN */}
+                    <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 20 }}>
+                        <h4 style={{ margin: '0 0 12px', fontSize: '0.95rem' }}>Pernyataan Kesanggupan</h4>
+                        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.7, margin: '0 0 16px' }}>
+                            Dengan ini saya menyatakan bahwa data yang saya sampaikan adalah benar sesuai dengan fakta yang ada, dan apabila dikemudian hari data perusahaan yang saya sampaikan tidak benar, maka saya bersedia untuk diproses secara hukum sesuai dengan ketentuan Undang-Undang yang berlaku.
+                        </p>
+                        <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: '0.88rem' }}>
+                            <input type="checkbox" checked={agreedLampiran} onChange={e => setAgreedLampiran(e.target.checked)} style={{ width: 18, height: 18, cursor: 'pointer' }} />
+                            Saya setuju dengan pernyataan di atas
+                        </label>
+                    </div>
+
+                    {submitError && <div style={{ color: '#ef4444', fontSize: '0.85rem', marginBottom: 12 }}>{submitError}</div>}
+
+                    <button onClick={handleSubmit} disabled={!agreedLampiran || submitting}
+                        style={{ width: '100%', padding: '14px 0', border: 'none', borderRadius: 10, background: agreedLampiran ? '#f59e0b' : 'rgba(128,128,128,0.3)', color: '#fff', cursor: agreedLampiran ? 'pointer' : 'not-allowed', fontWeight: 700, fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                        <Send size={18} /> {submitting ? 'Mengirim...' : '✈️ Kirimkan Permohonan Kontrak'}
                     </button>
                 </div>
             )}
