@@ -9,6 +9,8 @@ export const penggunaService = {
         const conditions = [];
         if (search) conditions.push(ilike(user.name, `%${search}%`));
         if (role) conditions.push(eq(user.role, role));
+        // Exclude Penyedia users — they have a separate management page
+        conditions.push(sql`COALESCE("user"."role", '') != 'Penyedia'`);
         const where = conditions.length > 0 ? sql`${sql.join(conditions, sql` AND `)}` : undefined;
         const offset = (page - 1) * limit;
 

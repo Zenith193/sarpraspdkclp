@@ -98,6 +98,7 @@ const Sidebar = ({ collapsed, onToggle, className = '' }) => {
         { label: 'Upload Form Kerusakan', icon: <Upload size={18} />, path: '/verifikator/form-kerusakan' },
         { label: 'Prestasi', icon: <Trophy size={18} />, path: '/verifikator/prestasi' },
         { label: 'Iklan', icon: <Megaphone size={18} />, path: '/verifikator/iklan' },
+        { label: 'Manajemen Penyedia', icon: <Briefcase size={18} />, path: '/verifikator/manajemen-penyedia' },
     ]);
 
     const korwilMenu = filterByAccess([

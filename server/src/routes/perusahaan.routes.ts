@@ -32,15 +32,15 @@ router.get('/check/:npwp', async (req, res) => {
     }
 });
 
-// ===== ADMIN: List all =====
-router.get('/', requireAuth, requireRole('admin'), async (_req, res) => {
+// ===== ADMIN/VERIFIKATOR: List all =====
+router.get('/', requireAuth, requireRole('admin', 'verifikator'), async (_req, res) => {
     try {
         res.json(await perusahaanService.list());
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// ===== ADMIN: Verify/Reject =====
-router.put('/:id/verify', requireAuth, requireRole('admin'), async (req, res) => {
+// ===== ADMIN/VERIFIKATOR: Verify/Reject =====
+router.put('/:id/verify', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
     try {
         const { status, keterangan } = req.body;
         if (!['Diverifikasi', 'Ditolak'].includes(status)) {
@@ -51,16 +51,16 @@ router.put('/:id/verify', requireAuth, requireRole('admin'), async (req, res) =>
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// ===== ADMIN: Update =====
-router.put('/:id', requireAuth, requireRole('admin'), async (req, res) => {
+// ===== ADMIN/VERIFIKATOR: Update =====
+router.put('/:id', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
     try {
         const updated = await perusahaanService.update(Number(req.params.id), req.body);
         res.json(updated);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// ===== ADMIN: Delete =====
-router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
+// ===== ADMIN/VERIFIKATOR: Delete =====
+router.delete('/:id', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
     try {
         await perusahaanService.delete(Number(req.params.id));
         res.json({ success: true });

@@ -146,6 +146,7 @@ function App() {
           <Route path="form-kerusakan" element={<UploadFormKerusakan />} />
           <Route path="prestasi" element={<Prestasi />} />
           <Route path="iklan" element={<Iklan />} />
+          <Route path="manajemen-penyedia" element={<ManajemenPenyedia />} />
           <Route path="profil" element={<ProfilPengguna />} />
           <Route path="aktivitas" element={<AktivitasPengguna />} />
         </Route>
