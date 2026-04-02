@@ -32,11 +32,10 @@ const DashboardPenyedia = () => {
         const load = async () => {
             try {
                 const [pRes, lRes] = await Promise.all([
-                    fetch('/api/perusahaan', { credentials: 'include' }).then(r => r.ok ? r.json() : []),
+                    fetch('/api/perusahaan/me', { credentials: 'include' }).then(r => r.ok ? r.json() : null),
                     kontrakApi.listPermohonan().then(r => r.data).catch(() => []),
                 ]);
-                const mine = Array.isArray(pRes) ? pRes.find(p => p.userId === user?.id) : null;
-                setPerusahaan(mine);
+                setPerusahaan(pRes);
                 setPermohonanAktif(Array.isArray(lRes) ? lRes.filter(p => p.status === 'Menunggu') : []);
             } catch { }
             setLoading(false);

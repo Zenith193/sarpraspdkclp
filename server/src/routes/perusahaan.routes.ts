@@ -32,6 +32,18 @@ router.get('/check/:npwp', async (req, res) => {
     }
 });
 
+// ===== PENYEDIA: Get own company data =====
+router.get('/me', requireAuth, async (req, res) => {
+    try {
+        const { perusahaan: perusahaanTable } = await import('../db/schema/index.js');
+        const { db: database } = await import('../db/index.js');
+        const { eq } = await import('drizzle-orm');
+        const results = await database.select().from(perusahaanTable).where(eq(perusahaanTable.userId, req.user!.id));
+        if (!results[0]) return res.status(404).json({ error: 'Perusahaan tidak ditemukan' });
+        res.json(results[0]);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 // ===== ADMIN/VERIFIKATOR: List all =====
 router.get('/', requireAuth, requireRole('admin', 'verifikator'), async (_req, res) => {
     try {
