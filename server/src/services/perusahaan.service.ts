@@ -45,6 +45,7 @@ export const perusahaanService = {
             alamatPemilik: data.alamatPemilik || null,
             namaPerusahaan: data.namaPerusahaan,
             namaPerusahaanSingkat: data.namaPerusahaanSingkat || null,
+            tipePerusahaan: data.tipePerusahaan || 'Penyedia',
             noAkta: data.noAkta || null,
             namaNotaris: data.namaNotaris || null,
             tanggalAkta: data.tanggalAkta || null,

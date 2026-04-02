@@ -1,0 +1,1 @@
+ALTER TABLE "perusahaan" ADD COLUMN IF NOT EXISTS "tipe_perusahaan" text DEFAULT 'Penyedia';

@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import useThemeStore from '../store/themeStore';
 
 const INITIAL = {
+    tipePerusahaan: 'Penyedia',
     nikPemilik: '', namaPemilik: '', jabatanPemilik: 'Direktur', jabatanManual: '', alamatPemilik: '',
     namaPerusahaan: '', namaPerusahaanSingkat: '',
     noAkta: '', namaNotaris: '', tanggalAkta: '',
@@ -112,12 +113,37 @@ const RegistrasiPenyedia = () => {
                     <h1 style={{ margin: 0, fontSize: '1.5rem', color: 'var(--text-primary)' }}>SARDIKA</h1>
                 </div>
                 <h2 style={{ margin: '0 0 8px', color: 'var(--text-primary)' }}>Registrasi Perusahaan</h2>
-                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Daftarkan perusahaan Anda sebagai Penyedia di sistem SARDIKA</p>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Daftarkan perusahaan Anda sebagai Penyedia/Konsultan di sistem SARDIKA</p>
             </div>
 
             {/* Form Card */}
             <div style={{ maxWidth: 720, width: '100%', background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', padding: '32px 28px', boxShadow: '0 4px 20px rgba(0,0,0,0.15)' }}>
                 <form onSubmit={handleSubmit}>
+                    {/* Section 0: Tipe Perusahaan */}
+                    <div style={sectionStyle}>
+                        {sectionTitle(<Building2 size={20} style={{ color: 'var(--accent-cyan, var(--accent-blue))' }} />, 'Tipe Pendaftaran')}
+                        <div style={{ display: 'flex', gap: 16 }}>
+                            {['Penyedia', 'Konsultan'].map(tipe => (
+                                <label key={tipe} style={{
+                                    flex: 1, display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px',
+                                    borderRadius: 'var(--radius-md)', border: `2px solid ${form.tipePerusahaan === tipe ? 'var(--accent-blue)' : 'var(--border-color)'}`,
+                                    background: form.tipePerusahaan === tipe ? 'rgba(59,130,246,0.08)' : 'var(--bg-secondary)',
+                                    cursor: 'pointer', transition: 'all 0.2s'
+                                }}>
+                                    <input type="radio" name="tipePerusahaan" value={tipe} checked={form.tipePerusahaan === tipe}
+                                        onChange={e => set('tipePerusahaan', e.target.value)}
+                                        style={{ accentColor: 'var(--accent-blue)', width: 18, height: 18 }} />
+                                    <div>
+                                        <div style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.95rem' }}>{tipe}</div>
+                                        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: 2 }}>
+                                            {tipe === 'Penyedia' ? 'Perusahaan penyedia barang/jasa (PT/CV)' : 'Perusahaan konsultan perencanaan/pengawasan'}
+                                        </div>
+                                    </div>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+
                     {/* Section 1: Data Pemilik */}
                     <div style={sectionStyle}>
                         {sectionTitle(<User size={20} style={{ color: 'var(--accent-blue)' }} />, 'Data Pemilik / Direktur')}

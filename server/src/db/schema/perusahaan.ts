@@ -11,6 +11,7 @@ export const perusahaan = pgTable('perusahaan', {
     // Data Perusahaan
     namaPerusahaan: text('nama_perusahaan').notNull(),
     namaPerusahaanSingkat: text('nama_perusahaan_singkat'),
+    tipePerusahaan: text('tipe_perusahaan').default('Penyedia'), // Penyedia | Konsultan
     noAkta: text('no_akta'),
     namaNotaris: text('nama_notaris'),
     tanggalAkta: text('tanggal_akta'),
