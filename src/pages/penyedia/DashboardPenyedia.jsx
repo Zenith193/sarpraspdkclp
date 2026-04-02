@@ -310,8 +310,8 @@ const DashboardPenyedia = () => {
 
                     {/* KOMPOSISI TIM */}
                     <h4 style={{ margin: '0 0 10px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}>👥 KOMPOSISI TIM DAN PENUGASAN</h4>
-                    <div ref={timScrollRef} style={{ overflowX: 'auto', marginBottom: 4 }}>
-                        <table className="data-table" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                    <div ref={timScrollRef} style={{ overflowX: 'scroll', marginBottom: 4 }}>
+                        <table className="data-table" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap', minWidth: 1100 }}>
                             <thead>
                                 <tr>
                                     <th>Nama</th><th>Posisi</th><th>Status Tenaga</th><th>Pendidikan</th>
@@ -366,15 +366,15 @@ const DashboardPenyedia = () => {
                         </table>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 24 }}>
-                        <button onClick={() => timScrollRef.current?.scrollBy({ left: -200, behavior: 'smooth' })} style={scrollBtnStyle}>◀</button>
-                        <div style={{ flex: 1, height: 6, background: 'var(--bg-tertiary, #334155)', borderRadius: 3 }}><div style={{ width: '50%', height: '100%', background: '#64748b', borderRadius: 3 }}></div></div>
-                        <button onClick={() => timScrollRef.current?.scrollBy({ left: 200, behavior: 'smooth' })} style={scrollBtnStyle}>▶</button>
+                        <button type="button" onClick={() => { if (timScrollRef.current) timScrollRef.current.scrollLeft -= 200; }} style={scrollBtnStyle}>◀</button>
+                        <div style={{ flex: 1, height: 6, background: 'var(--bg-tertiary, #334155)', borderRadius: 3 }}><div style={{ width: '40%', height: '100%', background: '#64748b', borderRadius: 3 }}></div></div>
+                        <button type="button" onClick={() => { if (timScrollRef.current) timScrollRef.current.scrollLeft += 200; }} style={scrollBtnStyle}>▶</button>
                     </div>
 
                     {/* PERALATAN UTAMA */}
                     <h4 style={{ margin: '0 0 10px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}>🔧 PERALATAN UTAMA (Apabila dipersyaratkan)</h4>
-                    <div ref={peralatanScrollRef} style={{ overflowX: 'auto', marginBottom: 4 }}>
-                        <table className="data-table" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                    <div ref={peralatanScrollRef} style={{ overflowX: 'scroll', marginBottom: 4 }}>
+                        <table className="data-table" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap', minWidth: 950 }}>
                             <thead>
                                 <tr>
                                     <th>Nama Peralatan</th><th>Merk</th><th>Type</th><th>Kapasitas</th>
@@ -417,9 +417,9 @@ const DashboardPenyedia = () => {
                         </table>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 30 }}>
-                        <button onClick={() => peralatanScrollRef.current?.scrollBy({ left: -200, behavior: 'smooth' })} style={scrollBtnStyle}>◀</button>
-                        <div style={{ flex: 1, height: 6, background: 'var(--bg-tertiary, #334155)', borderRadius: 3 }}><div style={{ width: '50%', height: '100%', background: '#64748b', borderRadius: 3 }}></div></div>
-                        <button onClick={() => peralatanScrollRef.current?.scrollBy({ left: 200, behavior: 'smooth' })} style={scrollBtnStyle}>▶</button>
+                        <button type="button" onClick={() => { if (peralatanScrollRef.current) peralatanScrollRef.current.scrollLeft -= 200; }} style={scrollBtnStyle}>◀</button>
+                        <div style={{ flex: 1, height: 6, background: 'var(--bg-tertiary, #334155)', borderRadius: 3 }}><div style={{ width: '40%', height: '100%', background: '#64748b', borderRadius: 3 }}></div></div>
+                        <button type="button" onClick={() => { if (peralatanScrollRef.current) peralatanScrollRef.current.scrollLeft += 200; }} style={scrollBtnStyle}>▶</button>
                     </div>
                     <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 20 }}>
                         <h4 style={{ margin: '0 0 12px', fontSize: '0.95rem' }}>Pernyataan Kesanggupan</h4>
