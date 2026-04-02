@@ -306,7 +306,7 @@ const DashboardPenyedia = () => {
                     {/* KOMPOSISI TIM */}
                     <h4 style={{ margin: '0 0 10px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}>👥 KOMPOSISI TIM DAN PENUGASAN</h4>
                     <div style={{ overflowX: 'auto', marginBottom: 24 }}>
-                        <table className="data-table" style={{ fontSize: '0.78rem', minWidth: 1200 }}>
+                        <table className="data-table" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
                             <thead>
                                 <tr>
                                     <th>Nama</th><th>Posisi</th><th>Status Tenaga</th><th>Pendidikan</th>
@@ -316,7 +316,7 @@ const DashboardPenyedia = () => {
                                 </tr>
                                 <tr>
                                     <th colSpan={7}></th>
-                                    {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => <th key={m} style={{ textAlign: 'center', padding: '4px 2px' }}>{m}</th>)}
+                                    {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => <th key={m} style={{ textAlign: 'center', padding: '2px 4px' }}>{m}</th>)}
                                     <th></th>
                                 </tr>
                             </thead>
@@ -326,27 +326,27 @@ const DashboardPenyedia = () => {
                                     <tr key={'saved-'+i} style={{ background: 'rgba(34,197,94,0.05)' }}>
                                         <td>{row.nama}</td><td>{row.posisi}</td><td>{row.statusTenaga}</td><td>{row.pendidikan}</td>
                                         <td>{row.pengalaman}</td><td>{row.sertifikasi}</td><td>{row.keterangan}</td>
-                                        {row.jadwal.map((c, j) => <td key={j} style={{ textAlign: 'center' }}>{c ? '✓' : ''}</td>)}
-                                        <td><button onClick={() => setTimRows(r => r.filter((_, idx) => idx !== i))} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, padding: '3px 8px', cursor: 'pointer', fontSize: '0.72rem' }}>Hapus</button></td>
+                                        {row.jadwal.map((c, j) => <td key={j} style={{ textAlign: 'center' }}>{c ? '■' : '□'}</td>)}
+                                        <td><button onClick={() => setTimRows(r => r.filter((_, idx) => idx !== i))} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, padding: '2px 6px', cursor: 'pointer', fontSize: '0.7rem' }}>Hapus</button></td>
                                     </tr>
                                 ))}
                                 {/* Input row */}
                                 <tr>
-                                    <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.8rem' }} placeholder="Nama lengkap" value={timInput.nama} onChange={e => setTimInput({ ...timInput, nama: e.target.value })} /></td>
-                                    <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.8rem' }} placeholder="Posisi" value={timInput.posisi} onChange={e => setTimInput({ ...timInput, posisi: e.target.value })} /></td>
+                                    <td><input style={{ ...fieldStyle, padding: '4px 6px', fontSize: '0.75rem', width: 60 }} value={timInput.nama} onChange={e => setTimInput({ ...timInput, nama: e.target.value })} /></td>
+                                    <td><input style={{ ...fieldStyle, padding: '4px 6px', fontSize: '0.75rem', width: 50 }} value={timInput.posisi} onChange={e => setTimInput({ ...timInput, posisi: e.target.value })} /></td>
                                     <td>
-                                        <select style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.8rem' }} value={timInput.statusTenaga} onChange={e => setTimInput({ ...timInput, statusTenaga: e.target.value })}>
-                                            <option value="">Pilih Status Tenaga</option><option>Tenaga Ahli</option><option>Tenaga Penunjang</option><option>Tenaga Teknis</option>
+                                        <select style={{ ...fieldStyle, padding: '4px 2px', fontSize: '0.72rem' }} value={timInput.statusTenaga} onChange={e => setTimInput({ ...timInput, statusTenaga: e.target.value })}>
+                                            <option value="">Pilih Status Te...</option><option>Tenaga Ahli</option><option>Tenaga Penunjang</option><option>Tenaga Teknis</option>
                                         </select>
                                     </td>
                                     <td>
-                                        <select style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.8rem' }} value={timInput.pendidikan} onChange={e => setTimInput({ ...timInput, pendidikan: e.target.value })}>
+                                        <select style={{ ...fieldStyle, padding: '4px 2px', fontSize: '0.72rem' }} value={timInput.pendidikan} onChange={e => setTimInput({ ...timInput, pendidikan: e.target.value })}>
                                             <option value="">Pilih Pendidikan</option><option>SD</option><option>SMP</option><option>SMA</option><option>D1</option><option>D2</option><option>D3</option><option>S1/D4</option><option>S2</option><option>S3</option>
                                         </select>
                                     </td>
-                                    <td><input type="number" style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.8rem' }} placeholder="0" value={timInput.pengalaman} onChange={e => setTimInput({ ...timInput, pengalaman: e.target.value })} /></td>
-                                    <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.8rem' }} placeholder="Sertifikasi" value={timInput.sertifikasi} onChange={e => setTimInput({ ...timInput, sertifikasi: e.target.value })} /></td>
-                                    <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.8rem' }} placeholder="Keterangan" value={timInput.keterangan} onChange={e => setTimInput({ ...timInput, keterangan: e.target.value })} /></td>
+                                    <td><input type="number" style={{ ...fieldStyle, padding: '4px 6px', fontSize: '0.75rem', width: 40 }} placeholder="0" value={timInput.pengalaman} onChange={e => setTimInput({ ...timInput, pengalaman: e.target.value })} /></td>
+                                    <td><input style={{ ...fieldStyle, padding: '4px 6px', fontSize: '0.75rem', width: 60 }} value={timInput.sertifikasi} onChange={e => setTimInput({ ...timInput, sertifikasi: e.target.value })} /></td>
+                                    <td><input style={{ ...fieldStyle, padding: '4px 6px', fontSize: '0.75rem', width: 60 }} value={timInput.keterangan} onChange={e => setTimInput({ ...timInput, keterangan: e.target.value })} /></td>
                                     {timInput.jadwal.map((checked, j) => (
                                         <td key={j} style={{ textAlign: 'center' }}>
                                             <input type="checkbox" checked={checked} onChange={() => { const jd = [...timInput.jadwal]; jd[j] = !jd[j]; setTimInput({ ...timInput, jadwal: jd }); }} />
@@ -364,7 +364,7 @@ const DashboardPenyedia = () => {
                     {/* PERALATAN UTAMA */}
                     <h4 style={{ margin: '0 0 10px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}>🔧 PERALATAN UTAMA (Apabila dipersyaratkan)</h4>
                     <div style={{ overflowX: 'auto', marginBottom: 30 }}>
-                        <table className="data-table" style={{ fontSize: '0.78rem', minWidth: 900 }}>
+                        <table className="data-table" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
                             <thead>
                                 <tr>
                                     <th>Nama Peralatan</th><th>Merk</th><th>Type</th><th>Kapasitas</th>
@@ -377,27 +377,27 @@ const DashboardPenyedia = () => {
                                     <tr key={'saved-'+i} style={{ background: 'rgba(34,197,94,0.05)' }}>
                                         <td>{row.nama}</td><td>{row.merk}</td><td>{row.type}</td><td>{row.kapasitas}</td>
                                         <td>{row.jumlah}</td><td>{row.kondisi}</td><td>{row.statusKepemilikan}</td><td>{row.keterangan}</td>
-                                        <td><button onClick={() => setPeralatanRows(r => r.filter((_, idx) => idx !== i))} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, padding: '3px 8px', cursor: 'pointer', fontSize: '0.72rem' }}>Hapus</button></td>
+                                        <td><button onClick={() => setPeralatanRows(r => r.filter((_, idx) => idx !== i))} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, padding: '2px 6px', cursor: 'pointer', fontSize: '0.7rem' }}>Hapus</button></td>
                                     </tr>
                                 ))}
                                 {/* Input row */}
                                 <tr>
-                                    <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.8rem' }} placeholder="Nama peralatan" value={peralatanInput.nama} onChange={e => setPeralatanInput({ ...peralatanInput, nama: e.target.value })} /></td>
-                                    <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.8rem' }} placeholder="Merk" value={peralatanInput.merk} onChange={e => setPeralatanInput({ ...peralatanInput, merk: e.target.value })} /></td>
-                                    <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.8rem' }} placeholder="Type" value={peralatanInput.type} onChange={e => setPeralatanInput({ ...peralatanInput, type: e.target.value })} /></td>
-                                    <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.8rem' }} placeholder="Kapasitas" value={peralatanInput.kapasitas} onChange={e => setPeralatanInput({ ...peralatanInput, kapasitas: e.target.value })} /></td>
-                                    <td><input type="number" style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.8rem' }} placeholder="0" value={peralatanInput.jumlah} onChange={e => setPeralatanInput({ ...peralatanInput, jumlah: e.target.value })} /></td>
+                                    <td><input style={{ ...fieldStyle, padding: '4px 6px', fontSize: '0.75rem', width: 80 }} value={peralatanInput.nama} onChange={e => setPeralatanInput({ ...peralatanInput, nama: e.target.value })} /></td>
+                                    <td><input style={{ ...fieldStyle, padding: '4px 6px', fontSize: '0.75rem', width: 60 }} value={peralatanInput.merk} onChange={e => setPeralatanInput({ ...peralatanInput, merk: e.target.value })} /></td>
+                                    <td><input style={{ ...fieldStyle, padding: '4px 6px', fontSize: '0.75rem', width: 50 }} value={peralatanInput.type} onChange={e => setPeralatanInput({ ...peralatanInput, type: e.target.value })} /></td>
+                                    <td><input style={{ ...fieldStyle, padding: '4px 6px', fontSize: '0.75rem', width: 60 }} value={peralatanInput.kapasitas} onChange={e => setPeralatanInput({ ...peralatanInput, kapasitas: e.target.value })} /></td>
+                                    <td><input type="number" style={{ ...fieldStyle, padding: '4px 6px', fontSize: '0.75rem', width: 45 }} placeholder="0" value={peralatanInput.jumlah} onChange={e => setPeralatanInput({ ...peralatanInput, jumlah: e.target.value })} /></td>
                                     <td>
-                                        <select style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.8rem' }} value={peralatanInput.kondisi} onChange={e => setPeralatanInput({ ...peralatanInput, kondisi: e.target.value })}>
+                                        <select style={{ ...fieldStyle, padding: '4px 2px', fontSize: '0.72rem' }} value={peralatanInput.kondisi} onChange={e => setPeralatanInput({ ...peralatanInput, kondisi: e.target.value })}>
                                             <option value="">Pilih Kondisi</option><option>Baik</option><option>Sedang</option><option>Rusak</option>
                                         </select>
                                     </td>
                                     <td>
-                                        <select style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.8rem' }} value={peralatanInput.statusKepemilikan} onChange={e => setPeralatanInput({ ...peralatanInput, statusKepemilikan: e.target.value })}>
-                                            <option value="">Pilih Status</option><option>Milik Sendiri</option><option>Sewa</option>
+                                        <select style={{ ...fieldStyle, padding: '4px 2px', fontSize: '0.72rem' }} value={peralatanInput.statusKepemilikan} onChange={e => setPeralatanInput({ ...peralatanInput, statusKepemilikan: e.target.value })}>
+                                            <option value="">Pilih Status Kepemilikan</option><option>Milik Sendiri</option><option>Sewa</option>
                                         </select>
                                     </td>
-                                    <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.8rem' }} placeholder="Keterangan" value={peralatanInput.keterangan} onChange={e => setPeralatanInput({ ...peralatanInput, keterangan: e.target.value })} /></td>
+                                    <td><input style={{ ...fieldStyle, padding: '4px 6px', fontSize: '0.75rem', width: 60 }} value={peralatanInput.keterangan} onChange={e => setPeralatanInput({ ...peralatanInput, keterangan: e.target.value })} /></td>
                                     <td>
                                         <button onClick={() => { if (!peralatanInput.nama.trim()) return; setPeralatanRows(r => [...r, { ...peralatanInput }]); setPeralatanInput({ ...emptyPeralatan }); }}
                                             style={{ background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 12px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Simpan</button>
