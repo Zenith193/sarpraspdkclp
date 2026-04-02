@@ -146,21 +146,38 @@ textarea {
 
 /* ===== SCROLLBAR ===== */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 14px;
 }
 
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--bg-secondary, #1e293b);
+  border-radius: 7px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: var(--radius-full);
+  background: linear-gradient(90deg, #475569, #64748b);
+  border-radius: 7px;
+  border: 2px solid var(--bg-secondary, #1e293b);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-secondary);
+  background: linear-gradient(90deg, #64748b, #94a3b8);
+}
+
+::-webkit-scrollbar-button:single-button {
+  display: block;
+  height: 14px;
+  width: 14px;
+  background: var(--bg-secondary, #1e293b);
+}
+
+::-webkit-scrollbar-button:single-button:horizontal:decrement {
+  background: var(--bg-secondary, #1e293b) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M5.5 0.5L2.5 4L5.5 7.5' stroke='%2394a3b8' fill='none' stroke-width='1.5'/%3E%3C/svg%3E") center no-repeat;
+}
+
+::-webkit-scrollbar-button:single-button:horizontal:increment {
+  background: var(--bg-secondary, #1e293b) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='8'%3E%3Cpath d='M2.5 0.5L5.5 4L2.5 7.5' stroke='%2394a3b8' fill='none' stroke-width='1.5'/%3E%3C/svg%3E") center no-repeat;
 }
 
 /* ============================================ */
