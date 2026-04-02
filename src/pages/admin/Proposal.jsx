@@ -130,7 +130,7 @@ const Proposal = ({ readOnly = false }) => {
     const [showChecklist, setShowChecklist] = useState(false);
     const [editChecklistId, setEditChecklistId] = useState(null);
     const [checklistForm, setChecklistForm] = useState({
-        sekolah: null, alamat: '', jenisUsulan: '', items: INITIAL_CHECKLIST_ITEMS, verifikators: []
+        sekolah: null, alamat: '', jenisUsulan: '', items: INITIAL_CHECKLIST_ITEMS, verifikators: [], tanggalCetak: ''
     });
     const [showRekomendasi, setShowRekomendasi] = useState(false);
     const [editRekomendasiId, setEditRekomendasiId] = useState(null);
@@ -364,6 +364,7 @@ const Proposal = ({ readOnly = false }) => {
                 jenisUsulan: checklistForm.jenisUsulan,
                 items: checklistForm.items,
                 verifikators: checklistForm.verifikators,
+                tanggalCetak: checklistForm.tanggalCetak || '',
             };
             if (editChecklistId) {
                 const updated = await arsipDokumenApi.updateChecklist(editChecklistId, payload);
@@ -405,6 +406,7 @@ const Proposal = ({ readOnly = false }) => {
             jenisUsulan: item.jenisUsulan || '',
             items: item.items || INITIAL_CHECKLIST_ITEMS,
             verifikators: item.verifikators || [],
+            tanggalCetak: item.tanggalCetak || '',
         });
         setShowChecklist(true);
         setShowDaftarModal(false);
@@ -412,10 +414,10 @@ const Proposal = ({ readOnly = false }) => {
 
     const handlePrintChecklist = () => {
         const sch = checklistForm.sekolah;
-        const tahun = new Date().getFullYear();
         const bulanIndo = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-        const now = new Date();
-        const tanggal = `${now.getDate()} ${bulanIndo[now.getMonth()]} ${now.getFullYear()}`;
+        const cetakDate = checklistForm.tanggalCetak ? new Date(checklistForm.tanggalCetak) : new Date();
+        const tahun = cetakDate.getFullYear();
+        const tanggal = `${cetakDate.getDate()} ${bulanIndo[cetakDate.getMonth()]} ${cetakDate.getFullYear()}`;
         const rows = checklistForm.items.map((item, i) =>
             `<tr><td style="text-align:center;padding:6px;border:1px solid #000;font-size:12pt">${i + 1}</td><td style="padding:6px;border:1px solid #000;font-size:12pt">${item.indikator}</td><td style="text-align:center;padding:6px;border:1px solid #000;font-size:12pt">${item.status === 'Ada' ? '✓' : ''}</td><td style="text-align:center;padding:6px;border:1px solid #000;font-size:12pt">${item.status === 'Tidak Ada' ? '✓' : ''}</td><td style="padding:6px;border:1px solid #000;font-size:12pt">${item.keterangan || ''}</td></tr>`
         ).join('');
@@ -440,9 +442,9 @@ const Proposal = ({ readOnly = false }) => {
 
     const handlePrintSavedChecklist = (item) => {
         const schName = item._sekolah?.nama || item.sekolahNama || '...........................';
-        const tahun = new Date(item.createdAt).getFullYear();
         const bulanIndo = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
-        const dt = new Date(item.createdAt);
+        const dt = item.tanggalCetak ? new Date(item.tanggalCetak) : new Date(item.createdAt);
+        const tahun = dt.getFullYear();
         const tanggal = `${dt.getDate()} ${bulanIndo[dt.getMonth()]} ${dt.getFullYear()}`;
         const rows = (item.items || []).map((it, i) =>
             `<tr><td style="text-align:center;padding:6px;border:1px solid #000;font-size:12pt">${i + 1}</td><td style="padding:6px;border:1px solid #000;font-size:12pt">${it.indikator}</td><td style="text-align:center;padding:6px;border:1px solid #000;font-size:12pt">${it.status === 'Ada' ? '✓' : ''}</td><td style="text-align:center;padding:6px;border:1px solid #000;font-size:12pt">${it.status === 'Tidak Ada' ? '✓' : ''}</td><td style="padding:6px;border:1px solid #000;font-size:12pt">${it.keterangan || ''}</td></tr>`
@@ -1134,6 +1136,12 @@ const Proposal = ({ readOnly = false }) => {
                                 </div>
                             ))}
                             <button className="btn btn-ghost btn-sm" onClick={() => setChecklistForm(prev => ({ ...prev, verifikators: [...prev.verifikators, { id: Date.now(), userId: '', nama: '', nip: '' }] }))}><Plus size={14} /> Tambah Verifikator</button>
+
+                            <h4 style={{ marginTop: 24, marginBottom: 12, borderBottom: '1px solid var(--border-color)', paddingBottom: 8 }}>Tanggal Cetak</h4>
+                            <div className="form-group">
+                                <label className="form-label">Tanggal Cetak <span style={{ fontSize: 11, color: 'var(--text-secondary)', fontWeight: 400 }}>(kosongkan = tanggal hari ini)</span></label>
+                                <input className="form-input" type="date" value={checklistForm.tanggalCetak || ''} onChange={e => setChecklistForm(prev => ({ ...prev, tanggalCetak: e.target.value }))} style={{ maxWidth: 250 }} />
+                            </div>
                         </div>
                         <div className="modal-footer">
                             <button className="btn btn-ghost" onClick={() => setShowChecklist(false)}>Batal</button>
