@@ -32,12 +32,11 @@ const INITIAL_CHECKLIST_ITEMS = [
     { id: 6, indikator: 'Foto Papan Lembaga, Foto Kegiatan KBM, dan foto lahan bagi usulan pembangunan/foto ruang yang rusak bagi usulan rehabilitasi (GPS map Camera)', status: '-', keterangan: '' },
     { id: 7, indikator: 'Surat Keterangan Domisili badan atau lembaga dari kepala desa / lurah yang diketahui Camat', status: '-', keterangan: '' },
     { id: 8, indikator: 'Surat Pernyataan Tidak terjadi konflik kepengurusan yang ditandatangani ketua yayasan', status: '-', keterangan: '' },
-    { id: 9, indikator: 'Surat Keterangan / pernyataan penggunaan Tanah (milik yayasan, tanah wakaf disampiri surat tidak keberatan dari ahli waris lain, hak guna pakai / milik desa)', status: '-', keterangan: '' },
+    { id: 9, indikator: 'Surat Keterangan / pernyataan penggunaan Tanah (milik yayasan, tanah wakaf dilampiri surat tidak keberatan dari ahli waris lain / sertifikat atas nama yayasan / sekolah, hak guna pakai / milik desa)', status: '-', keterangan: '' },
     { id: 10, indikator: 'Pernah mendapat bantuan Hibah tahun berapa / berupa apa?', status: '-', keterangan: '' },
     { id: 11, indikator: 'Rencana Anggaran Biaya (RAB)', status: '-', keterangan: '' },
-    { id: 12, indikator: 'Nomor Pokok Wajib Pajak (NPWP)', status: '-', keterangan: '' },
+    { id: 12, indikator: 'Struktur organisasi atau kepanitiaan', status: '-', keterangan: '' },
     { id: 13, indikator: 'Rekening atas nama sekolah yang masih aktif (bukan rek BOP)', status: '-', keterangan: '' },
-    { id: 14, indikator: 'Denah Sekolah', status: '-', keterangan: '' },
 ];
 
 const INITIAL_REKOMENDASI = {
