@@ -309,14 +309,14 @@ const DashboardPenyedia = () => {
                         <table className="data-table" style={{ fontSize: '0.78rem' }}>
                             <thead>
                                 <tr>
-                                    <th style={{ minWidth: 180 }}>Nama</th><th style={{ minWidth: 140 }}>Posisi</th><th style={{ minWidth: 140 }}>Status Tenaga</th><th style={{ minWidth: 120 }}>Pendidikan</th>
-                                    <th style={{ minWidth: 90 }}>Pengalaman (thn)</th><th style={{ minWidth: 140 }}>Sertifikasi</th><th style={{ minWidth: 140 }}>Keterangan</th>
+                                    <th style={{ minWidth: 110 }}>Nama</th><th style={{ minWidth: 80 }}>Posisi</th><th style={{ minWidth: 90 }}>Status Tenaga</th><th style={{ minWidth: 60 }}>Pendidikan</th>
+                                    <th style={{ minWidth: 40 }}>Pglm</th><th style={{ minWidth: 80 }}>Sertifikasi</th><th style={{ minWidth: 80 }}>Keterangan</th>
                                     <th colSpan={12} style={{ textAlign: 'center' }}>Jadwal Pelaksanaan (Bulan)</th>
                                     <th>Aksi</th>
                                 </tr>
                                 <tr>
                                     <th colSpan={7}></th>
-                                    {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => <th key={m} style={{ textAlign: 'center', padding: '4px 2px', minWidth: 28 }}>{m}</th>)}
+                                    {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => <th key={m} style={{ textAlign: 'center', padding: '2px 1px', minWidth: 22, fontSize: '0.7rem' }}>{m}</th>)}
                                     <th></th>
                                 </tr>
                             </thead>
@@ -332,21 +332,21 @@ const DashboardPenyedia = () => {
                                 ))}
                                 {/* Input row */}
                                 <tr>
-                                    <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem', minWidth: 160 }} placeholder="Nama lengkap" value={timInput.nama} onChange={e => setTimInput({ ...timInput, nama: e.target.value })} /></td>
-                                    <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} placeholder="Posisi" value={timInput.posisi} onChange={e => setTimInput({ ...timInput, posisi: e.target.value })} /></td>
+                                    <td><input style={{ ...fieldStyle, padding: '4px 6px', fontSize: '0.75rem', width: 100 }} placeholder="Nama" value={timInput.nama} onChange={e => setTimInput({ ...timInput, nama: e.target.value })} /></td>
+                                    <td><input style={{ ...fieldStyle, padding: '4px 6px', fontSize: '0.75rem', width: 70 }} placeholder="Posisi" value={timInput.posisi} onChange={e => setTimInput({ ...timInput, posisi: e.target.value })} /></td>
                                     <td>
-                                        <select style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={timInput.statusTenaga} onChange={e => setTimInput({ ...timInput, statusTenaga: e.target.value })}>
+                                        <select style={{ ...fieldStyle, padding: '4px 4px', fontSize: '0.72rem' }} value={timInput.statusTenaga} onChange={e => setTimInput({ ...timInput, statusTenaga: e.target.value })}>
                                             <option value="">Pilih</option><option>Tenaga Ahli</option><option>Tenaga Penunjang</option><option>Tenaga Teknis</option>
                                         </select>
                                     </td>
                                     <td>
-                                        <select style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={timInput.pendidikan} onChange={e => setTimInput({ ...timInput, pendidikan: e.target.value })}>
+                                        <select style={{ ...fieldStyle, padding: '4px 4px', fontSize: '0.72rem' }} value={timInput.pendidikan} onChange={e => setTimInput({ ...timInput, pendidikan: e.target.value })}>
                                             <option value="">Pilih</option><option>SD</option><option>SMP</option><option>SMA</option><option>D1</option><option>D2</option><option>D3</option><option>S1/D4</option><option>S2</option><option>S3</option>
                                         </select>
                                     </td>
-                                    <td><input type="number" style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem', width: 70 }} placeholder="0" value={timInput.pengalaman} onChange={e => setTimInput({ ...timInput, pengalaman: e.target.value })} /></td>
-                                    <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} placeholder="Sertifikasi" value={timInput.sertifikasi} onChange={e => setTimInput({ ...timInput, sertifikasi: e.target.value })} /></td>
-                                    <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} placeholder="Keterangan" value={timInput.keterangan} onChange={e => setTimInput({ ...timInput, keterangan: e.target.value })} /></td>
+                                    <td><input type="number" style={{ ...fieldStyle, padding: '4px 6px', fontSize: '0.75rem', width: 40 }} placeholder="0" value={timInput.pengalaman} onChange={e => setTimInput({ ...timInput, pengalaman: e.target.value })} /></td>
+                                    <td><input style={{ ...fieldStyle, padding: '4px 6px', fontSize: '0.75rem', width: 70 }} placeholder="Sertifikasi" value={timInput.sertifikasi} onChange={e => setTimInput({ ...timInput, sertifikasi: e.target.value })} /></td>
+                                    <td><input style={{ ...fieldStyle, padding: '4px 6px', fontSize: '0.75rem', width: 70 }} placeholder="Ket" value={timInput.keterangan} onChange={e => setTimInput({ ...timInput, keterangan: e.target.value })} /></td>
                                     {timInput.jadwal.map((checked, j) => (
                                         <td key={j} style={{ textAlign: 'center' }}>
                                             <input type="checkbox" checked={checked} onChange={() => { const jd = [...timInput.jadwal]; jd[j] = !jd[j]; setTimInput({ ...timInput, jadwal: jd }); }} />
@@ -367,8 +367,8 @@ const DashboardPenyedia = () => {
                         <table className="data-table" style={{ fontSize: '0.78rem' }}>
                             <thead>
                                 <tr>
-                                    <th style={{ minWidth: 160 }}>Nama Peralatan</th><th style={{ minWidth: 120 }}>Merk</th><th style={{ minWidth: 100 }}>Type</th><th style={{ minWidth: 100 }}>Kapasitas</th>
-                                    <th style={{ minWidth: 80 }}>Jumlah</th><th style={{ minWidth: 100 }}>Kondisi</th><th style={{ minWidth: 130 }}>Status Kepemilikan</th><th style={{ minWidth: 140 }}>Keterangan</th><th>Aksi</th>
+                                    <th style={{ minWidth: 110 }}>Nama Peralatan</th><th style={{ minWidth: 80 }}>Merk</th><th style={{ minWidth: 70 }}>Type</th><th style={{ minWidth: 70 }}>Kapasitas</th>
+                                    <th style={{ minWidth: 50 }}>Jml</th><th style={{ minWidth: 70 }}>Kondisi</th><th style={{ minWidth: 90 }}>Status</th><th style={{ minWidth: 80 }}>Keterangan</th><th>Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -382,22 +382,22 @@ const DashboardPenyedia = () => {
                                 ))}
                                 {/* Input row */}
                                 <tr>
-                                    <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem', minWidth: 140 }} placeholder="Nama peralatan" value={peralatanInput.nama} onChange={e => setPeralatanInput({ ...peralatanInput, nama: e.target.value })} /></td>
-                                    <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} placeholder="Merk" value={peralatanInput.merk} onChange={e => setPeralatanInput({ ...peralatanInput, merk: e.target.value })} /></td>
-                                    <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} placeholder="Type" value={peralatanInput.type} onChange={e => setPeralatanInput({ ...peralatanInput, type: e.target.value })} /></td>
-                                    <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} placeholder="Kapasitas" value={peralatanInput.kapasitas} onChange={e => setPeralatanInput({ ...peralatanInput, kapasitas: e.target.value })} /></td>
-                                    <td><input type="number" style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem', width: 70 }} placeholder="0" value={peralatanInput.jumlah} onChange={e => setPeralatanInput({ ...peralatanInput, jumlah: e.target.value })} /></td>
+                                    <td><input style={{ ...fieldStyle, padding: '4px 6px', fontSize: '0.75rem', width: 100 }} placeholder="Nama" value={peralatanInput.nama} onChange={e => setPeralatanInput({ ...peralatanInput, nama: e.target.value })} /></td>
+                                    <td><input style={{ ...fieldStyle, padding: '4px 6px', fontSize: '0.75rem', width: 70 }} placeholder="Merk" value={peralatanInput.merk} onChange={e => setPeralatanInput({ ...peralatanInput, merk: e.target.value })} /></td>
+                                    <td><input style={{ ...fieldStyle, padding: '4px 6px', fontSize: '0.75rem', width: 60 }} placeholder="Type" value={peralatanInput.type} onChange={e => setPeralatanInput({ ...peralatanInput, type: e.target.value })} /></td>
+                                    <td><input style={{ ...fieldStyle, padding: '4px 6px', fontSize: '0.75rem', width: 60 }} placeholder="Kap" value={peralatanInput.kapasitas} onChange={e => setPeralatanInput({ ...peralatanInput, kapasitas: e.target.value })} /></td>
+                                    <td><input type="number" style={{ ...fieldStyle, padding: '4px 6px', fontSize: '0.75rem', width: 45 }} placeholder="0" value={peralatanInput.jumlah} onChange={e => setPeralatanInput({ ...peralatanInput, jumlah: e.target.value })} /></td>
                                     <td>
-                                        <select style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={peralatanInput.kondisi} onChange={e => setPeralatanInput({ ...peralatanInput, kondisi: e.target.value })}>
+                                        <select style={{ ...fieldStyle, padding: '4px 4px', fontSize: '0.72rem' }} value={peralatanInput.kondisi} onChange={e => setPeralatanInput({ ...peralatanInput, kondisi: e.target.value })}>
                                             <option value="">Pilih</option><option>Baik</option><option>Sedang</option><option>Rusak</option>
                                         </select>
                                     </td>
                                     <td>
-                                        <select style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={peralatanInput.statusKepemilikan} onChange={e => setPeralatanInput({ ...peralatanInput, statusKepemilikan: e.target.value })}>
+                                        <select style={{ ...fieldStyle, padding: '4px 4px', fontSize: '0.72rem' }} value={peralatanInput.statusKepemilikan} onChange={e => setPeralatanInput({ ...peralatanInput, statusKepemilikan: e.target.value })}>
                                             <option value="">Pilih</option><option>Milik Sendiri</option><option>Sewa</option>
                                         </select>
                                     </td>
-                                    <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} placeholder="Keterangan" value={peralatanInput.keterangan} onChange={e => setPeralatanInput({ ...peralatanInput, keterangan: e.target.value })} /></td>
+                                    <td><input style={{ ...fieldStyle, padding: '4px 6px', fontSize: '0.75rem', width: 70 }} placeholder="Ket" value={peralatanInput.keterangan} onChange={e => setPeralatanInput({ ...peralatanInput, keterangan: e.target.value })} /></td>
                                     <td>
                                         <button onClick={() => { if (!peralatanInput.nama.trim()) return; setPeralatanRows(r => [...r, { ...peralatanInput }]); setPeralatanInput({ ...emptyPeralatan }); }}
                                             style={{ background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 12px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Simpan</button>
