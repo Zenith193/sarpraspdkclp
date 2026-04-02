@@ -46,13 +46,17 @@ const DashboardPenyedia = () => {
         load();
     }, [user]);
 
-    const handleSearch = async () => {
-        if (!kodeSirup.trim()) return;
+    const handleSearch = async (kode) => {
+        const k = (kode || kodeSirup).trim();
+        if (!k) {
+            setSearchResult(null); setNamaPaket(''); setMetodePengadaan(''); setJenisPengadaan(''); setMatrikId(null);
+            return;
+        }
         setSearchLoading(true);
         setSearchError('');
         setSearchResult(null);
         try {
-            const res = await kontrakApi.searchSirup(kodeSirup.trim());
+            const res = await kontrakApi.searchSirup(k);
             if (res) {
                 setSearchResult(res);
                 setNamaPaket(res.namaPaket || '');
@@ -62,9 +66,21 @@ const DashboardPenyedia = () => {
             }
         } catch (e) {
             setSearchError(e?.message || 'Paket tidak ditemukan');
+            setNamaPaket(''); setMetodePengadaan(''); setJenisPengadaan(''); setMatrikId(null);
         }
         setSearchLoading(false);
     };
+
+    // Auto-search with debounce when kodeSirup changes
+    useEffect(() => {
+        if (!kodeSirup.trim()) {
+            setSearchResult(null); setNamaPaket(''); setMetodePengadaan(''); setJenisPengadaan(''); setMatrikId(null);
+            setSearchError('');
+            return;
+        }
+        const timer = setTimeout(() => { handleSearch(kodeSirup); }, 500);
+        return () => clearTimeout(timer);
+    }, [kodeSirup]);
 
     const handleSubmit = async () => {
         setSubmitting(true);
