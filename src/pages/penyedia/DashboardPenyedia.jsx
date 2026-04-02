@@ -34,8 +34,10 @@ const DashboardPenyedia = () => {
     const [agreedLampiran, setAgreedLampiran] = useState(false);
     const emptyTim = { nama: '', posisi: '', statusTenaga: '', pendidikan: '', pengalaman: '', sertifikasi: '', keterangan: '', jadwal: Array(12).fill(false) };
     const emptyPeralatan = { nama: '', merk: '', type: '', kapasitas: '', jumlah: '', kondisi: '', statusKepemilikan: '', keterangan: '' };
-    const [timRows, setTimRows] = useState([{ ...emptyTim }]);
-    const [peralatanRows, setPeralatanRows] = useState([{ ...emptyPeralatan }]);
+    const [timInput, setTimInput] = useState({ ...emptyTim });
+    const [timRows, setTimRows] = useState([]);
+    const [peralatanInput, setPeralatanInput] = useState({ ...emptyPeralatan });
+    const [peralatanRows, setPeralatanRows] = useState([]);
 
     useEffect(() => {
         const load = async () => {
@@ -110,7 +112,8 @@ const DashboardPenyedia = () => {
             setSearchResult(null); setNoDppl(''); setTanggalDppl(''); setNoBahpl(''); setTanggalBahpl('');
             setBerkasPenawaran(null); setMatrikId(null);
             setShowLampiran(false); setAgreedLampiran(false);
-            setTimRows([{ ...emptyTim }]); setPeralatanRows([{ ...emptyPeralatan }]);
+            setTimInput({ ...emptyTim }); setTimRows([]);
+            setPeralatanInput({ ...emptyPeralatan }); setPeralatanRows([]);
             const lRes = await kontrakApi.listPermohonan().catch(() => []);
             setPermohonanAktif(Array.isArray(lRes) ? lRes.filter(p => p.status === 'Menunggu') : []);
             alert('Permohonan kontrak berhasil dikirim!');
@@ -306,9 +309,9 @@ const DashboardPenyedia = () => {
                         <table className="data-table" style={{ fontSize: '0.78rem' }}>
                             <thead>
                                 <tr>
-                                    <th>Nama</th><th>Posisi</th><th>Status Tenaga</th><th>Pendidikan</th>
-                                    <th>Pengalaman (tahun)</th><th>Sertifikasi</th><th>Keterangan</th>
-                                    <th colSpan={12} style={{ textAlign: 'center' }}>Jadwal Pelaksanaan Kegiatan (Bulan)</th>
+                                    <th style={{ minWidth: 180 }}>Nama</th><th style={{ minWidth: 140 }}>Posisi</th><th style={{ minWidth: 140 }}>Status Tenaga</th><th style={{ minWidth: 120 }}>Pendidikan</th>
+                                    <th style={{ minWidth: 90 }}>Pengalaman (thn)</th><th style={{ minWidth: 140 }}>Sertifikasi</th><th style={{ minWidth: 140 }}>Keterangan</th>
+                                    <th colSpan={12} style={{ textAlign: 'center' }}>Jadwal Pelaksanaan (Bulan)</th>
                                     <th>Aksi</th>
                                 </tr>
                                 <tr>
@@ -318,33 +321,42 @@ const DashboardPenyedia = () => {
                                 </tr>
                             </thead>
                             <tbody>
+                                {/* Saved rows */}
                                 {timRows.map((row, i) => (
-                                    <tr key={i}>
-                                        <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={row.nama} onChange={e => { const r = [...timRows]; r[i] = { ...r[i], nama: e.target.value }; setTimRows(r); }} /></td>
-                                        <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={row.posisi} onChange={e => { const r = [...timRows]; r[i] = { ...r[i], posisi: e.target.value }; setTimRows(r); }} /></td>
-                                        <td>
-                                            <select style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={row.statusTenaga} onChange={e => { const r = [...timRows]; r[i] = { ...r[i], statusTenaga: e.target.value }; setTimRows(r); }}>
-                                                <option value="">Pilih Status Tenaga</option><option>Tetap</option><option>Tidak Tetap</option>
-                                            </select>
-                                        </td>
-                                        <td>
-                                            <select style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={row.pendidikan} onChange={e => { const r = [...timRows]; r[i] = { ...r[i], pendidikan: e.target.value }; setTimRows(r); }}>
-                                                <option value="">Pilih Pendidikan</option><option>SD</option><option>SMP</option><option>SMA/SMK</option><option>D3</option><option>S1</option><option>S2</option><option>S3</option>
-                                            </select>
-                                        </td>
-                                        <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={row.pengalaman} onChange={e => { const r = [...timRows]; r[i] = { ...r[i], pengalaman: e.target.value }; setTimRows(r); }} /></td>
-                                        <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={row.sertifikasi} onChange={e => { const r = [...timRows]; r[i] = { ...r[i], sertifikasi: e.target.value }; setTimRows(r); }} /></td>
-                                        <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={row.keterangan} onChange={e => { const r = [...timRows]; r[i] = { ...r[i], keterangan: e.target.value }; setTimRows(r); }} /></td>
-                                        {row.jadwal.map((checked, j) => (
-                                            <td key={j} style={{ textAlign: 'center' }}>
-                                                <input type="checkbox" checked={checked} onChange={() => { const r = [...timRows]; const jd = [...r[i].jadwal]; jd[j] = !jd[j]; r[i] = { ...r[i], jadwal: jd }; setTimRows(r); }} />
-                                            </td>
-                                        ))}
-                                        <td>
-                                            <button onClick={() => setTimRows(r => [...r, { ...emptyTim }])} style={{ background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '50%', width: 28, height: 28, cursor: 'pointer', fontSize: '1rem' }}>+</button>
-                                        </td>
+                                    <tr key={'saved-'+i} style={{ background: 'rgba(34,197,94,0.05)' }}>
+                                        <td>{row.nama}</td><td>{row.posisi}</td><td>{row.statusTenaga}</td><td>{row.pendidikan}</td>
+                                        <td>{row.pengalaman}</td><td>{row.sertifikasi}</td><td>{row.keterangan}</td>
+                                        {row.jadwal.map((c, j) => <td key={j} style={{ textAlign: 'center' }}>{c ? '✓' : ''}</td>)}
+                                        <td><button onClick={() => setTimRows(r => r.filter((_, idx) => idx !== i))} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, padding: '3px 8px', cursor: 'pointer', fontSize: '0.72rem' }}>Hapus</button></td>
                                     </tr>
                                 ))}
+                                {/* Input row */}
+                                <tr>
+                                    <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem', minWidth: 160 }} placeholder="Nama lengkap" value={timInput.nama} onChange={e => setTimInput({ ...timInput, nama: e.target.value })} /></td>
+                                    <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} placeholder="Posisi" value={timInput.posisi} onChange={e => setTimInput({ ...timInput, posisi: e.target.value })} /></td>
+                                    <td>
+                                        <select style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={timInput.statusTenaga} onChange={e => setTimInput({ ...timInput, statusTenaga: e.target.value })}>
+                                            <option value="">Pilih</option><option>Tenaga Ahli</option><option>Tenaga Penunjang</option><option>Tenaga Teknis</option>
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <select style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={timInput.pendidikan} onChange={e => setTimInput({ ...timInput, pendidikan: e.target.value })}>
+                                            <option value="">Pilih</option><option>SD</option><option>SMP</option><option>SMA</option><option>D1</option><option>D2</option><option>D3</option><option>S1/D4</option><option>S2</option><option>S3</option>
+                                        </select>
+                                    </td>
+                                    <td><input type="number" style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem', width: 70 }} placeholder="0" value={timInput.pengalaman} onChange={e => setTimInput({ ...timInput, pengalaman: e.target.value })} /></td>
+                                    <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} placeholder="Sertifikasi" value={timInput.sertifikasi} onChange={e => setTimInput({ ...timInput, sertifikasi: e.target.value })} /></td>
+                                    <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} placeholder="Keterangan" value={timInput.keterangan} onChange={e => setTimInput({ ...timInput, keterangan: e.target.value })} /></td>
+                                    {timInput.jadwal.map((checked, j) => (
+                                        <td key={j} style={{ textAlign: 'center' }}>
+                                            <input type="checkbox" checked={checked} onChange={() => { const jd = [...timInput.jadwal]; jd[j] = !jd[j]; setTimInput({ ...timInput, jadwal: jd }); }} />
+                                        </td>
+                                    ))}
+                                    <td>
+                                        <button onClick={() => { if (!timInput.nama.trim()) return; setTimRows(r => [...r, { ...timInput }]); setTimInput({ ...emptyTim }); }}
+                                            style={{ background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 12px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Simpan</button>
+                                    </td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
@@ -355,34 +367,42 @@ const DashboardPenyedia = () => {
                         <table className="data-table" style={{ fontSize: '0.78rem' }}>
                             <thead>
                                 <tr>
-                                    <th>Nama Peralatan</th><th>Merk</th><th>Type</th><th>Kapasitas</th>
-                                    <th>Jumlah</th><th>Kondisi</th><th>Status Kepemilikan</th><th>Keterangan</th><th>Aksi</th>
+                                    <th style={{ minWidth: 160 }}>Nama Peralatan</th><th style={{ minWidth: 120 }}>Merk</th><th style={{ minWidth: 100 }}>Type</th><th style={{ minWidth: 100 }}>Kapasitas</th>
+                                    <th style={{ minWidth: 80 }}>Jumlah</th><th style={{ minWidth: 100 }}>Kondisi</th><th style={{ minWidth: 130 }}>Status Kepemilikan</th><th style={{ minWidth: 140 }}>Keterangan</th><th>Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
+                                {/* Saved rows */}
                                 {peralatanRows.map((row, i) => (
-                                    <tr key={i}>
-                                        <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={row.nama} onChange={e => { const r = [...peralatanRows]; r[i] = { ...r[i], nama: e.target.value }; setPeralatanRows(r); }} /></td>
-                                        <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={row.merk} onChange={e => { const r = [...peralatanRows]; r[i] = { ...r[i], merk: e.target.value }; setPeralatanRows(r); }} /></td>
-                                        <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={row.type} onChange={e => { const r = [...peralatanRows]; r[i] = { ...r[i], type: e.target.value }; setPeralatanRows(r); }} /></td>
-                                        <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={row.kapasitas} onChange={e => { const r = [...peralatanRows]; r[i] = { ...r[i], kapasitas: e.target.value }; setPeralatanRows(r); }} /></td>
-                                        <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={row.jumlah} onChange={e => { const r = [...peralatanRows]; r[i] = { ...r[i], jumlah: e.target.value }; setPeralatanRows(r); }} /></td>
-                                        <td>
-                                            <select style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={row.kondisi} onChange={e => { const r = [...peralatanRows]; r[i] = { ...r[i], kondisi: e.target.value }; setPeralatanRows(r); }}>
-                                                <option value="">Pilih Kondisi</option><option>Baik</option><option>Rusak Ringan</option><option>Rusak Berat</option>
-                                            </select>
-                                        </td>
-                                        <td>
-                                            <select style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={row.statusKepemilikan} onChange={e => { const r = [...peralatanRows]; r[i] = { ...r[i], statusKepemilikan: e.target.value }; setPeralatanRows(r); }}>
-                                                <option value="">Pilih Status Kepemilikan</option><option>Milik Sendiri</option><option>Sewa</option><option>Pinjam</option>
-                                            </select>
-                                        </td>
-                                        <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={row.keterangan} onChange={e => { const r = [...peralatanRows]; r[i] = { ...r[i], keterangan: e.target.value }; setPeralatanRows(r); }} /></td>
-                                        <td>
-                                            <button onClick={() => setPeralatanRows(r => [...r, { ...emptyPeralatan }])} style={{ background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: '50%', width: 28, height: 28, cursor: 'pointer', fontSize: '1rem' }}>+</button>
-                                        </td>
+                                    <tr key={'saved-'+i} style={{ background: 'rgba(34,197,94,0.05)' }}>
+                                        <td>{row.nama}</td><td>{row.merk}</td><td>{row.type}</td><td>{row.kapasitas}</td>
+                                        <td>{row.jumlah}</td><td>{row.kondisi}</td><td>{row.statusKepemilikan}</td><td>{row.keterangan}</td>
+                                        <td><button onClick={() => setPeralatanRows(r => r.filter((_, idx) => idx !== i))} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, padding: '3px 8px', cursor: 'pointer', fontSize: '0.72rem' }}>Hapus</button></td>
                                     </tr>
                                 ))}
+                                {/* Input row */}
+                                <tr>
+                                    <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem', minWidth: 140 }} placeholder="Nama peralatan" value={peralatanInput.nama} onChange={e => setPeralatanInput({ ...peralatanInput, nama: e.target.value })} /></td>
+                                    <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} placeholder="Merk" value={peralatanInput.merk} onChange={e => setPeralatanInput({ ...peralatanInput, merk: e.target.value })} /></td>
+                                    <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} placeholder="Type" value={peralatanInput.type} onChange={e => setPeralatanInput({ ...peralatanInput, type: e.target.value })} /></td>
+                                    <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} placeholder="Kapasitas" value={peralatanInput.kapasitas} onChange={e => setPeralatanInput({ ...peralatanInput, kapasitas: e.target.value })} /></td>
+                                    <td><input type="number" style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem', width: 70 }} placeholder="0" value={peralatanInput.jumlah} onChange={e => setPeralatanInput({ ...peralatanInput, jumlah: e.target.value })} /></td>
+                                    <td>
+                                        <select style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={peralatanInput.kondisi} onChange={e => setPeralatanInput({ ...peralatanInput, kondisi: e.target.value })}>
+                                            <option value="">Pilih</option><option>Baik</option><option>Sedang</option><option>Rusak</option>
+                                        </select>
+                                    </td>
+                                    <td>
+                                        <select style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} value={peralatanInput.statusKepemilikan} onChange={e => setPeralatanInput({ ...peralatanInput, statusKepemilikan: e.target.value })}>
+                                            <option value="">Pilih</option><option>Milik Sendiri</option><option>Sewa</option>
+                                        </select>
+                                    </td>
+                                    <td><input style={{ ...fieldStyle, padding: '6px 8px', fontSize: '0.78rem' }} placeholder="Keterangan" value={peralatanInput.keterangan} onChange={e => setPeralatanInput({ ...peralatanInput, keterangan: e.target.value })} /></td>
+                                    <td>
+                                        <button onClick={() => { if (!peralatanInput.nama.trim()) return; setPeralatanRows(r => [...r, { ...peralatanInput }]); setPeralatanInput({ ...emptyPeralatan }); }}
+                                            style={{ background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 12px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Simpan</button>
+                                    </td>
+                                </tr>
                             </tbody>
                         </table>
                     </div>
