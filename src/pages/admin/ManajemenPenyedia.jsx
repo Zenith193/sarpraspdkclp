@@ -193,7 +193,14 @@ const ManajemenPenyedia = () => {
                         setActiveMenu(null);
                     } else {
                         const rect = e.currentTarget.getBoundingClientRect();
-                        setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+                        const menuHeight = 300;
+                        const spaceBelow = window.innerHeight - rect.bottom;
+                        const flipUp = spaceBelow < menuHeight;
+                        setMenuPos({
+                            top: flipUp ? undefined : rect.bottom + 4,
+                            bottom: flipUp ? (window.innerHeight - rect.top + 4) : undefined,
+                            right: window.innerWidth - rect.right
+                        });
                         setActiveMenu(item.id);
                     }
                 }}
@@ -202,7 +209,10 @@ const ManajemenPenyedia = () => {
                 </button>
                 {isOpen && (
                     <div style={{
-                        position: 'fixed', top: menuPos.top, right: menuPos.right, zIndex: 9999,
+                        position: 'fixed',
+                        ...(menuPos.top !== undefined ? { top: menuPos.top } : {}),
+                        ...(menuPos.bottom !== undefined ? { bottom: menuPos.bottom } : {}),
+                        right: menuPos.right, zIndex: 9999,
                         background: 'var(--bg-card)', border: '1px solid var(--border-color)',
                         borderRadius: 'var(--radius-md)', boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
                         minWidth: 190, overflow: 'hidden', animation: 'fadeIn 150ms ease'
@@ -382,12 +392,12 @@ const ManajemenPenyedia = () => {
             {/* ===== MODAL DETAIL ===== */}
             {detailItem && (
                 <div className="modal-overlay" onClick={() => setDetailItem(null)}>
-                    <div className="modal" style={{ maxWidth: 640 }} onClick={e => e.stopPropagation()}>
-                        <div className="modal-header">
+                    <div className="modal" style={{ maxWidth: 640, maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+                        <div className="modal-header" style={{ flexShrink: 0 }}>
                             <div className="modal-title">Detail Perusahaan</div>
                             <button className="modal-close" onClick={() => setDetailItem(null)}><X size={18} /></button>
                         </div>
-                        <div className="modal-body">
+                        <div className="modal-body" style={{ overflowY: 'auto', flex: 1 }}>
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 12, flexWrap: 'wrap' }}>
                                 <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{detailItem.namaPerusahaan}</h3>
                                 <div style={{ display: 'flex', gap: 8 }}>
@@ -426,7 +436,7 @@ const ManajemenPenyedia = () => {
                                 </div>
                             )}
                         </div>
-                        <div className="modal-footer" style={{ flexWrap: 'wrap' }}>
+                        <div className="modal-footer" style={{ flexWrap: 'wrap', flexShrink: 0 }}>
                             <button className="btn btn-ghost" onClick={() => setDetailItem(null)}>Tutup</button>
                             {detailItem.userId && (
                                 <button className="btn btn-secondary" onClick={() => { setPasswordModal(detailItem); setDetailItem(null); }}>
