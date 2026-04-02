@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Search, Send, CheckCircle, Upload, ArrowRight, Eye, X } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import { kontrakApi } from '../../api';
 
 const DashboardPenyedia = () => {
     const user = useAuthStore(s => s.user);
+    const timScrollRef = useRef(null);
+    const peralatanScrollRef = useRef(null);
     const [perusahaan, setPerusahaan] = useState(null);
     const [loading, setLoading] = useState(true);
     const [step, setStep] = useState(1); // 1=dasar, 2=dppl/bahpl, 3=lampiran
@@ -140,6 +142,7 @@ const DashboardPenyedia = () => {
     const labelStyle = { fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' };
     const tblInput = { padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 6, fontSize: '0.78rem', background: 'var(--bg-secondary)', color: 'var(--text-primary)', boxSizing: 'border-box' };
     const tblSelect = { ...tblInput, padding: '5px 4px' };
+    const scrollBtnStyle = { background: 'var(--bg-tertiary, #334155)', color: '#94a3b8', border: 'none', borderRadius: 4, width: 24, height: 20, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '0.7rem', flexShrink: 0 };
 
     if (loading) return <div className="page-container" style={{ textAlign: 'center', padding: 80, color: 'var(--text-secondary)' }}>Memuat data...</div>;
 
@@ -307,7 +310,7 @@ const DashboardPenyedia = () => {
 
                     {/* KOMPOSISI TIM */}
                     <h4 style={{ margin: '0 0 10px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}>👥 KOMPOSISI TIM DAN PENUGASAN</h4>
-                    <div style={{ overflowX: 'auto', marginBottom: 24 }}>
+                    <div ref={timScrollRef} style={{ overflowX: 'auto', marginBottom: 4 }}>
                         <table className="data-table" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
                             <thead>
                                 <tr>
@@ -362,10 +365,15 @@ const DashboardPenyedia = () => {
                             </tbody>
                         </table>
                     </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 24 }}>
+                        <button onClick={() => timScrollRef.current?.scrollBy({ left: -200, behavior: 'smooth' })} style={scrollBtnStyle}>◀</button>
+                        <div style={{ flex: 1, height: 6, background: 'var(--bg-tertiary, #334155)', borderRadius: 3 }}><div style={{ width: '50%', height: '100%', background: '#64748b', borderRadius: 3 }}></div></div>
+                        <button onClick={() => timScrollRef.current?.scrollBy({ left: 200, behavior: 'smooth' })} style={scrollBtnStyle}>▶</button>
+                    </div>
 
                     {/* PERALATAN UTAMA */}
                     <h4 style={{ margin: '0 0 10px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}>🔧 PERALATAN UTAMA (Apabila dipersyaratkan)</h4>
-                    <div style={{ overflowX: 'auto', marginBottom: 30 }}>
+                    <div ref={peralatanScrollRef} style={{ overflowX: 'auto', marginBottom: 4 }}>
                         <table className="data-table" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
                             <thead>
                                 <tr>
@@ -408,8 +416,11 @@ const DashboardPenyedia = () => {
                             </tbody>
                         </table>
                     </div>
-
-                    {/* PERNYATAAN KESANGGUPAN */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 30 }}>
+                        <button onClick={() => peralatanScrollRef.current?.scrollBy({ left: -200, behavior: 'smooth' })} style={scrollBtnStyle}>◀</button>
+                        <div style={{ flex: 1, height: 6, background: 'var(--bg-tertiary, #334155)', borderRadius: 3 }}><div style={{ width: '50%', height: '100%', background: '#64748b', borderRadius: 3 }}></div></div>
+                        <button onClick={() => peralatanScrollRef.current?.scrollBy({ left: 200, behavior: 'smooth' })} style={scrollBtnStyle}>▶</button>
+                    </div>
                     <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 20 }}>
                         <h4 style={{ margin: '0 0 12px', fontSize: '0.95rem' }}>Pernyataan Kesanggupan</h4>
                         <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.7, margin: '0 0 16px' }}>
