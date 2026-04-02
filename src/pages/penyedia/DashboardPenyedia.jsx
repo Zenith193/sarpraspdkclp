@@ -138,6 +138,8 @@ const DashboardPenyedia = () => {
     const fieldStyle = { width: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 8, fontSize: '0.9rem', background: 'var(--bg-secondary)', color: 'var(--text-primary)', boxSizing: 'border-box' };
     const readOnlyStyle = { ...fieldStyle, background: 'var(--bg-tertiary, rgba(128,128,128,0.08))', color: 'var(--text-secondary)' };
     const labelStyle = { fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' };
+    const tblInput = { padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 6, fontSize: '0.78rem', background: 'var(--bg-secondary)', color: 'var(--text-primary)', boxSizing: 'border-box' };
+    const tblSelect = { ...tblInput, padding: '5px 4px' };
 
     if (loading) return <div className="page-container" style={{ textAlign: 'center', padding: 80, color: 'var(--text-secondary)' }}>Memuat data...</div>;
 
@@ -332,21 +334,21 @@ const DashboardPenyedia = () => {
                                 ))}
                                 {/* Input row */}
                                 <tr>
-                                    <td><input style={{ ...fieldStyle, padding: '4px 6px', fontSize: '0.75rem', width: 60 }} value={timInput.nama} onChange={e => setTimInput({ ...timInput, nama: e.target.value })} /></td>
-                                    <td><input style={{ ...fieldStyle, padding: '4px 6px', fontSize: '0.75rem', width: 50 }} value={timInput.posisi} onChange={e => setTimInput({ ...timInput, posisi: e.target.value })} /></td>
+                                    <td><input style={tblInput} value={timInput.nama} onChange={e => setTimInput({ ...timInput, nama: e.target.value })} /></td>
+                                    <td><input style={tblInput} value={timInput.posisi} onChange={e => setTimInput({ ...timInput, posisi: e.target.value })} /></td>
                                     <td>
-                                        <select style={{ ...fieldStyle, padding: '4px 2px', fontSize: '0.72rem' }} value={timInput.statusTenaga} onChange={e => setTimInput({ ...timInput, statusTenaga: e.target.value })}>
+                                        <select style={tblSelect} value={timInput.statusTenaga} onChange={e => setTimInput({ ...timInput, statusTenaga: e.target.value })}>
                                             <option value="">Pilih Status Te...</option><option>Tenaga Ahli</option><option>Tenaga Penunjang</option><option>Tenaga Teknis</option>
                                         </select>
                                     </td>
                                     <td>
-                                        <select style={{ ...fieldStyle, padding: '4px 2px', fontSize: '0.72rem' }} value={timInput.pendidikan} onChange={e => setTimInput({ ...timInput, pendidikan: e.target.value })}>
-                                            <option value="">Pilih Pendidikan</option><option>SD</option><option>SMP</option><option>SMA</option><option>D1</option><option>D2</option><option>D3</option><option>S1/D4</option><option>S2</option><option>S3</option>
+                                        <select style={tblSelect} value={timInput.pendidikan} onChange={e => setTimInput({ ...timInput, pendidikan: e.target.value })}>
+                                            <option value="">Pilih Pendid...</option><option>SD</option><option>SMP</option><option>SMA</option><option>D1</option><option>D2</option><option>D3</option><option>S1/D4</option><option>S2</option><option>S3</option>
                                         </select>
                                     </td>
-                                    <td><input type="number" style={{ ...fieldStyle, padding: '4px 6px', fontSize: '0.75rem', width: 40 }} placeholder="0" value={timInput.pengalaman} onChange={e => setTimInput({ ...timInput, pengalaman: e.target.value })} /></td>
-                                    <td><input style={{ ...fieldStyle, padding: '4px 6px', fontSize: '0.75rem', width: 60 }} value={timInput.sertifikasi} onChange={e => setTimInput({ ...timInput, sertifikasi: e.target.value })} /></td>
-                                    <td><input style={{ ...fieldStyle, padding: '4px 6px', fontSize: '0.75rem', width: 60 }} value={timInput.keterangan} onChange={e => setTimInput({ ...timInput, keterangan: e.target.value })} /></td>
+                                    <td><input type="number" style={tblInput} placeholder="0" value={timInput.pengalaman} onChange={e => setTimInput({ ...timInput, pengalaman: e.target.value })} /></td>
+                                    <td><input style={tblInput} value={timInput.sertifikasi} onChange={e => setTimInput({ ...timInput, sertifikasi: e.target.value })} /></td>
+                                    <td><input style={tblInput} value={timInput.keterangan} onChange={e => setTimInput({ ...timInput, keterangan: e.target.value })} /></td>
                                     {timInput.jadwal.map((checked, j) => (
                                         <td key={j} style={{ textAlign: 'center' }}>
                                             <input type="checkbox" checked={checked} onChange={() => { const jd = [...timInput.jadwal]; jd[j] = !jd[j]; setTimInput({ ...timInput, jadwal: jd }); }} />
@@ -382,22 +384,22 @@ const DashboardPenyedia = () => {
                                 ))}
                                 {/* Input row */}
                                 <tr>
-                                    <td><input style={{ ...fieldStyle, padding: '4px 6px', fontSize: '0.75rem', width: 80 }} value={peralatanInput.nama} onChange={e => setPeralatanInput({ ...peralatanInput, nama: e.target.value })} /></td>
-                                    <td><input style={{ ...fieldStyle, padding: '4px 6px', fontSize: '0.75rem', width: 60 }} value={peralatanInput.merk} onChange={e => setPeralatanInput({ ...peralatanInput, merk: e.target.value })} /></td>
-                                    <td><input style={{ ...fieldStyle, padding: '4px 6px', fontSize: '0.75rem', width: 50 }} value={peralatanInput.type} onChange={e => setPeralatanInput({ ...peralatanInput, type: e.target.value })} /></td>
-                                    <td><input style={{ ...fieldStyle, padding: '4px 6px', fontSize: '0.75rem', width: 60 }} value={peralatanInput.kapasitas} onChange={e => setPeralatanInput({ ...peralatanInput, kapasitas: e.target.value })} /></td>
-                                    <td><input type="number" style={{ ...fieldStyle, padding: '4px 6px', fontSize: '0.75rem', width: 45 }} placeholder="0" value={peralatanInput.jumlah} onChange={e => setPeralatanInput({ ...peralatanInput, jumlah: e.target.value })} /></td>
+                                    <td><input style={tblInput} value={peralatanInput.nama} onChange={e => setPeralatanInput({ ...peralatanInput, nama: e.target.value })} /></td>
+                                    <td><input style={tblInput} value={peralatanInput.merk} onChange={e => setPeralatanInput({ ...peralatanInput, merk: e.target.value })} /></td>
+                                    <td><input style={tblInput} value={peralatanInput.type} onChange={e => setPeralatanInput({ ...peralatanInput, type: e.target.value })} /></td>
+                                    <td><input style={tblInput} value={peralatanInput.kapasitas} onChange={e => setPeralatanInput({ ...peralatanInput, kapasitas: e.target.value })} /></td>
+                                    <td><input type="number" style={tblInput} placeholder="0" value={peralatanInput.jumlah} onChange={e => setPeralatanInput({ ...peralatanInput, jumlah: e.target.value })} /></td>
                                     <td>
-                                        <select style={{ ...fieldStyle, padding: '4px 2px', fontSize: '0.72rem' }} value={peralatanInput.kondisi} onChange={e => setPeralatanInput({ ...peralatanInput, kondisi: e.target.value })}>
+                                        <select style={tblSelect} value={peralatanInput.kondisi} onChange={e => setPeralatanInput({ ...peralatanInput, kondisi: e.target.value })}>
                                             <option value="">Pilih Kondisi</option><option>Baik</option><option>Sedang</option><option>Rusak</option>
                                         </select>
                                     </td>
                                     <td>
-                                        <select style={{ ...fieldStyle, padding: '4px 2px', fontSize: '0.72rem' }} value={peralatanInput.statusKepemilikan} onChange={e => setPeralatanInput({ ...peralatanInput, statusKepemilikan: e.target.value })}>
-                                            <option value="">Pilih Status Kepemilikan</option><option>Milik Sendiri</option><option>Sewa</option>
+                                        <select style={tblSelect} value={peralatanInput.statusKepemilikan} onChange={e => setPeralatanInput({ ...peralatanInput, statusKepemilikan: e.target.value })}>
+                                            <option value="">Pilih Status</option><option>Milik Sendiri</option><option>Sewa</option>
                                         </select>
                                     </td>
-                                    <td><input style={{ ...fieldStyle, padding: '4px 6px', fontSize: '0.75rem', width: 60 }} value={peralatanInput.keterangan} onChange={e => setPeralatanInput({ ...peralatanInput, keterangan: e.target.value })} /></td>
+                                    <td><input style={tblInput} value={peralatanInput.keterangan} onChange={e => setPeralatanInput({ ...peralatanInput, keterangan: e.target.value })} /></td>
                                     <td>
                                         <button onClick={() => { if (!peralatanInput.nama.trim()) return; setPeralatanRows(r => [...r, { ...peralatanInput }]); setPeralatanInput({ ...emptyPeralatan }); }}
                                             style={{ background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 12px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Simpan</button>
