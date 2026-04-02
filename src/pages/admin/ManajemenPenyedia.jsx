@@ -184,18 +184,28 @@ const ManajemenPenyedia = () => {
     // Dropdown action menu
     const ActionMenu = ({ item }) => {
         const isOpen = activeMenu === item.id;
+        const btnRef = useRef(null);
+
+        const getMenuPos = () => {
+            if (!btnRef.current) return { top: 0, right: 0 };
+            const rect = btnRef.current.getBoundingClientRect();
+            return { top: rect.bottom + 4, right: window.innerWidth - rect.right };
+        };
+
+        const pos = isOpen ? getMenuPos() : { top: 0, right: 0 };
+
         return (
             <div style={{ position: 'relative' }} ref={isOpen ? menuRef : null}>
-                <button className="btn-icon" title="Aksi" onClick={(e) => { e.stopPropagation(); setActiveMenu(isOpen ? null : item.id); }}
+                <button ref={btnRef} className="btn-icon" title="Aksi" onClick={(e) => { e.stopPropagation(); setActiveMenu(isOpen ? null : item.id); }}
                     style={{ color: isOpen ? 'var(--accent-blue)' : undefined }}>
                     <MoreVertical size={16} />
                 </button>
                 {isOpen && (
                     <div style={{
-                        position: 'absolute', right: 0, top: '100%', marginTop: 4, zIndex: 50,
+                        position: 'fixed', top: pos.top, right: pos.right, zIndex: 9999,
                         background: 'var(--bg-card)', border: '1px solid var(--border-color)',
-                        borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-lg)',
-                        minWidth: 180, overflow: 'hidden', animation: 'fadeIn 150ms ease'
+                        borderRadius: 'var(--radius-md)', boxShadow: '0 10px 40px rgba(0,0,0,0.3)',
+                        minWidth: 190, overflow: 'hidden', animation: 'fadeIn 150ms ease'
                     }}>
                         {/* Lihat Detail */}
                         <button onClick={() => { setDetailItem(item); setActiveMenu(null); }}
