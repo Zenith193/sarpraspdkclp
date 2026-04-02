@@ -2,6 +2,34 @@ import { useState, useEffect } from 'react';
 import { ClipboardCheck, Eye, Search, X, CheckCircle, XCircle, Clock, Save, ChevronRight } from 'lucide-react';
 import { kontrakApi } from '../../api';
 
+// ===== Number to Terbilang (Indonesian) =====
+const angka = ['', 'Satu', 'Dua', 'Tiga', 'Empat', 'Lima', 'Enam', 'Tujuh', 'Delapan', 'Sembilan', 'Sepuluh', 'Sebelas'];
+const terbilangHelper = (n) => {
+    if (n < 0) return 'Minus ' + terbilangHelper(-n);
+    if (n < 12) return angka[n];
+    if (n < 20) return angka[n - 10] + ' Belas';
+    if (n < 100) return angka[Math.floor(n / 10)] + ' Puluh' + (n % 10 ? ' ' + angka[n % 10] : '');
+    if (n < 200) return 'Seratus' + (n % 100 ? ' ' + terbilangHelper(n % 100) : '');
+    if (n < 1000) return angka[Math.floor(n / 100)] + ' Ratus' + (n % 100 ? ' ' + terbilangHelper(n % 100) : '');
+    if (n < 2000) return 'Seribu' + (n % 1000 ? ' ' + terbilangHelper(n % 1000) : '');
+    if (n < 1000000) return terbilangHelper(Math.floor(n / 1000)) + ' Ribu' + (n % 1000 ? ' ' + terbilangHelper(n % 1000) : '');
+    if (n < 1000000000) return terbilangHelper(Math.floor(n / 1000000)) + ' Juta' + (n % 1000000 ? ' ' + terbilangHelper(n % 1000000) : '');
+    if (n < 1000000000000) return terbilangHelper(Math.floor(n / 1000000000)) + ' Miliar' + (n % 1000000000 ? ' ' + terbilangHelper(n % 1000000000) : '');
+    return terbilangHelper(Math.floor(n / 1000000000000)) + ' Triliun' + (n % 1000000000000 ? ' ' + terbilangHelper(n % 1000000000000) : '');
+};
+const numberToTerbilang = (n) => { const v = Math.floor(Number(n)); if (!v || v <= 0) return ''; return terbilangHelper(v) + ' Rupiah'; };
+const formatSeparator = (v) => { const n = String(v).replace(/\D/g, ''); return n ? Number(n).toLocaleString('id-ID') : ''; };
+const parseSeparator = (v) => String(v).replace(/\./g, '').replace(/,/g, '');
+
+const calcTanggalSelesai = (tglMulai, hari) => {
+    if (!tglMulai || !hari) return '';
+    const days = parseInt(hari);
+    if (isNaN(days) || days <= 0) return '';
+    const d = new Date(tglMulai);
+    d.setDate(d.getDate() + days - 1);
+    return d.toISOString().split('T')[0];
+};
+
 const statusBadge = (status) => {
     const map = {
         'Menunggu': { bg: 'rgba(251,191,36,0.12)', color: '#f59e0b', icon: Clock },
@@ -45,13 +73,20 @@ const ManajemenKontrak = () => {
             setDetail(d);
             setTab('data_dasar');
             setAgreed(false);
+            const nk = d.nilaiKontrak || d.matrik?.nilaiKontrak || '';
+            const wp = d.waktuPenyelesaian || (d.matrik?.jangkaWaktu ? String(d.matrik.jangkaWaktu) : '');
+            // Strip "hari kalender" text if present, keep only number
+            const wpNum = String(wp).replace(/[^\d]/g, '') || '';
+            const tglMulai = d.tanggalMulai || d.matrik?.tanggalMulai || '';
+            const tglSelesai = d.tanggalSelesai || d.matrik?.tanggalSelesai || calcTanggalSelesai(tglMulai, wpNum);
+            const tb = d.terbilangKontrak || d.matrik?.terbilangKontrak || numberToTerbilang(nk);
             setSpkData({
                 noSpk: d.noSpk || d.matrik?.noSpk || '',
-                nilaiKontrak: d.nilaiKontrak || d.matrik?.nilaiKontrak || '',
-                terbilangKontrak: d.terbilangKontrak || d.matrik?.terbilangKontrak || '',
-                tanggalMulai: d.tanggalMulai || d.matrik?.tanggalMulai || '',
-                tanggalSelesai: d.tanggalSelesai || d.matrik?.tanggalSelesai || '',
-                waktuPenyelesaian: d.waktuPenyelesaian || (d.matrik?.jangkaWaktu ? `${d.matrik.jangkaWaktu} hari kalender` : ''),
+                nilaiKontrak: nk,
+                terbilangKontrak: tb,
+                tanggalMulai: tglMulai,
+                tanggalSelesai: tglSelesai,
+                waktuPenyelesaian: wpNum,
                 tataCaraPembayaran: d.tataCaraPembayaran || '',
                 uangMuka: d.uangMuka || '',
             });
@@ -284,19 +319,31 @@ const ManajemenKontrak = () => {
                                         </div>
                                         <div>
                                             <label style={labelStyle}>Nilai Kontrak (Rp)</label>
-                                            <input type="number" style={fieldStyle} value={spkData.nilaiKontrak} onChange={e => setSpkData({ ...spkData, nilaiKontrak: e.target.value })} placeholder="0" />
+                                            <input style={fieldStyle} value={formatSeparator(spkData.nilaiKontrak)} onChange={e => {
+                                                const raw = parseSeparator(e.target.value);
+                                                const tb = numberToTerbilang(raw);
+                                                setSpkData({ ...spkData, nilaiKontrak: raw, terbilangKontrak: tb });
+                                            }} placeholder="0" />
                                         </div>
                                         <div>
                                             <label style={labelStyle}>Terbilang</label>
-                                            <input style={fieldStyle} value={spkData.terbilangKontrak} onChange={e => setSpkData({ ...spkData, terbilangKontrak: e.target.value })} placeholder="Delapan puluh juta rupiah" />
+                                            <input style={readOnlyStyle} value={spkData.terbilangKontrak} readOnly />
                                         </div>
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                                            <div><label style={labelStyle}>Tanggal Mulai</label><input type="date" style={fieldStyle} value={spkData.tanggalMulai} onChange={e => setSpkData({ ...spkData, tanggalMulai: e.target.value })} /></div>
-                                            <div><label style={labelStyle}>Tanggal Selesai</label><input type="date" style={fieldStyle} value={spkData.tanggalSelesai} onChange={e => setSpkData({ ...spkData, tanggalSelesai: e.target.value })} /></div>
+                                            <div><label style={labelStyle}>Tanggal Mulai</label><input type="date" style={fieldStyle} value={spkData.tanggalMulai} onChange={e => {
+                                                const tgl = e.target.value;
+                                                const selesai = calcTanggalSelesai(tgl, spkData.waktuPenyelesaian);
+                                                setSpkData({ ...spkData, tanggalMulai: tgl, tanggalSelesai: selesai });
+                                            }} /></div>
+                                            <div><label style={labelStyle}>Tanggal Selesai</label><input type="date" style={readOnlyStyle} value={spkData.tanggalSelesai} readOnly /></div>
                                         </div>
                                         <div>
-                                            <label style={labelStyle}>Waktu Penyelesaian</label>
-                                            <input style={fieldStyle} value={spkData.waktuPenyelesaian} onChange={e => setSpkData({ ...spkData, waktuPenyelesaian: e.target.value })} placeholder="90 hari kalender" />
+                                            <label style={labelStyle}>Waktu Penyelesaian (hari kalender)</label>
+                                            <input type="number" style={fieldStyle} value={spkData.waktuPenyelesaian} onChange={e => {
+                                                const hari = e.target.value;
+                                                const selesai = calcTanggalSelesai(spkData.tanggalMulai, hari);
+                                                setSpkData({ ...spkData, waktuPenyelesaian: hari, tanggalSelesai: selesai });
+                                            }} placeholder="90" />
                                         </div>
                                         <div>
                                             <label style={labelStyle}>Tata Cara Pembayaran</label>
