@@ -9,14 +9,16 @@ const DEFAULT_ACCESS = {
         'riwayat-bantuan', 'matriks-kegiatan', 'create-bast',
         'pencairan', 'manajemen-korwil', 'form-kerusakan', 'prestasi',
         'verifikasi-sarpras', 'verifikasi-proposal', 'ranking',
-        'hak-akses', 'pengaturan-nas', 'countdown-settings', 'iklan'
+        'hak-akses', 'pengaturan-nas', 'countdown-settings', 'iklan',
+        'manajemen-penyedia'
     ],
     verifikator: [
         'dashboard', 'data-sarpras', 'proposal',
         'verifikasi-sarpras', 'verifikasi-proposal',
         'ranking', 'riwayat-bantuan',
         'manajemen-template', 'matriks-kegiatan', 'create-bast',
-        'pencairan', 'form-kerusakan', 'prestasi', 'iklan'
+        'pencairan', 'form-kerusakan', 'prestasi', 'iklan',
+        'manajemen-penyedia'
     ],
     korwil: [
         'dashboard', 'verifikasi-sarpras', 'verifikasi-proposal',
@@ -53,6 +55,7 @@ export const ALL_MENUS = {
         { path: 'pengaturan-nas', label: 'Pengaturan NAS' },
         { path: 'countdown-settings', label: 'Countdown Timer' },
         { path: 'iklan', label: 'Iklan' },
+        { path: 'manajemen-penyedia', label: 'Manajemen Penyedia' },
     ],
     verifikator: [
         { path: 'dashboard', label: 'Dashboard' },
@@ -69,6 +72,7 @@ export const ALL_MENUS = {
         { path: 'form-kerusakan', label: 'Upload Form Kerusakan' },
         { path: 'prestasi', label: 'Prestasi' },
         { path: 'iklan', label: 'Iklan' },
+        { path: 'manajemen-penyedia', label: 'Manajemen Penyedia' },
     ],
     korwil: [
         { path: 'dashboard', label: 'Dashboard Korwil' },
