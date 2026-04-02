@@ -43,8 +43,8 @@ router.get('/', requireAuth, requireRole('admin', 'verifikator'), async (_req, r
 router.put('/:id/verify', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
     try {
         const { status, keterangan } = req.body;
-        if (!['Diverifikasi', 'Ditolak'].includes(status)) {
-            return res.status(400).json({ error: 'Status harus Diverifikasi atau Ditolak' });
+        if (!['Diverifikasi', 'Ditolak', 'Menunggu'].includes(status)) {
+            return res.status(400).json({ error: 'Status harus Diverifikasi, Ditolak, atau Menunggu' });
         }
         const result = await perusahaanService.verify(Number(req.params.id), status, keterangan);
         res.json(result);

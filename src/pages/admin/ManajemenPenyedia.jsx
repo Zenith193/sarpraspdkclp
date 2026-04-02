@@ -1,7 +1,7 @@
-import { useState, useMemo, useEffect } from 'react';
-import { Search, CheckCircle, XCircle, Clock, Trash2, Eye, X, ChevronLeft, ChevronRight, AlertTriangle, Pencil, Save, Building2, Briefcase } from 'lucide-react';
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { Search, CheckCircle, XCircle, Clock, Trash2, Eye, X, ChevronLeft, ChevronRight, AlertTriangle, Pencil, Save, Building2, Briefcase, MoreVertical, Key, EyeOff, ShieldCheck, ShieldX } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { perusahaanApi } from '../../api/index';
+import { perusahaanApi, penggunaApi } from '../../api/index';
 
 const ManajemenPenyedia = () => {
     const [data, setData] = useState([]);
@@ -18,6 +18,12 @@ const ManajemenPenyedia = () => {
     const [verifyKeterangan, setVerifyKeterangan] = useState('');
     const [deleteTarget, setDeleteTarget] = useState(null);
     const [page, setPage] = useState(1);
+    const [activeMenu, setActiveMenu] = useState(null);
+    const [passwordModal, setPasswordModal] = useState(null);
+    const [newPassword, setNewPassword] = useState('');
+    const [showPw, setShowPw] = useState(false);
+    const [pwSaving, setPwSaving] = useState(false);
+    const menuRef = useRef(null);
     const perPage = 20;
 
     const fetchData = async () => {
@@ -31,6 +37,17 @@ const ManajemenPenyedia = () => {
     };
 
     useEffect(() => { fetchData(); }, []);
+
+    // Close dropdown menu on outside click
+    useEffect(() => {
+        const handler = (e) => {
+            if (menuRef.current && !menuRef.current.contains(e.target)) {
+                setActiveMenu(null);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
 
     const filtered = useMemo(() => {
         return data.filter(p => {
@@ -65,7 +82,7 @@ const ManajemenPenyedia = () => {
         if (!verifyTarget || !verifyStatus) return;
         try {
             await perusahaanApi.verify(verifyTarget.id, { status: verifyStatus, keterangan: verifyKeterangan });
-            toast.success(`Perusahaan ${verifyStatus === 'Diverifikasi' ? 'diverifikasi' : 'ditolak'}`);
+            toast.success(`Perusahaan ${verifyStatus === 'Diverifikasi' ? 'diverifikasi' : verifyStatus === 'Ditolak' ? 'ditolak' : 'status diubah ke Menunggu'}`);
             setVerifyTarget(null); setVerifyStatus(''); setVerifyKeterangan('');
             fetchData();
         } catch (err) { toast.error(err?.message || 'Gagal'); }
@@ -81,9 +98,23 @@ const ManajemenPenyedia = () => {
         } catch (err) { toast.error(err?.message || 'Gagal menghapus'); }
     };
 
+    const handleChangePassword = async () => {
+        if (!passwordModal || !newPassword) return;
+        if (newPassword.length < 6) { toast.error('Password minimal 6 karakter'); return; }
+        setPwSaving(true);
+        try {
+            await penggunaApi.changePassword(passwordModal.userId, newPassword);
+            toast.success('Password berhasil diubah');
+            setPasswordModal(null); setNewPassword(''); setShowPw(false);
+        } catch (err) {
+            toast.error(err?.message || 'Gagal mengubah password');
+        } finally { setPwSaving(false); }
+    };
+
     // ===== EDIT HANDLERS =====
     const openEdit = (item) => {
         setEditItem(item);
+        setActiveMenu(null);
         setEditForm({
             nikPemilik: item.nikPemilik || '',
             namaPemilik: item.namaPemilik || '',
@@ -121,7 +152,6 @@ const ManajemenPenyedia = () => {
     };
 
     const countByStatus = (st) => data.filter(d => d.status === st).length;
-    const countByTipe = (t) => data.filter(d => (d.tipePerusahaan || 'Penyedia') === t).length;
 
     // Form row helper
     const formRow = (children, cols = 2) => (
@@ -131,7 +161,7 @@ const ManajemenPenyedia = () => {
     );
 
     const formField = (label, field, opts = {}) => (
-        <div className="form-group" style={opts.style || {}}>
+        <div className="form-group" style={{ marginBottom: 0, ...(opts.style || {}) }}>
             <label className="form-label" style={{ fontSize: '0.78rem', marginBottom: 4, color: 'var(--text-secondary)' }}>
                 {label} {opts.required && <span style={{ color: 'var(--accent-red)' }}>*</span>}
             </label>
@@ -150,6 +180,96 @@ const ManajemenPenyedia = () => {
             )}
         </div>
     );
+
+    // Dropdown action menu
+    const ActionMenu = ({ item }) => {
+        const isOpen = activeMenu === item.id;
+        return (
+            <div style={{ position: 'relative' }} ref={isOpen ? menuRef : null}>
+                <button className="btn-icon" title="Aksi" onClick={(e) => { e.stopPropagation(); setActiveMenu(isOpen ? null : item.id); }}
+                    style={{ color: isOpen ? 'var(--accent-blue)' : undefined }}>
+                    <MoreVertical size={16} />
+                </button>
+                {isOpen && (
+                    <div style={{
+                        position: 'absolute', right: 0, top: '100%', marginTop: 4, zIndex: 50,
+                        background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+                        borderRadius: 'var(--radius-md)', boxShadow: 'var(--shadow-lg)',
+                        minWidth: 180, overflow: 'hidden', animation: 'fadeIn 150ms ease'
+                    }}>
+                        {/* Lihat Detail */}
+                        <button onClick={() => { setDetailItem(item); setActiveMenu(null); }}
+                            style={menuItemStyle}
+                            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-input)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                            <Eye size={14} style={{ color: 'var(--text-secondary)' }} /> Lihat Detail
+                        </button>
+                        {/* Edit */}
+                        <button onClick={() => openEdit(item)}
+                            style={menuItemStyle}
+                            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-input)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                            <Pencil size={14} style={{ color: 'var(--accent-blue)' }} /> Edit Data
+                        </button>
+                        {/* Ganti Password */}
+                        {item.userId && (
+                            <button onClick={() => { setPasswordModal(item); setActiveMenu(null); }}
+                                style={menuItemStyle}
+                                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-input)'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                <Key size={14} style={{ color: 'var(--accent-yellow)' }} /> Ganti Password
+                            </button>
+                        )}
+                        {/* Divider */}
+                        <div style={{ height: 1, background: 'var(--border-color)', margin: '4px 0' }} />
+                        {/* Verifikasi */}
+                        {item.status !== 'Diverifikasi' && (
+                            <button onClick={() => { setVerifyTarget(item); setVerifyStatus('Diverifikasi'); setActiveMenu(null); }}
+                                style={menuItemStyle}
+                                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-input)'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                <ShieldCheck size={14} style={{ color: 'var(--accent-green)' }} /> Verifikasi
+                            </button>
+                        )}
+                        {/* Unverifikasi (set back to Menunggu) */}
+                        {item.status === 'Diverifikasi' && (
+                            <button onClick={() => { setVerifyTarget(item); setVerifyStatus('Menunggu'); setActiveMenu(null); }}
+                                style={menuItemStyle}
+                                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-input)'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                <ShieldX size={14} style={{ color: 'var(--accent-orange, #f97316)' }} /> Unverifikasi
+                            </button>
+                        )}
+                        {/* Tolak */}
+                        {item.status !== 'Ditolak' && (
+                            <button onClick={() => { setVerifyTarget(item); setVerifyStatus('Ditolak'); setActiveMenu(null); }}
+                                style={menuItemStyle}
+                                onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-input)'}
+                                onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                                <XCircle size={14} style={{ color: 'var(--accent-red)' }} /> Tolak
+                            </button>
+                        )}
+                        {/* Divider */}
+                        <div style={{ height: 1, background: 'var(--border-color)', margin: '4px 0' }} />
+                        {/* Hapus */}
+                        <button onClick={() => { setDeleteTarget(item); setActiveMenu(null); }}
+                            style={{ ...menuItemStyle, color: 'var(--accent-red)' }}
+                            onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.08)'}
+                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
+                            <Trash2 size={14} /> Hapus
+                        </button>
+                    </div>
+                )}
+            </div>
+        );
+    };
+
+    const menuItemStyle = {
+        width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+        padding: '9px 14px', fontSize: '0.82rem', color: 'var(--text-primary)',
+        background: 'transparent', border: 'none', cursor: 'pointer',
+        transition: 'background 0.15s', textAlign: 'left',
+    };
 
     return (
         <div className="page-container">
@@ -182,9 +302,9 @@ const ManajemenPenyedia = () => {
 
             {/* Search & Filter */}
             <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-                <div className="search-wrapper" style={{ flex: 1, minWidth: 200 }}>
+                <div className="table-search" style={{ flex: 1, minWidth: 200 }}>
                     <Search size={16} className="search-icon" />
-                    <input className="search-input" placeholder="Cari perusahaan, NPWP, email..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
+                    <input placeholder="Cari perusahaan, NPWP, email..." value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} />
                 </div>
                 <select className="form-select" value={filterTipe} onChange={e => { setFilterTipe(e.target.value); setPage(1); }} style={{ width: 160 }}>
                     <option value="">Semua Tipe</option>
@@ -206,12 +326,12 @@ const ManajemenPenyedia = () => {
                         <tr>
                             <th style={{ width: 40, textAlign: 'center' }}>No</th>
                             <th>Nama Perusahaan</th>
-                            <th style={{ width: 90 }}>Tipe</th>
+                            <th style={{ width: 100 }}>Tipe</th>
                             <th>NPWP</th>
                             <th>Pemilik</th>
                             <th>Email</th>
                             <th style={{ width: 110 }}>Status</th>
-                            <th style={{ width: 130, textAlign: 'center' }}>Aksi</th>
+                            <th style={{ width: 60, textAlign: 'center' }}>Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -231,18 +351,8 @@ const ManajemenPenyedia = () => {
                                 <td style={{ fontSize: '0.875rem' }}>{p.namaPemilik || '-'}</td>
                                 <td style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{p.emailPerusahaan || '-'}</td>
                                 <td>{statusBadge(p.status)}</td>
-                                <td>
-                                    <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
-                                        <button className="btn-icon" title="Detail" onClick={() => setDetailItem(p)}><Eye size={15} /></button>
-                                        <button className="btn-icon" title="Edit" style={{ color: 'var(--accent-blue)' }} onClick={() => openEdit(p)}><Pencil size={15} /></button>
-                                        {p.status === 'Menunggu' && (
-                                            <>
-                                                <button className="btn-icon" title="Verifikasi" style={{ color: 'var(--accent-green)' }} onClick={() => { setVerifyTarget(p); setVerifyStatus('Diverifikasi'); }}><CheckCircle size={15} /></button>
-                                                <button className="btn-icon" title="Tolak" style={{ color: 'var(--accent-red)' }} onClick={() => { setVerifyTarget(p); setVerifyStatus('Ditolak'); }}><XCircle size={15} /></button>
-                                            </>
-                                        )}
-                                        <button className="btn-icon" title="Hapus" style={{ color: 'var(--accent-red)' }} onClick={() => setDeleteTarget(p)}><Trash2 size={15} /></button>
-                                    </div>
+                                <td style={{ textAlign: 'center', overflow: 'visible', position: 'relative' }}>
+                                    <ActionMenu item={p} />
                                 </td>
                             </tr>
                         ))}
@@ -306,8 +416,13 @@ const ManajemenPenyedia = () => {
                                 </div>
                             )}
                         </div>
-                        <div className="modal-footer">
+                        <div className="modal-footer" style={{ flexWrap: 'wrap' }}>
                             <button className="btn btn-ghost" onClick={() => setDetailItem(null)}>Tutup</button>
+                            {detailItem.userId && (
+                                <button className="btn btn-secondary" onClick={() => { setPasswordModal(detailItem); setDetailItem(null); }}>
+                                    <Key size={14} /> Ganti Password
+                                </button>
+                            )}
                             <button className="btn btn-secondary" onClick={() => { openEdit(detailItem); setDetailItem(null); }}>
                                 <Pencil size={14} /> Edit
                             </button>
@@ -316,6 +431,9 @@ const ManajemenPenyedia = () => {
                                     <button className="btn btn-secondary" style={{ background: 'rgba(239,68,68,0.15)', color: 'var(--accent-red)' }} onClick={() => { setVerifyTarget(detailItem); setVerifyStatus('Ditolak'); setDetailItem(null); }}>Tolak</button>
                                     <button className="btn btn-primary" onClick={() => { setVerifyTarget(detailItem); setVerifyStatus('Diverifikasi'); setDetailItem(null); }}>Verifikasi</button>
                                 </>
+                            )}
+                            {detailItem.status === 'Diverifikasi' && (
+                                <button className="btn btn-secondary" style={{ background: 'rgba(249,115,22,0.15)', color: 'var(--accent-orange, #f97316)' }} onClick={() => { setVerifyTarget(detailItem); setVerifyStatus('Menunggu'); setDetailItem(null); }}>Unverifikasi</button>
                             )}
                         </div>
                     </div>
@@ -410,19 +528,60 @@ const ManajemenPenyedia = () => {
                 </div>
             )}
 
+            {/* ===== MODAL GANTI PASSWORD ===== */}
+            {passwordModal && (
+                <div className="modal-overlay" onClick={() => { setPasswordModal(null); setNewPassword(''); setShowPw(false); }}>
+                    <div className="modal" style={{ maxWidth: 440 }} onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <div className="modal-title">Ganti Password</div>
+                            <button className="modal-close" onClick={() => { setPasswordModal(null); setNewPassword(''); setShowPw(false); }}><X size={18} /></button>
+                        </div>
+                        <div className="modal-body">
+                            <div style={{ marginBottom: 16, padding: 12, borderRadius: 'var(--radius-md)', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)' }}>
+                                <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Perusahaan</div>
+                                <div style={{ fontWeight: 600, fontSize: '0.95rem', marginTop: 2 }}>{passwordModal.namaPerusahaan}</div>
+                            </div>
+                            <div className="form-group">
+                                <label className="form-label">Password Baru <span style={{ color: 'var(--accent-red)' }}>*</span></label>
+                                <div style={{ position: 'relative' }}>
+                                    <input className="form-input" type={showPw ? 'text' : 'password'} placeholder="Minimal 6 karakter"
+                                        value={newPassword} onChange={e => setNewPassword(e.target.value)} style={{ paddingRight: 40 }} />
+                                    <button type="button" onClick={() => setShowPw(!showPw)} style={{
+                                        position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)',
+                                        background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4
+                                    }}>
+                                        {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="modal-footer">
+                            <button className="btn btn-ghost" onClick={() => { setPasswordModal(null); setNewPassword(''); setShowPw(false); }}>Batal</button>
+                            <button className="btn btn-primary" onClick={handleChangePassword} disabled={pwSaving || !newPassword}>
+                                <Key size={14} /> {pwSaving ? 'Menyimpan...' : 'Ganti Password'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* ===== MODAL VERIFIKASI ===== */}
             {verifyTarget && (
                 <div className="modal-overlay" onClick={() => setVerifyTarget(null)}>
                     <div className="modal" style={{ maxWidth: 480 }} onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
-                            <div className="modal-title">{verifyStatus === 'Diverifikasi' ? '✅ Verifikasi' : '❌ Tolak'} Perusahaan</div>
+                            <div className="modal-title">
+                                {verifyStatus === 'Diverifikasi' ? '✅ Verifikasi' : verifyStatus === 'Ditolak' ? '❌ Tolak' : '🔄 Unverifikasi'} Perusahaan
+                            </div>
                             <button className="modal-close" onClick={() => setVerifyTarget(null)}><X size={18} /></button>
                         </div>
                         <div className="modal-body">
                             <p style={{ marginBottom: 16 }}>
                                 {verifyStatus === 'Diverifikasi'
                                     ? <>Anda akan <strong>memverifikasi</strong> perusahaan <strong>{verifyTarget.namaPerusahaan}</strong>. Akun login perusahaan akan diaktifkan.</>
-                                    : <>Anda akan <strong>menolak</strong> registrasi <strong>{verifyTarget.namaPerusahaan}</strong>.</>}
+                                    : verifyStatus === 'Ditolak'
+                                    ? <>Anda akan <strong>menolak</strong> registrasi <strong>{verifyTarget.namaPerusahaan}</strong>.</>
+                                    : <>Anda akan <strong>membatalkan verifikasi</strong> perusahaan <strong>{verifyTarget.namaPerusahaan}</strong>. Akun login akan dinonaktifkan.</>}
                             </p>
                             <div className="form-group">
                                 <label className="form-label">Keterangan (opsional)</label>
@@ -431,8 +590,12 @@ const ManajemenPenyedia = () => {
                         </div>
                         <div className="modal-footer">
                             <button className="btn btn-ghost" onClick={() => setVerifyTarget(null)}>Batal</button>
-                            <button className="btn btn-primary" style={verifyStatus === 'Ditolak' ? { background: 'var(--accent-red)' } : {}} onClick={handleVerify}>
-                                {verifyStatus === 'Diverifikasi' ? 'Verifikasi' : 'Tolak'}
+                            <button className="btn btn-primary" style={
+                                verifyStatus === 'Ditolak' ? { background: 'var(--accent-red)' }
+                                : verifyStatus === 'Menunggu' ? { background: 'var(--accent-orange, #f97316)' }
+                                : {}
+                            } onClick={handleVerify}>
+                                {verifyStatus === 'Diverifikasi' ? 'Verifikasi' : verifyStatus === 'Ditolak' ? 'Tolak' : 'Unverifikasi'}
                             </button>
                         </div>
                     </div>
