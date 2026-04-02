@@ -33,6 +33,7 @@ export const arsipChecklist = pgTable('arsip_checklist', {
     jenisUsulan: text('jenis_usulan'),
     items: jsonb('items').default([]),          // array of { indikator, status, keterangan }
     verifikators: jsonb('verifikators').default([]), // array of { nama, nip }
+    tanggalCetak: text('tanggal_cetak'),
     createdBy: text('created_by').references(() => user.id),
     createdAt: timestamp('created_at').defaultNow(),
 });
