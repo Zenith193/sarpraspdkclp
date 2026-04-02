@@ -250,4 +250,11 @@ export const arsipDokumenApi = {
     deleteChecklist: (id) => api.delete(`/arsip-dokumen/checklist/${id}`),
 };
 
-
+export const perusahaanApi = {
+    register: (data) => api.post('/perusahaan/register', data),
+    checkNpwp: (npwp) => api.get(`/perusahaan/check/${encodeURIComponent(npwp)}`),
+    list: () => api.get('/perusahaan'),
+    verify: (id, data) => api.put(`/perusahaan/${id}/verify`, data),
+    update: (id, data) => api.put(`/perusahaan/${id}`, data),
+    delete: (id) => api.delete(`/perusahaan/${id}`),
+};

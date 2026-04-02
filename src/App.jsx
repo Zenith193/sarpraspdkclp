@@ -29,12 +29,20 @@ import Prestasi from './pages/admin/Prestasi';
 import HakAkses from './pages/admin/HakAkses';
 import PengaturanNAS from './pages/admin/PengaturanNAS';
 import CountdownSettings from './pages/admin/CountdownSettings';
+import ManajemenPenyedia from './pages/admin/ManajemenPenyedia';
 
 // Korwil
 import DashboardKorwil from './pages/korwil/DashboardKorwil';
 
 // Sekolah
 import DashboardSekolah from './pages/sekolah/DashboardSekolah';
+
+// Penyedia
+import DashboardPenyedia from './pages/penyedia/DashboardPenyedia';
+
+// Public
+import RegistrasiPenyedia from './pages/RegistrasiPenyedia';
+import CekVerifikasi from './pages/CekVerifikasi';
 
 // Shared
 import ProfilPengguna from './pages/shared/ProfilPengguna';
@@ -64,6 +72,7 @@ const HomeRedirect = () => {
 
   if (isAuthenticated && user?.role) {
     const role = user.role.toLowerCase();
+    if (role === 'penyedia') return <Navigate to="/penyedia/dashboard" replace />;
     return <Navigate to={`/${role}/dashboard`} replace />;
   }
   return <Navigate to="/login" replace />;
@@ -90,6 +99,8 @@ function App() {
       <AdScriptInjector />
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/registrasi-penyedia" element={<RegistrasiPenyedia />} />
+        <Route path="/cek-verifikasi" element={<CekVerifikasi />} />
         <Route path="/" element={<HomeRedirect />} />
 
         {/* Admin Routes */}
@@ -115,6 +126,7 @@ function App() {
           <Route path="pengaturan-nas" element={<PengaturanNAS />} />
           <Route path="countdown-settings" element={<CountdownSettings />} />
           <Route path="iklan" element={<Iklan />} />
+          <Route path="manajemen-penyedia" element={<ManajemenPenyedia />} />
           <Route path="profil" element={<ProfilPengguna />} />
         </Route>
 
@@ -164,6 +176,12 @@ function App() {
           <Route path="iklan" element={<Iklan />} />
           <Route path="profil" element={<ProfilPengguna />} />
           <Route path="aktivitas" element={<AktivitasPengguna />} />
+        </Route>
+
+        {/* Penyedia Routes */}
+        <Route path="/penyedia" element={<ProtectedRoute allowedRoles={['penyedia']}><AppLayout /></ProtectedRoute>}>
+          <Route path="dashboard" element={<DashboardPenyedia />} />
+          <Route path="profil" element={<ProfilPengguna />} />
         </Route>
 
         {/* Catch-all */}

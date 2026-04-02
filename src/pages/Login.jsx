@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Eye, EyeOff, Building2, Shield, Users, GraduationCap, MapPin, School, UserCheck, Lock, Sun, Moon, LogIn, Loader2 } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
+import { Eye, EyeOff, Building2, Shield, Users, GraduationCap, MapPin, School, UserCheck, Lock, Sun, Moon, LogIn, Loader2, Briefcase } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useAuthStore from '../store/authStore';
 import useThemeStore from '../store/themeStore';
@@ -90,6 +90,7 @@ const Login = () => {
                     if (rolePath === 'admin') target = '/admin/dashboard';
                     else if (rolePath === 'verifikator') target = '/verifikator/dashboard';
                     else if (rolePath === 'korwil') target = '/korwil/dashboard';
+                    else if (rolePath === 'penyedia') target = '/penyedia/dashboard';
                     startTransition(user, target);
                 }
             }
@@ -297,6 +298,9 @@ const Login = () => {
                         <button className={`login-tab ${tab === 'sekolah' ? 'active' : ''}`} onClick={() => setTab('sekolah')}>
                             <GraduationCap size={16} /> Sekolah
                         </button>
+                        <button className={`login-tab ${tab === 'penyedia' ? 'active' : ''}`} onClick={() => setTab('penyedia')}>
+                            <Briefcase size={16} /> Penyedia
+                        </button>
                     </div>
 
                     <form onSubmit={handleLogin}>
@@ -332,7 +336,7 @@ const Login = () => {
                                     />
                                 </div>
                             </div>
-                        ) : (
+                        ) : tab === 'sekolah' ? (
                             <div className="login-field">
                                 <label>NPSN (Nomor Pokok Sekolah Nasional)</label>
                                 <div className="login-input-wrapper">
@@ -341,6 +345,19 @@ const Login = () => {
                                         placeholder="Contoh: 20300001"
                                         value={npsn}
                                         onChange={e => setNpsn(e.target.value)}
+                                        required
+                                    />
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="login-field">
+                                <label>Email</label>
+                                <div className="login-input-wrapper">
+                                    <input
+                                        type="email"
+                                        placeholder="email@perusahaan.com"
+                                        value={email}
+                                        onChange={e => setEmail(e.target.value)}
                                         required
                                     />
                                 </div>
@@ -372,8 +389,15 @@ const Login = () => {
 
                         <button type="submit" className="login-submit-btn" disabled={submitting}>
                             {submitting ? <Loader2 size={18} className="spin" /> : <LogIn size={18} />}
-                            {submitting ? 'Memproses...' : `Masuk sebagai ${tab === 'staff' ? roleOptions.find(r => r.key === role)?.label : 'Sekolah'}`}
+                            {submitting ? 'Memproses...' : `Masuk sebagai ${tab === 'staff' ? roleOptions.find(r => r.key === role)?.label : tab === 'sekolah' ? 'Sekolah' : 'Penyedia'}`}
                         </button>
+
+                        {tab === 'penyedia' && (
+                            <div style={{ textAlign: 'center', marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                                <Link to="/registrasi-penyedia" style={{ color: 'var(--accent-blue)', fontSize: '0.85rem' }}>Belum punya akun? Daftar di sini</Link>
+                                <Link to="/cek-verifikasi" style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>Cek Status Verifikasi</Link>
+                            </div>
+                        )}
                     </form>
                 </div>
             </div>

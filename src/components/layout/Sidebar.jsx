@@ -4,7 +4,7 @@ import {
     LayoutDashboard, Database, FileText, DollarSign, Activity, Users, FileSpreadsheet,
     History, Grid3X3, FilePlus, Wallet, Map, Upload, Trophy, LogOut, School,
     ChevronLeft, ChevronRight, CheckCircle, Star, ClipboardList, Eye,
-    Shield, HardDrive, Timer, Megaphone
+    Shield, HardDrive, Timer, Megaphone, Briefcase
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import useSettingsStore from '../../store/settingsStore';
@@ -74,6 +74,7 @@ const Sidebar = ({ collapsed, onToggle, className = '' }) => {
         { label: 'Verifikasi Proposal', icon: <ClipboardList size={18} />, path: '/admin/verifikasi-proposal' },
         { label: 'Ranking & Prioritas', icon: <Star size={18} />, path: '/admin/ranking' },
         { label: 'Iklan', icon: <Megaphone size={18} />, path: '/admin/iklan' },
+        { label: 'Manajemen Penyedia', icon: <Briefcase size={18} />, path: '/admin/manajemen-penyedia' },
     ]);
 
     const adminSettingsMenu = filterByAccess([
@@ -121,9 +122,13 @@ const Sidebar = ({ collapsed, onToggle, className = '' }) => {
         { label: 'Iklan', icon: <Megaphone size={18} />, path: '/sekolah/iklan' },
     ]);
 
+    const penyediaMenu = [
+        { label: 'Dashboard', icon: <LayoutDashboard size={18} />, path: '/penyedia/dashboard' },
+    ];
+
     const bottomMenu = [
         { label: 'Profil', icon: <Users size={18} />, path: `/${role}/profil` },
-        { label: 'Aktivitas', icon: <Activity size={18} />, path: `/${role}/aktivitas` },
+        ...(role !== 'penyedia' ? [{ label: 'Aktivitas', icon: <Activity size={18} />, path: `/${role}/aktivitas` }] : []),
     ];
 
     const getMenu = () => {
@@ -132,6 +137,7 @@ const Sidebar = ({ collapsed, onToggle, className = '' }) => {
             case 'verifikator': return verifikatorMenu;
             case 'korwil': return korwilMenu;
             case 'sekolah': return sekolahMenu;
+            case 'penyedia': return penyediaMenu;
             default: return [];
         }
     };
