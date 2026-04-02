@@ -4,7 +4,7 @@ import {
     LayoutDashboard, Database, FileText, DollarSign, Activity, Users, FileSpreadsheet,
     History, Grid3X3, FilePlus, Wallet, Map, Upload, Trophy, LogOut, School,
     ChevronLeft, ChevronRight, CheckCircle, Star, ClipboardList, Eye,
-    Shield, HardDrive, Timer, Megaphone, Briefcase
+    Shield, HardDrive, Timer, Megaphone, Briefcase, ClipboardCheck
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import useSettingsStore, { ALL_MENUS } from '../../store/settingsStore';
@@ -85,6 +85,7 @@ const Sidebar = ({ collapsed, onToggle, className = '' }) => {
         { label: 'Ranking & Prioritas', icon: <Star size={18} />, path: '/admin/ranking' },
         { label: 'Iklan', icon: <Megaphone size={18} />, path: '/admin/iklan' },
         { label: 'Manajemen Penyedia', icon: <Briefcase size={18} />, path: '/admin/manajemen-penyedia' },
+        { label: 'Manajemen Kontrak', icon: <ClipboardCheck size={18} />, path: '/admin/manajemen-kontrak' },
     ]);
 
     const adminSettingsMenu = filterByAccess([
@@ -109,6 +110,7 @@ const Sidebar = ({ collapsed, onToggle, className = '' }) => {
         { label: 'Prestasi', icon: <Trophy size={18} />, path: '/verifikator/prestasi' },
         { label: 'Iklan', icon: <Megaphone size={18} />, path: '/verifikator/iklan' },
         { label: 'Manajemen Penyedia', icon: <Briefcase size={18} />, path: '/verifikator/manajemen-penyedia' },
+        { label: 'Manajemen Kontrak', icon: <ClipboardCheck size={18} />, path: '/verifikator/manajemen-kontrak' },
     ]);
 
     const korwilMenu = filterByAccess([
@@ -135,6 +137,7 @@ const Sidebar = ({ collapsed, onToggle, className = '' }) => {
 
     const penyediaMenu = [
         { label: 'Dashboard', icon: <LayoutDashboard size={18} />, path: '/penyedia/dashboard' },
+        { label: 'Riwayat Kontrak', icon: <History size={18} />, path: '/penyedia/riwayat-kontrak' },
     ];
 
     const bottomMenu = [

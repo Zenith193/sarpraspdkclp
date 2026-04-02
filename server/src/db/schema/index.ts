@@ -11,3 +11,4 @@ export { korwilAssignment, aktivitas, appSettings, riwayatBantuan } from './sett
 export { iklan } from './iklan';
 export { arsipRekomendasi, arsipChecklist } from './arsipDokumen';
 export { perusahaan } from './perusahaan';
+export { permohonanKontrak, realisasi } from './kontrak';

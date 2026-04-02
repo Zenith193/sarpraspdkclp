@@ -39,6 +39,9 @@ import DashboardSekolah from './pages/sekolah/DashboardSekolah';
 
 // Penyedia
 import DashboardPenyedia from './pages/penyedia/DashboardPenyedia';
+import PermohonanKontrak from './pages/penyedia/PermohonanKontrak';
+import RiwayatKontrakPenyedia from './pages/penyedia/RiwayatKontrakPenyedia';
+import ManajemenKontrak from './pages/admin/ManajemenKontrak';
 
 // Public
 import RegistrasiPenyedia from './pages/RegistrasiPenyedia';
@@ -127,6 +130,7 @@ function App() {
           <Route path="countdown-settings" element={<CountdownSettings />} />
           <Route path="iklan" element={<Iklan />} />
           <Route path="manajemen-penyedia" element={<ManajemenPenyedia />} />
+          <Route path="manajemen-kontrak" element={<ManajemenKontrak />} />
           <Route path="profil" element={<ProfilPengguna />} />
         </Route>
 
@@ -147,6 +151,7 @@ function App() {
           <Route path="prestasi" element={<Prestasi />} />
           <Route path="iklan" element={<Iklan />} />
           <Route path="manajemen-penyedia" element={<ManajemenPenyedia />} />
+          <Route path="manajemen-kontrak" element={<ManajemenKontrak />} />
           <Route path="profil" element={<ProfilPengguna />} />
           <Route path="aktivitas" element={<AktivitasPengguna />} />
         </Route>
@@ -182,6 +187,8 @@ function App() {
         {/* Penyedia Routes */}
         <Route path="/penyedia" element={<ProtectedRoute allowedRoles={['penyedia']}><AppLayout /></ProtectedRoute>}>
           <Route path="dashboard" element={<DashboardPenyedia />} />
+          <Route path="permohonan-kontrak" element={<PermohonanKontrak />} />
+          <Route path="riwayat-kontrak" element={<RiwayatKontrakPenyedia />} />
           <Route path="profil" element={<ProfilPengguna />} />
         </Route>
 

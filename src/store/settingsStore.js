@@ -10,7 +10,7 @@ const DEFAULT_ACCESS = {
         'pencairan', 'manajemen-korwil', 'form-kerusakan', 'prestasi',
         'verifikasi-sarpras', 'verifikasi-proposal', 'ranking',
         'hak-akses', 'pengaturan-nas', 'countdown-settings', 'iklan',
-        'manajemen-penyedia'
+        'manajemen-penyedia', 'manajemen-kontrak'
     ],
     verifikator: [
         'dashboard', 'data-sarpras', 'proposal',
@@ -18,7 +18,7 @@ const DEFAULT_ACCESS = {
         'ranking', 'riwayat-bantuan',
         'manajemen-template', 'matriks-kegiatan', 'create-bast',
         'pencairan', 'form-kerusakan', 'prestasi', 'iklan',
-        'manajemen-penyedia'
+        'manajemen-penyedia', 'manajemen-kontrak'
     ],
     korwil: [
         'dashboard', 'verifikasi-sarpras', 'verifikasi-proposal',
@@ -56,6 +56,7 @@ export const ALL_MENUS = {
         { path: 'countdown-settings', label: 'Countdown Timer' },
         { path: 'iklan', label: 'Iklan' },
         { path: 'manajemen-penyedia', label: 'Manajemen Penyedia' },
+        { path: 'manajemen-kontrak', label: 'Manajemen Kontrak' },
     ],
     verifikator: [
         { path: 'dashboard', label: 'Dashboard' },
@@ -73,6 +74,7 @@ export const ALL_MENUS = {
         { path: 'prestasi', label: 'Prestasi' },
         { path: 'iklan', label: 'Iklan' },
         { path: 'manajemen-penyedia', label: 'Manajemen Penyedia' },
+        { path: 'manajemen-kontrak', label: 'Manajemen Kontrak' },
     ],
     korwil: [
         { path: 'dashboard', label: 'Dashboard Korwil' },

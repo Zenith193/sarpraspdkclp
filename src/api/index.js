@@ -258,3 +258,18 @@ export const perusahaanApi = {
     update: (id, data) => api.put(`/perusahaan/${id}`, data),
     delete: (id) => api.delete(`/perusahaan/${id}`),
 };
+
+export const kontrakApi = {
+    searchSirup: (kode) => api.get(`/kontrak/search-sirup?kode=${encodeURIComponent(kode)}`),
+    createPermohonan: (formData) => api.post('/kontrak/permohonan', formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+    listPermohonan: () => api.get('/kontrak/permohonan'),
+    getPermohonan: (id) => api.get(`/kontrak/permohonan/${id}`),
+    updatePermohonan: (id, data) => api.put(`/kontrak/permohonan/${id}`, data),
+    deletePermohonan: (id) => api.delete(`/kontrak/permohonan/${id}`),
+    getStats: () => api.get('/kontrak/stats'),
+    // Realisasi
+    listRealisasi: (kontrakId) => api.get(`/kontrak/permohonan/${kontrakId}/realisasi`),
+    createRealisasi: (kontrakId, formData) => api.post(`/kontrak/permohonan/${kontrakId}/realisasi`, formData, { headers: { 'Content-Type': 'multipart/form-data' } }),
+    updateRealisasi: (id, data) => api.put(`/kontrak/realisasi/${id}`, data),
+    deleteRealisasi: (id) => api.delete(`/kontrak/realisasi/${id}`),
+};

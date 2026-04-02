@@ -34,6 +34,7 @@ import dashboardRoutes from './routes/dashboard.routes.js';
 import iklanRoutes from './routes/iklan.routes.js';
 import arsipDokumenRoutes from './routes/arsipDokumen.routes.js';
 import perusahaanRoutes from './routes/perusahaan.routes.js';
+import kontrakRoutes from './routes/kontrak.routes.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -682,6 +683,7 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/iklan', iklanRoutes);
 app.use('/api/arsip-dokumen', arsipDokumenRoutes);
 app.use('/api/perusahaan', perusahaanRoutes);
+app.use('/api/kontrak', kontrakRoutes);
 
 // ===== PUBLIC STATS (no auth required for login page) =====
 
@@ -890,6 +892,51 @@ async function autoMigrate() {
         `ALTER TABLE sekolah ADD COLUMN IF NOT EXISTS denah_upload_status TEXT DEFAULT 'done'`,
         `ALTER TABLE iklan ALTER COLUMN advertiser SET DEFAULT '-'`,
         `UPDATE iklan SET advertiser = '-' WHERE advertiser IS NULL`,
+        // Kontrak tables
+        `CREATE TABLE IF NOT EXISTS permohonan_kontrak (
+            id SERIAL PRIMARY KEY,
+            perusahaan_id INTEGER NOT NULL REFERENCES perusahaan(id) ON DELETE CASCADE,
+            matrik_id INTEGER REFERENCES matrik_kegiatan(id),
+            kode_sirup TEXT NOT NULL,
+            nama_paket TEXT,
+            metode_pengadaan TEXT,
+            jenis_pengadaan TEXT,
+            no_dppl TEXT,
+            tanggal_dppl DATE,
+            no_bahpl TEXT,
+            tanggal_bahpl DATE,
+            berkas_penawaran_path TEXT,
+            no_spk TEXT,
+            nilai_kontrak BIGINT,
+            terbilang_kontrak TEXT,
+            tanggal_mulai DATE,
+            tanggal_selesai DATE,
+            waktu_penyelesaian TEXT,
+            tata_cara_pembayaran TEXT,
+            uang_muka TEXT,
+            no_sp TEXT,
+            tanggal_sp DATE,
+            id_paket TEXT,
+            status TEXT DEFAULT 'Menunggu',
+            catatan TEXT,
+            created_by TEXT REFERENCES "user"(id),
+            verified_by TEXT REFERENCES "user"(id),
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
+        )`,
+        `CREATE TABLE IF NOT EXISTS realisasi (
+            id SERIAL PRIMARY KEY,
+            kontrak_id INTEGER NOT NULL REFERENCES permohonan_kontrak(id) ON DELETE CASCADE,
+            nama_sekolah TEXT,
+            tahun INTEGER NOT NULL,
+            bulan INTEGER NOT NULL,
+            target_persen INTEGER DEFAULT 0,
+            realisasi_persen INTEGER DEFAULT 0,
+            dokumentasi_path TEXT,
+            keterangan TEXT,
+            created_by TEXT REFERENCES "user"(id),
+            created_at TIMESTAMP DEFAULT NOW()
+        )`,
     ];
     for (const m of migrations) {
         try { await db.execute(sql.raw(m)); } catch (e: any) {

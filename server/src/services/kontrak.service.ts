@@ -1,0 +1,200 @@
+import { db } from '../db/index.js';
+import { permohonanKontrak, realisasi, perusahaan, matrikKegiatan } from '../db/schema/index.js';
+import { eq, desc, and, sql } from 'drizzle-orm';
+
+export const kontrakService = {
+    // Search matrik by RUP/SiRUP code
+    async searchSirup(kode: string) {
+        const results = await db.select({
+            id: matrikKegiatan.id,
+            rup: matrikKegiatan.rup,
+            namaPaket: matrikKegiatan.namaPaket,
+            metode: matrikKegiatan.metode,
+            jenisPengadaan: matrikKegiatan.jenisPengadaan,
+            namaSekolah: matrikKegiatan.namaSekolah,
+            npsn: matrikKegiatan.npsn,
+            paguAnggaran: matrikKegiatan.paguAnggaran,
+            hps: matrikKegiatan.hps,
+        }).from(matrikKegiatan).where(eq(matrikKegiatan.rup, kode));
+        return results[0] || null;
+    },
+
+    // Create permohonan (by penyedia)
+    async createPermohonan(data: any, userId: string) {
+        // Find perusahaan linked to this user
+        const perusahaanList = await db.select().from(perusahaan).where(eq(perusahaan.userId, userId));
+        const myPerusahaan = perusahaanList[0];
+        if (!myPerusahaan) throw new Error('Perusahaan tidak ditemukan untuk akun ini');
+        if (myPerusahaan.status !== 'Diverifikasi') throw new Error('Perusahaan belum diverifikasi');
+
+        const [created] = await db.insert(permohonanKontrak).values({
+            perusahaanId: myPerusahaan.id,
+            matrikId: data.matrikId || null,
+            kodeSirup: data.kodeSirup,
+            namaPaket: data.namaPaket,
+            metodePengadaan: data.metodePengadaan,
+            jenisPengadaan: data.jenisPengadaan,
+            noDppl: data.noDppl || null,
+            tanggalDppl: data.tanggalDppl || null,
+            noBahpl: data.noBahpl || null,
+            tanggalBahpl: data.tanggalBahpl || null,
+            berkasPenawaranPath: data.berkasPenawaranPath || null,
+            status: 'Menunggu',
+            createdBy: userId,
+        }).returning();
+        return created;
+    },
+
+    // List permohonan: admin=all, penyedia=own only
+    async listPermohonan(userId: string, role: string) {
+        const isAdmin = ['admin', 'verifikator'].includes(role.toLowerCase());
+
+        if (isAdmin) {
+            return db.select({
+                id: permohonanKontrak.id,
+                kodeSirup: permohonanKontrak.kodeSirup,
+                namaPaket: permohonanKontrak.namaPaket,
+                metodePengadaan: permohonanKontrak.metodePengadaan,
+                jenisPengadaan: permohonanKontrak.jenisPengadaan,
+                status: permohonanKontrak.status,
+                nilaiKontrak: permohonanKontrak.nilaiKontrak,
+                noSpk: permohonanKontrak.noSpk,
+                createdAt: permohonanKontrak.createdAt,
+                namaPerusahaan: perusahaan.namaPerusahaan,
+                perusahaanId: permohonanKontrak.perusahaanId,
+            }).from(permohonanKontrak)
+              .leftJoin(perusahaan, eq(permohonanKontrak.perusahaanId, perusahaan.id))
+              .orderBy(desc(permohonanKontrak.createdAt));
+        }
+
+        // Penyedia: only own
+        const myPerusahaan = await db.select().from(perusahaan).where(eq(perusahaan.userId, userId));
+        if (!myPerusahaan[0]) return [];
+
+        return db.select({
+            id: permohonanKontrak.id,
+            kodeSirup: permohonanKontrak.kodeSirup,
+            namaPaket: permohonanKontrak.namaPaket,
+            metodePengadaan: permohonanKontrak.metodePengadaan,
+            jenisPengadaan: permohonanKontrak.jenisPengadaan,
+            status: permohonanKontrak.status,
+            nilaiKontrak: permohonanKontrak.nilaiKontrak,
+            noSpk: permohonanKontrak.noSpk,
+            createdAt: permohonanKontrak.createdAt,
+            namaPerusahaan: perusahaan.namaPerusahaan,
+            perusahaanId: permohonanKontrak.perusahaanId,
+        }).from(permohonanKontrak)
+          .leftJoin(perusahaan, eq(permohonanKontrak.perusahaanId, perusahaan.id))
+          .where(eq(permohonanKontrak.perusahaanId, myPerusahaan[0].id))
+          .orderBy(desc(permohonanKontrak.createdAt));
+    },
+
+    // Get single permohonan detail
+    async getById(id: number) {
+        const results = await db.select({
+            kontrak: permohonanKontrak,
+            namaPerusahaan: perusahaan.namaPerusahaan,
+            namaPerusahaanSingkat: perusahaan.namaPerusahaanSingkat,
+            nikPemilik: perusahaan.nikPemilik,
+            namaPemilik: perusahaan.namaPemilik,
+            alamatPemilik: perusahaan.alamatPemilik,
+            alamatPerusahaan: perusahaan.alamatPerusahaan,
+            noTelp: perusahaan.noTelp,
+            emailPerusahaan: perusahaan.emailPerusahaan,
+            noAkta: perusahaan.noAkta,
+            namaNotaris: perusahaan.namaNotaris,
+            tanggalAkta: perusahaan.tanggalAkta,
+            npwp: perusahaan.npwp,
+            noRekening: perusahaan.noRekening,
+            namaRekening: perusahaan.namaRekening,
+            bank: perusahaan.bank,
+        }).from(permohonanKontrak)
+          .leftJoin(perusahaan, eq(permohonanKontrak.perusahaanId, perusahaan.id))
+          .where(eq(permohonanKontrak.id, id));
+        if (!results[0]) return null;
+        return { ...results[0].kontrak, perusahaan: { ...results[0] } };
+    },
+
+    // Verifikator: update SPK, SP/SPMK, verify
+    async updateByVerifikator(id: number, data: any, userId: string) {
+        const [updated] = await db.update(permohonanKontrak).set({
+            noSpk: data.noSpk,
+            nilaiKontrak: data.nilaiKontrak ? Number(data.nilaiKontrak) : undefined,
+            terbilangKontrak: data.terbilangKontrak,
+            tanggalMulai: data.tanggalMulai,
+            tanggalSelesai: data.tanggalSelesai,
+            waktuPenyelesaian: data.waktuPenyelesaian,
+            tataCaraPembayaran: data.tataCaraPembayaran,
+            uangMuka: data.uangMuka,
+            noSp: data.noSp,
+            tanggalSp: data.tanggalSp,
+            idPaket: data.idPaket,
+            status: data.status || undefined,
+            catatan: data.catatan,
+            verifiedBy: data.status === 'Diverifikasi' ? userId : undefined,
+            updatedAt: new Date(),
+        }).where(eq(permohonanKontrak.id, id)).returning();
+        return updated;
+    },
+
+    // Delete permohonan
+    async deletePermohonan(id: number) {
+        await db.delete(permohonanKontrak).where(eq(permohonanKontrak.id, id));
+    },
+
+    // ===== REALISASI =====
+    async listRealisasi(kontrakId: number) {
+        return db.select().from(realisasi)
+            .where(eq(realisasi.kontrakId, kontrakId))
+            .orderBy(desc(realisasi.tahun), desc(realisasi.bulan));
+    },
+
+    async createRealisasi(kontrakId: number, data: any, userId: string) {
+        const [created] = await db.insert(realisasi).values({
+            kontrakId,
+            namaSekolah: data.namaSekolah,
+            tahun: Number(data.tahun),
+            bulan: Number(data.bulan),
+            targetPersen: Number(data.targetPersen || 0),
+            realisasiPersen: Number(data.realisasiPersen || 0),
+            dokumentasiPath: data.dokumentasiPath || null,
+            keterangan: data.keterangan || null,
+            createdBy: userId,
+        }).returning();
+        return created;
+    },
+
+    async updateRealisasi(id: number, data: any) {
+        const [updated] = await db.update(realisasi).set({
+            namaSekolah: data.namaSekolah,
+            tahun: data.tahun ? Number(data.tahun) : undefined,
+            bulan: data.bulan ? Number(data.bulan) : undefined,
+            targetPersen: data.targetPersen !== undefined ? Number(data.targetPersen) : undefined,
+            realisasiPersen: data.realisasiPersen !== undefined ? Number(data.realisasiPersen) : undefined,
+            dokumentasiPath: data.dokumentasiPath,
+            keterangan: data.keterangan,
+        }).where(eq(realisasi.id, id)).returning();
+        return updated;
+    },
+
+    async deleteRealisasi(id: number) {
+        await db.delete(realisasi).where(eq(realisasi.id, id));
+    },
+
+    // Dashboard stats for penyedia
+    async getStats(userId: string) {
+        const myPerusahaan = await db.select().from(perusahaan).where(eq(perusahaan.userId, userId));
+        if (!myPerusahaan[0]) return { total: 0, menunggu: 0, diverifikasi: 0, ditolak: 0 };
+
+        const pId = myPerusahaan[0].id;
+        const all = await db.select({ status: permohonanKontrak.status })
+            .from(permohonanKontrak).where(eq(permohonanKontrak.perusahaanId, pId));
+
+        return {
+            total: all.length,
+            menunggu: all.filter(r => r.status === 'Menunggu').length,
+            diverifikasi: all.filter(r => r.status === 'Diverifikasi').length,
+            ditolak: all.filter(r => r.status === 'Ditolak').length,
+        };
+    },
+};
