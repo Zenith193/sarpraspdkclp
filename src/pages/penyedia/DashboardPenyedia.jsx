@@ -33,10 +33,11 @@ const DashboardPenyedia = () => {
             try {
                 const [pRes, lRes] = await Promise.all([
                     fetch('/api/perusahaan/me', { credentials: 'include' }).then(r => r.ok ? r.json() : null),
-                    kontrakApi.listPermohonan().then(r => r.data).catch(() => []),
+                    kontrakApi.listPermohonan().catch(() => []),
                 ]);
                 setPerusahaan(pRes);
-                setPermohonanAktif(Array.isArray(lRes) ? lRes.filter(p => p.status === 'Menunggu') : []);
+                const list = Array.isArray(lRes) ? lRes : [];
+                setPermohonanAktif(list.filter(p => p.status === 'Menunggu'));
             } catch { }
             setLoading(false);
         };
@@ -50,15 +51,15 @@ const DashboardPenyedia = () => {
         setSearchResult(null);
         try {
             const res = await kontrakApi.searchSirup(kodeSirup.trim());
-            if (res.data) {
-                setSearchResult(res.data);
-                setNamaPaket(res.data.namaPaket || '');
-                setMetodePengadaan(res.data.metode || '');
-                setJenisPengadaan(res.data.jenisPengadaan || '');
-                setMatrikId(res.data.id || null);
+            if (res) {
+                setSearchResult(res);
+                setNamaPaket(res.namaPaket || '');
+                setMetodePengadaan(res.metode || '');
+                setJenisPengadaan(res.jenisPengadaan || '');
+                setMatrikId(res.id || null);
             }
         } catch (e) {
-            setSearchError(e?.response?.data?.error || 'Paket tidak ditemukan');
+            setSearchError(e?.message || 'Paket tidak ditemukan');
         }
         setSearchLoading(false);
     };
@@ -83,11 +84,11 @@ const DashboardPenyedia = () => {
             setStep(1); setKodeSirup(''); setNamaPaket(''); setMetodePengadaan(''); setJenisPengadaan('');
             setSearchResult(null); setNoDppl(''); setTanggalDppl(''); setNoBahpl(''); setTanggalBahpl('');
             setBerkasPenawaran(null); setMatrikId(null);
-            const lRes = await kontrakApi.listPermohonan().then(r => r.data).catch(() => []);
+            const lRes = await kontrakApi.listPermohonan().catch(() => []);
             setPermohonanAktif(Array.isArray(lRes) ? lRes.filter(p => p.status === 'Menunggu') : []);
             alert('Permohonan kontrak berhasil dikirim!');
         } catch (e) {
-            setSubmitError(e?.response?.data?.error || 'Gagal mengirim permohonan');
+            setSubmitError(e?.message || 'Gagal mengirim permohonan');
         }
         setSubmitting(false);
     };

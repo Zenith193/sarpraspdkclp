@@ -33,7 +33,7 @@ const ManajemenKontrak = () => {
 
     const load = () => {
         setLoading(true);
-        kontrakApi.listPermohonan().then(r => setData(Array.isArray(r.data) ? r.data : []))
+        kontrakApi.listPermohonan().then(r => setData(Array.isArray(r) ? r : []))
             .catch(() => {}).finally(() => setLoading(false));
     };
     useEffect(load, []);
@@ -41,7 +41,7 @@ const ManajemenKontrak = () => {
     const handleDetail = async (id) => {
         try {
             const res = await kontrakApi.getPermohonan(id);
-            const d = res.data;
+            const d = res;
             setDetail(d);
             setTab('data_dasar');
             setAgreed(false);

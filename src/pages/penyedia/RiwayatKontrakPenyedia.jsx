@@ -23,14 +23,14 @@ const RiwayatKontrakPenyedia = () => {
     const [detail, setDetail] = useState(null);
 
     useEffect(() => {
-        kontrakApi.listPermohonan().then(r => setData(Array.isArray(r.data) ? r.data : []))
+        kontrakApi.listPermohonan().then(r => setData(Array.isArray(r) ? r : []))
             .catch(() => {}).finally(() => setLoading(false));
     }, []);
 
     const handleDetail = async (id) => {
         try {
             const res = await kontrakApi.getPermohonan(id);
-            setDetail(res.data);
+            setDetail(res);
         } catch { }
     };
 
