@@ -1,13 +1,27 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Search, ArrowLeft, CheckCircle, Clock, XCircle, Building2, Loader2 } from 'lucide-react';
+import { Search, ArrowLeft, CheckCircle, Clock, XCircle, Building2, Loader2, Sun, Moon } from 'lucide-react';
 import toast from 'react-hot-toast';
+import useThemeStore from '../store/themeStore';
+
+const formatNpwp = (val) => {
+    const digits = val.replace(/\D/g, '').slice(0, 15);
+    let fmt = '';
+    for (let i = 0; i < digits.length; i++) {
+        if (i === 2 || i === 5 || i === 8) fmt += '.';
+        if (i === 9) fmt += '-';
+        if (i === 12) fmt += '.';
+        fmt += digits[i];
+    }
+    return fmt;
+};
 
 const CekVerifikasi = () => {
     const [npwp, setNpwp] = useState('');
     const [result, setResult] = useState(null);
     const [loading, setLoading] = useState(false);
     const [searched, setSearched] = useState(false);
+    const { theme, toggleTheme } = useThemeStore();
 
     const handleCheck = async (e) => {
         e.preventDefault();
@@ -38,6 +52,9 @@ const CekVerifikasi = () => {
 
     return (
         <div className="login-page" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 16px' }}>
+            <button className="login-theme-toggle" onClick={toggleTheme} title="Ganti Tema" style={{ position: 'fixed', top: 16, right: 16, zIndex: 100 }}>
+                {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
             <div style={{ maxWidth: 520, width: '100%', textAlign: 'center' }}>
                 {/* Header */}
                 <Link to="/login" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--accent-blue)', fontSize: '0.875rem', marginBottom: 24, textDecoration: 'none' }}>
@@ -58,9 +75,9 @@ const CekVerifikasi = () => {
                             <label className="form-label" style={{ fontWeight: 600 }}>NPWP <span style={{ color: 'var(--accent-red)' }}>*</span></label>
                             <div style={{ position: 'relative' }}>
                                 <Building2 size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-                                <input className="form-input" placeholder="Masukkan NPWP Perusahaan Anda (dengan tanda - dan .)" value={npwp} onChange={e => setNpwp(e.target.value)} style={{ paddingLeft: 36 }} />
+                                <input className="form-input" placeholder="Masukkan NPWP (contoh: 93.290.382.0-382.323)" value={npwp} onChange={e => setNpwp(formatNpwp(e.target.value))} style={{ paddingLeft: 36 }} />
                             </div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 6 }}>Contoh format: 12.345.678.9-012.345</div>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 6 }}>Contoh format: 93.290.382.0-382.323</div>
                         </div>
                         <button type="submit" className="btn btn-primary" disabled={loading} style={{ width: '100%', marginTop: 8, padding: '12px 20px' }}>
                             {loading ? <Loader2 size={16} className="spin" /> : <Search size={16} />}

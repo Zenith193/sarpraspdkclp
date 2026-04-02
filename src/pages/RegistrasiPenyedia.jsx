@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Building2, User, CreditCard, Lock, Eye, EyeOff, Loader2, CheckCircle, ArrowLeft, FileText, Phone, Mail, MapPin, Hash } from 'lucide-react';
+import { Building2, User, CreditCard, Lock, Eye, EyeOff, Loader2, CheckCircle, ArrowLeft, FileText, Phone, Mail, MapPin, Hash, Sun, Moon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import useThemeStore from '../store/themeStore';
 
 const INITIAL = {
-    nikPemilik: '', namaPemilik: '', jabatanPemilik: 'Direktur', alamatPemilik: '',
+    nikPemilik: '', namaPemilik: '', jabatanPemilik: 'Direktur', jabatanManual: '', alamatPemilik: '',
     namaPerusahaan: '', namaPerusahaanSingkat: '',
     noAkta: '', namaNotaris: '', tanggalAkta: '',
     alamatPerusahaan: '', noTelp: '', emailPerusahaan: '', npwp: '',
@@ -14,7 +14,18 @@ const INITIAL = {
     agree: false,
 };
 
-const BANKS = ['BRI', 'BNI', 'BCA', 'Mandiri', 'BTN', 'Bank Jateng', 'Bank Syariah Indonesia', 'Lainnya'];
+// Auto-format NPWP: 93.290.382.0-382.323
+const formatNpwp = (val) => {
+    const digits = val.replace(/\D/g, '').slice(0, 15);
+    let fmt = '';
+    for (let i = 0; i < digits.length; i++) {
+        if (i === 2 || i === 5 || i === 8) fmt += '.';
+        if (i === 9) fmt += '-';
+        if (i === 12) fmt += '.';
+        fmt += digits[i];
+    }
+    return fmt;
+};
 
 const RegistrasiPenyedia = () => {
     const [form, setForm] = useState(INITIAL);
@@ -22,7 +33,7 @@ const RegistrasiPenyedia = () => {
     const [submitting, setSubmitting] = useState(false);
     const [success, setSuccess] = useState(false);
     const navigate = useNavigate();
-    const theme = useThemeStore(s => s.theme);
+    const { theme, toggleTheme } = useThemeStore();
 
     const set = (k, v) => setForm(prev => ({ ...prev, [k]: v }));
 
@@ -37,10 +48,16 @@ const RegistrasiPenyedia = () => {
 
         setSubmitting(true);
         try {
+            const payload = { ...form };
+            if (payload.jabatanPemilik === '_manual') {
+                payload.jabatanPemilik = payload.jabatanManual || 'Lainnya';
+            }
+            delete payload.jabatanManual;
+
             const res = await fetch('/api/perusahaan/register', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(form),
+                body: JSON.stringify(payload),
             });
             const data = await res.json();
             if (!res.ok) throw new Error(data.error || 'Registrasi gagal');
@@ -82,6 +99,9 @@ const RegistrasiPenyedia = () => {
 
     return (
         <div className="login-page" style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '40px 16px' }}>
+            <button className="login-theme-toggle" onClick={toggleTheme} title="Ganti Tema" style={{ position: 'fixed', top: 16, right: 16, zIndex: 100 }}>
+                {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
             {/* Header */}
             <div style={{ textAlign: 'center', marginBottom: 32, maxWidth: 600 }}>
                 <Link to="/login" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, color: 'var(--accent-blue)', fontSize: '0.875rem', marginBottom: 16, textDecoration: 'none' }}>
@@ -102,9 +122,9 @@ const RegistrasiPenyedia = () => {
                     <div style={sectionStyle}>
                         {sectionTitle(<User size={20} style={{ color: 'var(--accent-blue)' }} />, 'Data Pemilik / Direktur')}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                            <div className="form-group"><label className="form-label">NIK <span style={{ color: 'var(--accent-red)' }}>*</span></label><input className="form-input" placeholder="Nomor Induk Kependudukan" value={form.nikPemilik} onChange={e => set('nikPemilik', e.target.value)} required /></div>
+                            <div className="form-group"><label className="form-label">NIK <span style={{ color: 'var(--accent-red)' }}>*</span></label><input className="form-input" placeholder="Nomor Induk Kependudukan" value={form.nikPemilik} onChange={e => { const v = e.target.value.replace(/\D/g, '').slice(0, 16); set('nikPemilik', v); }} maxLength={16} required /><div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: 4 }}>Maks. 16 digit angka</div></div>
                             <div className="form-group"><label className="form-label">Nama Lengkap <span style={{ color: 'var(--accent-red)' }}>*</span></label><input className="form-input" placeholder="Nama sesuai KTP" value={form.namaPemilik} onChange={e => set('namaPemilik', e.target.value)} required /></div>
-                            <div className="form-group"><label className="form-label">Jabatan</label><select className="form-select" value={form.jabatanPemilik} onChange={e => set('jabatanPemilik', e.target.value)}><option>Direktur</option><option>Wakil Sah</option><option>Pemilik</option></select></div>
+                            <div className="form-group"><label className="form-label">Jabatan</label><select className="form-select" value={form.jabatanPemilik} onChange={e => set('jabatanPemilik', e.target.value)}><option>Direktur</option><option>Kepala Cabang</option><option value="_manual">Input Manual...</option></select>{form.jabatanPemilik === '_manual' && <input className="form-input" style={{ marginTop: 8 }} placeholder="Ketik jabatan..." value={form.jabatanManual} onChange={e => set('jabatanManual', e.target.value)} />}</div>
                             <div className="form-group"><label className="form-label">Alamat (sesuai KTP)</label><input className="form-input" placeholder="Alamat lengkap" value={form.alamatPemilik} onChange={e => set('alamatPemilik', e.target.value)} /></div>
                         </div>
                     </div>
@@ -118,11 +138,11 @@ const RegistrasiPenyedia = () => {
                             <div className="form-group"><label className="form-label">No. Akta Notaris</label><input className="form-input" placeholder="Nomor akta" value={form.noAkta} onChange={e => set('noAkta', e.target.value)} /></div>
                             <div className="form-group"><label className="form-label">Nama Notaris</label><input className="form-input" placeholder="Nama notaris" value={form.namaNotaris} onChange={e => set('namaNotaris', e.target.value)} /></div>
                             <div className="form-group"><label className="form-label">Tanggal Akta</label><input className="form-input" type="date" value={form.tanggalAkta} onChange={e => set('tanggalAkta', e.target.value)} /></div>
-                            <div className="form-group"><label className="form-label">NPWP Perusahaan <span style={{ color: 'var(--accent-red)' }}>*</span></label><input className="form-input" placeholder="12.345.678.9-012.345" value={form.npwp} onChange={e => set('npwp', e.target.value)} required /></div>
+                            <div className="form-group"><label className="form-label">NPWP Perusahaan <span style={{ color: 'var(--accent-red)' }}>*</span></label><input className="form-input" placeholder="93.290.382.0-382.323" value={form.npwp} onChange={e => set('npwp', formatNpwp(e.target.value))} required /><div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: 4 }}>Format: 93.290.382.0-382.323</div></div>
                         </div>
                         <div className="form-group" style={{ marginTop: 16 }}><label className="form-label">Alamat Perusahaan</label><input className="form-input" placeholder="Alamat kantor lengkap" value={form.alamatPerusahaan} onChange={e => set('alamatPerusahaan', e.target.value)} /></div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginTop: 16 }}>
-                            <div className="form-group"><label className="form-label">No. Telepon</label><input className="form-input" placeholder="021-xxxxxxx" value={form.noTelp} onChange={e => set('noTelp', e.target.value)} /></div>
+                            <div className="form-group"><label className="form-label">No. Telepon</label><input className="form-input" placeholder="081234567890" value={form.noTelp} onChange={e => { const v = e.target.value.replace(/\D/g, '').slice(0, 13); set('noTelp', v); }} maxLength={13} /><div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: 4 }}>Maks. 13 digit angka</div></div>
                             <div className="form-group"><label className="form-label">Email Perusahaan</label><input className="form-input" type="email" placeholder="info@perusahaan.com" value={form.emailPerusahaan} onChange={e => set('emailPerusahaan', e.target.value)} /></div>
                         </div>
                     </div>
@@ -131,7 +151,7 @@ const RegistrasiPenyedia = () => {
                     <div style={sectionStyle}>
                         {sectionTitle(<CreditCard size={20} style={{ color: 'var(--accent-green)' }} />, 'Data Rekening')}
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
-                            <div className="form-group"><label className="form-label">Bank</label><select className="form-select" value={form.bank} onChange={e => set('bank', e.target.value)}><option value="">Pilih bank...</option>{BANKS.map(b => <option key={b}>{b}</option>)}</select></div>
+                            <div className="form-group"><label className="form-label">Bank</label><input className="form-input" placeholder="Ketik nama bank sesuai rekening koran" value={form.bank} onChange={e => set('bank', e.target.value)} /></div>
                             <div className="form-group"><label className="form-label">Nomor Rekening</label><input className="form-input" placeholder="123456789" value={form.noRekening} onChange={e => set('noRekening', e.target.value)} /></div>
                             <div className="form-group"><label className="form-label">Nama Pemilik Rekening</label><input className="form-input" placeholder="Atas nama..." value={form.namaRekening} onChange={e => set('namaRekening', e.target.value)} /></div>
                         </div>
