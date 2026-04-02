@@ -108,11 +108,35 @@ export const kontrakService = {
             noRekening: perusahaan.noRekening,
             namaRekening: perusahaan.namaRekening,
             bank: perusahaan.bank,
+            // Matrik data for SPK auto-fill
+            matrikNoSpk: matrikKegiatan.noSpk,
+            matrikNilaiKontrak: matrikKegiatan.nilaiKontrak,
+            matrikTerbilangKontrak: matrikKegiatan.terbilangKontrak,
+            matrikTanggalMulai: matrikKegiatan.tanggalMulai,
+            matrikTanggalSelesai: matrikKegiatan.tanggalSelesai,
+            matrikJangkaWaktu: matrikKegiatan.jangkaWaktu,
+            matrikPaguAnggaran: matrikKegiatan.paguAnggaran,
+            matrikHps: matrikKegiatan.hps,
         }).from(permohonanKontrak)
           .leftJoin(perusahaan, eq(permohonanKontrak.perusahaanId, perusahaan.id))
+          .leftJoin(matrikKegiatan, eq(permohonanKontrak.matrikId, matrikKegiatan.id))
           .where(eq(permohonanKontrak.id, id));
         if (!results[0]) return null;
-        return { ...results[0].kontrak, perusahaan: { ...results[0] } };
+        const r = results[0];
+        return {
+            ...r.kontrak,
+            perusahaan: { ...r },
+            matrik: {
+                noSpk: r.matrikNoSpk,
+                nilaiKontrak: r.matrikNilaiKontrak,
+                terbilangKontrak: r.matrikTerbilangKontrak,
+                tanggalMulai: r.matrikTanggalMulai,
+                tanggalSelesai: r.matrikTanggalSelesai,
+                jangkaWaktu: r.matrikJangkaWaktu,
+                paguAnggaran: r.matrikPaguAnggaran,
+                hps: r.matrikHps,
+            },
+        };
     },
 
     // Verifikator: update SPK, SP/SPMK, verify

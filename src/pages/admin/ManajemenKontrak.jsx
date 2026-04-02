@@ -46,12 +46,12 @@ const ManajemenKontrak = () => {
             setTab('data_dasar');
             setAgreed(false);
             setSpkData({
-                noSpk: d.noSpk || '',
-                nilaiKontrak: d.nilaiKontrak || '',
-                terbilangKontrak: d.terbilangKontrak || '',
-                tanggalMulai: d.tanggalMulai || '',
-                tanggalSelesai: d.tanggalSelesai || '',
-                waktuPenyelesaian: d.waktuPenyelesaian || '',
+                noSpk: d.noSpk || d.matrik?.noSpk || '',
+                nilaiKontrak: d.nilaiKontrak || d.matrik?.nilaiKontrak || '',
+                terbilangKontrak: d.terbilangKontrak || d.matrik?.terbilangKontrak || '',
+                tanggalMulai: d.tanggalMulai || d.matrik?.tanggalMulai || '',
+                tanggalSelesai: d.tanggalSelesai || d.matrik?.tanggalSelesai || '',
+                waktuPenyelesaian: d.waktuPenyelesaian || (d.matrik?.jangkaWaktu ? `${d.matrik.jangkaWaktu} hari kalender` : ''),
                 tataCaraPembayaran: d.tataCaraPembayaran || '',
                 uangMuka: d.uangMuka || '',
             });
