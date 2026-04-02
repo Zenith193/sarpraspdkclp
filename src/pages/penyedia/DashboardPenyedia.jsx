@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Send, CheckCircle, Upload, ArrowRight, Eye } from 'lucide-react';
+import { Search, Send, CheckCircle, Upload, ArrowRight, Eye, X } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import { kontrakApi } from '../../api';
 
@@ -14,6 +14,8 @@ const DashboardPenyedia = () => {
     const [submitError, setSubmitError] = useState('');
     const [submitting, setSubmitting] = useState(false);
     const [permohonanAktif, setPermohonanAktif] = useState([]);
+    const [detailModal, setDetailModal] = useState(null);
+    const [detailLoading, setDetailLoading] = useState(false);
 
     // Step 1
     const [kodeSirup, setKodeSirup] = useState('');
@@ -94,6 +96,16 @@ const DashboardPenyedia = () => {
     };
 
     const formatDate = (d) => d ? new Date(d).toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' }) : '-';
+    const formatCurrency = (v) => v ? `Rp. ${Number(v).toLocaleString('id-ID')}` : '-';
+
+    const handleDetail = async (id) => {
+        setDetailLoading(true);
+        try {
+            const res = await kontrakApi.getPermohonan(id);
+            setDetailModal(res);
+        } catch { }
+        setDetailLoading(false);
+    };
 
     const fieldStyle = { width: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 8, fontSize: '0.9rem', background: 'var(--bg-secondary)', color: 'var(--text-primary)', boxSizing: 'border-box' };
     const readOnlyStyle = { ...fieldStyle, background: 'var(--bg-tertiary, rgba(128,128,128,0.08))', color: 'var(--text-secondary)' };
@@ -290,7 +302,7 @@ const DashboardPenyedia = () => {
                                         <td>{p.metodePengadaan}</td>
                                         <td>{formatDate(p.createdAt)}</td>
                                         <td>
-                                            <button style={{ padding: '6px 14px', border: 'none', borderRadius: 6, background: 'var(--accent-blue)', color: '#fff', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                            <button onClick={() => handleDetail(p.id)} style={{ padding: '6px 14px', border: 'none', borderRadius: 6, background: 'var(--accent-blue)', color: '#fff', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                                                 <Eye size={14} /> Detail
                                             </button>
                                         </td>
@@ -298,6 +310,66 @@ const DashboardPenyedia = () => {
                                 ))}
                             </tbody>
                         </table>
+                    </div>
+                </div>
+            )}
+            {/* Detail Modal */}
+            {detailModal && (
+                <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }} onClick={() => setDetailModal(null)} />
+                    <div style={{ position: 'relative', background: 'var(--bg-primary)', borderRadius: 16, width: 'min(90vw, 720px)', maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+                        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3 style={{ margin: 0 }}>📋 Detail Permohonan</h3>
+                            <button onClick={() => setDetailModal(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+                        </div>
+                        <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
+                                {[
+                                    ['Kode SiRUP', detailModal.kodeSirup],
+                                    ['Nama Paket', detailModal.namaPaket],
+                                    ['Jenis Pengadaan', detailModal.jenisPengadaan],
+                                    ['Metode Pengadaan', detailModal.metodePengadaan],
+                                    ['No DPPL', detailModal.noDppl],
+                                    ['Tanggal DPPL', formatDate(detailModal.tanggalDppl)],
+                                    ['No BAHPL', detailModal.noBahpl],
+                                    ['Tanggal BAHPL', formatDate(detailModal.tanggalBahpl)],
+                                    ['Status', detailModal.status],
+                                    ['Tanggal Pengajuan', formatDate(detailModal.createdAt)],
+                                ].map(([l, v]) => (
+                                    <div key={l} style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: 14 }}>
+                                        <div style={{ fontSize: '0.78rem', color: 'var(--accent-blue)', marginBottom: 4 }}>{l}</div>
+                                        <div style={{ fontSize: '0.9rem' }}>{v || '-'}</div>
+                                    </div>
+                                ))}
+                            </div>
+                            {detailModal.berkasPenawaranPath && (
+                                <div style={{ background: 'rgba(59,130,246,0.08)', borderRadius: 8, padding: 16 }}>
+                                    <div style={{ fontSize: '0.82rem', color: 'var(--accent-blue)', fontWeight: 600, marginBottom: 8 }}>Berkas Penawaran</div>
+                                    <a href={detailModal.berkasPenawaranPath} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-blue)', textDecoration: 'underline' }}>📄 Lihat Dokumen PDF</a>
+                                </div>
+                            )}
+                            {detailModal.status === 'Diverifikasi' && (
+                                <>
+                                    <hr style={{ margin: '20px 0', border: 'none', borderTop: '1px solid var(--border)' }} />
+                                    <h4 style={{ marginBottom: 12 }}>Data Kontrak (dari Verifikator)</h4>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                                        {[
+                                            ['No SPK', detailModal.noSpk],
+                                            ['Nilai Kontrak', formatCurrency(detailModal.nilaiKontrak)],
+                                            ['Terbilang', detailModal.terbilangKontrak],
+                                            ['Tanggal Mulai', formatDate(detailModal.tanggalMulai)],
+                                            ['Tanggal Selesai', formatDate(detailModal.tanggalSelesai)],
+                                            ['Waktu Penyelesaian', detailModal.waktuPenyelesaian],
+                                        ].map(([l, v]) => (
+                                            <div key={l} style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: 14 }}>
+                                                <div style={{ fontSize: '0.78rem', color: 'var(--accent-blue)', marginBottom: 4 }}>{l}</div>
+                                                <div style={{ fontSize: '0.9rem' }}>{v || '-'}</div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
