@@ -358,8 +358,8 @@ const ManajemenKontrak = () => {
                                     <div style={{ ...cs, marginBottom: 24 }}><div style={rl}>Uang Muka</div>
                                         <select style={fieldStyle} value={spkData.uangMuka} onChange={e => setSpkData({ ...spkData, uangMuka: e.target.value })}>
                                             <option value="">Pilih Uang Muka</option>
-                                            <option value="Tidak Ada">Tidak Ada</option>
-                                            <option value="Ada">Ada</option>
+                                            <option value="Ada Uang Muka">Ada Uang Muka</option>
+                                            <option value="Tidak Ada Uang Muka">Tidak Ada Uang Muka</option>
                                         </select>
                                     </div>
 
