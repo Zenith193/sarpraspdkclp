@@ -7,7 +7,6 @@ const DashboardPenyedia = () => {
     const user = useAuthStore(s => s.user);
     const [perusahaan, setPerusahaan] = useState(null);
     const [loading, setLoading] = useState(true);
-    const [step, setStep] = useState(1); // 1=dasar, 2=dppl/bahpl, 3=lampiran
     const [searchLoading, setSearchLoading] = useState(false);
     const [searchResult, setSearchResult] = useState(null);
     const [searchError, setSearchError] = useState('');
@@ -29,8 +28,8 @@ const DashboardPenyedia = () => {
     const [noBahpl, setNoBahpl] = useState('');
     const [tanggalBahpl, setTanggalBahpl] = useState('');
     const [berkasPenawaran, setBerkasPenawaran] = useState(null);
-    // Lampiran step
-    const [showLampiran, setShowLampiran] = useState(false);
+    // Lampiran
+    const [saved, setSaved] = useState(false);
     const [agreedLampiran, setAgreedLampiran] = useState(false);
     const emptyTim = { nama: '', posisi: '', statusTenaga: '', pendidikan: '', pengalaman: '', sertifikasi: '', keterangan: '', jadwal: Array(12).fill(false) };
     const emptyPeralatan = { nama: '', merk: '', type: '', kapasitas: '', jumlah: '', kondisi: '', statusKepemilikan: '', keterangan: '' };
@@ -108,10 +107,10 @@ const DashboardPenyedia = () => {
             if (berkasPenawaran) formData.append('berkasPenawaran', berkasPenawaran);
             await kontrakApi.createPermohonan(formData);
             // Reset & reload
-            setStep(1); setKodeSirup(''); setNamaPaket(''); setMetodePengadaan(''); setJenisPengadaan('');
+            setKodeSirup(''); setNamaPaket(''); setMetodePengadaan(''); setJenisPengadaan('');
             setSearchResult(null); setNoDppl(''); setTanggalDppl(''); setNoBahpl(''); setTanggalBahpl('');
             setBerkasPenawaran(null); setMatrikId(null);
-            setShowLampiran(false); setAgreedLampiran(false);
+            setSaved(false); setAgreedLampiran(false);
             setTimInput({ ...emptyTim }); setTimRows([]);
             setPeralatanInput({ ...emptyPeralatan }); setPeralatanRows([]);
             const lRes = await kontrakApi.listPermohonan().catch(() => []);
@@ -165,8 +164,7 @@ const DashboardPenyedia = () => {
 
             {submitError && <div style={{ padding: 14, borderRadius: 8, background: 'rgba(239,68,68,0.1)', color: '#ef4444', marginBottom: 20, fontSize: '0.875rem' }}>{submitError}</div>}
 
-            {/* ===== STEP 1: Data Perusahaan + SiRUP ===== */}
-            {step === 1 && (
+            {/* ===== Data Perusahaan + SiRUP ===== */}
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 28 }}>
                     {/* LEFT: Company Data (read-only) */}
                     <div>
@@ -245,19 +243,12 @@ const DashboardPenyedia = () => {
                             <label style={labelStyle}>Jenis Pengadaan</label>
                             <input style={readOnlyStyle} value={jenisPengadaan} readOnly />
                         </div>
-
-                        <button onClick={() => setStep(2)} disabled={!searchResult}
-                            style={{ width: '100%', padding: '14px 0', border: 'none', borderRadius: 10, background: searchResult ? 'var(--accent-blue)' : '#9ca3af', color: '#fff', cursor: searchResult ? 'pointer' : 'not-allowed', fontWeight: 700, fontSize: '0.95rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.3s' }}>
-                            <Send size={18} /> LANJUT PERMOHONAN
-                        </button>
                     </div>
                 </div>
-            )}
 
-            {/* ===== STEP 2: DPPL, BAHPL, Upload ===== */}
-            {step === 2 && (
-                <div style={{ maxWidth: 900, margin: '0 auto' }}>
-                    <button onClick={() => setStep(1)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent-blue)', fontSize: '0.875rem', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 4 }}>← Kembali ke Data Dasar</button>
+                {/* ===== DPPL, BAHPL, Upload ===== */}
+                {searchResult && (
+                    <div style={{ maxWidth: 900, margin: '0 auto', marginTop: 24 }}>
 
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
                         <div>
@@ -293,17 +284,14 @@ const DashboardPenyedia = () => {
                         <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: 10 }}>ℹ️ Maksimum ukuran file 10MB dalam format PDF</div>
                     </div>
 
-                    <button onClick={() => setShowLampiran(true)}
+                    <button onClick={() => setSaved(true)}
                         style={{ width: '100%', padding: '14px 0', border: 'none', borderRadius: 10, background: 'var(--accent-blue)', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                         <Send size={18} /> 💾 Simpan Data Permohonan
                     </button>
-                </div>
-            )}
 
-            {/* ===== LAMPIRAN DOKUMEN ===== */}
-            {showLampiran && step >= 2 && (
-                <div style={{ marginTop: 30 }}>
-                    <h3 style={{ margin: '0 0 16px', fontSize: '1.05rem' }}>Lampiran Dokumen</h3>
+                    {/* ===== LAMPIRAN DOKUMEN ===== */}
+                    <div style={{ marginTop: 30 }}>
+                        <h3 style={{ margin: '0 0 16px', fontSize: '1.05rem' }}>Lampiran Dokumen</h3>
 
                     {/* KOMPOSISI TIM */}
                     <h4 style={{ margin: '0 0 10px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}>👥 KOMPOSISI TIM DAN PENUGASAN</h4>
@@ -428,10 +416,11 @@ const DashboardPenyedia = () => {
                         <Send size={18} /> {submitting ? 'Mengirim...' : '✈️ Kirimkan Permohonan Kontrak'}
                     </button>
                 </div>
-            )}
+                </div>
+                )}
 
             {/* ===== Permohonan Dalam Proses ===== */}
-            {step === 1 && permohonanAktif.length > 0 && (
+            {permohonanAktif.length > 0 && (
                 <div style={{ marginTop: 40 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                         <h3 style={{ margin: 0, fontSize: '1.05rem', display: 'flex', alignItems: 'center', gap: 8 }}>
