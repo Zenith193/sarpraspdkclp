@@ -254,10 +254,7 @@ const DashboardPenyedia = () => {
             <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
                 {[
                     { id: 'data-dasar', label: 'Data Dasar' },
-                    { id: 'spk', label: 'SPK' },
                     { id: 'lampiran', label: 'Lampiran' },
-                    { id: 'spspmk', label: 'SP/SPMK' },
-                    { id: 'verifikasi', label: 'Verifikasi' },
                 ].map(t => (
                     <button key={t.id} onClick={() => setActiveTab(t.id)}
                         style={{
@@ -455,14 +452,6 @@ const DashboardPenyedia = () => {
                 </div>
             )}
 
-            {/* ===== TAB: SPK / SP-SPMK / VERIFIKASI (placeholder) ===== */}
-            {(activeTab === 'spk' || activeTab === 'spspmk' || activeTab === 'verifikasi') && (
-                <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-secondary)' }}>
-                    <div style={{ fontSize: 48, marginBottom: 16 }}>📋</div>
-                    <h3 style={{ marginBottom: 8 }}>{activeTab === 'spk' ? 'SPK' : activeTab === 'spspmk' ? 'SP/SPMK' : 'Verifikasi'}</h3>
-                    <p style={{ fontSize: '0.9rem' }}>Tahap ini akan diisi setelah proses verifikasi oleh admin.</p>
-                </div>
-            )}
 
             </>)}
 
