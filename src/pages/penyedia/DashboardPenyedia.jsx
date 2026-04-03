@@ -332,11 +332,11 @@ const DashboardPenyedia = () => {
 
             {/* === SECTION: LAMPIRAN (appears after Simpan Data Dasar) === */}
             {completed['data-dasar'] && (
-                <div>
+                <div style={{ overflow: 'hidden' }}>
                     <h3 style={{ margin: '0 0 16px', fontSize: '1.05rem' }}>Lampiran Dokumen</h3>
 
                     <h4 style={{ margin: '0 0 10px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}>👥 KOMPOSISI TIM DAN PENUGASAN</h4>
-                    <div style={{ overflowX: 'auto', marginBottom: 24 }}>
+                    <div style={{ overflowX: 'auto', marginBottom: 24, maxWidth: 'calc(100vw - 120px)' }}>
                         <table className="data-table" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
                             <thead>
                                 <tr>
@@ -378,7 +378,7 @@ const DashboardPenyedia = () => {
                     </div>
 
                     <h4 style={{ margin: '0 0 10px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}>🔧 PERALATAN UTAMA (Apabila dipersyaratkan)</h4>
-                    <div style={{ overflowX: 'auto', marginBottom: 30 }}>
+                    <div style={{ overflowX: 'auto', marginBottom: 30, maxWidth: 'calc(100vw - 120px)' }}>
                         <table className="data-table" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
                             <thead><tr><th>Nama Peralatan</th><th>Merk</th><th>Type</th><th>Kapasitas</th><th>Jumlah</th><th>Kondisi</th><th>Status Kepemilikan</th><th>Keterangan</th><th>Aksi</th></tr></thead>
                             <tbody>
