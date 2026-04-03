@@ -60,6 +60,7 @@ const ManajemenKontrak = () => {
     const [agreed, setAgreed] = useState(false);
     const [spkAgreed, setSpkAgreed] = useState(false);
     const [nilaiItems, setNilaiItems] = useState([]);
+    const [editDppl, setEditDppl] = useState({ noDppl: '', tanggalDppl: '', noBahpl: '', tanggalBahpl: '' });
     const [tabSaved, setTabSaved] = useState({ data_dasar: false, spk: false, lampiran: false, sp_spmk: false, verifikasi: false });
 
     const load = () => {
@@ -125,6 +126,12 @@ const ManajemenKontrak = () => {
                 tanggalSp: d.tanggalSp || '',
                 idPaket: d.idPaket || d.kodeSirup || '',
             });
+            setEditDppl({
+                noDppl: d.noDppl || '',
+                tanggalDppl: d.tanggalDppl || '',
+                noBahpl: d.noBahpl || '',
+                tanggalBahpl: d.tanggalBahpl || '',
+            });
         } catch { }
     };
 
@@ -136,6 +143,18 @@ const ManajemenKontrak = () => {
             setTabSaved(prev => ({ ...prev, spk: true }));
             showToast('Data SPK berhasil disimpan');
         } catch { showToast('Gagal menyimpan SPK', true); }
+        setSaving(false);
+    };
+
+    const handleSaveDppl = async () => {
+        if (!detail) return;
+        setSaving(true);
+        try {
+            await kontrakApi.updatePermohonan(detail.id, editDppl);
+            setDetail(prev => ({ ...prev, ...editDppl }));
+            setTabSaved(prev => ({ ...prev, lampiran: true }));
+            showToast('Data DPPL/BAHPL berhasil disimpan');
+        } catch { showToast('Gagal menyimpan DPPL/BAHPL', true); }
         setSaving(false);
     };
 
@@ -351,13 +370,14 @@ const ManajemenKontrak = () => {
                                         <div style={cs}><div style={cl}>Satuan Kerja</div><div style={cv}>{detail.matrik?.sumberDana || 'APBD'}</div></div>
                                     </div>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-                                        <div style={cs}><div style={cl}>Nomor DPPL</div><div style={cv}>{detail.noDppl || '-'}</div></div>
-                                        <div style={cs}><div style={cl}>Tanggal DPPL</div><div style={cv}>{formatDate(detail.tanggalDppl)}</div></div>
+                                        <div style={cs}><div style={cl}>Nomor DPPL</div><input style={{ ...fieldStyle, marginTop: 4 }} value={editDppl.noDppl} onChange={e => setEditDppl(p => ({ ...p, noDppl: e.target.value }))} placeholder="Nomor DPPL" /></div>
+                                        <div style={cs}><div style={cl}>Tanggal DPPL</div><input type="date" style={{ ...fieldStyle, marginTop: 4 }} value={editDppl.tanggalDppl} onChange={e => setEditDppl(p => ({ ...p, tanggalDppl: e.target.value }))} /></div>
                                     </div>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-                                        <div style={cs}><div style={cl}>Nomor BAHPL</div><div style={cv}>{detail.noBahpl || '-'}</div></div>
-                                        <div style={cs}><div style={cl}>Tanggal BAHPL</div><div style={cv}>{formatDate(detail.tanggalBahpl)}</div></div>
+                                        <div style={cs}><div style={cl}>Nomor BAHPL</div><input style={{ ...fieldStyle, marginTop: 4 }} value={editDppl.noBahpl} onChange={e => setEditDppl(p => ({ ...p, noBahpl: e.target.value }))} placeholder="Nomor BAHPL" /></div>
+                                        <div style={cs}><div style={cl}>Tanggal BAHPL</div><input type="date" style={{ ...fieldStyle, marginTop: 4 }} value={editDppl.tanggalBahpl} onChange={e => setEditDppl(p => ({ ...p, tanggalBahpl: e.target.value }))} /></div>
                                     </div>
+                                    <button onClick={handleSaveDppl} disabled={saving} style={{ padding: '10px 24px', border: 'none', borderRadius: 8, background: 'var(--accent-blue)', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}><Save size={16} /> {saving ? 'Menyimpan...' : 'Simpan DPPL / BAHPL'}</button>
                                     {detail.berkasPenawaranPath && (
                                         <div style={{ ...cs, marginBottom: 12 }}><div style={cl}>Berkas Penawaran</div>
                                             <a href={detail.berkasPenawaranPath} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-blue)', textDecoration: 'underline', fontSize: '0.875rem' }}>📄 Lihat Dokumen PDF</a>
