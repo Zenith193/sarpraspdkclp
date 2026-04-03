@@ -289,7 +289,8 @@ const DashboardPenyedia = () => {
                         <Send size={18} /> 💾 Simpan Data Permohonan
                     </button>
 
-                    {/* ===== LAMPIRAN DOKUMEN ===== */}
+                    {/* ===== LAMPIRAN DOKUMEN (muncul setelah Simpan) ===== */}
+                    {saved && (
                     <div style={{ marginTop: 30 }}>
                         <h3 style={{ margin: '0 0 16px', fontSize: '1.05rem' }}>Lampiran Dokumen</h3>
 
@@ -416,6 +417,7 @@ const DashboardPenyedia = () => {
                         <Send size={18} /> {submitting ? 'Mengirim...' : '✈️ Kirimkan Permohonan Kontrak'}
                     </button>
                 </div>
+                    )}
                 </div>
                 )}
 
