@@ -30,6 +30,7 @@ export const permohonanKontrak = pgTable('permohonan_kontrak', {
     waktuPenyelesaian: text('waktu_penyelesaian'),
     tataCaraPembayaran: text('tata_cara_pembayaran'),
     uangMuka: text('uang_muka'),
+    nilaiItems: text('nilai_items'), // JSON array of {nama, nilai} for child packages
     // SP/SPMK (filled by verifikator)
     noSp: text('no_sp'),
     tanggalSp: date('tanggal_sp'),

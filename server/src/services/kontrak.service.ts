@@ -150,6 +150,7 @@ export const kontrakService = {
             waktuPenyelesaian: data.waktuPenyelesaian,
             tataCaraPembayaran: data.tataCaraPembayaran,
             uangMuka: data.uangMuka,
+            nilaiItems: data.nilaiItems !== undefined ? data.nilaiItems : undefined,
             noSp: data.noSp,
             tanggalSp: data.tanggalSp,
             idPaket: data.idPaket,

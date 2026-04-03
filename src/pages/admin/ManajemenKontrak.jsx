@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ClipboardCheck, Eye, Search, X, CheckCircle, XCircle, Clock, Save, ChevronRight } from 'lucide-react';
+import { ClipboardCheck, Eye, Search, X, CheckCircle, XCircle, Clock, Save, ChevronRight, Plus, Minus } from 'lucide-react';
 import { kontrakApi } from '../../api';
 
 // ===== Number to Terbilang (Indonesian) =====
@@ -59,6 +59,7 @@ const ManajemenKontrak = () => {
     const [spSpmkData, setSpSpmkData] = useState({});
     const [agreed, setAgreed] = useState(false);
     const [spkAgreed, setSpkAgreed] = useState(false);
+    const [nilaiItems, setNilaiItems] = useState([]);
 
     const load = () => {
         setLoading(true);
@@ -76,11 +77,13 @@ const ManajemenKontrak = () => {
             setAgreed(false);
             const nk = d.nilaiKontrak || d.matrik?.nilaiKontrak || '';
             const wp = d.waktuPenyelesaian || (d.matrik?.jangkaWaktu ? String(d.matrik.jangkaWaktu) : '');
-            // Strip "hari kalender" text if present, keep only number
             const wpNum = String(wp).replace(/[^\d]/g, '') || '';
             const tglMulai = d.tanggalMulai || d.matrik?.tanggalMulai || '';
             const tglSelesai = d.tanggalSelesai || d.matrik?.tanggalSelesai || calcTanggalSelesai(tglMulai, wpNum);
             const tb = d.terbilangKontrak || d.matrik?.terbilangKontrak || numberToTerbilang(nk);
+            // Initialize nilaiItems from stored data or default single item
+            const storedItems = d.nilaiItems ? JSON.parse(d.nilaiItems) : null;
+            setNilaiItems(storedItems || (nk ? [{ nama: d.namaPaket || '', nilai: String(nk) }] : []));
             setSpkData({
                 noSpk: d.noSpk || d.matrik?.noSpk || '',
                 nilaiKontrak: nk,
@@ -103,7 +106,7 @@ const ManajemenKontrak = () => {
         if (!detail) return;
         setSaving(true);
         try {
-            await kontrakApi.updatePermohonan(detail.id, { ...spkData, nilaiKontrak: Number(spkData.nilaiKontrak) || 0 });
+            await kontrakApi.updatePermohonan(detail.id, { ...spkData, nilaiKontrak: Number(spkData.nilaiKontrak) || 0, nilaiItems: nilaiItems.length > 1 ? JSON.stringify(nilaiItems) : null });
             showToast('Data SPK berhasil disimpan');
         } catch { showToast('Gagal menyimpan SPK', true); }
         setSaving(false);
@@ -338,6 +341,13 @@ const ManajemenKontrak = () => {
                             {/* SPK */}
                             {tab === 'spk' && (() => {
                                 const rl = { fontSize: '0.78rem', fontWeight: 600, color: '#ef4444', marginBottom: 4 };
+                                const totalNilai = nilaiItems.reduce((s, it) => s + (Number(parseSeparator(it.nilai)) || 0), 0);
+                                const hpsValue = detail.matrik?.hps || 0;
+                                const exceedsHps = hpsValue > 0 && totalNilai > hpsValue;
+                                // Sync totalNilai to spkData
+                                if (nilaiItems.length > 0 && String(totalNilai) !== String(spkData.nilaiKontrak)) {
+                                    setTimeout(() => setSpkData(prev => ({ ...prev, nilaiKontrak: String(totalNilai), terbilangKontrak: numberToTerbilang(totalNilai) })), 0);
+                                }
                                 return (
                                 <div>
                                     <div style={{ background: 'var(--accent-blue)', color: '#fff', padding: '10px 20px', borderRadius: 8, marginBottom: 20, fontWeight: 600, fontSize: '0.9rem' }}>Surat Perintah Kerja</div>
@@ -345,8 +355,32 @@ const ManajemenKontrak = () => {
                                     <h4 style={{ margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.95rem' }}>ℹ️ Data Surat Perintah Kerja</h4>
                                     <div style={{ ...cs, marginBottom: 12 }}><div style={cl}>Jenis Kontrak</div><div style={cv}>{detail.jenisPengadaan || '-'}</div></div>
                                     <div style={{ ...cs, marginBottom: 12 }}><div style={rl}>Nomor SPK</div><input style={fieldStyle} value={spkData.noSpk} onChange={e => setSpkData({ ...spkData, noSpk: e.target.value })} placeholder="400.3.13/400/A3/2026" /></div>
-                                    <div style={{ ...cs, marginBottom: 12 }}><div style={rl}>Nilai Kontrak</div><input style={fieldStyle} value={spkData.nilaiKontrak ? `Rp. ${formatSeparator(spkData.nilaiKontrak)}` : ''} onChange={e => { const raw = parseSeparator(e.target.value.replace(/^Rp\.?\s?/, '')); const tb = numberToTerbilang(raw); setSpkData({ ...spkData, nilaiKontrak: raw, terbilangKontrak: tb }); }} placeholder="Rp. 0" /></div>
-                                    <div style={{ ...cs, marginBottom: 12 }}><div style={rl}>Terbilang Nilai Kontrak</div><div style={cv}>{spkData.terbilangKontrak || '-'}</div></div>
+
+                                    {/* Nilai Kontrak with anakan items */}
+                                    <div style={{ ...cs, marginBottom: 12 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                            <div style={rl}>Nilai Kontrak</div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                            <input style={{ ...fieldStyle, flex: 1 }} value={nilaiItems.length > 1 ? `Rp. ${formatSeparator(totalNilai)}` : (spkData.nilaiKontrak ? `Rp. ${formatSeparator(spkData.nilaiKontrak)}` : '')} onChange={e => { if (nilaiItems.length <= 1) { const raw = parseSeparator(e.target.value.replace(/^Rp\.?\s?/, '')); const tb = numberToTerbilang(raw); setSpkData({ ...spkData, nilaiKontrak: raw, terbilangKontrak: tb }); if (nilaiItems.length === 1) setNilaiItems([{ ...nilaiItems[0], nilai: raw }]); } }} readOnly={nilaiItems.length > 1} />
+                                            <button onClick={() => setNilaiItems(prev => [...prev, { nama: '', nilai: '' }])} style={{ width: 36, height: 36, borderRadius: '50%', border: 'none', background: 'var(--accent-blue)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Plus size={18} /></button>
+                                        </div>
+                                        {/* Anakan rows */}
+                                        {nilaiItems.length > 1 && nilaiItems.map((item, idx) => (
+                                            <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 8, marginTop: 8 }}>
+                                                <input style={fieldStyle} value={item.nama} onChange={e => { const items = [...nilaiItems]; items[idx].nama = e.target.value; setNilaiItems(items); }} placeholder="Nama paket anakan" />
+                                                <input style={fieldStyle} value={item.nilai ? `Rp. ${formatSeparator(item.nilai)}` : ''} onChange={e => { const raw = parseSeparator(e.target.value.replace(/^Rp\.?\s?/, '')); const items = [...nilaiItems]; items[idx].nilai = raw; setNilaiItems(items); }} placeholder="Rp. 0" />
+                                                <button onClick={() => setNilaiItems(prev => prev.filter((_, i) => i !== idx))} style={{ width: 36, height: 36, borderRadius: '50%', border: 'none', background: '#ef4444', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Minus size={18} /></button>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    <div style={{ ...cs, marginBottom: 12 }}>
+                                        <div style={rl}>Terbilang Nilai Kontrak</div>
+                                        {exceedsHps
+                                            ? <div style={{ fontSize: '0.88rem', color: '#ef4444', fontWeight: 600 }}>Nilai kontrak melebihi nilai HPS: {formatSeparator(hpsValue)}</div>
+                                            : <div style={cv}>{nilaiItems.length > 1 ? numberToTerbilang(totalNilai) : (spkData.terbilangKontrak || '-')}</div>}
+                                    </div>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
                                         <div style={cs}><div style={rl}>Tanggal Awal</div><input type="date" style={fieldStyle} value={spkData.tanggalMulai} onChange={e => { const tgl = e.target.value; const selesai = calcTanggalSelesai(tgl, spkData.waktuPenyelesaian); setSpkData({ ...spkData, tanggalMulai: tgl, tanggalSelesai: selesai }); }} /></div>
                                         <div style={cs}><div style={rl}>Tanggal Akhir</div><input type="date" style={fieldStyle} value={spkData.tanggalSelesai} onChange={e => setSpkData({ ...spkData, tanggalSelesai: e.target.value })} /></div>
