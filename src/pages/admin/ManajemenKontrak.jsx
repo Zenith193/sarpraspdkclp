@@ -243,26 +243,35 @@ const ManajemenKontrak = () => {
             )}
 
             {/* Detail Modal with Tabs */}
-            {detail && (
+            {detail && (() => {
+                const cs = { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 16px' };
+                const cl = { fontSize: '0.78rem', fontWeight: 600, color: '#22c55e', marginBottom: 4 };
+                const cv = { fontSize: '0.92rem', color: 'var(--text-primary)', fontWeight: 500 };
+                const tabDone = { data_dasar: !!detail.kodeSirup, spk: !!spkData.noSpk, lampiran: !!(detail.noDppl || detail.noBahpl), sp_spmk: !!spSpmkData.noSp, verifikasi: detail.status === 'Diverifikasi' };
+                return (
                 <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }} onClick={() => setDetail(null)} />
                     <div style={{ position: 'relative', background: 'var(--bg-primary)', borderRadius: 16, width: 'min(92vw, 900px)', maxHeight: '90vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
                         {/* Header */}
                         <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h3 style={{ margin: 0 }}>📋 Detail Permohonan Kontrak</h3>
-                            <button onClick={() => setDetail(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+                            <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>🏠 DETAIL PERMOHONAN KONTRAK</h3>
+                            <button onClick={() => setDetail(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={20} /></button>
                         </div>
 
-                        {/* Tab Bar */}
-                        <div style={{ display: 'flex', gap: 4, padding: '12px 24px 0', borderBottom: '1px solid var(--border)', overflowX: 'auto' }}>
+                        {/* Tab Bar - Lakon pill style */}
+                        <div style={{ display: 'flex', gap: 8, padding: '14px 24px', flexWrap: 'wrap' }}>
                             {tabs.map(t => (
                                 <button key={t.key} onClick={() => setTab(t.key)}
                                     style={{
-                                        padding: '10px 18px', border: 'none', borderRadius: '8px 8px 0 0', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, transition: 'all 0.2s',
+                                        padding: '7px 16px', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem',
                                         background: tab === t.key ? 'var(--accent-blue)' : 'transparent',
                                         color: tab === t.key ? '#fff' : 'var(--text-secondary)',
+                                        border: tab === t.key ? '1px solid var(--accent-blue)' : '1px solid var(--border)',
+                                        borderRadius: 20, display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.2s',
                                     }}>
-                                    {t.label}
+                                    {t.label} {tabDone[t.key]
+                                        ? <CheckCircle size={14} style={{ color: tab === t.key ? '#86efac' : '#22c55e' }} />
+                                        : <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 14, height: 14, borderRadius: '50%', background: 'rgba(239,68,68,0.2)', fontSize: '0.55rem', color: '#ef4444', fontWeight: 700 }}>✕</span>}
                                 </button>
                             ))}
                         </div>
@@ -272,90 +281,78 @@ const ManajemenKontrak = () => {
                             {/* DATA DASAR */}
                             {tab === 'data_dasar' && (
                                 <div>
-                                    <div style={{ background: 'var(--accent-blue)', color: '#fff', padding: '10px 16px', borderRadius: 8, marginBottom: 20, fontWeight: 600 }}>Data Dasar Permohonan Kontrak</div>
-                                    <h4 style={{ marginBottom: 12 }}>👤 DIREKTUR</h4>
+                                    <div style={{ background: 'var(--accent-blue)', color: '#fff', padding: '10px 20px', borderRadius: 8, marginBottom: 20, fontWeight: 600, fontSize: '0.9rem' }}>Data Dasar Permohonan Kontrak</div>
+
+                                    <h4 style={{ margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: 8 }}>👤 DIREKTUR</h4>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
-                                        {[
-                                            ['Nama Direktur', detail.perusahaan?.namaPemilik],
-                                            ['Alamat Direktur', detail.perusahaan?.alamatPemilik],
-                                        ].map(([l, v]) => (
-                                            <div key={l} style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: 14 }}>
-                                                <div style={{ fontSize: '0.78rem', color: 'var(--accent-blue)', marginBottom: 4 }}>{l}</div>
-                                                <div style={{ fontSize: '0.9rem' }}>{v || '-'}</div>
-                                            </div>
-                                        ))}
+                                        <div style={cs}><div style={cl}>Nama Direktur</div><div style={cv}>{detail.perusahaan?.namaPemilik || '-'}</div></div>
+                                        <div style={cs}><div style={cl}>Alamat Direktur</div><div style={cv}>{detail.perusahaan?.alamatPemilik || '-'}</div></div>
                                     </div>
-                                    <h4 style={{ marginBottom: 12 }}>🏢 PERUSAHAAN</h4>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                                        {[
-                                            ['Nama Perusahaan', detail.perusahaan?.namaPerusahaan],
-                                            ['NPWP', detail.perusahaan?.npwp],
-                                            ['Telepon', detail.perusahaan?.noTelp],
-                                            ['Email', detail.perusahaan?.emailPerusahaan],
-                                            ['Alamat', detail.perusahaan?.alamatPerusahaan],
-                                            ['Bank', `${detail.perusahaan?.bank || '-'} / ${detail.perusahaan?.noRekening || '-'}`],
-                                        ].map(([l, v]) => (
-                                            <div key={l} style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: 14 }}>
-                                                <div style={{ fontSize: '0.78rem', color: 'var(--accent-blue)', marginBottom: 4 }}>{l}</div>
-                                                <div style={{ fontSize: '0.9rem' }}>{v || '-'}</div>
-                                            </div>
-                                        ))}
+
+                                    <h4 style={{ margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: 8 }}>🏢 PERUSAHAAN</h4>
+                                    <div style={{ ...cs, marginBottom: 12 }}><div style={cl}>Nama Perusahaan</div><div style={cv}>{detail.perusahaan?.namaPerusahaan || '-'}</div></div>
+                                    <div style={{ ...cs, marginBottom: 12 }}><div style={cl}>NPWP Perusahaan</div><div style={cv}>{detail.perusahaan?.npwp || '-'}</div></div>
+                                    <div style={{ ...cs, marginBottom: 12 }}><div style={cl}>Alamat Perusahaan</div><div style={cv}>{detail.perusahaan?.alamatPerusahaan || '-'}</div></div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                                        <div style={cs}><div style={cl}>Nomor Telp</div><div style={cv}>{detail.perusahaan?.noTelp || '-'}</div></div>
+                                        <div style={cs}><div style={cl}>Email</div><div style={cv}>{detail.perusahaan?.emailPerusahaan || '-'}</div></div>
                                     </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                                        <div style={cs}><div style={cl}>Nomor Akta Notaris</div><div style={cv}>{detail.perusahaan?.noAkta || '-'}</div></div>
+                                        <div style={cs}><div style={cl}>Tanggal Akta Notaris</div><div style={cv}>{detail.perusahaan?.tanggalAkta || '-'}</div></div>
+                                    </div>
+                                    <div style={{ ...cs, marginBottom: 12 }}><div style={cl}>Nama Akta Notaris</div><div style={cv}>{detail.perusahaan?.namaNotaris || '-'}</div></div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+                                        <div style={cs}><div style={cl}>Bank</div><div style={cv}>{detail.perusahaan?.bank || '-'}</div></div>
+                                        <div style={cs}><div style={cl}>Rekening</div><div style={cv}>{detail.perusahaan?.noRekening || '-'} atas nama <strong>{detail.perusahaan?.namaRekening || '-'}</strong></div></div>
+                                    </div>
+
+                                    <h4 style={{ margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: 8 }}>⚙️ PAKET PEKERJAAN</h4>
+                                    <div style={{ ...cs, marginBottom: 12 }}><div style={cl}>Kode Sirup</div><div style={cv}>{detail.kodeSirup || '-'}</div></div>
+                                    <div style={{ ...cs, marginBottom: 12 }}><div style={cl}>Nama Paket</div><div style={cv}>{detail.namaPaket || '-'}</div></div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                                        <div style={cs}><div style={cl}>Jenis Pengadaan</div><div style={cv}>{detail.jenisPengadaan || '-'}</div></div>
+                                        <div style={cs}><div style={cl}>Metode Pemilihan</div><div style={cv}>{detail.metodePengadaan || '-'}</div></div>
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                                        <div style={cs}><div style={cl}>Satuan Kerja</div><div style={cv}>{detail.matrik?.satuanKerja || 'DINAS PENDIDIKAN DAN KEBUDAYAAN KABUPATEN CILACAP'}</div></div>
+                                        <div style={cs}><div style={cl}>Satuan Kerja</div><div style={cv}>{detail.matrik?.sumberDana || 'APBD'}</div></div>
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                                        <div style={cs}><div style={cl}>Nomor DPPL</div><div style={cv}>{detail.noDppl || '-'}</div></div>
+                                        <div style={cs}><div style={cl}>Tanggal DPPL</div><div style={cv}>{formatDate(detail.tanggalDppl)}</div></div>
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                                        <div style={cs}><div style={cl}>Nomor BAHPL</div><div style={cv}>{detail.noBahpl || '-'}</div></div>
+                                        <div style={cs}><div style={cl}>Tanggal BAHPL</div><div style={cv}>{formatDate(detail.tanggalBahpl)}</div></div>
+                                    </div>
+                                    {detail.berkasPenawaranPath && (
+                                        <div style={{ ...cs, marginBottom: 12 }}><div style={cl}>Berkas Penawaran</div>
+                                            <a href={detail.berkasPenawaranPath} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-blue)', textDecoration: 'underline', fontSize: '0.875rem' }}>📄 Lihat Dokumen PDF</a>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
                             {/* SPK */}
                             {tab === 'spk' && (
                                 <div>
-                                    <div style={{ background: 'var(--accent-blue)', color: '#fff', padding: '10px 16px', borderRadius: 8, marginBottom: 20, fontWeight: 600 }}>Surat Perintah Kerja</div>
-                                    <div style={{ display: 'grid', gap: 16 }}>
-                                        <div>
-                                            <label style={labelStyle}>Jenis Kontrak</label>
-                                            <input style={readOnlyStyle} value={detail.jenisPengadaan || '-'} readOnly />
-                                        </div>
-                                        <div>
-                                            <label style={labelStyle}>Nomor SPK</label>
-                                            <input style={fieldStyle} value={spkData.noSpk} onChange={e => setSpkData({ ...spkData, noSpk: e.target.value })} placeholder="400.3.13/..." />
-                                        </div>
-                                        <div>
-                                            <label style={labelStyle}>Nilai Kontrak (Rp)</label>
-                                            <input style={fieldStyle} value={formatSeparator(spkData.nilaiKontrak)} onChange={e => {
-                                                const raw = parseSeparator(e.target.value);
-                                                const tb = numberToTerbilang(raw);
-                                                setSpkData({ ...spkData, nilaiKontrak: raw, terbilangKontrak: tb });
-                                            }} placeholder="0" />
-                                        </div>
-                                        <div>
-                                            <label style={labelStyle}>Terbilang</label>
-                                            <input style={readOnlyStyle} value={spkData.terbilangKontrak} readOnly />
-                                        </div>
+                                    <div style={{ background: 'var(--accent-blue)', color: '#fff', padding: '10px 20px', borderRadius: 8, marginBottom: 20, fontWeight: 600, fontSize: '0.9rem' }}>Surat Perintah Kerja</div>
+                                    <div style={{ display: 'grid', gap: 12 }}>
+                                        <div style={cs}><div style={cl}>Jenis Kontrak</div><div style={cv}>{detail.jenisPengadaan || '-'}</div></div>
+                                        <div style={cs}><div style={cl}>Nomor SPK</div><input style={fieldStyle} value={spkData.noSpk} onChange={e => setSpkData({ ...spkData, noSpk: e.target.value })} placeholder="400.3.13/..." /></div>
+                                        <div style={cs}><div style={cl}>Nilai Kontrak (Rp)</div><input style={fieldStyle} value={formatSeparator(spkData.nilaiKontrak)} onChange={e => { const raw = parseSeparator(e.target.value); const tb = numberToTerbilang(raw); setSpkData({ ...spkData, nilaiKontrak: raw, terbilangKontrak: tb }); }} placeholder="0" /></div>
+                                        <div style={cs}><div style={cl}>Terbilang</div><div style={cv}>{spkData.terbilangKontrak || '-'}</div></div>
                                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                                            <div><label style={labelStyle}>Tanggal Mulai</label><input type="date" style={fieldStyle} value={spkData.tanggalMulai} onChange={e => {
-                                                const tgl = e.target.value;
-                                                const selesai = calcTanggalSelesai(tgl, spkData.waktuPenyelesaian);
-                                                setSpkData({ ...spkData, tanggalMulai: tgl, tanggalSelesai: selesai });
-                                            }} /></div>
-                                            <div><label style={labelStyle}>Tanggal Selesai</label><input type="date" style={readOnlyStyle} value={spkData.tanggalSelesai} readOnly /></div>
+                                            <div style={cs}><div style={cl}>Tanggal Mulai</div><input type="date" style={fieldStyle} value={spkData.tanggalMulai} onChange={e => { const tgl = e.target.value; const selesai = calcTanggalSelesai(tgl, spkData.waktuPenyelesaian); setSpkData({ ...spkData, tanggalMulai: tgl, tanggalSelesai: selesai }); }} /></div>
+                                            <div style={cs}><div style={cl}>Tanggal Selesai</div><div style={cv}>{spkData.tanggalSelesai || '-'}</div></div>
                                         </div>
-                                        <div>
-                                            <label style={labelStyle}>Waktu Penyelesaian (hari kalender)</label>
-                                            <input type="number" style={fieldStyle} value={spkData.waktuPenyelesaian} onChange={e => {
-                                                const hari = e.target.value;
-                                                const selesai = calcTanggalSelesai(spkData.tanggalMulai, hari);
-                                                setSpkData({ ...spkData, waktuPenyelesaian: hari, tanggalSelesai: selesai });
-                                            }} placeholder="90" />
-                                        </div>
-                                        <div>
-                                            <label style={labelStyle}>Tata Cara Pembayaran</label>
-                                            <input style={fieldStyle} value={spkData.tataCaraPembayaran} onChange={e => setSpkData({ ...spkData, tataCaraPembayaran: e.target.value })} placeholder="Termin" />
-                                        </div>
-                                        <div>
-                                            <label style={labelStyle}>Uang Muka</label>
-                                            <input style={fieldStyle} value={spkData.uangMuka} onChange={e => setSpkData({ ...spkData, uangMuka: e.target.value })} placeholder="Tidak Ada / Ada" />
-                                        </div>
+                                        <div style={cs}><div style={cl}>Waktu Penyelesaian (hari kalender)</div><input type="number" style={fieldStyle} value={spkData.waktuPenyelesaian} onChange={e => { const hari = e.target.value; const selesai = calcTanggalSelesai(spkData.tanggalMulai, hari); setSpkData({ ...spkData, waktuPenyelesaian: hari, tanggalSelesai: selesai }); }} placeholder="90" /></div>
+                                        <div style={cs}><div style={cl}>Tata Cara Pembayaran</div><input style={fieldStyle} value={spkData.tataCaraPembayaran} onChange={e => setSpkData({ ...spkData, tataCaraPembayaran: e.target.value })} placeholder="Termin" /></div>
+                                        <div style={cs}><div style={cl}>Uang Muka</div><input style={fieldStyle} value={spkData.uangMuka} onChange={e => setSpkData({ ...spkData, uangMuka: e.target.value })} placeholder="Tidak Ada / Ada" /></div>
                                         <button className="btn btn-primary" onClick={handleSaveSpk} disabled={saving}
-                                            style={{ padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontWeight: 600 }}>
-                                            <Save size={18} /> {saving ? 'Menyimpan...' : 'Simpan Data SPK'}
+                                            style={{ width: '100%', padding: '14px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontWeight: 700, fontSize: '1rem', borderRadius: 10 }}>
+                                            <Save size={18} /> {saving ? 'Menyimpan...' : '✓ Simpan Data SPK'}
                                         </button>
                                     </div>
                                 </div>
@@ -364,54 +361,34 @@ const ManajemenKontrak = () => {
                             {/* LAMPIRAN */}
                             {tab === 'lampiran' && (
                                 <div>
-                                    <div style={{ background: 'var(--accent-blue)', color: '#fff', padding: '10px 16px', borderRadius: 8, marginBottom: 20, fontWeight: 600 }}>Lampiran Dokumen</div>
-                                    <div style={{ display: 'grid', gap: 16 }}>
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                                            {[
-                                                ['No DPPL', detail.noDppl],
-                                                ['Tanggal DPPL', formatDate(detail.tanggalDppl)],
-                                                ['No BAHPL', detail.noBahpl],
-                                                ['Tanggal BAHPL', formatDate(detail.tanggalBahpl)],
-                                            ].map(([l, v]) => (
-                                                <div key={l} style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: 14 }}>
-                                                    <div style={{ fontSize: '0.78rem', color: 'var(--accent-blue)', marginBottom: 4 }}>{l}</div>
-                                                    <div style={{ fontSize: '0.9rem' }}>{v || '-'}</div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        {detail.berkasPenawaranPath && (
-                                            <div style={{ background: 'rgba(59,130,246,0.08)', borderRadius: 8, padding: 16 }}>
-                                                <div style={{ fontSize: '0.82rem', color: 'var(--accent-blue)', fontWeight: 600, marginBottom: 8 }}>Berkas Penawaran</div>
-                                                <a href={detail.berkasPenawaranPath} target="_blank" rel="noreferrer"
-                                                    style={{ color: 'var(--accent-blue)', textDecoration: 'underline', fontSize: '0.875rem' }}>
-                                                    📄 Lihat Dokumen PDF
-                                                </a>
-                                            </div>
-                                        )}
+                                    <div style={{ background: 'var(--accent-blue)', color: '#fff', padding: '10px 20px', borderRadius: 8, marginBottom: 20, fontWeight: 600, fontSize: '0.9rem' }}>Lampiran Dokumen</div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                                        <div style={cs}><div style={cl}>No DPPL</div><div style={cv}>{detail.noDppl || '-'}</div></div>
+                                        <div style={cs}><div style={cl}>Tanggal DPPL</div><div style={cv}>{formatDate(detail.tanggalDppl)}</div></div>
                                     </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                                        <div style={cs}><div style={cl}>No BAHPL</div><div style={cv}>{detail.noBahpl || '-'}</div></div>
+                                        <div style={cs}><div style={cl}>Tanggal BAHPL</div><div style={cv}>{formatDate(detail.tanggalBahpl)}</div></div>
+                                    </div>
+                                    {detail.berkasPenawaranPath && (
+                                        <div style={{ ...cs, marginBottom: 12 }}><div style={cl}>Berkas Penawaran</div>
+                                            <a href={detail.berkasPenawaranPath} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-blue)', textDecoration: 'underline', fontSize: '0.875rem' }}>📄 Lihat Dokumen PDF</a>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
                             {/* SP/SPMK */}
                             {tab === 'sp_spmk' && (
                                 <div>
-                                    <div style={{ background: 'var(--accent-blue)', color: '#fff', padding: '10px 16px', borderRadius: 8, marginBottom: 20, fontWeight: 600 }}>Surat Perintah / SPMK</div>
-                                    <div style={{ display: 'grid', gap: 16 }}>
-                                        <div>
-                                            <label style={labelStyle}>Nomor SP</label>
-                                            <input style={fieldStyle} value={spSpmkData.noSp} onChange={e => setSpSpmkData({ ...spSpmkData, noSp: e.target.value })} placeholder="Nomor Surat Perintah" />
-                                        </div>
-                                        <div>
-                                            <label style={labelStyle}>Tanggal SP</label>
-                                            <input type="date" style={fieldStyle} value={spSpmkData.tanggalSp} onChange={e => setSpSpmkData({ ...spSpmkData, tanggalSp: e.target.value })} />
-                                        </div>
-                                        <div>
-                                            <label style={labelStyle}>ID Paket</label>
-                                            <input style={fieldStyle} value={spSpmkData.idPaket} onChange={e => setSpSpmkData({ ...spSpmkData, idPaket: e.target.value })} placeholder="ID Paket / Kode SiRUP" />
-                                        </div>
+                                    <div style={{ background: 'var(--accent-blue)', color: '#fff', padding: '10px 20px', borderRadius: 8, marginBottom: 20, fontWeight: 600, fontSize: '0.9rem' }}>Surat Perintah / SPMK</div>
+                                    <div style={{ display: 'grid', gap: 12 }}>
+                                        <div style={cs}><div style={cl}>Nomor SP</div><input style={fieldStyle} value={spSpmkData.noSp} onChange={e => setSpSpmkData({ ...spSpmkData, noSp: e.target.value })} placeholder="Nomor Surat Perintah" /></div>
+                                        <div style={cs}><div style={cl}>Tanggal SP</div><input type="date" style={fieldStyle} value={spSpmkData.tanggalSp} onChange={e => setSpSpmkData({ ...spSpmkData, tanggalSp: e.target.value })} /></div>
+                                        <div style={cs}><div style={cl}>ID Paket</div><input style={fieldStyle} value={spSpmkData.idPaket} onChange={e => setSpSpmkData({ ...spSpmkData, idPaket: e.target.value })} placeholder="ID Paket / Kode SiRUP" /></div>
                                         <button className="btn btn-primary" onClick={handleSaveSpSpmk} disabled={saving}
-                                            style={{ padding: '12px 24px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontWeight: 600 }}>
-                                            <Save size={18} /> {saving ? 'Menyimpan...' : 'Simpan Data SP/SPMK'}
+                                            style={{ width: '100%', padding: '14px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontWeight: 700, fontSize: '1rem', borderRadius: 10 }}>
+                                            <Save size={18} /> {saving ? 'Menyimpan...' : '✓ Simpan Data SP/SPMK'}
                                         </button>
                                     </div>
                                 </div>
@@ -420,33 +397,30 @@ const ManajemenKontrak = () => {
                             {/* VERIFIKASI */}
                             {tab === 'verifikasi' && (
                                 <div>
-                                    <div style={{ background: 'var(--accent-blue)', color: '#fff', padding: '10px 16px', borderRadius: 8, marginBottom: 20, fontWeight: 600 }}>Verifikasi</div>
-                                    <div style={{ background: 'var(--bg-secondary)', borderRadius: 12, padding: 20, marginBottom: 20 }}>
-                                        <h4 style={{ marginBottom: 12 }}>Konfirmasi Verifikasi</h4>
-                                        <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', lineHeight: 1.6, marginBottom: 16 }}>
+                                    <div style={{ background: 'var(--accent-blue)', color: '#fff', padding: '10px 20px', borderRadius: 8, marginBottom: 20, fontWeight: 600, fontSize: '0.9rem' }}>Verifikasi Permohonan Kontrak</div>
+                                    <div style={{ ...cs, marginBottom: 20, padding: 20 }}>
+                                        <h4 style={{ margin: '0 0 12px', fontSize: '0.95rem' }}>Konfirmasi Verifikasi</h4>
+                                        <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.7, margin: '0 0 16px' }}>
                                             Dengan ini saya menyatakan bahwa data yang saya lihat dan saya sampaikan adalah benar sesuai dengan fakta yang ada,
                                             dan apabila dikemudian hari data yang saya lihat atau sampaikan tidak benar, maka saya bersedia untuk diproses secara hukum
                                             sesuai dengan ketentuan Undang-Undang yang berlaku.
                                         </p>
-                                        <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontSize: '0.875rem' }}>
-                                            <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} style={{ width: 18, height: 18 }} />
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: '0.88rem' }}>
+                                            <input type="checkbox" checked={agreed} onChange={e => setAgreed(e.target.checked)} style={{ width: 18, height: 18, cursor: 'pointer' }} />
                                             Saya setuju dengan pernyataan di atas
                                         </label>
                                     </div>
-                                    <button className="btn" onClick={handleVerify} disabled={!agreed || saving}
-                                        style={{
-                                            width: '100%', padding: '14px 24px', fontSize: '1rem', fontWeight: 700,
-                                            background: agreed ? '#22c55e' : '#9ca3af', color: '#fff', border: 'none', borderRadius: 10, cursor: agreed ? 'pointer' : 'not-allowed',
-                                            display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'all 0.3s',
-                                        }}>
-                                        <CheckCircle size={20} /> {saving ? 'Memproses...' : 'Terima Permohonan Kontrak'}
+                                    <button onClick={handleVerify} disabled={!agreed || saving}
+                                        style={{ width: '100%', padding: '14px 0', border: 'none', borderRadius: 10, background: agreed ? '#22c55e' : 'rgba(128,128,128,0.3)', color: '#fff', cursor: agreed ? 'pointer' : 'not-allowed', fontWeight: 700, fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                                        <CheckCircle size={20} /> {saving ? 'Memproses...' : '✓ Terima Permohonan Kontrak'}
                                     </button>
                                 </div>
                             )}
                         </div>
                     </div>
                 </div>
-            )}
+                );
+            })()}
         </div>
     );
 };
