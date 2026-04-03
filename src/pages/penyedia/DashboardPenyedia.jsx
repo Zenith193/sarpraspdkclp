@@ -8,7 +8,7 @@ const DashboardPenyedia = () => {
     const [perusahaan, setPerusahaan] = useState(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('data-dasar');
-    const [showForm, setShowForm] = useState(false);
+    const [showForm, setShowForm] = useState(0);
     const [completed, setCompleted] = useState({ 'data-dasar': false, spk: false, lampiran: false, spspmk: false, verifikasi: false });
     const [searchLoading, setSearchLoading] = useState(false);
     const [searchResult, setSearchResult] = useState(null);
@@ -202,7 +202,7 @@ const DashboardPenyedia = () => {
                     <div className="stat-card" style={{ padding: 24, background: 'var(--accent-blue)', color: '#fff' }}>
                         <h3 style={{ margin: '0 0 12px', fontSize: '1.1rem', color: '#fff' }}>Pengajuan Layanan Kontrak</h3>
                         <p style={{ fontSize: '0.85rem', lineHeight: 1.6, margin: '0 0 20px', opacity: 0.9 }}>Gunakan SPIDOL untuk mengajukan permohonan kontrak dengan lebih efisien. Siapkan dokumen dan data pendukung untuk memperlancar proses pengajuan Anda.</p>
-                        <button onClick={() => { setShowForm(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                        <button onClick={() => { setShowForm(1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                             style={{ width: '100%', padding: '14px 0', border: '2px solid #fff', borderRadius: 10, background: 'transparent', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '0.95rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                             <ArrowRight size={18} /> AJUKAN PERMOHONAN KONTRAK
                         </button>
@@ -220,7 +220,7 @@ const DashboardPenyedia = () => {
             </div>
 
             {/* ===== LAKON 2-COL FORM ===== */}
-            {showForm && !completed['data-dasar'] && (
+            {showForm === 1 && !completed['data-dasar'] && (
                 <div className="stat-card" style={{ padding: 24, marginBottom: 30 }}>
                     <h2 style={{ margin: '0 0 24px', display: 'flex', alignItems: 'center', gap: 10, fontSize: '1.15rem' }}>📝 PERMOHONAN KONTRAK</h2>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 30 }}>
@@ -241,41 +241,18 @@ const DashboardPenyedia = () => {
                             <div style={{ marginBottom: 16 }}><label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Nama Paket</label><div style={readOnlyStyle}>{namaPaket || '-'}</div></div>
                             <div style={{ marginBottom: 16 }}><label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Metode Pengadaan</label><div style={readOnlyStyle}>{metodePengadaan || '-'}</div></div>
                             <div style={{ marginBottom: 24 }}><label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Jenis Pengadaan</label><div style={readOnlyStyle}>{jenisPengadaan || '-'}</div></div>
-                            {searchResult && (<button onClick={() => { setCompleted(c => ({ ...c, 'data-dasar': true })); setActiveTab('lampiran'); setToast('Data dasar berhasil disimpan'); setTimeout(() => setToast(''), 3000); }} style={{ width: '100%', padding: '14px 0', border: 'none', borderRadius: 10, background: 'var(--accent-blue)', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}><Send size={18} /> LANJUT PERMOHONAN</button>)}
+                            {searchResult && (<button onClick={() => { setShowForm(2); setToast('Silahkan isi dan simpan Data Dasar'); setTimeout(() => setToast(''), 3000); }} style={{ width: '100%', padding: '14px 0', border: 'none', borderRadius: 10, background: 'var(--accent-blue)', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}><Send size={18} /> LANJUT PERMOHONAN</button>)}
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* ===== TAB SYSTEM (after LANJUT) ===== */}
-            {showForm && completed['data-dasar'] && (<>
+            {/* ===== LINEAR FLOW (after AJUKAN) ===== */}
+            {showForm === 2 && (<>
             <div className="page-header"><h1 className="page-title">🏠 DETAIL PERMOHONAN KONTRAK</h1></div>
-            {/* ===== TAB INDICATORS ===== */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-                {[
-                    { id: 'data-dasar', label: 'Data Dasar' },
-                    { id: 'lampiran', label: 'Lampiran' },
-                ].map(t => (
-                    <button key={t.id} onClick={() => setActiveTab(t.id)}
-                        style={{
-                            padding: '7px 16px', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem',
-                            background: activeTab === t.id ? 'var(--accent-blue)' : 'transparent',
-                            color: activeTab === t.id ? '#fff' : 'var(--text-secondary)',
-                            border: activeTab === t.id ? '1px solid var(--accent-blue)' : '1px solid var(--border)',
-                            borderRadius: 20, display: 'flex', alignItems: 'center', gap: 5, transition: 'all 0.2s',
-                        }}>
-                        {t.label} {completed[t.id]
-                            ? <CheckCircle size={14} style={{ color: activeTab === t.id ? '#86efac' : '#22c55e' }} />
-                            : <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 14, height: 14, borderRadius: '50%', background: 'rgba(239,68,68,0.2)', fontSize: '0.55rem', color: '#ef4444', fontWeight: 700 }}>✕</span>}
-                    </button>
-                ))}
-            </div>
-            <div style={{ background: 'var(--accent-blue)', color: '#fff', padding: '10px 20px', borderRadius: 8, marginBottom: 24, fontWeight: 600, fontSize: '0.9rem' }}>
-                {activeTab === 'data-dasar' ? 'Data Dasar' : activeTab === 'spk' ? 'SPK' : activeTab === 'lampiran' ? 'Lampiran' : activeTab === 'spspmk' ? 'SP/SPMK' : 'Verifikasi'} Permohonan Kontrak
-            </div>
 
-            {/* ===== TAB: DATA DASAR ===== */}
-            {activeTab === 'data-dasar' && (() => {
+            {/* === SECTION: DATA DASAR === */}
+            {(() => {
                 const cs = { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 16px' };
                 const cl = { fontSize: '0.78rem', fontWeight: 600, color: '#22c55e', marginBottom: 4 };
                 const cv = { fontSize: '0.92rem', color: 'var(--text-primary)', fontWeight: 500 };
@@ -343,7 +320,7 @@ const DashboardPenyedia = () => {
                             </label>
                         </div>
 
-                        <button onClick={() => { setCompleted(c => ({ ...c, 'data-dasar': true })); setActiveTab('lampiran'); setToast('Data Dasar berhasil disimpan'); setTimeout(() => setToast(''), 3000); }}
+                        <button onClick={() => { setCompleted(c => ({ ...c, 'data-dasar': true })); setToast('Data Dasar berhasil disimpan'); setTimeout(() => setToast(''), 3000); }}
                             style={{ width: '100%', padding: '14px 0', border: 'none', borderRadius: 10, background: 'var(--accent-blue)', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                             <CheckCircle size={18} /> ✓ Simpan Data Dasar
                         </button>
@@ -353,8 +330,8 @@ const DashboardPenyedia = () => {
                 );
             })()}
 
-            {/* ===== TAB: LAMPIRAN ===== */}
-            {activeTab === 'lampiran' && (
+            {/* === SECTION: LAMPIRAN (appears after Simpan Data Dasar) === */}
+            {completed['data-dasar'] && (
                 <div>
                     <h3 style={{ margin: '0 0 16px', fontSize: '1.05rem' }}>Lampiran Dokumen</h3>
 
@@ -451,8 +428,6 @@ const DashboardPenyedia = () => {
                     </button>
                 </div>
             )}
-
-
             </>)}
 
             {/* ===== Permohonan Dalam Proses ===== */}
