@@ -58,6 +58,7 @@ const ManajemenKontrak = () => {
     const [spkData, setSpkData] = useState({});
     const [spSpmkData, setSpSpmkData] = useState({});
     const [agreed, setAgreed] = useState(false);
+    const [spkAgreed, setSpkAgreed] = useState(false);
 
     const load = () => {
         setLoading(true);
@@ -335,28 +336,46 @@ const ManajemenKontrak = () => {
                             )}
 
                             {/* SPK */}
-                            {tab === 'spk' && (
+                            {tab === 'spk' && (() => {
+                                const rl = { fontSize: '0.78rem', fontWeight: 600, color: '#ef4444', marginBottom: 4 };
+                                return (
                                 <div>
                                     <div style={{ background: 'var(--accent-blue)', color: '#fff', padding: '10px 20px', borderRadius: 8, marginBottom: 20, fontWeight: 600, fontSize: '0.9rem' }}>Surat Perintah Kerja</div>
-                                    <div style={{ display: 'grid', gap: 12 }}>
-                                        <div style={cs}><div style={cl}>Jenis Kontrak</div><div style={cv}>{detail.jenisPengadaan || '-'}</div></div>
-                                        <div style={cs}><div style={cl}>Nomor SPK</div><input style={fieldStyle} value={spkData.noSpk} onChange={e => setSpkData({ ...spkData, noSpk: e.target.value })} placeholder="400.3.13/..." /></div>
-                                        <div style={cs}><div style={cl}>Nilai Kontrak (Rp)</div><input style={fieldStyle} value={formatSeparator(spkData.nilaiKontrak)} onChange={e => { const raw = parseSeparator(e.target.value); const tb = numberToTerbilang(raw); setSpkData({ ...spkData, nilaiKontrak: raw, terbilangKontrak: tb }); }} placeholder="0" /></div>
-                                        <div style={cs}><div style={cl}>Terbilang</div><div style={cv}>{spkData.terbilangKontrak || '-'}</div></div>
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                                            <div style={cs}><div style={cl}>Tanggal Mulai</div><input type="date" style={fieldStyle} value={spkData.tanggalMulai} onChange={e => { const tgl = e.target.value; const selesai = calcTanggalSelesai(tgl, spkData.waktuPenyelesaian); setSpkData({ ...spkData, tanggalMulai: tgl, tanggalSelesai: selesai }); }} /></div>
-                                            <div style={cs}><div style={cl}>Tanggal Selesai</div><div style={cv}>{spkData.tanggalSelesai || '-'}</div></div>
-                                        </div>
-                                        <div style={cs}><div style={cl}>Waktu Penyelesaian (hari kalender)</div><input type="number" style={fieldStyle} value={spkData.waktuPenyelesaian} onChange={e => { const hari = e.target.value; const selesai = calcTanggalSelesai(spkData.tanggalMulai, hari); setSpkData({ ...spkData, waktuPenyelesaian: hari, tanggalSelesai: selesai }); }} placeholder="90" /></div>
-                                        <div style={cs}><div style={cl}>Tata Cara Pembayaran</div><input style={fieldStyle} value={spkData.tataCaraPembayaran} onChange={e => setSpkData({ ...spkData, tataCaraPembayaran: e.target.value })} placeholder="Termin" /></div>
-                                        <div style={cs}><div style={cl}>Uang Muka</div><input style={fieldStyle} value={spkData.uangMuka} onChange={e => setSpkData({ ...spkData, uangMuka: e.target.value })} placeholder="Tidak Ada / Ada" /></div>
-                                        <button className="btn btn-primary" onClick={handleSaveSpk} disabled={saving}
-                                            style={{ width: '100%', padding: '14px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontWeight: 700, fontSize: '1rem', borderRadius: 10 }}>
-                                            <Save size={18} /> {saving ? 'Menyimpan...' : '✓ Simpan Data SPK'}
-                                        </button>
+
+                                    <h4 style={{ margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.95rem' }}>ℹ️ Data Surat Perintah Kerja</h4>
+                                    <div style={{ ...cs, marginBottom: 12 }}><div style={cl}>Jenis Kontrak</div><div style={cv}>{detail.jenisPengadaan || '-'}</div></div>
+                                    <div style={{ ...cs, marginBottom: 12 }}><div style={rl}>Nomor SPK</div><input style={fieldStyle} value={spkData.noSpk} onChange={e => setSpkData({ ...spkData, noSpk: e.target.value })} placeholder="400.3.13/400/A3/2026" /></div>
+                                    <div style={{ ...cs, marginBottom: 12 }}><div style={rl}>Nilai Kontrak</div><input style={fieldStyle} value={spkData.nilaiKontrak ? `Rp. ${formatSeparator(spkData.nilaiKontrak)}` : ''} onChange={e => { const raw = parseSeparator(e.target.value.replace(/^Rp\.?\s?/, '')); const tb = numberToTerbilang(raw); setSpkData({ ...spkData, nilaiKontrak: raw, terbilangKontrak: tb }); }} placeholder="Rp. 0" /></div>
+                                    <div style={{ ...cs, marginBottom: 12 }}><div style={rl}>Terbilang Nilai Kontrak</div><div style={cv}>{spkData.terbilangKontrak || '-'}</div></div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                                        <div style={cs}><div style={rl}>Tanggal Awal</div><input type="date" style={fieldStyle} value={spkData.tanggalMulai} onChange={e => { const tgl = e.target.value; const selesai = calcTanggalSelesai(tgl, spkData.waktuPenyelesaian); setSpkData({ ...spkData, tanggalMulai: tgl, tanggalSelesai: selesai }); }} /></div>
+                                        <div style={cs}><div style={rl}>Tanggal Akhir</div><input type="date" style={fieldStyle} value={spkData.tanggalSelesai} onChange={e => setSpkData({ ...spkData, tanggalSelesai: e.target.value })} /></div>
                                     </div>
+                                    <div style={{ ...cs, marginBottom: 24 }}><div style={rl}>Waktu Penyelesaian</div><input style={fieldStyle} value={spkData.waktuPenyelesaian} onChange={e => { const hari = e.target.value; const selesai = calcTanggalSelesai(spkData.tanggalMulai, hari); setSpkData({ ...spkData, waktuPenyelesaian: hari, tanggalSelesai: selesai }); }} placeholder="90 hari kalender" /></div>
+
+                                    <h4 style={{ margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.95rem' }}>ℹ️ Sistem Pembayaran</h4>
+                                    <div style={{ ...cs, marginBottom: 12 }}><div style={rl}>Tata Cara Pembayaran</div><input style={fieldStyle} value={spkData.tataCaraPembayaran} onChange={e => setSpkData({ ...spkData, tataCaraPembayaran: e.target.value })} placeholder="Termin / Bulanan" /></div>
+                                    <div style={{ ...cs, marginBottom: 24 }}><div style={rl}>Uang Muka</div>
+                                        <select style={fieldStyle} value={spkData.uangMuka} onChange={e => setSpkData({ ...spkData, uangMuka: e.target.value })}>
+                                            <option value="">Pilih Uang Muka</option>
+                                            <option value="Tidak Ada">Tidak Ada</option>
+                                            <option value="Ada">Ada</option>
+                                        </select>
+                                    </div>
+
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, fontWeight: 600, fontSize: '0.92rem' }}><CheckCircle size={18} style={{ color: 'var(--accent-blue)' }} /> Validasi Kebenaran Data</div>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 16, paddingLeft: 4 }}>
+                                        <input type="checkbox" checked={spkAgreed} onChange={e => setSpkAgreed(e.target.checked)} style={{ width: 16, height: 16, cursor: 'pointer' }} />
+                                        Data - data diatas sudah sesuai dengan ketentuan dan kebutuhan.
+                                    </label>
+
+                                    <button onClick={() => { if (spkAgreed) handleSaveSpk(); }} disabled={!spkAgreed || saving}
+                                        style={{ width: '100%', padding: '14px 0', border: 'none', borderRadius: 10, background: spkAgreed ? '#22c55e' : 'rgba(128,128,128,0.3)', color: '#fff', cursor: spkAgreed ? 'pointer' : 'not-allowed', fontWeight: 700, fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                                        <CheckCircle size={18} /> {saving ? 'Menyimpan...' : '✓ Simpan Data Surat Perintah Kerja'}
+                                    </button>
                                 </div>
-                            )}
+                                );
+                            })()}
 
                             {/* LAMPIRAN */}
                             {tab === 'lampiran' && (
