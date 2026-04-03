@@ -431,66 +431,70 @@ const DashboardPenyedia = () => {
                     </div>
                 </div>
             )}
-            {/* Detail Modal */}
-            {detailModal && (
+            {/* Detail Modal - Lakon style */}
+            {detailModal && (() => {
+                const cs = { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 16px' };
+                const cl = { fontSize: '0.78rem', fontWeight: 600, color: '#22c55e', marginBottom: 4 };
+                const cv = { fontSize: '0.92rem', color: 'var(--text-primary)', fontWeight: 500 };
+                return (
                 <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }} onClick={() => setDetailModal(null)} />
                     <div style={{ position: 'relative', background: 'var(--bg-primary)', borderRadius: 16, width: 'min(90vw, 720px)', maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
-                        <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <h3 style={{ margin: 0 }}>📋 Detail Permohonan</h3>
-                            <button onClick={() => setDetailModal(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+                        <div style={{ padding: '16px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: 8 }}>🏠 DETAIL PERMOHONAN KONTRAK</h3>
+                            <button onClick={() => setDetailModal(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={20} /></button>
                         </div>
                         <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
-                                {[
-                                    ['Kode SiRUP', detailModal.kodeSirup],
-                                    ['Nama Paket', detailModal.namaPaket],
-                                    ['Jenis Pengadaan', detailModal.jenisPengadaan],
-                                    ['Metode Pengadaan', detailModal.metodePengadaan],
-                                    ['No DPPL', detailModal.noDppl],
-                                    ['Tanggal DPPL', formatDate(detailModal.tanggalDppl)],
-                                    ['No BAHPL', detailModal.noBahpl],
-                                    ['Tanggal BAHPL', formatDate(detailModal.tanggalBahpl)],
-                                    ['Status', detailModal.status],
-                                    ['Tanggal Pengajuan', formatDate(detailModal.createdAt)],
-                                ].map(([l, v]) => (
-                                    <div key={l} style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: 14 }}>
-                                        <div style={{ fontSize: '0.78rem', color: 'var(--accent-blue)', marginBottom: 4 }}>{l}</div>
-                                        <div style={{ fontSize: '0.9rem' }}>{v || '-'}</div>
-                                    </div>
-                                ))}
+                            <div style={{ background: 'var(--accent-blue)', color: '#fff', padding: '10px 20px', borderRadius: 8, marginBottom: 20, fontWeight: 600, fontSize: '0.9rem' }}>Data Permohonan Kontrak</div>
+
+                            <h4 style={{ margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: 8 }}>⚙️ PAKET PEKERJAAN</h4>
+                            <div style={{ ...cs, marginBottom: 12 }}><div style={cl}>Kode SiRUP</div><div style={cv}>{detailModal.kodeSirup || '-'}</div></div>
+                            <div style={{ ...cs, marginBottom: 12 }}><div style={cl}>Nama Paket</div><div style={cv}>{detailModal.namaPaket || '-'}</div></div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                                <div style={cs}><div style={cl}>Jenis Pengadaan</div><div style={cv}>{detailModal.jenisPengadaan || '-'}</div></div>
+                                <div style={cs}><div style={cl}>Metode Pengadaan</div><div style={cv}>{detailModal.metodePengadaan || '-'}</div></div>
+                            </div>
+
+                            <h4 style={{ margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: 8 }}>📋 LAMPIRAN</h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                                <div style={cs}><div style={cl}>No DPPL</div><div style={cv}>{detailModal.noDppl || '-'}</div></div>
+                                <div style={cs}><div style={cl}>Tanggal DPPL</div><div style={cv}>{formatDate(detailModal.tanggalDppl)}</div></div>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                                <div style={cs}><div style={cl}>No BAHPL</div><div style={cv}>{detailModal.noBahpl || '-'}</div></div>
+                                <div style={cs}><div style={cl}>Tanggal BAHPL</div><div style={cv}>{formatDate(detailModal.tanggalBahpl)}</div></div>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                                <div style={cs}><div style={cl}>Status</div><div style={cv}>{detailModal.status || '-'}</div></div>
+                                <div style={cs}><div style={cl}>Tanggal Pengajuan</div><div style={cv}>{formatDate(detailModal.createdAt)}</div></div>
                             </div>
                             {detailModal.berkasPenawaranPath && (
-                                <div style={{ background: 'rgba(59,130,246,0.08)', borderRadius: 8, padding: 16 }}>
-                                    <div style={{ fontSize: '0.82rem', color: 'var(--accent-blue)', fontWeight: 600, marginBottom: 8 }}>Berkas Penawaran</div>
-                                    <a href={detailModal.berkasPenawaranPath} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-blue)', textDecoration: 'underline' }}>📄 Lihat Dokumen PDF</a>
+                                <div style={{ ...cs, marginBottom: 12 }}><div style={cl}>Berkas Penawaran</div>
+                                    <a href={detailModal.berkasPenawaranPath} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-blue)', textDecoration: 'underline', fontSize: '0.875rem' }}>📄 Lihat Dokumen PDF</a>
                                 </div>
                             )}
+
                             {detailModal.status === 'Diverifikasi' && (
                                 <>
-                                    <hr style={{ margin: '20px 0', border: 'none', borderTop: '1px solid var(--border)' }} />
-                                    <h4 style={{ marginBottom: 12 }}>Data Kontrak (dari Verifikator)</h4>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                                        {[
-                                            ['No SPK', detailModal.noSpk],
-                                            ['Nilai Kontrak', formatCurrency(detailModal.nilaiKontrak)],
-                                            ['Terbilang', detailModal.terbilangKontrak],
-                                            ['Tanggal Mulai', formatDate(detailModal.tanggalMulai)],
-                                            ['Tanggal Selesai', formatDate(detailModal.tanggalSelesai)],
-                                            ['Waktu Penyelesaian', detailModal.waktuPenyelesaian],
-                                        ].map(([l, v]) => (
-                                            <div key={l} style={{ background: 'var(--bg-secondary)', borderRadius: 8, padding: 14 }}>
-                                                <div style={{ fontSize: '0.78rem', color: 'var(--accent-blue)', marginBottom: 4 }}>{l}</div>
-                                                <div style={{ fontSize: '0.9rem' }}>{v || '-'}</div>
-                                            </div>
-                                        ))}
-                                    </div>
+                                <hr style={{ margin: '20px 0', border: 'none', borderTop: '1px solid var(--border)' }} />
+                                <h4 style={{ margin: '0 0 12px', display: 'flex', alignItems: 'center', gap: 8 }}>📝 DATA KONTRAK (Verifikator)</h4>
+                                <div style={{ ...cs, marginBottom: 12 }}><div style={cl}>No SPK</div><div style={cv}>{detailModal.noSpk || '-'}</div></div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                                    <div style={cs}><div style={cl}>Nilai Kontrak</div><div style={cv}>{formatCurrency(detailModal.nilaiKontrak)}</div></div>
+                                    <div style={cs}><div style={cl}>Terbilang</div><div style={cv}>{detailModal.terbilangKontrak || '-'}</div></div>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                                    <div style={cs}><div style={cl}>Tanggal Mulai</div><div style={cv}>{formatDate(detailModal.tanggalMulai)}</div></div>
+                                    <div style={cs}><div style={cl}>Tanggal Selesai</div><div style={cv}>{formatDate(detailModal.tanggalSelesai)}</div></div>
+                                </div>
+                                <div style={{ ...cs, marginBottom: 12 }}><div style={cl}>Waktu Penyelesaian</div><div style={cv}>{detailModal.waktuPenyelesaian || '-'}</div></div>
                                 </>
                             )}
                         </div>
                     </div>
                 </div>
-            )}
+                );
+            })()}
         </div>
     );
 };
