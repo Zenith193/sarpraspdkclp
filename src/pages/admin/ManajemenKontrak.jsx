@@ -60,6 +60,7 @@ const ManajemenKontrak = () => {
     const [agreed, setAgreed] = useState(false);
     const [spkAgreed, setSpkAgreed] = useState(false);
     const [nilaiItems, setNilaiItems] = useState([]);
+    const [tabSaved, setTabSaved] = useState({ data_dasar: false, spk: false, lampiran: false, sp_spmk: false, verifikasi: false });
 
     const load = () => {
         setLoading(true);
@@ -75,6 +76,15 @@ const ManajemenKontrak = () => {
             setDetail(d);
             setTab('data_dasar');
             setAgreed(false);
+            setSpkAgreed(false);
+            // Init tabSaved from existing server data
+            setTabSaved({
+                data_dasar: !!d.kodeSirup,
+                spk: !!d.noSpk,
+                lampiran: !!(d.noDppl || d.noBahpl),
+                sp_spmk: !!d.noSp,
+                verifikasi: d.status === 'Diverifikasi',
+            });
             const nk = d.nilaiKontrak || d.matrik?.nilaiKontrak || '';
             const wp = d.waktuPenyelesaian || (d.matrik?.jangkaWaktu ? String(d.matrik.jangkaWaktu) : '');
             const wpNum = String(wp).replace(/[^\d]/g, '') || '';
@@ -107,6 +117,7 @@ const ManajemenKontrak = () => {
         setSaving(true);
         try {
             await kontrakApi.updatePermohonan(detail.id, { ...spkData, nilaiKontrak: Number(spkData.nilaiKontrak) || 0, nilaiItems: nilaiItems.length > 1 ? JSON.stringify(nilaiItems) : null });
+            setTabSaved(prev => ({ ...prev, spk: true }));
             showToast('Data SPK berhasil disimpan');
         } catch { showToast('Gagal menyimpan SPK', true); }
         setSaving(false);
@@ -117,6 +128,7 @@ const ManajemenKontrak = () => {
         setSaving(true);
         try {
             await kontrakApi.updatePermohonan(detail.id, spSpmkData);
+            setTabSaved(prev => ({ ...prev, sp_spmk: true }));
             showToast('Data SP/SPMK berhasil disimpan');
         } catch { showToast('Gagal menyimpan SP/SPMK', true); }
         setSaving(false);
@@ -251,7 +263,7 @@ const ManajemenKontrak = () => {
                 const cs = { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 16px' };
                 const cl = { fontSize: '0.78rem', fontWeight: 600, color: '#22c55e', marginBottom: 4 };
                 const cv = { fontSize: '0.92rem', color: 'var(--text-primary)', fontWeight: 500 };
-                const tabDone = { data_dasar: !!detail.kodeSirup, spk: !!spkData.noSpk, lampiran: !!(detail.noDppl || detail.noBahpl), sp_spmk: !!spSpmkData.noSp, verifikasi: detail.status === 'Diverifikasi' };
+                const tabDone = tabSaved;
                 return (
                 <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                     <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)' }} onClick={() => setDetail(null)} />
