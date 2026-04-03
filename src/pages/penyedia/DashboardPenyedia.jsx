@@ -15,6 +15,7 @@ const DashboardPenyedia = () => {
     const [permohonanAktif, setPermohonanAktif] = useState([]);
     const [detailModal, setDetailModal] = useState(null);
     const [detailLoading, setDetailLoading] = useState(false);
+    const [toast, setToast] = useState('');
 
     // Step 1
     const [kodeSirup, setKodeSirup] = useState('');
@@ -115,7 +116,8 @@ const DashboardPenyedia = () => {
             setPeralatanInput({ ...emptyPeralatan }); setPeralatanRows([]);
             const lRes = await kontrakApi.listPermohonan().catch(() => []);
             setPermohonanAktif(Array.isArray(lRes) ? lRes.filter(p => p.status === 'Menunggu') : []);
-            alert('Permohonan kontrak berhasil dikirim!');
+            setToast('Permohonan Kontrak berhasil');
+            setTimeout(() => setToast(''), 3000);
         } catch (e) {
             setSubmitError(e?.message || 'Gagal mengirim permohonan');
         }
@@ -160,6 +162,12 @@ const DashboardPenyedia = () => {
 
     return (
         <div className="page-container">
+            {/* Toast notification */}
+            {toast && (
+                <div style={{ position: 'fixed', top: 20, left: '50%', transform: 'translateX(-50%)', zIndex: 9999, background: '#16a34a', color: '#fff', padding: '12px 28px', borderRadius: 8, fontSize: '0.95rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 4px 20px rgba(0,0,0,0.3)', animation: 'fadeIn 0.3s ease' }}>
+                    <CheckCircle size={20} /> {toast}
+                </div>
+            )}
             <div className="page-header"><h1 className="page-title">📋 PERMOHONAN KONTRAK</h1></div>
 
             {submitError && <div style={{ padding: 14, borderRadius: 8, background: 'rgba(239,68,68,0.1)', color: '#ef4444', marginBottom: 20, fontSize: '0.875rem' }}>{submitError}</div>}
