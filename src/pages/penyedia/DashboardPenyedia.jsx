@@ -170,9 +170,56 @@ const DashboardPenyedia = () => {
                     <CheckCircle size={20} /> {toast}
                 </div>
             )}
-            <div className="page-header"><h1 className="page-title">🏠 DETAIL PERMOHONAN KONTRAK</h1></div>
-
             {submitError && <div style={{ padding: 14, borderRadius: 8, background: 'rgba(239,68,68,0.1)', color: '#ef4444', marginBottom: 20, fontSize: '0.875rem' }}>{submitError}</div>}
+
+            {/* ===== LAKON TOP SECTION ===== */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, marginBottom: 30 }}>
+                {/* Left: Informasi Perusahaan */}
+                <div className="stat-card" style={{ padding: 24 }}>
+                    <h3 style={{ margin: '0 0 20px', fontSize: '1.1rem' }}>Informasi Perusahaan</h3>
+                    <div style={{ width: 100, height: 100, borderRadius: '50%', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', border: '2px solid var(--border)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Company<br/>Logo</div>
+                    <div style={{ display: 'grid', gap: 12, fontSize: '0.88rem' }}>
+                        {[
+                            ['Nama Perusahaan', perusahaan?.namaPerusahaan],
+                            ['Alamat Perusahaan', perusahaan?.alamatPerusahaan],
+                            ['No. Telepon', perusahaan?.noTelp],
+                            ['Email', perusahaan?.emailPerusahaan],
+                        ].map(([l, v]) => (
+                            <div key={l} style={{ display: 'grid', gridTemplateColumns: '140px 1fr', gap: 8 }}>
+                                <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>{l}</span>
+                                <span>: {v || '-'}</span>
+                            </div>
+                        ))}
+                    </div>
+                    <div style={{ marginTop: 16, textAlign: 'center' }}>
+                        <a href="#" style={{ color: 'var(--accent-blue)', fontSize: '0.85rem', textDecoration: 'none' }}>Lengkapi Data Perusahaan →</a>
+                    </div>
+                </div>
+
+                {/* Right: Pengajuan Layanan Kontrak */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                    <div className="stat-card" style={{ padding: 24, background: 'var(--accent-blue)', color: '#fff' }}>
+                        <h3 style={{ margin: '0 0 12px', fontSize: '1.1rem', color: '#fff' }}>Pengajuan Layanan Kontrak</h3>
+                        <p style={{ fontSize: '0.85rem', lineHeight: 1.6, margin: '0 0 20px', opacity: 0.9 }}>Gunakan SPIDOL untuk mengajukan permohonan kontrak dengan lebih efisien. Siapkan dokumen dan data pendukung untuk memperlancar proses pengajuan Anda.</p>
+                        <button onClick={() => { setActiveTab('data-dasar'); window.scrollTo({ top: 500, behavior: 'smooth' }); }}
+                            style={{ width: '100%', padding: '14px 0', border: '2px solid #fff', borderRadius: 10, background: 'transparent', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '0.95rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                            <ArrowRight size={18} /> AJUKAN PERMOHONAN KONTRAK
+                        </button>
+                    </div>
+                    <div className="stat-card" style={{ padding: 20, display: 'flex', alignItems: 'center', gap: 16 }}>
+                        <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(59,130,246,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <CheckCircle size={24} style={{ color: 'var(--accent-blue)' }} />
+                        </div>
+                        <div>
+                            <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Permohonan Aktif</div>
+                            <div style={{ fontSize: '1.5rem', fontWeight: 700 }}>{permohonanAktif.length}</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* ===== FORM SECTION ===== */}
+            <div className="page-header"><h1 className="page-title">🏠 DETAIL PERMOHONAN KONTRAK</h1></div>
 
             {/* ===== TAB INDICATORS ===== */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
