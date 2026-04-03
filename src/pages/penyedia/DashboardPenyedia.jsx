@@ -7,6 +7,8 @@ const DashboardPenyedia = () => {
     const user = useAuthStore(s => s.user);
     const [perusahaan, setPerusahaan] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState('data-dasar');
+    const [completed, setCompleted] = useState({ 'data-dasar': false, spk: false, lampiran: false, spspmk: false, verifikasi: false });
     const [searchLoading, setSearchLoading] = useState(false);
     const [searchResult, setSearchResult] = useState(null);
     const [searchError, setSearchError] = useState('');
@@ -168,141 +170,116 @@ const DashboardPenyedia = () => {
                     <CheckCircle size={20} /> {toast}
                 </div>
             )}
-            <div className="page-header"><h1 className="page-title">📋 PERMOHONAN KONTRAK</h1></div>
+            <div className="page-header"><h1 className="page-title">🏠 DETAIL PERMOHONAN KONTRAK</h1></div>
 
             {submitError && <div style={{ padding: 14, borderRadius: 8, background: 'rgba(239,68,68,0.1)', color: '#ef4444', marginBottom: 20, fontSize: '0.875rem' }}>{submitError}</div>}
 
-            {/* ===== Data Perusahaan + SiRUP ===== */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 28 }}>
-                    {/* LEFT: Company Data (read-only) */}
-                    <div>
-                        <div style={{ marginBottom: 16 }}>
-                            <label style={labelStyle}>NIK Direktur</label>
-                            <input style={readOnlyStyle} value={perusahaan?.nikPemilik || '-'} readOnly />
-                        </div>
-                        <div style={{ marginBottom: 16 }}>
-                            <label style={labelStyle}>Nama Direktur</label>
-                            <input style={readOnlyStyle} value={perusahaan?.namaPemilik || '-'} readOnly />
-                        </div>
-                        <div style={{ marginBottom: 16 }}>
-                            <label style={labelStyle}>Alamat Direktur</label>
-                            <textarea style={{ ...readOnlyStyle, minHeight: 70, resize: 'vertical' }} value={perusahaan?.alamatPemilik || '-'} readOnly />
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 12, marginBottom: 16 }}>
-                            <div><label style={labelStyle}>Nama Perusahaan</label><input style={readOnlyStyle} value={perusahaan?.namaPerusahaan || '-'} readOnly /></div>
-                            <div><label style={labelStyle}>Singkatan</label><input style={readOnlyStyle} value={perusahaan?.namaPerusahaanSingkat || '-'} readOnly /></div>
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 16 }}>
-                            <div><label style={labelStyle}>No. Akta</label><input style={readOnlyStyle} value={perusahaan?.noAkta || '-'} readOnly /></div>
-                            <div><label style={labelStyle}>Notaris</label><input style={readOnlyStyle} value={perusahaan?.namaNotaris || '-'} readOnly /></div>
-                            <div><label style={labelStyle}>Tgl Akta</label><input style={readOnlyStyle} value={perusahaan?.tanggalAkta || '-'} readOnly /></div>
-                        </div>
-                        <div style={{ marginBottom: 16 }}>
-                            <label style={labelStyle}>Alamat Perusahaan</label>
-                            <textarea style={{ ...readOnlyStyle, minHeight: 70, resize: 'vertical' }} value={perusahaan?.alamatPerusahaan || '-'} readOnly />
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-                            <div><label style={labelStyle}>No. Telepon</label><input style={readOnlyStyle} value={perusahaan?.noTelp || '-'} readOnly /></div>
-                            <div><label style={labelStyle}>Email</label><input style={readOnlyStyle} value={perusahaan?.emailPerusahaan || '-'} readOnly /></div>
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 16 }}>
-                            <div><label style={labelStyle}>No Rekening</label><input style={readOnlyStyle} value={perusahaan?.noRekening || '-'} readOnly /></div>
-                            <div><label style={labelStyle}>Atas Nama</label><input style={readOnlyStyle} value={perusahaan?.namaRekening || '-'} readOnly /></div>
-                            <div><label style={labelStyle}>Bank</label><input style={readOnlyStyle} value={perusahaan?.bank || '-'} readOnly /></div>
-                        </div>
-                        <div style={{ marginBottom: 16 }}>
-                            <label style={labelStyle}>NPWP Perusahaan</label>
-                            <input style={readOnlyStyle} value={perusahaan?.npwp || '-'} readOnly />
-                        </div>
+            {/* ===== TAB INDICATORS ===== */}
+            {(() => {
+                const tabs = [
+                    { id: 'data-dasar', label: 'Data Dasar' },
+                    { id: 'spk', label: 'SPK' },
+                    { id: 'lampiran', label: 'Lampiran' },
+                    { id: 'spspmk', label: 'SP/SPMK' },
+                    { id: 'verifikasi', label: 'Verifikasi' },
+                ];
+                const tabBtnStyle = (isActive) => ({
+                    padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem',
+                    background: isActive ? 'var(--accent-blue)' : 'var(--bg-secondary)', color: isActive ? '#fff' : 'var(--text-secondary)',
+                    display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.2s',
+                });
+                return (
+                    <>
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+                        {tabs.map(t => (
+                            <button key={t.id} onClick={() => setActiveTab(t.id)} style={tabBtnStyle(activeTab === t.id)}>
+                                {t.label} {completed[t.id] ? <CheckCircle size={14} style={{ color: '#22c55e' }} /> : <X size={14} style={{ color: '#ef4444' }} />}
+                            </button>
+                        ))}
                     </div>
-
-                    {/* RIGHT: Catatan + DASAR PERMOHONAN */}
-                    <div>
-                        <div style={{ background: 'rgba(59,130,246,0.08)', borderRadius: 10, padding: '14px 18px', marginBottom: 24, border: '1px solid rgba(59,130,246,0.15)' }}>
-                            <div style={{ fontWeight: 700, marginBottom: 6, fontSize: '0.9rem' }}>⭐ Catatan:</div>
-                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>Pastikan untuk mengecek kembali kebenaran data perusahaan Anda. Jika ingin merubah data perusahaan maka hubungi admin.</div>
-                        </div>
-
-                        <h3 style={{ margin: '0 0 20px', fontSize: '1.05rem', fontWeight: 700 }}>📋 DASAR PERMOHONAN</h3>
-
-                        <div style={{ marginBottom: 16 }}>
-                            <label style={{ ...labelStyle, color: 'var(--text-primary)' }}>Kode Sirup <span style={{ color: '#ef4444' }}>*</span></label>
-                            <div style={{ display: 'flex', gap: 8 }}>
-                                <input style={{ ...fieldStyle, flex: 1 }} placeholder="Kode Sirup" value={kodeSirup}
-                                    onChange={e => setKodeSirup(e.target.value)}
-                                    onKeyDown={e => e.key === 'Enter' && handleSearch()} />
-                                <button onClick={handleSearch} disabled={searchLoading}
-                                    style={{ padding: '10px 18px', border: 'none', borderRadius: 8, background: 'var(--accent-blue)', color: '#fff', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                    <Search size={16} />
-                                </button>
-                            </div>
-                            {searchResult && <div style={{ color: '#22c55e', fontSize: '0.82rem', marginTop: 6 }}>✅ Paket berhasil ditemukan!</div>}
-                            {searchError && <div style={{ color: '#ef4444', fontSize: '0.82rem', marginTop: 6 }}>❌ {searchError}</div>}
-                        </div>
-                        <div style={{ marginBottom: 16 }}>
-                            <label style={labelStyle}>Nama Paket</label>
-                            <input style={readOnlyStyle} value={namaPaket} readOnly />
-                        </div>
-                        <div style={{ marginBottom: 16 }}>
-                            <label style={labelStyle}>Metode Pengadaan</label>
-                            <input style={readOnlyStyle} value={metodePengadaan} readOnly />
-                        </div>
-                        <div style={{ marginBottom: 24 }}>
-                            <label style={labelStyle}>Jenis Pengadaan</label>
-                            <input style={readOnlyStyle} value={jenisPengadaan} readOnly />
-                        </div>
+                    <div style={{ background: 'var(--accent-blue)', color: '#fff', padding: '10px 20px', borderRadius: 8, marginBottom: 24, fontWeight: 600, fontSize: '0.9rem' }}>
+                        {tabs.find(t => t.id === activeTab)?.label || ''} Permohonan Kontrak
                     </div>
-                </div>
+                    </>
+                );
+            })()}
 
-                {/* ===== DPPL, BAHPL, Upload ===== */}
-                {searchResult && (
-                    <div style={{ maxWidth: 900, margin: '0 auto', marginTop: 24 }}>
-
+            {/* ===== TAB: DATA DASAR ===== */}
+            {activeTab === 'data-dasar' && (
+                <div>
+                    <h3 style={{ margin: '0 0 16px', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: 8 }}>👤 DIREKTUR</h3>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
-                        <div>
-                            <label style={{ ...labelStyle, color: 'var(--text-primary)' }}>Nomor DPPL <span style={{ color: '#ef4444' }}>*</span></label>
-                            <input style={fieldStyle} placeholder="Nomor DPPL" value={noDppl} onChange={e => setNoDppl(e.target.value)} />
-                        </div>
-                        <div>
-                            <label style={{ ...labelStyle, color: 'var(--text-primary)' }}>Tanggal DPPL <span style={{ color: '#ef4444' }}>*</span></label>
-                            <input type="date" style={fieldStyle} value={tanggalDppl} onChange={e => setTanggalDppl(e.target.value)} />
-                        </div>
-                    </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 32 }}>
-                        <div>
-                            <label style={{ ...labelStyle, color: 'var(--text-primary)' }}>Nomor BAHPL <span style={{ color: '#ef4444' }}>*</span></label>
-                            <input style={fieldStyle} placeholder="Nomor BAHPL" value={noBahpl} onChange={e => setNoBahpl(e.target.value)} />
-                        </div>
-                        <div>
-                            <label style={{ ...labelStyle, color: 'var(--text-primary)' }}>Tanggal BAHPL <span style={{ color: '#ef4444' }}>*</span></label>
-                            <input type="date" style={fieldStyle} value={tanggalBahpl} onChange={e => setTanggalBahpl(e.target.value)} />
-                        </div>
+                        <div><label style={labelStyle}>Nama Direktur</label><input style={readOnlyStyle} value={perusahaan?.namaPemilik || '-'} readOnly /></div>
+                        <div><label style={labelStyle}>Alamat Direktur</label><input style={readOnlyStyle} value={perusahaan?.alamatPemilik || '-'} readOnly /></div>
                     </div>
 
-                    <h4 style={{ margin: '0 0 12px', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <Upload size={18} style={{ color: 'var(--accent-blue)' }} /> Dokumen Penawaran
-                    </h4>
-                    <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 10, padding: 20, marginBottom: 32 }}>
-                        <div style={{ fontSize: '0.875rem', marginBottom: 10 }}>Upload Berkas Penawaran <span style={{ color: 'var(--accent-blue)' }}>(.pdf)</span></div>
-                        <label style={{ cursor: 'pointer', display: 'inline-block' }}>
-                            <input type="file" accept=".pdf" onChange={e => setBerkasPenawaran(e.target.files?.[0])} style={{ display: 'none' }} />
-                            <div style={{ padding: '8px 20px', border: '1px solid var(--border)', borderRadius: 6, fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--bg-primary)' }}>Choose File</div>
-                            <span style={{ marginLeft: 10, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{berkasPenawaran ? berkasPenawaran.name : 'No file chosen'}</span>
-                        </label>
-                        <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', marginTop: 10 }}>ℹ️ Maksimum ukuran file 10MB dalam format PDF</div>
+                    <h3 style={{ margin: '0 0 16px', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: 8 }}>🏢 PERUSAHAAN</h3>
+                    <div style={{ marginBottom: 12 }}><label style={labelStyle}>Nama Perusahaan</label><input style={readOnlyStyle} value={perusahaan?.namaPerusahaan || '-'} readOnly /></div>
+                    <div style={{ marginBottom: 12 }}><label style={labelStyle}>NPWP Perusahaan</label><input style={readOnlyStyle} value={perusahaan?.npwp || '-'} readOnly /></div>
+                    <div style={{ marginBottom: 12 }}><label style={labelStyle}>Alamat Perusahaan</label><input style={readOnlyStyle} value={perusahaan?.alamatPerusahaan || '-'} readOnly /></div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 12 }}>
+                        <div><label style={labelStyle}>Nomor Telp</label><input style={readOnlyStyle} value={perusahaan?.noTelp || '-'} readOnly /></div>
+                        <div><label style={labelStyle}>Email</label><input style={readOnlyStyle} value={perusahaan?.emailPerusahaan || '-'} readOnly /></div>
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 12 }}>
+                        <div><label style={labelStyle}>Nomor Akta Notaris</label><input style={readOnlyStyle} value={perusahaan?.noAkta || '-'} readOnly /></div>
+                        <div><label style={labelStyle}>Tanggal Akta Notaris</label><input style={readOnlyStyle} value={perusahaan?.tanggalAkta || '-'} readOnly /></div>
+                    </div>
+                    <div style={{ marginBottom: 12 }}><label style={labelStyle}>Nama Akta Notaris</label><input style={readOnlyStyle} value={perusahaan?.namaNotaris || '-'} readOnly /></div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
+                        <div><label style={labelStyle}>Bank</label><input style={readOnlyStyle} value={perusahaan?.bank || '-'} readOnly /></div>
+                        <div><label style={labelStyle}>Rekening</label><input style={readOnlyStyle} value={`${perusahaan?.noRekening || '-'} atas nama ${perusahaan?.namaRekening || '-'}`} readOnly /></div>
                     </div>
 
-                    <button onClick={() => setSaved(true)}
-                        style={{ width: '100%', padding: '14px 0', border: 'none', borderRadius: 10, background: 'var(--accent-blue)', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
-                        <Send size={18} /> 💾 Simpan Data Permohonan
-                    </button>
+                    <h3 style={{ margin: '0 0 16px', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: 8 }}>⚙️ PAKET PEKERJAAN</h3>
+                    <div style={{ marginBottom: 12 }}>
+                        <label style={{ ...labelStyle, color: 'var(--text-primary)' }}>Kode Sirup <span style={{ color: '#ef4444' }}>*</span></label>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <input style={{ ...fieldStyle, flex: 1 }} placeholder="Kode Sirup" value={kodeSirup} onChange={e => setKodeSirup(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()} />
+                            <button onClick={handleSearch} disabled={searchLoading} style={{ padding: '10px 18px', border: 'none', borderRadius: 8, background: 'var(--accent-blue)', color: '#fff', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><Search size={16} /></button>
+                        </div>
+                        {searchResult && <div style={{ color: '#22c55e', fontSize: '0.82rem', marginTop: 6 }}>✅ Paket ditemukan</div>}
+                        {searchError && <div style={{ color: '#ef4444', fontSize: '0.82rem', marginTop: 6 }}>❌ {searchError}</div>}
+                    </div>
+                    <div style={{ marginBottom: 12 }}><label style={labelStyle}>Nama Paket</label><input style={readOnlyStyle} value={namaPaket} readOnly /></div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 12 }}>
+                        <div><label style={labelStyle}>Jenis Pengadaan</label><input style={readOnlyStyle} value={jenisPengadaan} readOnly /></div>
+                        <div><label style={labelStyle}>Metode Pemilihan</label><input style={readOnlyStyle} value={metodePengadaan} readOnly /></div>
+                    </div>
 
-                    {/* ===== LAMPIRAN DOKUMEN (muncul setelah Simpan) ===== */}
-                    {saved && (
-                    <div style={{ marginTop: 30 }}>
-                        <h3 style={{ margin: '0 0 16px', fontSize: '1.05rem' }}>Lampiran Dokumen</h3>
+                    {searchResult && (
+                        <>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 12 }}>
+                            <div><label style={{ ...labelStyle, color: 'var(--text-primary)' }}>Nomor DPPL <span style={{ color: '#ef4444' }}>*</span></label><input style={fieldStyle} placeholder="Nomor DPPL" value={noDppl} onChange={e => setNoDppl(e.target.value)} /></div>
+                            <div><label style={{ ...labelStyle, color: 'var(--text-primary)' }}>Tanggal DPPL <span style={{ color: '#ef4444' }}>*</span></label><input type="date" style={fieldStyle} value={tanggalDppl} onChange={e => setTanggalDppl(e.target.value)} /></div>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                            <div><label style={{ ...labelStyle, color: 'var(--text-primary)' }}>Nomor BAHPL <span style={{ color: '#ef4444' }}>*</span></label><input style={fieldStyle} placeholder="Nomor BAHPL" value={noBahpl} onChange={e => setNoBahpl(e.target.value)} /></div>
+                            <div><label style={{ ...labelStyle, color: 'var(--text-primary)' }}>Tanggal BAHPL <span style={{ color: '#ef4444' }}>*</span></label><input type="date" style={fieldStyle} value={tanggalBahpl} onChange={e => setTanggalBahpl(e.target.value)} /></div>
+                        </div>
+                        <div style={{ marginBottom: 12 }}><label style={labelStyle}>Berkas Penawaran</label></div>
+                        <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 10, padding: 16, marginBottom: 24 }}>
+                            <label style={{ cursor: 'pointer', display: 'inline-block' }}>
+                                <input type="file" accept=".pdf" onChange={e => setBerkasPenawaran(e.target.files?.[0])} style={{ display: 'none' }} />
+                                <div style={{ padding: '6px 16px', border: '1px solid var(--border)', borderRadius: 6, fontSize: '0.85rem', display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--bg-primary)' }}>Choose File</div>
+                                <span style={{ marginLeft: 10, fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{berkasPenawaran ? berkasPenawaran.name : 'No file chosen'}</span>
+                            </label>
+                        </div>
 
-                    {/* KOMPOSISI TIM */}
+                        <button onClick={() => { setCompleted(c => ({ ...c, 'data-dasar': true })); setActiveTab('lampiran'); setToast('Data Dasar berhasil disimpan'); setTimeout(() => setToast(''), 3000); }}
+                            style={{ width: '100%', padding: '14px 0', border: 'none', borderRadius: 10, background: 'var(--accent-blue)', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                            <CheckCircle size={18} /> ✓ Simpan Data Dasar
+                        </button>
+                        </>
+                    )}
+                </div>
+            )}
+
+            {/* ===== TAB: LAMPIRAN ===== */}
+            {activeTab === 'lampiran' && (
+                <div>
+                    <h3 style={{ margin: '0 0 16px', fontSize: '1.05rem' }}>Lampiran Dokumen</h3>
+
                     <h4 style={{ margin: '0 0 10px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}>👥 KOMPOSISI TIM DAN PENUGASAN</h4>
                     <div style={{ overflowX: 'auto', marginBottom: 24 }}>
                         <table className="data-table" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
@@ -320,7 +297,6 @@ const DashboardPenyedia = () => {
                                 </tr>
                             </thead>
                             <tbody>
-                                {/* Saved rows */}
                                 {timRows.map((row, i) => (
                                     <tr key={'saved-'+i} style={{ background: 'rgba(34,197,94,0.05)' }}>
                                         <td>{row.nama}</td><td>{row.posisi}</td><td>{row.statusTenaga}</td><td>{row.pendidikan}</td>
@@ -329,50 +305,28 @@ const DashboardPenyedia = () => {
                                         <td><button onClick={() => setTimRows(r => r.filter((_, idx) => idx !== i))} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, padding: '2px 6px', cursor: 'pointer', fontSize: '0.7rem' }}>Hapus</button></td>
                                     </tr>
                                 ))}
-                                {/* Input row */}
                                 <tr>
                                     <td><input style={tblInput} value={timInput.nama} onChange={e => setTimInput({ ...timInput, nama: e.target.value })} /></td>
                                     <td><input style={tblInput} value={timInput.posisi} onChange={e => setTimInput({ ...timInput, posisi: e.target.value })} /></td>
-                                    <td>
-                                        <select style={tblSelect} value={timInput.statusTenaga} onChange={e => setTimInput({ ...timInput, statusTenaga: e.target.value })}>
-                                            <option value="">Pilih Status Te...</option><option>Tenaga Ahli</option><option>Tenaga Penunjang</option><option>Tenaga Teknis</option>
-                                        </select>
-                                    </td>
-                                    <td>
-                                        <select style={tblSelect} value={timInput.pendidikan} onChange={e => setTimInput({ ...timInput, pendidikan: e.target.value })}>
-                                            <option value="">Pilih Pendid...</option><option>SD</option><option>SMP</option><option>SMA</option><option>D1</option><option>D2</option><option>D3</option><option>S1/D4</option><option>S2</option><option>S3</option>
-                                        </select>
-                                    </td>
+                                    <td><select style={tblSelect} value={timInput.statusTenaga} onChange={e => setTimInput({ ...timInput, statusTenaga: e.target.value })}><option value="">Pilih Status Te...</option><option>Tenaga Ahli</option><option>Tenaga Penunjang</option><option>Tenaga Teknis</option></select></td>
+                                    <td><select style={tblSelect} value={timInput.pendidikan} onChange={e => setTimInput({ ...timInput, pendidikan: e.target.value })}><option value="">Pilih Pendid...</option><option>SD</option><option>SMP</option><option>SMA</option><option>D1</option><option>D2</option><option>D3</option><option>S1/D4</option><option>S2</option><option>S3</option></select></td>
                                     <td><input type="number" style={tblInput} placeholder="0" value={timInput.pengalaman} onChange={e => setTimInput({ ...timInput, pengalaman: e.target.value })} /></td>
                                     <td><input style={tblInput} value={timInput.sertifikasi} onChange={e => setTimInput({ ...timInput, sertifikasi: e.target.value })} /></td>
                                     <td><input style={tblInput} value={timInput.keterangan} onChange={e => setTimInput({ ...timInput, keterangan: e.target.value })} /></td>
                                     {timInput.jadwal.map((checked, j) => (
-                                        <td key={j} style={{ textAlign: 'center' }}>
-                                            <input type="checkbox" checked={checked} onChange={() => { const jd = [...timInput.jadwal]; jd[j] = !jd[j]; setTimInput({ ...timInput, jadwal: jd }); }} />
-                                        </td>
+                                        <td key={j} style={{ textAlign: 'center' }}><input type="checkbox" checked={checked} onChange={() => { const jd = [...timInput.jadwal]; jd[j] = !jd[j]; setTimInput({ ...timInput, jadwal: jd }); }} /></td>
                                     ))}
-                                    <td>
-                                        <button onClick={() => { if (!timInput.nama.trim()) return; setTimRows(r => [...r, { ...timInput }]); setTimInput({ ...emptyTim }); }}
-                                            style={{ background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 12px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Simpan</button>
-                                    </td>
+                                    <td><button onClick={() => { if (!timInput.nama.trim()) return; setTimRows(r => [...r, { ...timInput }]); setTimInput({ ...emptyTim }); }} style={{ background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 12px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Simpan</button></td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
 
-
-                    {/* PERALATAN UTAMA */}
                     <h4 style={{ margin: '0 0 10px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}>🔧 PERALATAN UTAMA (Apabila dipersyaratkan)</h4>
                     <div style={{ overflowX: 'auto', marginBottom: 30 }}>
                         <table className="data-table" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
-                            <thead>
-                                <tr>
-                                    <th>Nama Peralatan</th><th>Merk</th><th>Type</th><th>Kapasitas</th>
-                                    <th>Jumlah</th><th>Kondisi</th><th>Status Kepemilikan</th><th>Keterangan</th><th>Aksi</th>
-                                </tr>
-                            </thead>
+                            <thead><tr><th>Nama Peralatan</th><th>Merk</th><th>Type</th><th>Kapasitas</th><th>Jumlah</th><th>Kondisi</th><th>Status Kepemilikan</th><th>Keterangan</th><th>Aksi</th></tr></thead>
                             <tbody>
-                                {/* Saved rows */}
                                 {peralatanRows.map((row, i) => (
                                     <tr key={'saved-'+i} style={{ background: 'rgba(34,197,94,0.05)' }}>
                                         <td>{row.nama}</td><td>{row.merk}</td><td>{row.type}</td><td>{row.kapasitas}</td>
@@ -380,28 +334,16 @@ const DashboardPenyedia = () => {
                                         <td><button onClick={() => setPeralatanRows(r => r.filter((_, idx) => idx !== i))} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, padding: '2px 6px', cursor: 'pointer', fontSize: '0.7rem' }}>Hapus</button></td>
                                     </tr>
                                 ))}
-                                {/* Input row */}
                                 <tr>
                                     <td><input style={tblInput} value={peralatanInput.nama} onChange={e => setPeralatanInput({ ...peralatanInput, nama: e.target.value })} /></td>
                                     <td><input style={tblInput} value={peralatanInput.merk} onChange={e => setPeralatanInput({ ...peralatanInput, merk: e.target.value })} /></td>
                                     <td><input style={tblInput} value={peralatanInput.type} onChange={e => setPeralatanInput({ ...peralatanInput, type: e.target.value })} /></td>
                                     <td><input style={tblInput} value={peralatanInput.kapasitas} onChange={e => setPeralatanInput({ ...peralatanInput, kapasitas: e.target.value })} /></td>
                                     <td><input type="number" style={tblInput} placeholder="0" value={peralatanInput.jumlah} onChange={e => setPeralatanInput({ ...peralatanInput, jumlah: e.target.value })} /></td>
-                                    <td>
-                                        <select style={tblSelect} value={peralatanInput.kondisi} onChange={e => setPeralatanInput({ ...peralatanInput, kondisi: e.target.value })}>
-                                            <option value="">Pilih Kondisi</option><option>Baik</option><option>Sedang</option><option>Rusak</option>
-                                        </select>
-                                    </td>
-                                    <td>
-                                        <select style={tblSelect} value={peralatanInput.statusKepemilikan} onChange={e => setPeralatanInput({ ...peralatanInput, statusKepemilikan: e.target.value })}>
-                                            <option value="">Pilih Status</option><option>Milik Sendiri</option><option>Sewa</option>
-                                        </select>
-                                    </td>
+                                    <td><select style={tblSelect} value={peralatanInput.kondisi} onChange={e => setPeralatanInput({ ...peralatanInput, kondisi: e.target.value })}><option value="">Pilih Kondisi</option><option>Baik</option><option>Sedang</option><option>Rusak</option></select></td>
+                                    <td><select style={tblSelect} value={peralatanInput.statusKepemilikan} onChange={e => setPeralatanInput({ ...peralatanInput, statusKepemilikan: e.target.value })}><option value="">Pilih Status</option><option>Milik Sendiri</option><option>Sewa</option></select></td>
                                     <td><input style={tblInput} value={peralatanInput.keterangan} onChange={e => setPeralatanInput({ ...peralatanInput, keterangan: e.target.value })} /></td>
-                                    <td>
-                                        <button onClick={() => { if (!peralatanInput.nama.trim()) return; setPeralatanRows(r => [...r, { ...peralatanInput }]); setPeralatanInput({ ...emptyPeralatan }); }}
-                                            style={{ background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 12px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Simpan</button>
-                                    </td>
+                                    <td><button onClick={() => { if (!peralatanInput.nama.trim()) return; setPeralatanRows(r => [...r, { ...peralatanInput }]); setPeralatanInput({ ...emptyPeralatan }); }} style={{ background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 12px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Simpan</button></td>
                                 </tr>
                             </tbody>
                         </table>
@@ -418,6 +360,11 @@ const DashboardPenyedia = () => {
                         </label>
                     </div>
 
+                    <button onClick={() => { setCompleted(c => ({ ...c, lampiran: true })); setToast('Lampiran berhasil disimpan'); setTimeout(() => setToast(''), 3000); }}
+                        style={{ width: '100%', padding: '14px 0', border: 'none', borderRadius: 10, background: 'var(--accent-blue)', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 16 }}>
+                        <CheckCircle size={18} /> ✓ Simpan Lampiran
+                    </button>
+
                     {submitError && <div style={{ color: '#ef4444', fontSize: '0.85rem', marginBottom: 12 }}>{submitError}</div>}
 
                     <button onClick={handleSubmit} disabled={!agreedLampiran || submitting}
@@ -425,9 +372,16 @@ const DashboardPenyedia = () => {
                         <Send size={18} /> {submitting ? 'Mengirim...' : '✈️ Kirimkan Permohonan Kontrak'}
                     </button>
                 </div>
-                    )}
+            )}
+
+            {/* ===== TAB: SPK / SP-SPMK / VERIFIKASI (placeholder) ===== */}
+            {(activeTab === 'spk' || activeTab === 'spspmk' || activeTab === 'verifikasi') && (
+                <div style={{ textAlign: 'center', padding: 60, color: 'var(--text-secondary)' }}>
+                    <div style={{ fontSize: 48, marginBottom: 16 }}>📋</div>
+                    <h3 style={{ marginBottom: 8 }}>{activeTab === 'spk' ? 'SPK' : activeTab === 'spspmk' ? 'SP/SPMK' : 'Verifikasi'}</h3>
+                    <p style={{ fontSize: '0.9rem' }}>Tahap ini akan diisi setelah proses verifikasi oleh admin.</p>
                 </div>
-                )}
+            )}
 
             {/* ===== Permohonan Dalam Proses ===== */}
             {permohonanAktif.length > 0 && (
