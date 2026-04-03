@@ -170,65 +170,66 @@ const DashboardPenyedia = () => {
                     <CheckCircle size={20} /> {toast}
                 </div>
             )}
-            <div className="page-header"><h1 className="page-title">🏠 DETAIL PERMOHONAN KONTRAK</h1></div>
+            <div className="page-header"><h1 className="page-title">🏠 Detail Permohonan Kontrak</h1></div>
 
             {submitError && <div style={{ padding: 14, borderRadius: 8, background: 'rgba(239,68,68,0.1)', color: '#ef4444', marginBottom: 20, fontSize: '0.875rem' }}>{submitError}</div>}
 
-            {/* ===== TAB INDICATORS ===== */}
-            {(() => {
-                const tabs = [
+            {/* ===== TAB INDICATORS (Lakon style) ===== */}
+            <div style={{ display: 'flex', gap: 0, marginBottom: 12 }}>
+                {[
                     { id: 'data-dasar', label: 'Data Dasar' },
                     { id: 'spk', label: 'SPK' },
                     { id: 'lampiran', label: 'Lampiran' },
                     { id: 'spspmk', label: 'SP/SPMK' },
                     { id: 'verifikasi', label: 'Verifikasi' },
-                ];
-                const tabBtnStyle = (isActive) => ({
-                    padding: '8px 18px', borderRadius: 8, border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.82rem',
-                    background: isActive ? 'var(--accent-blue)' : 'var(--bg-secondary)', color: isActive ? '#fff' : 'var(--text-secondary)',
-                    display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.2s',
-                });
-                return (
-                    <>
-                    <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
-                        {tabs.map(t => (
-                            <button key={t.id} onClick={() => setActiveTab(t.id)} style={tabBtnStyle(activeTab === t.id)}>
-                                {t.label} {completed[t.id] ? <CheckCircle size={14} style={{ color: '#22c55e' }} /> : <X size={14} style={{ color: '#ef4444' }} />}
-                            </button>
-                        ))}
-                    </div>
-                    <div style={{ background: 'var(--accent-blue)', color: '#fff', padding: '10px 20px', borderRadius: 8, marginBottom: 24, fontWeight: 600, fontSize: '0.9rem' }}>
-                        {tabs.find(t => t.id === activeTab)?.label || ''} Permohonan Kontrak
-                    </div>
-                    </>
-                );
-            })()}
+                ].map(t => (
+                    <button key={t.id} onClick={() => setActiveTab(t.id)}
+                        style={{
+                            padding: '8px 20px', border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem',
+                            background: activeTab === t.id ? 'var(--accent-blue)' : 'transparent',
+                            color: activeTab === t.id ? '#fff' : 'var(--text-secondary)',
+                            borderRadius: activeTab === t.id ? 8 : 0,
+                            display: 'flex', alignItems: 'center', gap: 6, transition: 'all 0.2s',
+                        }}>
+                        {t.label} {completed[t.id] ? <CheckCircle size={14} style={{ color: activeTab === t.id ? '#fff' : '#22c55e' }} /> : <X size={14} style={{ opacity: 0.5 }} />}
+                    </button>
+                ))}
+            </div>
+            <div style={{ background: 'var(--accent-blue)', color: '#fff', padding: '10px 20px', borderRadius: 8, marginBottom: 24, fontWeight: 600, fontSize: '0.9rem' }}>
+                {['data-dasar','spk','lampiran','spspmk','verifikasi'].map(id => ({id, label: id === 'data-dasar' ? 'Data Dasar' : id === 'spk' ? 'SPK' : id === 'lampiran' ? 'Lampiran' : id === 'spspmk' ? 'SP/SPMK' : 'Verifikasi'})).find(t => t.id === activeTab)?.label} Permohonan Kontrak
+            </div>
 
             {/* ===== TAB: DATA DASAR ===== */}
-            {activeTab === 'data-dasar' && (
+            {activeTab === 'data-dasar' && (() => {
+                const cardStyle = { background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 16px' };
+                const cardLabel = { fontSize: '0.78rem', fontWeight: 600, color: '#3b82f6', marginBottom: 4 };
+                const cardValue = { fontSize: '0.92rem', color: 'var(--text-primary)', fontWeight: 500 };
+                return (
                 <div>
                     <h3 style={{ margin: '0 0 16px', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: 8 }}>👤 DIREKTUR</h3>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
-                        <div><label style={labelStyle}>Nama Direktur</label><input style={readOnlyStyle} value={perusahaan?.namaPemilik || '-'} readOnly /></div>
-                        <div><label style={labelStyle}>Alamat Direktur</label><input style={readOnlyStyle} value={perusahaan?.alamatPemilik || '-'} readOnly /></div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+                        <div style={cardStyle}><div style={cardLabel}>Nama Direktur</div><div style={cardValue}>{perusahaan?.namaPemilik || '-'}</div></div>
+                        <div style={cardStyle}><div style={cardLabel}>Alamat Direktur</div><div style={cardValue}>{perusahaan?.alamatPemilik || '-'}</div></div>
                     </div>
 
                     <h3 style={{ margin: '0 0 16px', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: 8 }}>🏢 PERUSAHAAN</h3>
-                    <div style={{ marginBottom: 12 }}><label style={labelStyle}>Nama Perusahaan</label><input style={readOnlyStyle} value={perusahaan?.namaPerusahaan || '-'} readOnly /></div>
-                    <div style={{ marginBottom: 12 }}><label style={labelStyle}>NPWP Perusahaan</label><input style={readOnlyStyle} value={perusahaan?.npwp || '-'} readOnly /></div>
-                    <div style={{ marginBottom: 12 }}><label style={labelStyle}>Alamat Perusahaan</label><input style={readOnlyStyle} value={perusahaan?.alamatPerusahaan || '-'} readOnly /></div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 12 }}>
-                        <div><label style={labelStyle}>Nomor Telp</label><input style={readOnlyStyle} value={perusahaan?.noTelp || '-'} readOnly /></div>
-                        <div><label style={labelStyle}>Email</label><input style={readOnlyStyle} value={perusahaan?.emailPerusahaan || '-'} readOnly /></div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                        <div style={cardStyle}><div style={cardLabel}>Nama Perusahaan</div><div style={cardValue}>{perusahaan?.namaPerusahaan || '-'}</div></div>
+                        <div style={cardStyle}><div style={cardLabel}>NPWP</div><div style={cardValue}>{perusahaan?.npwp || '-'}</div></div>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 12 }}>
-                        <div><label style={labelStyle}>Nomor Akta Notaris</label><input style={readOnlyStyle} value={perusahaan?.noAkta || '-'} readOnly /></div>
-                        <div><label style={labelStyle}>Tanggal Akta Notaris</label><input style={readOnlyStyle} value={perusahaan?.tanggalAkta || '-'} readOnly /></div>
+                    <div style={{ ...cardStyle, marginBottom: 12 }}><div style={cardLabel}>Alamat Perusahaan</div><div style={cardValue}>{perusahaan?.alamatPerusahaan || '-'}</div></div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                        <div style={cardStyle}><div style={{ ...cardLabel, color: '#ef4444' }}>Telepon</div><div style={cardValue}>{perusahaan?.noTelp || '-'}</div></div>
+                        <div style={cardStyle}><div style={{ ...cardLabel, color: '#ef4444' }}>Email</div><div style={cardValue}>{perusahaan?.emailPerusahaan || '-'}</div></div>
                     </div>
-                    <div style={{ marginBottom: 12 }}><label style={labelStyle}>Nama Akta Notaris</label><input style={readOnlyStyle} value={perusahaan?.namaNotaris || '-'} readOnly /></div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
-                        <div><label style={labelStyle}>Bank</label><input style={readOnlyStyle} value={perusahaan?.bank || '-'} readOnly /></div>
-                        <div><label style={labelStyle}>Rekening</label><input style={readOnlyStyle} value={`${perusahaan?.noRekening || '-'} atas nama ${perusahaan?.namaRekening || '-'}`} readOnly /></div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                        <div style={cardStyle}><div style={cardLabel}>Nomor Akta Notaris</div><div style={cardValue}>{perusahaan?.noAkta || '-'}</div></div>
+                        <div style={cardStyle}><div style={cardLabel}>Tanggal Akta Notaris</div><div style={cardValue}>{perusahaan?.tanggalAkta || '-'}</div></div>
+                    </div>
+                    <div style={{ ...cardStyle, marginBottom: 12 }}><div style={cardLabel}>Nama Akta Notaris</div><div style={cardValue}>{perusahaan?.namaNotaris || '-'}</div></div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 24 }}>
+                        <div style={cardStyle}><div style={cardLabel}>Bank</div><div style={cardValue}>{perusahaan?.bank || '-'}</div></div>
+                        <div style={cardStyle}><div style={cardLabel}>Rekening</div><div style={cardValue}>{perusahaan?.noRekening || '-'} atas nama <strong>{perusahaan?.namaRekening || '-'}</strong></div></div>
                     </div>
 
                     <h3 style={{ margin: '0 0 16px', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: 8 }}>⚙️ PAKET PEKERJAAN</h3>
@@ -241,23 +242,23 @@ const DashboardPenyedia = () => {
                         {searchResult && <div style={{ color: '#22c55e', fontSize: '0.82rem', marginTop: 6 }}>✅ Paket ditemukan</div>}
                         {searchError && <div style={{ color: '#ef4444', fontSize: '0.82rem', marginTop: 6 }}>❌ {searchError}</div>}
                     </div>
-                    <div style={{ marginBottom: 12 }}><label style={labelStyle}>Nama Paket</label><input style={readOnlyStyle} value={namaPaket} readOnly /></div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 12 }}>
-                        <div><label style={labelStyle}>Jenis Pengadaan</label><input style={readOnlyStyle} value={jenisPengadaan} readOnly /></div>
-                        <div><label style={labelStyle}>Metode Pemilihan</label><input style={readOnlyStyle} value={metodePengadaan} readOnly /></div>
+                    <div style={{ ...cardStyle, marginBottom: 12 }}><div style={cardLabel}>Nama Paket</div><div style={cardValue}>{namaPaket || '-'}</div></div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                        <div style={cardStyle}><div style={cardLabel}>Jenis Pengadaan</div><div style={cardValue}>{jenisPengadaan || '-'}</div></div>
+                        <div style={cardStyle}><div style={cardLabel}>Metode Pemilihan</div><div style={cardValue}>{metodePengadaan || '-'}</div></div>
                     </div>
 
                     {searchResult && (
                         <>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 12 }}>
-                            <div><label style={{ ...labelStyle, color: 'var(--text-primary)' }}>Nomor DPPL <span style={{ color: '#ef4444' }}>*</span></label><input style={fieldStyle} placeholder="Nomor DPPL" value={noDppl} onChange={e => setNoDppl(e.target.value)} /></div>
-                            <div><label style={{ ...labelStyle, color: 'var(--text-primary)' }}>Tanggal DPPL <span style={{ color: '#ef4444' }}>*</span></label><input type="date" style={fieldStyle} value={tanggalDppl} onChange={e => setTanggalDppl(e.target.value)} /></div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                            <div><label style={{ ...labelStyle, color: '#3b82f6' }}>Nomor DPPL <span style={{ color: '#ef4444' }}>*</span></label><input style={fieldStyle} placeholder="Nomor DPPL" value={noDppl} onChange={e => setNoDppl(e.target.value)} /></div>
+                            <div><label style={{ ...labelStyle, color: '#3b82f6' }}>Tanggal DPPL <span style={{ color: '#ef4444' }}>*</span></label><input type="date" style={fieldStyle} value={tanggalDppl} onChange={e => setTanggalDppl(e.target.value)} /></div>
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-                            <div><label style={{ ...labelStyle, color: 'var(--text-primary)' }}>Nomor BAHPL <span style={{ color: '#ef4444' }}>*</span></label><input style={fieldStyle} placeholder="Nomor BAHPL" value={noBahpl} onChange={e => setNoBahpl(e.target.value)} /></div>
-                            <div><label style={{ ...labelStyle, color: 'var(--text-primary)' }}>Tanggal BAHPL <span style={{ color: '#ef4444' }}>*</span></label><input type="date" style={fieldStyle} value={tanggalBahpl} onChange={e => setTanggalBahpl(e.target.value)} /></div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+                            <div><label style={{ ...labelStyle, color: '#3b82f6' }}>Nomor BAHPL <span style={{ color: '#ef4444' }}>*</span></label><input style={fieldStyle} placeholder="Nomor BAHPL" value={noBahpl} onChange={e => setNoBahpl(e.target.value)} /></div>
+                            <div><label style={{ ...labelStyle, color: '#3b82f6' }}>Tanggal BAHPL <span style={{ color: '#ef4444' }}>*</span></label><input type="date" style={fieldStyle} value={tanggalBahpl} onChange={e => setTanggalBahpl(e.target.value)} /></div>
                         </div>
-                        <div style={{ marginBottom: 12 }}><label style={labelStyle}>Berkas Penawaran</label></div>
+                        <div style={{ ...cardLabel, marginBottom: 6 }}>Berkas Penawaran</div>
                         <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: 10, padding: 16, marginBottom: 24 }}>
                             <label style={{ cursor: 'pointer', display: 'inline-block' }}>
                                 <input type="file" accept=".pdf" onChange={e => setBerkasPenawaran(e.target.files?.[0])} style={{ display: 'none' }} />
@@ -273,7 +274,8 @@ const DashboardPenyedia = () => {
                         </>
                     )}
                 </div>
-            )}
+                );
+            })()}
 
             {/* ===== TAB: LAMPIRAN ===== */}
             {activeTab === 'lampiran' && (
