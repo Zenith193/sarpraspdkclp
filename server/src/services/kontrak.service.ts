@@ -19,10 +19,12 @@ export const kontrakService = {
         return results[0] || null;
     },
 
-    // Find all matrik with same RUP (siblings/anakan)
+    // Find all matrik with same RUP or same noMatrik parent (siblings/anakan)
     async searchSiblings(rup: string) {
-        const results = await db.select({
+        // First try exact RUP match
+        let results = await db.select({
             id: matrikKegiatan.id,
+            noMatrik: matrikKegiatan.noMatrik,
             rup: matrikKegiatan.rup,
             namaPaket: matrikKegiatan.namaPaket,
             namaSekolah: matrikKegiatan.namaSekolah,
@@ -30,7 +32,36 @@ export const kontrakService = {
             hps: matrikKegiatan.hps,
             paguAnggaran: matrikKegiatan.paguAnggaran,
         }).from(matrikKegiatan).where(eq(matrikKegiatan.rup, rup));
-        console.log(`[Siblings] RUP="${rup}" found ${results.length} entries:`, results.map(r => r.namaPaket));
+        console.log(`[Siblings] RUP="${rup}" found ${results.length} entries by RUP match`);
+        
+        // If only 1 result, try to find siblings via noMatrik prefix
+        if (results.length === 1) {
+            const parentNoMatrik = results[0].noMatrik;
+            // Get base number (e.g. "87" from "87" or "87.1")
+            const baseNoMatrik = parentNoMatrik.includes('.') ? parentNoMatrik.split('.')[0] : parentNoMatrik;
+            
+            const allMatrik = await db.select({
+                id: matrikKegiatan.id,
+                noMatrik: matrikKegiatan.noMatrik,
+                rup: matrikKegiatan.rup,
+                namaPaket: matrikKegiatan.namaPaket,
+                namaSekolah: matrikKegiatan.namaSekolah,
+                nilaiKontrak: matrikKegiatan.nilaiKontrak,
+                hps: matrikKegiatan.hps,
+                paguAnggaran: matrikKegiatan.paguAnggaran,
+            }).from(matrikKegiatan);
+            
+            const siblings = allMatrik.filter(m => 
+                m.noMatrik === baseNoMatrik || m.noMatrik.startsWith(baseNoMatrik + '.')
+            );
+            
+            if (siblings.length > 1) {
+                console.log(`[Siblings] Found ${siblings.length} entries by noMatrik prefix "${baseNoMatrik}":`, siblings.map(r => `${r.noMatrik}: ${r.namaPaket}`));
+                return siblings;
+            }
+        }
+        
+        console.log(`[Siblings] Final: ${results.length} entries:`, results.map(r => `${r.noMatrik}: ${r.namaPaket}`));
         return results;
     },
 
