@@ -8,6 +8,7 @@ const DashboardPenyedia = () => {
     const [perusahaan, setPerusahaan] = useState(null);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('data-dasar');
+    const [showForm, setShowForm] = useState(false);
     const [completed, setCompleted] = useState({ 'data-dasar': false, spk: false, lampiran: false, spspmk: false, verifikasi: false });
     const [searchLoading, setSearchLoading] = useState(false);
     const [searchResult, setSearchResult] = useState(null);
@@ -201,7 +202,7 @@ const DashboardPenyedia = () => {
                     <div className="stat-card" style={{ padding: 24, background: 'var(--accent-blue)', color: '#fff' }}>
                         <h3 style={{ margin: '0 0 12px', fontSize: '1.1rem', color: '#fff' }}>Pengajuan Layanan Kontrak</h3>
                         <p style={{ fontSize: '0.85rem', lineHeight: 1.6, margin: '0 0 20px', opacity: 0.9 }}>Gunakan SPIDOL untuk mengajukan permohonan kontrak dengan lebih efisien. Siapkan dokumen dan data pendukung untuk memperlancar proses pengajuan Anda.</p>
-                        <button onClick={() => { setActiveTab('data-dasar'); window.scrollTo({ top: 500, behavior: 'smooth' }); }}
+                        <button onClick={() => { setShowForm(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                             style={{ width: '100%', padding: '14px 0', border: '2px solid #fff', borderRadius: 10, background: 'transparent', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '0.95rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                             <ArrowRight size={18} /> AJUKAN PERMOHONAN KONTRAK
                         </button>
@@ -218,9 +219,37 @@ const DashboardPenyedia = () => {
                 </div>
             </div>
 
-            {/* ===== FORM SECTION ===== */}
-            <div className="page-header"><h1 className="page-title">🏠 DETAIL PERMOHONAN KONTRAK</h1></div>
+            {/* ===== LAKON 2-COL FORM ===== */}
+            {showForm && !completed['data-dasar'] && (
+                <div className="stat-card" style={{ padding: 24, marginBottom: 30 }}>
+                    <h2 style={{ margin: '0 0 24px', display: 'flex', alignItems: 'center', gap: 10, fontSize: '1.15rem' }}>📝 PERMOHONAN KONTRAK</h2>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 30 }}>
+                        <div>
+                            {[['NIK Direktur', perusahaan?.nikPemilik], ['Nama Direktur', perusahaan?.namaPemilik]].map(([l, v]) => (<div key={l} style={{ marginBottom: 16 }}><label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>{l}</label><div style={readOnlyStyle}>{v || '-'}</div></div>))}
+                            <div style={{ marginBottom: 16 }}><label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Alamat Direktur</label><div style={{ ...readOnlyStyle, minHeight: 60 }}>{perusahaan?.alamatPemilik || '-'}</div></div>
+                            <div style={{ marginBottom: 16 }}><label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Nama Perusahaan</label><div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 8 }}><div style={readOnlyStyle}>{perusahaan?.namaPerusahaan || '-'}</div><div style={readOnlyStyle}>{perusahaan?.namaPerusahaanSingkat || '-'}</div></div></div>
+                            <div style={{ marginBottom: 16 }}><label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Akta Notaris</label><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}><div style={readOnlyStyle}>{perusahaan?.noAkta || '-'}</div><div style={readOnlyStyle}>{perusahaan?.namaNotaris || '-'}</div><div style={readOnlyStyle}>{perusahaan?.tanggalAkta || '-'}</div></div></div>
+                            <div style={{ marginBottom: 16 }}><label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Alamat Perusahaan</label><div style={{ ...readOnlyStyle, minHeight: 60 }}>{perusahaan?.alamatPerusahaan || '-'}</div></div>
+                            <div style={{ marginBottom: 16 }}><label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Kontak</label><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}><div style={readOnlyStyle}>{perusahaan?.noTelp || '-'}</div><div style={readOnlyStyle}>{perusahaan?.emailPerusahaan || '-'}</div></div></div>
+                            <div style={{ marginBottom: 16 }}><label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>No Rekening Perusahaan</label><div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}><div style={readOnlyStyle}>{perusahaan?.noRekening || '-'}</div><div style={readOnlyStyle}>{perusahaan?.namaRekening || '-'}</div><div style={readOnlyStyle}>{perusahaan?.bank || '-'}</div></div></div>
+                            <div style={{ marginBottom: 16 }}><label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>NPWP Perusahaan</label><div style={readOnlyStyle}>{perusahaan?.npwp || '-'}</div></div>
+                        </div>
+                        <div>
+                            <div style={{ background: 'rgba(239,68,68,0.06)', borderRadius: 10, padding: 16, marginBottom: 20 }}><div style={{ fontWeight: 700, color: '#ef4444', marginBottom: 6, fontSize: '0.88rem' }}>⚠️ Catatan:</div><p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.6 }}>Pastikan untuk mengecek kembali kebenaran data perusahaan Anda.</p></div>
+                            <h3 style={{ margin: '0 0 16px', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: 8 }}>📋 DASAR PERMOHONAN</h3>
+                            <div style={{ marginBottom: 16 }}><label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Kode Sirup <span style={{ color: '#ef4444' }}>*</span></label><div style={{ display: 'flex', gap: 8 }}><input style={{ ...fieldStyle, flex: 1 }} placeholder="Kode Sirup" value={kodeSirup} onChange={e => setKodeSirup(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleSearch()} /><button onClick={handleSearch} disabled={searchLoading} style={{ padding: '10px 18px', border: 'none', borderRadius: 8, background: 'var(--accent-blue)', color: '#fff', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><Search size={16} /></button></div>{searchResult && <div style={{ color: '#22c55e', fontSize: '0.82rem', marginTop: 6 }}>✅ Paket ditemukan</div>}{searchError && <div style={{ color: '#ef4444', fontSize: '0.82rem', marginTop: 6 }}>❌ {searchError}</div>}</div>
+                            <div style={{ marginBottom: 16 }}><label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Nama Paket</label><div style={readOnlyStyle}>{namaPaket || '-'}</div></div>
+                            <div style={{ marginBottom: 16 }}><label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Metode Pengadaan</label><div style={readOnlyStyle}>{metodePengadaan || '-'}</div></div>
+                            <div style={{ marginBottom: 24 }}><label style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Jenis Pengadaan</label><div style={readOnlyStyle}>{jenisPengadaan || '-'}</div></div>
+                            {searchResult && (<button onClick={() => { setCompleted(c => ({ ...c, 'data-dasar': true })); setActiveTab('lampiran'); setToast('Data dasar berhasil disimpan'); setTimeout(() => setToast(''), 3000); }} style={{ width: '100%', padding: '14px 0', border: 'none', borderRadius: 10, background: 'var(--accent-blue)', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}><Send size={18} /> LANJUT PERMOHONAN</button>)}
+                        </div>
+                    </div>
+                </div>
+            )}
 
+            {/* ===== TAB SYSTEM (after LANJUT) ===== */}
+            {showForm && completed['data-dasar'] && (<>
+            <div className="page-header"><h1 className="page-title">🏠 DETAIL PERMOHONAN KONTRAK</h1></div>
             {/* ===== TAB INDICATORS ===== */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
                 {[
@@ -434,6 +463,8 @@ const DashboardPenyedia = () => {
                     <p style={{ fontSize: '0.9rem' }}>Tahap ini akan diisi setelah proses verifikasi oleh admin.</p>
                 </div>
             )}
+
+            </>)}
 
             {/* ===== Permohonan Dalam Proses ===== */}
             {permohonanAktif.length > 0 && (
