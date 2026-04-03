@@ -96,20 +96,29 @@ const ManajemenKontrak = () => {
             const storedItems = d.nilaiItems ? JSON.parse(d.nilaiItems) : null;
             if (storedItems) {
                 setNilaiItems(storedItems);
-            } else if (d.kodeSirup) {
-                // Auto-detect siblings (anakan) from matrik
-                try {
-                    const siblings = await kontrakApi.searchSiblings(d.kodeSirup);
-                    if (Array.isArray(siblings) && siblings.length > 1) {
-                        setNilaiItems(siblings.map(s => ({ nama: s.namaPaket || '', nilai: String(s.nilaiKontrak || 0) })));
-                    } else {
+            } else {
+                // Auto-detect siblings (anakan) from matrik using RUP code
+                const rupCode = d.kodeSirup || d.matrik?.rup || '';
+                console.log('[Anakan] Searching siblings for RUP:', rupCode);
+                if (rupCode) {
+                    try {
+                        const siblings = await kontrakApi.searchSiblings(rupCode);
+                        console.log('[Anakan] Siblings found:', siblings);
+                        if (Array.isArray(siblings) && siblings.length > 1) {
+                            setNilaiItems(siblings.map(s => ({
+                                nama: s.namaPaket || '',
+                                nilai: String(s.nilaiKontrak || s.hps || s.paguAnggaran || 0)
+                            })));
+                        } else {
+                            setNilaiItems(nk ? [{ nama: d.namaPaket || '', nilai: String(nk) }] : []);
+                        }
+                    } catch (err) {
+                        console.error('[Anakan] Error:', err);
                         setNilaiItems(nk ? [{ nama: d.namaPaket || '', nilai: String(nk) }] : []);
                     }
-                } catch {
+                } else {
                     setNilaiItems(nk ? [{ nama: d.namaPaket || '', nilai: String(nk) }] : []);
                 }
-            } else {
-                setNilaiItems(nk ? [{ nama: d.namaPaket || '', nilai: String(nk) }] : []);
             }
             setSpkData({
                 noSpk: d.noSpk || d.matrik?.noSpk || '',

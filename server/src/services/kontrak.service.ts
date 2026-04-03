@@ -21,7 +21,7 @@ export const kontrakService = {
 
     // Find all matrik with same RUP (siblings/anakan)
     async searchSiblings(rup: string) {
-        return db.select({
+        const results = await db.select({
             id: matrikKegiatan.id,
             rup: matrikKegiatan.rup,
             namaPaket: matrikKegiatan.namaPaket,
@@ -30,6 +30,8 @@ export const kontrakService = {
             hps: matrikKegiatan.hps,
             paguAnggaran: matrikKegiatan.paguAnggaran,
         }).from(matrikKegiatan).where(eq(matrikKegiatan.rup, rup));
+        console.log(`[Siblings] RUP="${rup}" found ${results.length} entries:`, results.map(r => r.namaPaket));
+        return results;
     },
 
     // Create permohonan (by penyedia)
