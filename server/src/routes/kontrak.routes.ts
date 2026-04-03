@@ -35,6 +35,16 @@ router.get('/search-sirup', requireAuth, async (req, res) => {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// === Search siblings (anakan) by RUP ===
+router.get('/siblings', requireAuth, async (req, res) => {
+    try {
+        const rup = req.query.rup as string;
+        if (!rup) return res.status(400).json({ error: 'RUP wajib diisi' });
+        const results = await kontrakService.searchSiblings(rup);
+        res.json(results);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 // === PENYEDIA: Create permohonan ===
 router.post('/permohonan', requireAuth, upload.single('berkasPenawaran'), async (req, res) => {
     try {

@@ -261,6 +261,7 @@ export const perusahaanApi = {
 
 export const kontrakApi = {
     searchSirup: (kode) => api.get(`/kontrak/search-sirup?kode=${encodeURIComponent(kode)}`),
+    searchSiblings: (rup) => api.get(`/kontrak/siblings?rup=${encodeURIComponent(rup)}`),
     createPermohonan: (formData) => api.upload('/kontrak/permohonan', formData),
     listPermohonan: () => api.get('/kontrak/permohonan'),
     getPermohonan: (id) => api.get(`/kontrak/permohonan/${id}`),

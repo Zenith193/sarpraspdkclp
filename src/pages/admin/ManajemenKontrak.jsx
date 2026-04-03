@@ -91,9 +91,25 @@ const ManajemenKontrak = () => {
             const tglMulai = d.tanggalMulai || d.matrik?.tanggalMulai || '';
             const tglSelesai = d.tanggalSelesai || d.matrik?.tanggalSelesai || calcTanggalSelesai(tglMulai, wpNum);
             const tb = d.terbilangKontrak || d.matrik?.terbilangKontrak || numberToTerbilang(nk);
-            // Initialize nilaiItems from stored data or default single item
+            // Initialize nilaiItems: priority = stored > siblings > single
             const storedItems = d.nilaiItems ? JSON.parse(d.nilaiItems) : null;
-            setNilaiItems(storedItems || (nk ? [{ nama: d.namaPaket || '', nilai: String(nk) }] : []));
+            if (storedItems) {
+                setNilaiItems(storedItems);
+            } else if (d.kodeSirup) {
+                // Auto-detect siblings (anakan) from matrik
+                try {
+                    const siblings = await kontrakApi.searchSiblings(d.kodeSirup);
+                    if (Array.isArray(siblings) && siblings.length > 1) {
+                        setNilaiItems(siblings.map(s => ({ nama: s.namaPaket || '', nilai: String(s.nilaiKontrak || 0) })));
+                    } else {
+                        setNilaiItems(nk ? [{ nama: d.namaPaket || '', nilai: String(nk) }] : []);
+                    }
+                } catch {
+                    setNilaiItems(nk ? [{ nama: d.namaPaket || '', nilai: String(nk) }] : []);
+                }
+            } else {
+                setNilaiItems(nk ? [{ nama: d.namaPaket || '', nilai: String(nk) }] : []);
+            }
             setSpkData({
                 noSpk: d.noSpk || d.matrik?.noSpk || '',
                 nilaiKontrak: nk,

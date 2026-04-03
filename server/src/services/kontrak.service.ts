@@ -19,6 +19,19 @@ export const kontrakService = {
         return results[0] || null;
     },
 
+    // Find all matrik with same RUP (siblings/anakan)
+    async searchSiblings(rup: string) {
+        return db.select({
+            id: matrikKegiatan.id,
+            rup: matrikKegiatan.rup,
+            namaPaket: matrikKegiatan.namaPaket,
+            namaSekolah: matrikKegiatan.namaSekolah,
+            nilaiKontrak: matrikKegiatan.nilaiKontrak,
+            hps: matrikKegiatan.hps,
+            paguAnggaran: matrikKegiatan.paguAnggaran,
+        }).from(matrikKegiatan).where(eq(matrikKegiatan.rup, rup));
+    },
+
     // Create permohonan (by penyedia)
     async createPermohonan(data: any, userId: string) {
         // Find perusahaan linked to this user
