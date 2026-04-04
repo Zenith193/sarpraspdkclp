@@ -138,8 +138,9 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
 
         // Create history record first to get the ID
         const userId = (req as any).user?.id;
-        const sanitize = (s: string) => (s || '').replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
-        const namaFile = `${sanitize(item.noMatrik)}_${sanitize(item.namaSekolah)}_${sanitize(item.namaPaket)}`;
+        const sanitize = (s: string) => (s || '').replace(/[^a-zA-Z0-9 .(),\-]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+        const penyediaStr = item.penyedia ? ` (${sanitize(item.penyedia)})` : '';
+        const namaFile = `${item.noMatrik || ''}.${sanitize(item.namaPaket || '')}${penyediaStr}`.substring(0, 150);
         const historyRecord = await splHistoryService.create({
             matrikId: item.id,
             templateId: Number(req.params.id),

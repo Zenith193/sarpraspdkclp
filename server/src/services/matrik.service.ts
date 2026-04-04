@@ -134,11 +134,20 @@ export const splHistoryService = {
         const results = await query;
 
         // Filter by jenis if provided (matches template name pattern)
+        let filtered = results;
         if (jenis) {
             const j = jenis.toLowerCase();
-            return results.filter(r => (r.templateNama || '').toLowerCase().includes(j));
+            filtered = results.filter(r => (r.templateNama || '').toLowerCase().includes(j));
         }
-        return results;
+
+        // Deduplicate: only keep the latest per matrikId+templateId
+        const seen = new Map<string, boolean>();
+        return filtered.filter(r => {
+            const key = `${r.spl.matrikId}_${r.spl.templateId}`;
+            if (seen.has(key)) return false;
+            seen.set(key, true);
+            return true;
+        });
     },
 
     async create(data: typeof splGenerated.$inferInsert) {
