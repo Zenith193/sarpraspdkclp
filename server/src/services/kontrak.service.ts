@@ -193,6 +193,14 @@ export const kontrakService = {
             matrikSumberDana: matrikKegiatan.sumberDana,
             matrikTahunAnggaran: matrikKegiatan.tahunAnggaran,
             matrikPaguPaket: matrikKegiatan.paguPaket,
+            matrikNoMatrik: matrikKegiatan.noMatrik,
+            matrikNamaSekolah: matrikKegiatan.namaSekolah,
+            matrikPenyedia: matrikKegiatan.penyedia,
+            matrikNamaPemilik: matrikKegiatan.namaPemilik,
+            matrikAlamatKantor: matrikKegiatan.alamatKantor,
+            matrikNoHp: matrikKegiatan.noHp,
+            matrikMetode: matrikKegiatan.metode,
+            matrikNamaPaket: matrikKegiatan.namaPaket,
         }).from(permohonanKontrak)
           .leftJoin(perusahaan, eq(permohonanKontrak.perusahaanId, perusahaan.id))
           .leftJoin(matrikKegiatan, eq(permohonanKontrak.matrikId, matrikKegiatan.id))
@@ -221,6 +229,14 @@ export const kontrakService = {
                 sumberDana: r.matrikSumberDana,
                 tahunAnggaran: r.matrikTahunAnggaran,
                 paguPaket: r.matrikPaguPaket,
+                noMatrik: r.matrikNoMatrik,
+                namaSekolah: r.matrikNamaSekolah,
+                penyedia: r.matrikPenyedia,
+                namaPemilik: r.matrikNamaPemilik,
+                alamatKantor: r.matrikAlamatKantor,
+                noHp: r.matrikNoHp,
+                metode: r.matrikMetode,
+                namaPaket: r.matrikNamaPaket,
             },
             verifikatorName,
         };

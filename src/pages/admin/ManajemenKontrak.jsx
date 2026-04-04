@@ -99,7 +99,7 @@ const ManajemenKontrak = () => {
                 sp_spmk: !!d.noSp,
                 verifikasi: d.status === 'Diverifikasi',
             });
-            const nk = d.nilaiKontrak || d.matrik?.nilaiKontrak || '';
+            const nk = d.matrik?.nilaiKontrak || d.nilaiKontrak || '';
             const wp = d.waktuPenyelesaian || (d.matrik?.jangkaWaktu ? String(d.matrik.jangkaWaktu) : '');
             const wpNum = String(wp).replace(/[^\d]/g, '') || '';
             const tglMulai = d.tanggalMulai || d.matrik?.tanggalMulai || '';
@@ -342,26 +342,26 @@ const ManajemenKontrak = () => {
                                                 // Identitas
                                                 noMatrik: m.noMatrik || d.kodeSirup || '',
                                                 namaSekolah: m.namaSekolah || d.namaPaket || '',
-                                                // Matrik fields
-                                                noSpk: d.noSpk || m.noSpk || '',
-                                                nilaiKontrak: d.nilaiKontrak || m.nilaiKontrak || 0,
-                                                terbilangKontrak: d.terbilangKontrak || m.terbilangKontrak || '',
-                                                tanggalMulai: d.tanggalMulai || m.tanggalMulai || '',
-                                                tanggalSelesai: d.tanggalSelesai || m.tanggalSelesai || '',
-                                                jangkaWaktu: d.waktuPenyelesaian || m.jangkaWaktu || '',
+                                                // Matrik fields (matrik = source of truth)
+                                                noSpk: m.noSpk || d.noSpk || '',
+                                                nilaiKontrak: m.nilaiKontrak || d.nilaiKontrak || 0,
+                                                terbilangKontrak: m.terbilangKontrak || d.terbilangKontrak || '',
+                                                tanggalMulai: m.tanggalMulai || d.tanggalMulai || '',
+                                                tanggalSelesai: m.tanggalSelesai || d.tanggalSelesai || '',
+                                                jangkaWaktu: m.jangkaWaktu || d.waktuPenyelesaian || '',
                                                 paguAnggaran: m.paguAnggaran || 0,
                                                 paguPaket: m.paguPaket || 0,
                                                 hps: m.hps || 0,
                                                 subKegiatan: m.subKegiatan || '',
                                                 sumberDana: m.sumberDana || '',
                                                 tahunAnggaran: m.tahunAnggaran || new Date().getFullYear(),
-                                                // Penyedia fields (map from perusahaan names)
-                                                penyedia: p.namaPerusahaan || '',
-                                                namaPemilik: p.namaPemilik || '',
+                                                // Penyedia: matrik > perusahaan (matrik may have updated penyedia name)
+                                                penyedia: m.penyedia || p.namaPerusahaan || '',
+                                                namaPemilik: m.namaPemilik || p.namaPemilik || '',
                                                 statusPemilik: 'Direktur',
-                                                alamatKantor: p.alamatPerusahaan || '',
-                                                noHp: p.noTelp || '',
-                                                metode: d.metodePengadaan || '',
+                                                alamatKantor: m.alamatKantor || p.alamatPerusahaan || '',
+                                                noHp: m.noHp || p.noTelp || '',
+                                                metode: m.metode || d.metodePengadaan || '',
                                                 // Bank & Akta
                                                 bank: p.bank || '',
                                                 noRekening: p.noRekening || '',
