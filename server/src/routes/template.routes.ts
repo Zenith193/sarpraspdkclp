@@ -163,27 +163,10 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
         const content = fs.readFileSync(tpl.filePath, 'binary');
         const zip = new PizZip(content);
 
-        // PRE-PROCESS: Replace {{tabelRincian}} paragraph in XML BEFORE docxtemplater
+        // Add tabelRincian as a regular variable (marker text, post-processed after render)
         if (rincianItems.length > 0) {
-            try {
-                let docXml = zip.file('word/document.xml')?.asText() || '';
-                const idx = docXml.indexOf('tabelRincian');
-                if (idx > -1) {
-                    // Find the <w:p ...> that contains the marker
-                    const pStart = docXml.lastIndexOf('<w:p', idx);
-                    const pEnd = docXml.indexOf('</w:p>', idx);
-                    if (pStart > -1 && pEnd > -1) {
-                        const tableXml = buildWordTableXml(rincianItems, rincianTotal);
-                        docXml = docXml.substring(0, pStart) + tableXml + docXml.substring(pEnd + '</w:p>'.length);
-                        zip.file('word/document.xml', docXml);
-                        console.log('[Template] Pre-injected rincian table with', rincianItems.length, 'rows');
-                    }
-                }
-            } catch (preErr: any) {
-                console.error('[Template] Pre-process tabelRincian error:', preErr.message);
-            }
+            vars.tabelRincian = '__RINCIAN_TABLE__';
         }
-        delete vars.tabelRincian;
 
         const docxOptions: any = {
             paragraphLoop: true,
@@ -208,21 +191,6 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
             }
             console.log('[DOCX] Retrying without paragraphLoop...');
             const zip2 = new PizZip(content);
-            // Pre-process again for retry zip
-            if (rincianItems.length > 0) {
-                try {
-                    let xml2 = zip2.file('word/document.xml')?.asText() || '';
-                    const idx2 = xml2.indexOf('tabelRincian');
-                    if (idx2 > -1) {
-                        const ps = xml2.lastIndexOf('<w:p', idx2);
-                        const pe = xml2.indexOf('</w:p>', idx2);
-                        if (ps > -1 && pe > -1) {
-                            xml2 = xml2.substring(0, ps) + buildWordTableXml(rincianItems, rincianTotal) + xml2.substring(pe + '</w:p>'.length);
-                            zip2.file('word/document.xml', xml2);
-                        }
-                    }
-                } catch (_) {}
-            }
             doc = new Docxtemplater(zip2, { ...docxOptions, paragraphLoop: false });
         }
 
@@ -241,16 +209,19 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
         if (rincianItems.length > 0) {
             try {
                 let docXml = generatedZip.file('word/document.xml')?.asText() || '';
-                if (docXml.includes('__RINCIAN_TABLE__')) {
-                    const tableXml = buildWordTableXml(rincianItems, rincianTotal);
-                    docXml = docXml.replace(
-                        /<w:p\b[^>]*>(?:[^<]*<[^>]*>)*?[^<]*__RINCIAN_TABLE__[^<]*(?:<[^>]*>[^<]*)*?<\/w:p>/,
-                        tableXml
-                    );
-                    generatedZip.file('word/document.xml', docXml);
-                    console.log('[Template] Fallback: injected rincian table');
+                const markerIdx = docXml.indexOf('__RINCIAN_TABLE__');
+                if (markerIdx > -1) {
+                    const pStart = docXml.lastIndexOf('<w:p', markerIdx);
+                    const pEnd = docXml.indexOf('</w:p>', markerIdx);
+                    if (pStart > -1 && pEnd > -1) {
+                        const tableXml = buildWordTableXml(rincianItems, rincianTotal);
+                        docXml = docXml.substring(0, pStart) + tableXml + docXml.substring(pEnd + '</w:p>'.length);
+                        generatedZip.file('word/document.xml', docXml);
+                        console.log('[Template] Injected rincian table with', rincianItems.length, 'rows');
+                    }
                 }
             } catch (tblErr: any) {
+                console.error('[Template] Table injection error:', tblErr.message);
             }
         }
 
