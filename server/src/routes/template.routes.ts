@@ -163,7 +163,22 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
             paragraphLoop: true,
             linebreaks: true,
             delimiters: { start: '{{', end: '}}' },
+            nullGetter(part: any) {
+                // Log missing variable names for debugging
+                if (!part.module) {
+                    console.log('[DOCX] Missing var:', part.value, 'in scope:', part.scopePathItem?.join('.') || 'root');
+                }
+                return '';
+            },
         });
+
+        // Log all tags found in template for debugging
+        try {
+            const fullText = doc.getFullText();
+            const tagRegex = /\{\{[^}]+\}\}/g;
+            const foundTags = fullText.match(tagRegex);
+            console.log('[DOCX] Tags found in template:', foundTags?.join(', ') || 'NONE');
+        } catch (e) { /* ignore */ }
 
         doc.render(vars);
 
