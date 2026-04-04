@@ -60,9 +60,10 @@ router.get('/permohonan/:id/dokumen', requireAuth, async (req, res) => {
         const { splGenerated, bastTemplate, matrikKegiatan } = await import('../db/schema/index.js');
 
         // Find the matrikId(s) to search: from permohonan directly, or via kodeSirup→matrik.rup
-        let matrikIds: number[] = [];
+        // Also include kontrakId itself as fallback (old records may have stored kontrakId as matrikId)
+        let matrikIds: number[] = [kontrakId];
         if (kontrakData.matrikId) {
-            matrikIds.push(kontrakData.matrikId);
+            if (!matrikIds.includes(kontrakData.matrikId)) matrikIds.push(kontrakData.matrikId);
         }
         // Also search matrik by kodeSirup (RUP) as fallback
         if (kontrakData.kodeSirup) {
@@ -73,8 +74,6 @@ router.get('/permohonan/:id/dokumen', requireAuth, async (req, res) => {
                 if (!matrikIds.includes(m.id)) matrikIds.push(m.id);
             }
         }
-
-        if (matrikIds.length === 0) return res.json([]);
 
         // Get generated SPL files for these matrik IDs
         const { inArray } = await import('drizzle-orm');

@@ -335,6 +335,11 @@ const ManajemenKontrak = () => {
                                             // Map kontrak+perusahaan+matrik fields to match buildVariableMap expected names
                                             const item = {
                                                 ...d,
+                                                // Override id with matrikId for spl_generated
+                                                id: d.matrikId || d.id,
+                                                // Identitas
+                                                noMatrik: m.noMatrik || d.kodeSirup || '',
+                                                namaSekolah: m.namaSekolah || d.namaPaket || '',
                                                 // Matrik fields
                                                 noSpk: d.noSpk || m.noSpk || '',
                                                 nilaiKontrak: d.nilaiKontrak || m.nilaiKontrak || 0,
