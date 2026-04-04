@@ -393,8 +393,8 @@ const ManajemenKontrak = () => {
                             <div style={infoCard}><div style={infoLabel}>TANGGAL BAHPL</div><div style={infoVal}>{formatDate(d.tanggalBahpl)}</div></div>
                         </div>
                         <div style={grid2}>
-                            <div style={infoCard}><div style={infoLabel}>NOMOR SPPBJ</div><div style={infoVal}>{d.noSp || '-'}</div></div>
-                            <div style={infoCard}><div style={infoLabel}>TANGGAL SPPBJ</div><div style={infoVal}>{formatDate(d.tanggalSp)}</div></div>
+                            <div style={infoCard}><div style={infoLabel}>NOMOR SPMK</div><div style={infoVal}>{d.noSp || '-'}</div></div>
+                            <div style={infoCard}><div style={infoLabel}>TANGGAL SPMK</div><div style={infoVal}>{formatDate(d.tanggalSp)}</div></div>
                         </div>
 
                         {/* INFORMASI VERIFIKATOR */}
