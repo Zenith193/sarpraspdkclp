@@ -111,11 +111,20 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
                     );
 
                     if (siblings.length > 1) {
-                        item.nilaiItemsArr = siblings.map((s: any) => ({
-                            nama: s.namaPaket || '',
-                            nilai: String(s.nilaiKontrak || 0),
-                        }));
-                        console.log(`[Generate] Auto-fetched ${siblings.length} siblings for matrik ${baseNo}:`, siblings.map((s: any) => s.noMatrik));
+                        // Only include anakan (with dot in noMatrik), exclude indukan
+                        const anakan = siblings.filter((s: any) => s.noMatrik.includes('.'));
+                        if (anakan.length > 0) {
+                            item.nilaiItemsArr = anakan.map((s: any) => ({
+                                nama: s.namaPaket || '',
+                                nilai: String(s.nilaiKontrak || 0),
+                            }));
+                        } else {
+                            item.nilaiItemsArr = siblings.map((s: any) => ({
+                                nama: s.namaPaket || '',
+                                nilai: String(s.nilaiKontrak || 0),
+                            }));
+                        }
+                        console.log(`[Generate] Auto-fetched ${siblings.length} siblings (${anakan.length} anakan) for matrik ${baseNo}:`, siblings.map((s: any) => s.noMatrik));
                     } else {
                         // Try by RUP
                         const rup = currentMatrik[0].rup;
