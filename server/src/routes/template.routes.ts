@@ -163,38 +163,26 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
         const content = fs.readFileSync(tpl.filePath, 'binary');
         const zip = new PizZip(content);
 
-        // PRE-PROCESS: Replace {{tabelRincian}} in XML BEFORE docxtemplater
+        // PRE-PROCESS: Replace {{tabelRincian}} paragraph in XML BEFORE docxtemplater
         if (rincianItems.length > 0) {
             try {
                 let docXml = zip.file('word/document.xml')?.asText() || '';
-                // Match the paragraph containing {{tabelRincian}} (may be split across XML runs)
-                const tabelMarker = /(<w:p\b[^>]*>(?:[^<]*<[^>]*>)*?[^<]*)\{\{tabelRincian\}\}([^<]*(?:<[^>]*>[^<]*)*?<\/w:p>)/;
-                if (tabelMarker.test(docXml)) {
-                    const tableXml = buildWordTableXml(rincianItems, rincianTotal);
-                    docXml = docXml.replace(tabelMarker, tableXml);
-                    zip.file('word/document.xml', docXml);
-                    console.log('[Template] Pre-injected rincian table with', rincianItems.length, 'rows');
-                } else {
-                    // Tag might be split across Word XML runs, try simpler approach
-                    const simpleMarker = '{{tabelRincian}}';
-                    // Reconstruct: look for the runs containing the tag pieces
-                    const xmlParts = docXml.split('tabelRincian');
-                    if (xmlParts.length > 1) {
-                        // Find the full paragraph containing split tag and replace
-                        const fullParaRegex = /<w:p\b[^>]*>(?:(?!<w:p\b).)*?tabelRincian(?:(?!<\/w:p>).)*?<\/w:p>/s;
-                        if (fullParaRegex.test(docXml)) {
-                            const tableXml = buildWordTableXml(rincianItems, rincianTotal);
-                            docXml = docXml.replace(fullParaRegex, tableXml);
-                            zip.file('word/document.xml', docXml);
-                            console.log('[Template] Pre-injected rincian table (split tag) with', rincianItems.length, 'rows');
-                        }
+                const idx = docXml.indexOf('tabelRincian');
+                if (idx > -1) {
+                    // Find the <w:p ...> that contains the marker
+                    const pStart = docXml.lastIndexOf('<w:p', idx);
+                    const pEnd = docXml.indexOf('</w:p>', idx);
+                    if (pStart > -1 && pEnd > -1) {
+                        const tableXml = buildWordTableXml(rincianItems, rincianTotal);
+                        docXml = docXml.substring(0, pStart) + tableXml + docXml.substring(pEnd + '</w:p>'.length);
+                        zip.file('word/document.xml', docXml);
+                        console.log('[Template] Pre-injected rincian table with', rincianItems.length, 'rows');
                     }
                 }
             } catch (preErr: any) {
                 console.error('[Template] Pre-process tabelRincian error:', preErr.message);
             }
         }
-        // Remove tabelRincian from vars (already handled)
         delete vars.tabelRincian;
 
         const docxOptions: any = {
@@ -224,10 +212,14 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
             if (rincianItems.length > 0) {
                 try {
                     let xml2 = zip2.file('word/document.xml')?.asText() || '';
-                    const regex2 = /<w:p\b[^>]*>(?:(?!<w:p\b).)*?tabelRincian(?:(?!<\/w:p>).)*?<\/w:p>/s;
-                    if (regex2.test(xml2)) {
-                        xml2 = xml2.replace(regex2, buildWordTableXml(rincianItems, rincianTotal));
-                        zip2.file('word/document.xml', xml2);
+                    const idx2 = xml2.indexOf('tabelRincian');
+                    if (idx2 > -1) {
+                        const ps = xml2.lastIndexOf('<w:p', idx2);
+                        const pe = xml2.indexOf('</w:p>', idx2);
+                        if (ps > -1 && pe > -1) {
+                            xml2 = xml2.substring(0, ps) + buildWordTableXml(rincianItems, rincianTotal) + xml2.substring(pe + '</w:p>'.length);
+                            zip2.file('word/document.xml', xml2);
+                        }
                     }
                 } catch (_) {}
             }
