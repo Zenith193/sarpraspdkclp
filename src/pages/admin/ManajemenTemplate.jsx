@@ -184,9 +184,9 @@ const GUIDE_DATA = {
         { variable: "{{terbilangTotalRincian}}", description: "Terbilang total rincian" },
         { variable: "{{#rincianKontrak}}", description: "⬇ Loop tabel rincian kontrak (baris per anakan)" },
         { variable: "{{no}}", description: "Nomor urut (dalam loop)" },
-        { variable: "{{nama}} / {{rincianNama}}", description: "Nama paket (dalam loop)" },
-        { variable: "{{nilai}} / {{rincianNilai}}", description: "Nilai Rp. (dalam loop)" },
-        { variable: "{{nilaiRaw}} / {{rincianNilaiRaw}}", description: "Nilai angka (dalam loop)" },
+        { variable: "{{rincianNama}}", description: "Nama paket anakan (dalam loop)" },
+        { variable: "{{rincianNilai}}", description: "Nilai anakan format angka (dalam loop)" },
+        { variable: "{{rincianNilaiRaw}}", description: "Nilai anakan angka mentah (dalam loop)" },
         { variable: "{{/rincianKontrak}}", description: "⬆ Akhir loop tabel rincian" },
     ],
 };
