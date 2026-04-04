@@ -3,6 +3,9 @@ import { templateService } from '../services/bast.service.js';
 import { splHistoryService } from '../services/matrik.service.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { uploadTemplate } from '../middleware/upload.js';
+import { db } from '../db/index.js';
+import { matrikKegiatan } from '../db/schema/index.js';
+import { eq } from 'drizzle-orm';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
@@ -80,6 +83,59 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
 
         // Build variable map
         const refData = await getRefData();
+
+        // Auto-fetch siblings if nilaiItemsArr is empty but matrikId exists
+        if ((!item.nilaiItemsArr || item.nilaiItemsArr.length === 0) && item.id) {
+            try {
+                // Get the current matrik to find noMatrik
+                const currentMatrik = await db.select({
+                    noMatrik: matrikKegiatan.noMatrik,
+                    rup: matrikKegiatan.rup,
+                }).from(matrikKegiatan).where(eq(matrikKegiatan.id, item.id));
+
+                if (currentMatrik[0]) {
+                    const noMatrik = currentMatrik[0].noMatrik || '';
+                    const baseNo = noMatrik.includes('.') ? noMatrik.split('.')[0] : noMatrik;
+
+                    // Find siblings by noMatrik prefix
+                    const allMatrik = await db.select({
+                        noMatrik: matrikKegiatan.noMatrik,
+                        namaPaket: matrikKegiatan.namaPaket,
+                        nilaiKontrak: matrikKegiatan.nilaiKontrak,
+                        namaSekolah: matrikKegiatan.namaSekolah,
+                        rup: matrikKegiatan.rup,
+                    }).from(matrikKegiatan);
+
+                    const siblings = allMatrik.filter((m: any) =>
+                        m.noMatrik === baseNo || m.noMatrik.startsWith(baseNo + '.')
+                    );
+
+                    if (siblings.length > 1) {
+                        item.nilaiItemsArr = siblings.map((s: any) => ({
+                            nama: s.namaPaket || '',
+                            nilai: String(s.nilaiKontrak || 0),
+                        }));
+                        console.log(`[Generate] Auto-fetched ${siblings.length} siblings for matrik ${baseNo}:`, siblings.map((s: any) => s.noMatrik));
+                    } else {
+                        // Try by RUP
+                        const rup = currentMatrik[0].rup;
+                        if (rup) {
+                            const rupSiblings = allMatrik.filter((m: any) => m.rup === rup);
+                            if (rupSiblings.length > 1) {
+                                item.nilaiItemsArr = rupSiblings.map((s: any) => ({
+                                    nama: s.namaPaket || '',
+                                    nilai: String(s.nilaiKontrak || 0),
+                                }));
+                                console.log(`[Generate] Auto-fetched ${rupSiblings.length} siblings by RUP ${rup}`);
+                            }
+                        }
+                    }
+                }
+            } catch (e: any) {
+                console.error('[Generate] Auto-fetch siblings error:', e.message);
+            }
+        }
+
         console.log('[Generate] nilaiItemsArr:', JSON.stringify(item.nilaiItemsArr), 'children:', JSON.stringify(item.children?.length));
         const vars = buildVariableMap(item, sekretaris || {}, refData);
         console.log('[Generate] rincianKontrak:', JSON.stringify(vars.rincianKontrak), 'lingkupPekerjaan:', vars.lingkupPekerjaan, 'adaRincian:', vars.adaRincian);
