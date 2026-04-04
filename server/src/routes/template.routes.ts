@@ -847,9 +847,13 @@ function fmtCurrency(v: number): string {
 
 // Build a proper Word OOXML table for rincian kontrak
 function buildWordTableXml(items: { nama: string; nilai: number }[], total: number): string {
+    // Font & size: Arial Narrow 11pt (sz=22 half-points)
+    const FONT = 'Arial Narrow';
+    const SZ = '22'; // 11pt in half-points
+
     const tblPr = '<w:tblPr>' +
         '<w:tblStyle w:val="TableGrid"/>' +
-        '<w:tblW w:w="0" w:type="auto"/>' +
+        '<w:tblW w:w="5000" w:type="pct"/>' + // 100% page width
         '<w:tblBorders>' +
         '<w:top w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
         '<w:left w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
@@ -861,35 +865,47 @@ function buildWordTableXml(items: { nama: string; nilai: number }[], total: numb
         '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>' +
         '</w:tblPr>';
 
-    const tblGrid = '<w:tblGrid><w:gridCol w:w="6400"/><w:gridCol w:w="2600"/></w:tblGrid>';
+    // 70% for nama, 30% for nilai
+    const tblGrid = '<w:tblGrid><w:gridCol w:w="6300"/><w:gridCol w:w="2700"/></w:tblGrid>';
 
-    function cell(text: string, width: number, opts: { bold?: boolean; center?: boolean; right?: boolean } = {}): string {
+    function cell(text: string, widthPct: number, opts: { bold?: boolean; center?: boolean; right?: boolean } = {}): string {
         const safe = xmlEscape(text);
-        const tcPr = `<w:tcPr><w:tcW w:w="${width}" w:type="dxa"/></w:tcPr>`;
+        const tcPr = `<w:tcPr><w:tcW w:w="${widthPct}" w:type="pct"/></w:tcPr>`;
+
+        // Run properties: font + size + optional bold
+        const rPrParts = [
+            `<w:rFonts w:ascii="${FONT}" w:hAnsi="${FONT}" w:cs="${FONT}"/>`,
+            `<w:sz w:val="${SZ}"/><w:szCs w:val="${SZ}"/>`,
+        ];
+        if (opts.bold) rPrParts.push('<w:b/><w:bCs/>');
+        const rPr = '<w:rPr>' + rPrParts.join('') + '</w:rPr>';
+
+        // Paragraph properties: alignment + paragraph-level rPr
         const pPrParts: string[] = [];
         if (opts.center) pPrParts.push('<w:jc w:val="center"/>');
         if (opts.right) pPrParts.push('<w:jc w:val="right"/>');
-        const rPrTag = opts.bold ? '<w:rPr><w:b/><w:bCs/></w:rPr>' : '';
-        if (opts.bold) pPrParts.push(rPrTag);
-        const pPr = pPrParts.length > 0 ? '<w:pPr>' + pPrParts.join('') + '</w:pPr>' : '';
-        return '<w:tc>' + tcPr + '<w:p>' + pPr + '<w:r>' + rPrTag + '<w:t xml:space="preserve">' + safe + '</w:t></w:r></w:p></w:tc>';
+        pPrParts.push('<w:spacing w:after="0" w:line="240" w:lineRule="auto"/>');
+        pPrParts.push(rPr); // inheritable rPr
+        const pPr = '<w:pPr>' + pPrParts.join('') + '</w:pPr>';
+
+        return '<w:tc>' + tcPr + '<w:p>' + pPr + '<w:r>' + rPr + '<w:t xml:space="preserve">' + safe + '</w:t></w:r></w:p></w:tc>';
     }
 
     const headerRow = '<w:tr>' +
-        cell('RINCIAN KONTRAK', 6400, { bold: true, center: true }) +
-        cell('NILAI', 2600, { bold: true, center: true }) +
+        cell('RINCIAN KONTRAK', 3500, { bold: true, center: true }) +
+        cell('NILAI', 1500, { bold: true, center: true }) +
         '</w:tr>';
 
     const dataRows = items.map(it =>
         '<w:tr>' +
-        cell(it.nama, 6400) +
-        cell(fmtCurrency(it.nilai), 2600, { right: true }) +
+        cell(it.nama, 3500) +
+        cell(fmtCurrency(it.nilai), 1500, { right: true }) +
         '</w:tr>'
     ).join('');
 
     const totalRow = '<w:tr>' +
-        cell('TOTAL', 6400, { bold: true, center: true }) +
-        cell(fmtCurrency(total), 2600, { bold: true, right: true }) +
+        cell('TOTAL', 3500, { bold: true, center: true }) +
+        cell(fmtCurrency(total), 1500, { bold: true, right: true }) +
         '</w:tr>';
 
     return '<w:tbl>' + tblPr + tblGrid + headerRow + dataRows + totalRow + '</w:tbl>';
