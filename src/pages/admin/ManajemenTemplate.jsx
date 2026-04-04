@@ -176,20 +176,16 @@ const GUIDE_DATA = {
         { variable: "{{anakan1Kecamatan}}", description: "Kecamatan anakan ke-1" },
     ],
     "Rincian Kontrak (Anakan)": [
+        { variable: "{{tabelRincian}}", description: "⭐ TABEL OTOMATIS: Rincian + Nilai + Total (cukup ketik ini saja!)" },
         { variable: "{{jumlahRincian}}", description: "Jumlah rincian paket (angka)" },
         { variable: "{{adaRincian}}", description: "'Ya' jika paket punya anakan" },
         { variable: "{{lingkupPekerjaan}}", description: "Daftar pekerjaan bernomor (baris baru)" },
         { variable: "{{totalRincian}}", description: "Total rincian (format angka)" },
-        { variable: "{{totalRincianRaw}}", description: "Total nilai rincian (angka mentah)" },
         { variable: "{{terbilangTotalRincian}}", description: "Terbilang total rincian" },
-        { variable: "{{rincianNamaAll}}", description: "Semua nama anakan (baris baru per item)" },
-        { variable: "{{rincianNilaiAll}}", description: "Semua nilai anakan Rp. (baris baru per item)" },
         { variable: "{{rincian1Nama}}", description: "Nama anakan ke-1" },
-        { variable: "{{rincian1Nilai}}", description: "Nilai anakan ke-1 (sudah termasuk Rp., kosong jika 0)" },
+        { variable: "{{rincian1Nilai}}", description: "Nilai anakan ke-1 (sudah Rp., kosong jika 0)" },
         { variable: "{{rincian2Nama}}", description: "Nama anakan ke-2" },
-        { variable: "{{rincian2Nilai}}", description: "Nilai anakan ke-2 (sudah termasuk Rp., kosong jika 0)" },
-        { variable: "{{rincian3Nama}} dst", description: "Nama anakan ke-3, 4, 5... (maks 15)" },
-        { variable: "{{rincian3Nilai}} dst", description: "Nilai ke-3,4,5... (sudah termasuk Rp., kosong jika 0)" },
+        { variable: "{{rincian2Nilai}}", description: "Nilai anakan ke-2 (sudah Rp., kosong jika 0)" },
     ],
 };
 

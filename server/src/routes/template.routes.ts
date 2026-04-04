@@ -182,8 +182,27 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
 
         doc.render(vars);
 
-        // Post-process: strip empty Word Header sections that cause extra top spacing
+        // Post-process: replace __RINCIAN_TABLE__ marker with actual Word table XML
         const generatedZip = doc.getZip();
+        if (vars._rincianItems && vars._rincianItems.length > 0) {
+            try {
+                let docXml = generatedZip.file('word/document.xml')?.asText() || '';
+                if (docXml.includes('__RINCIAN_TABLE__')) {
+                    const tableXml = buildWordTableXml(vars._rincianItems, vars._rincianTotal);
+                    // Replace the paragraph containing the marker with the table
+                    docXml = docXml.replace(
+                        /<w:p\b[^>]*>(?:[^<]*<[^>]*>)*?[^<]*__RINCIAN_TABLE__[^<]*(?:<[^>]*>[^<]*)*?<\/w:p>/,
+                        tableXml
+                    );
+                    generatedZip.file('word/document.xml', docXml);
+                    console.log('[Template] Injected rincian table with', vars._rincianItems.length, 'rows');
+                }
+            } catch (tblErr: any) {
+                console.error('[Template] Table injection error:', tblErr.message);
+            }
+        }
+
+        // Post-process: strip empty Word Header sections that cause extra top spacing
         try {
             // Check each header file; remove if it only has empty paragraphs
             const headerFiles = Object.keys(generatedZip.files).filter(f => /^word\/header\d*\.xml$/i.test(f));
@@ -723,6 +742,51 @@ function buildRincianVars(d: any) {
         rincianNilaiAll,
         // Indexed: rincian1Nama, rincian1Nilai, rincian2Nama, etc.
         ...indexedVars,
+        // Marker for auto-generated table (post-processed into Word table XML)
+        tabelRincian: items.length > 0 ? '__RINCIAN_TABLE__' : '',
+        // Store items data for post-processing
+        _rincianItems: items,
+        _rincianTotal: total,
     };
 }
 
+
+// Build a proper Word OOXML table for rincian kontrak
+function buildWordTableXml(items: { nama: string; nilai: number }[], total: number): string {
+    const fmtVal = (v: number) => v ? 'Rp. ' + Number(v).toLocaleString('id-ID') : '';
+
+    const tblPr = `<w:tblPr>` +
+        `<w:tblW w:w="5000" w:type="pct"/>` +
+        `<w:tblBorders>` +
+        `<w:top w:val="single" w:sz="4" w:space="0" w:color="000000"/>` +
+        `<w:left w:val="single" w:sz="4" w:space="0" w:color="000000"/>` +
+        `<w:bottom w:val="single" w:sz="4" w:space="0" w:color="000000"/>` +
+        `<w:right w:val="single" w:sz="4" w:space="0" w:color="000000"/>` +
+        `<w:insideH w:val="single" w:sz="4" w:space="0" w:color="000000"/>` +
+        `<w:insideV w:val="single" w:sz="4" w:space="0" w:color="000000"/>` +
+        `</w:tblBorders>` +
+        `<w:tblLook w:val="04A0" w:firstRow="1"/>` +
+        `</w:tblPr>`;
+
+    const tblGrid = `<w:tblGrid><w:gridCol w:w="6500"/><w:gridCol w:w="2500"/></w:tblGrid>`;
+
+    const cell = (text: string, opts: { bold?: boolean; center?: boolean; right?: boolean } = {}) => {
+        const pPrParts: string[] = [];
+        if (opts.center) pPrParts.push(`<w:jc w:val="center"/>`);
+        if (opts.right) pPrParts.push(`<w:jc w:val="right"/>`);
+        if (opts.bold) pPrParts.push(`<w:rPr><w:b/><w:bCs/></w:rPr>`);
+        const pPr = pPrParts.length ? `<w:pPr>` + pPrParts.join('') + `</w:pPr>` : '';
+        const rPr = opts.bold ? `<w:rPr><w:b/><w:bCs/></w:rPr>` : '';
+        return `<w:tc><w:p>` + pPr + `<w:r>` + rPr + `<w:t xml:space="preserve">` + text + `</w:t></w:r></w:p></w:tc>`;
+    };
+
+    const headerRow = `<w:tr>` + cell('RINCIAN KONTRAK', { bold: true, center: true }) + cell('NILAI', { bold: true, center: true }) + `</w:tr>`;
+
+    const dataRows = items.map(it =>
+        `<w:tr>` + cell(it.nama) + cell(fmtVal(it.nilai), { right: true }) + `</w:tr>`
+    ).join('');
+
+    const totalRow = `<w:tr>` + cell('TOTAL', { bold: true, center: true }) + cell('Rp. ' + Number(total).toLocaleString('id-ID'), { bold: true, right: true }) + `</w:tr>`;
+
+    return `<w:tbl>` + tblPr + tblGrid + headerRow + dataRows + totalRow + `</w:tbl>`;
+}
