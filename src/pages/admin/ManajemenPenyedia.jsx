@@ -41,6 +41,7 @@ const ManajemenPenyedia = () => {
     const [skSearch, setSkSearch] = useState('');
     const [ppkSearch, setPpkSearch] = useState('');
     const [mainTab, setMainTab] = useState('akun-penyedia');
+    const [refDeleteConfirm, setRefDeleteConfirm] = useState(null); // { type, id, label }
 
     const fetchData = async () => {
         setLoading(true);
@@ -439,7 +440,7 @@ const ManajemenPenyedia = () => {
                             <tbody>
                                 {dasarHukumData.filter(r => !dhSearch || r.isi?.toLowerCase().includes(dhSearch.toLowerCase()) || String(r.tahun).includes(dhSearch)).map(r => (
                                     <tr key={r.id}><td style={{ textAlign: 'center' }}><input type="checkbox" /></td>
-                                        <td><div style={{ display: 'flex', gap: 4 }}><button title="Edit" onClick={() => setDhEdit({ ...r })} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 4, padding: '3px 6px', cursor: 'pointer' }}><Pencil size={13} /></button><button title="Hapus" onClick={async () => { if (!confirm('Hapus?')) return; await referensiApi.deleteDasarHukum(r.id); fetchRef(); toast.success('Dihapus'); }} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, padding: '3px 6px', cursor: 'pointer' }}><Trash2 size={13} /></button></div></td>
+                                        <td><div style={{ display: 'flex', gap: 4 }}><button title="Edit" onClick={() => setDhEdit({ ...r })} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 4, padding: '3px 6px', cursor: 'pointer' }}><Pencil size={13} /></button><button title="Hapus" onClick={() => setRefDeleteConfirm({ type: 'dasar-hukum', id: r.id, label: `Dasar Hukum ${r.tahun}` })} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, padding: '3px 6px', cursor: 'pointer' }}><Trash2 size={13} /></button></div></td>
                                         <td>{r.tahun}</td><td style={{ whiteSpace: 'normal' }}>{r.isi}</td>
                                     </tr>
                                 ))}
@@ -465,7 +466,7 @@ const ManajemenPenyedia = () => {
                             <tbody>
                                 {satuanKerjaData.filter(r => !skSearch || [r.nip, r.namaPimpinan, r.email].some(f => f?.toLowerCase().includes(skSearch.toLowerCase()))).map(r => (
                                     <tr key={r.id}><td style={{ textAlign: 'center' }}><input type="checkbox" /></td>
-                                        <td><div style={{ display: 'flex', gap: 4 }}><button title="Edit" onClick={() => setSkEdit({ ...r })} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 4, padding: '3px 6px', cursor: 'pointer' }}><Pencil size={13} /></button><button title="Hapus" onClick={async () => { if (!confirm('Hapus?')) return; await referensiApi.deleteSatuanKerja(r.id); fetchRef(); toast.success('Dihapus'); }} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, padding: '3px 6px', cursor: 'pointer' }}><Trash2 size={13} /></button></div></td>
+                                        <td><div style={{ display: 'flex', gap: 4 }}><button title="Edit" onClick={() => setSkEdit({ ...r })} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 4, padding: '3px 6px', cursor: 'pointer' }}><Pencil size={13} /></button><button title="Hapus" onClick={() => setRefDeleteConfirm({ type: 'satuan-kerja', id: r.id, label: r.namaPimpinan || 'Satuan Kerja' })} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, padding: '3px 6px', cursor: 'pointer' }}><Trash2 size={13} /></button></div></td>
                                         <td style={{ fontFamily: 'monospace', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{r.nip}</td><td style={{ whiteSpace: 'nowrap' }}>{r.namaPimpinan}</td><td style={{ whiteSpace: 'nowrap' }}>{r.jabatan}</td><td style={{ whiteSpace: 'nowrap', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.website}</td><td style={{ whiteSpace: 'nowrap' }}>{r.email}</td><td style={{ whiteSpace: 'nowrap' }}>{r.telepon}</td><td style={{ whiteSpace: 'nowrap' }}>{r.klpd}</td>
                                     </tr>
                                 ))}
@@ -491,7 +492,7 @@ const ManajemenPenyedia = () => {
                             <tbody>
                                 {ppkomData.filter(r => !ppkSearch || [r.nip, r.nama, r.email].some(f => f?.toLowerCase().includes(ppkSearch.toLowerCase()))).map(r => (
                                     <tr key={r.id}><td style={{ textAlign: 'center' }}><input type="checkbox" /></td>
-                                        <td><div style={{ display: 'flex', gap: 4 }}><button title="Edit" onClick={() => setPpkEdit({ ...r })} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 4, padding: '3px 6px', cursor: 'pointer' }}><Pencil size={13} /></button><button title="Hapus" onClick={async () => { if (!confirm('Hapus?')) return; await referensiApi.deletePpkom(r.id); fetchRef(); toast.success('Dihapus'); }} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, padding: '3px 6px', cursor: 'pointer' }}><Trash2 size={13} /></button></div></td>
+                                        <td><div style={{ display: 'flex', gap: 4 }}><button title="Edit" onClick={() => setPpkEdit({ ...r })} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 4, padding: '3px 6px', cursor: 'pointer' }}><Pencil size={13} /></button><button title="Hapus" onClick={() => setRefDeleteConfirm({ type: 'ppkom', id: r.id, label: r.nama || 'PPKOM' })} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, padding: '3px 6px', cursor: 'pointer' }}><Trash2 size={13} /></button></div></td>
                                         <td style={{ fontFamily: 'monospace', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{r.nip}</td><td style={{ whiteSpace: 'nowrap' }}>{r.nama}</td><td style={{ whiteSpace: 'nowrap' }}>{r.pangkat}</td><td style={{ whiteSpace: 'nowrap' }}>{r.jabatan}</td><td style={{ whiteSpace: 'nowrap', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.alamat}</td><td style={{ whiteSpace: 'nowrap' }}>{r.noTelp}</td><td style={{ whiteSpace: 'nowrap' }}>{r.email}</td>
                                     </tr>
                                 ))}
@@ -805,6 +806,48 @@ const ManajemenPenyedia = () => {
                     </div>
                     <div className="modal-footer"><button className="btn btn-ghost" onClick={() => setPpkEdit(null)}>Batal</button><button className="btn btn-primary" onClick={async () => { try { if (ppkEdit._new) { await referensiApi.createPpkom(ppkEdit); } else { await referensiApi.updatePpkom(ppkEdit.id, ppkEdit); } toast.success('Tersimpan'); setPpkEdit(null); fetchRef(); } catch { toast.error('Gagal'); } }}>Simpan</button></div>
                 </div></div>
+            )}
+
+            {/* ===== MODAL KONFIRMASI HAPUS REFERENSI ===== */}
+            {refDeleteConfirm && (
+                <div className="modal-overlay" onClick={() => setRefDeleteConfirm(null)} onKeyDown={async (e) => {
+                    if (e.key === 'Enter') {
+                        try {
+                            if (refDeleteConfirm.type === 'dasar-hukum') await referensiApi.deleteDasarHukum(refDeleteConfirm.id);
+                            else if (refDeleteConfirm.type === 'satuan-kerja') await referensiApi.deleteSatuanKerja(refDeleteConfirm.id);
+                            else if (refDeleteConfirm.type === 'ppkom') await referensiApi.deletePpkom(refDeleteConfirm.id);
+                            toast.success('Data berhasil dihapus');
+                            setRefDeleteConfirm(null);
+                            fetchRef();
+                        } catch { toast.error('Gagal menghapus'); }
+                    } else if (e.key === 'Escape') { setRefDeleteConfirm(null); }
+                }} tabIndex={0} ref={el => el && el.focus()}>
+                    <div className="modal" style={{ maxWidth: 420, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                        <div style={{ padding: '28px 24px 8px' }}>
+                            <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(239,68,68,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                                <Trash2 size={28} color="#ef4444" />
+                            </div>
+                            <h3 style={{ margin: '0 0 8px', fontSize: '1.1rem', color: 'var(--text-primary)' }}>Hapus Data?</h3>
+                            <p style={{ margin: 0, fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                                Anda yakin ingin menghapus <strong style={{ color: 'var(--text-primary)' }}>{refDeleteConfirm.label}</strong>? Data yang dihapus tidak dapat dikembalikan.
+                            </p>
+                        </div>
+                        <div style={{ display: 'flex', gap: 10, justifyContent: 'center', padding: '20px 24px 24px' }}>
+                            <button className="btn btn-ghost" onClick={() => setRefDeleteConfirm(null)} style={{ minWidth: 90, borderRadius: 8 }}>Batal</button>
+                            <button className="btn btn-primary" style={{ background: '#ef4444', minWidth: 90, borderRadius: 8 }} onClick={async () => {
+                                try {
+                                    if (refDeleteConfirm.type === 'dasar-hukum') await referensiApi.deleteDasarHukum(refDeleteConfirm.id);
+                                    else if (refDeleteConfirm.type === 'satuan-kerja') await referensiApi.deleteSatuanKerja(refDeleteConfirm.id);
+                                    else if (refDeleteConfirm.type === 'ppkom') await referensiApi.deletePpkom(refDeleteConfirm.id);
+                                    toast.success('Data berhasil dihapus');
+                                    setRefDeleteConfirm(null);
+                                    fetchRef();
+                                } catch { toast.error('Gagal menghapus'); }
+                            }}>Hapus</button>
+                        </div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', paddingBottom: 16, opacity: 0.7 }}>Tekan <kbd style={{ background: 'var(--bg-secondary)', padding: '1px 6px', borderRadius: 4, border: '1px solid var(--border-color)' }}>Enter</kbd> untuk konfirmasi</div>
+                    </div>
+                </div>
             )}
         </div>
     );
