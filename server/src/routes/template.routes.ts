@@ -654,9 +654,13 @@ function buildRincianVars(d: any) {
     // rincianKontrak: loop array for docxtemplater {{#rincianKontrak}}...{{/rincianKontrak}}
     const rincianKontrak = items.map((it, i) => ({
         no: String(i + 1),
+        // Provide both naming conventions for template compatibility
         rincianNama: it.nama,
-        rincianNilai: fmtRp(it.nilai),
+        nama: it.nama,
+        rincianNilai: 'Rp. ' + fmtRp(it.nilai),
+        nilai: 'Rp. ' + fmtRp(it.nilai),
         rincianNilaiRaw: String(it.nilai),
+        nilaiRaw: String(it.nilai),
     }));
 
     // lingkupPekerjaan: numbered list text
@@ -665,7 +669,7 @@ function buildRincianVars(d: any) {
     return {
         rincianKontrak,
         lingkupPekerjaan,
-        totalRincian: fmtRp(total),
+        totalRincian: 'Rp. ' + fmtRp(total),
         totalRincianRaw: String(total),
         terbilangTotalRincian: ucFirst(terbilang(total)) + ' rupiah',
         jumlahRincian: String(items.length),
