@@ -147,7 +147,11 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
 
         console.log('[Generate] nilaiItemsArr:', JSON.stringify(item.nilaiItemsArr), 'children:', JSON.stringify(item.children?.length));
         const vars = buildVariableMap(item, sekretaris || {}, refData);
-        console.log('[Generate] rincianKontrak:', JSON.stringify(vars.rincianKontrak), 'lingkupPekerjaan:', vars.lingkupPekerjaan, 'adaRincian:', vars.adaRincian);
+        console.log('[Generate] ALL KEYS:', Object.keys(vars).join(', '));
+        console.log('[Generate] rincianKontrak length:', vars.rincianKontrak?.length, 'rincianNama:', vars.rincianNama, 'rincianNilai:', vars.rincianNilai);
+        if (vars.rincianKontrak && vars.rincianKontrak.length > 0) {
+            console.log('[Generate] rincianKontrak[0]:', JSON.stringify(vars.rincianKontrak[0]));
+        }
 
         // Fill DOCX template with docxtemplater
         const PizZip = (await import('pizzip')).default;
