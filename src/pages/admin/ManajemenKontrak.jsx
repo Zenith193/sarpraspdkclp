@@ -383,12 +383,7 @@ const ManajemenKontrak = () => {
                                                 // Save historyId for download buttons
                                                 localStorage.setItem(`kontrak_history_${d.id}`, JSON.stringify({ historyId: result.historyId, templateId: selectedTemplate, hasPdf: result.hasPdf }));
                                                 setViewDetail({ ...d, _historyId: result.historyId, _hasPdf: result.hasPdf });
-                                                const blob = await templateApi.getSplFile('docx', result.historyId);
-                                                const url = URL.createObjectURL(blob);
-                                                const a = document.createElement('a');
-                                                a.href = url; a.download = `Kontrak_${d.namaPaket || 'document'}.docx`;
-                                                a.click(); URL.revokeObjectURL(url);
-                                                showToast('✅ Dokumen berhasil di-generate & diunduh');
+                                                showToast('✅ Dokumen berhasil di-generate');
                                             }
                                         } catch (e) { showToast('Gagal generate: ' + e.message, true); }
                                         setGenerating(false);
