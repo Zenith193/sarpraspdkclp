@@ -454,19 +454,19 @@ const ManajemenPenyedia = () => {
 
             {/* ===== TAB: SATUAN KERJA ===== */}
             {mainTab === 'satuan-kerja' && (
-                <div style={{ paddingTop: 0 }}>
+                <div style={{ paddingTop: 0, maxWidth: '100%', overflow: 'hidden' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                         <div className="table-search" style={{ maxWidth: 220 }}><Search size={14} className="search-icon" /><input placeholder="Search" value={skSearch} onChange={e => setSkSearch(e.target.value)} /></div>
                         <button className="btn btn-primary btn-sm" onClick={() => setSkEdit({ nip: '', namaPimpinan: '', jabatan: '', website: '', email: '', telepon: '', klpd: '', _new: true })} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>＋ Tambah Data</button>
                     </div>
-                    <div style={{ overflowX: 'auto' }}>
-                        <table className="data-table" style={{ minWidth: 1400, tableLayout: 'fixed' }}>
-                            <thead><tr><th style={{ width: 40 }}></th><th style={{ width: 60 }}>AKSI</th><th style={{ width: 180 }}>NIP</th><th style={{ width: 200 }}>NAMA PIMPINAN</th><th style={{ width: 180 }}>JABATAN</th><th style={{ width: 200 }}>WEBSITE</th><th style={{ width: 200 }}>EMAIL</th><th style={{ width: 140 }}>TELEPON</th><th style={{ width: 200 }}>KLPD</th></tr></thead>
+                    <div className="table-container" style={{ overflowX: 'auto', maxWidth: '100%' }}>
+                        <table className="data-table" style={{ minWidth: 1200, width: '100%' }}>
+                            <thead><tr><th style={{ width: 40 }}></th><th style={{ width: 55 }}>AKSI</th><th style={{ width: 170 }}>NIP</th><th>NAMA PIMPINAN</th><th>JABATAN</th><th>WEBSITE</th><th>EMAIL</th><th style={{ width: 120 }}>TELEPON</th><th>KLPD</th></tr></thead>
                             <tbody>
                                 {satuanKerjaData.filter(r => !skSearch || [r.nip, r.namaPimpinan, r.email].some(f => f?.toLowerCase().includes(skSearch.toLowerCase()))).map(r => (
                                     <tr key={r.id}><td style={{ textAlign: 'center' }}><input type="checkbox" /></td>
                                         <td><div style={{ display: 'flex', gap: 4 }}><button title="Edit" onClick={() => setSkEdit({ ...r })} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 4, padding: '3px 6px', cursor: 'pointer' }}><Pencil size={13} /></button><button title="Hapus" onClick={async () => { if (!confirm('Hapus?')) return; await referensiApi.deleteSatuanKerja(r.id); fetchRef(); toast.success('Dihapus'); }} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, padding: '3px 6px', cursor: 'pointer' }}><Trash2 size={13} /></button></div></td>
-                                        <td style={{ fontFamily: 'monospace', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{r.nip}</td><td style={{ whiteSpace: 'nowrap' }}>{r.namaPimpinan}</td><td style={{ whiteSpace: 'nowrap' }}>{r.jabatan}</td><td style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.website}</td><td style={{ whiteSpace: 'nowrap' }}>{r.email}</td><td style={{ whiteSpace: 'nowrap' }}>{r.telepon}</td><td style={{ whiteSpace: 'nowrap' }}>{r.klpd}</td>
+                                        <td style={{ fontFamily: 'monospace', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{r.nip}</td><td style={{ whiteSpace: 'nowrap' }}>{r.namaPimpinan}</td><td style={{ whiteSpace: 'nowrap' }}>{r.jabatan}</td><td style={{ whiteSpace: 'nowrap', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.website}</td><td style={{ whiteSpace: 'nowrap' }}>{r.email}</td><td style={{ whiteSpace: 'nowrap' }}>{r.telepon}</td><td style={{ whiteSpace: 'nowrap' }}>{r.klpd}</td>
                                     </tr>
                                 ))}
                                 {satuanKerjaData.length === 0 && <tr><td colSpan={9} style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: 20 }}>Belum ada data</td></tr>}
@@ -480,19 +480,19 @@ const ManajemenPenyedia = () => {
 
             {/* ===== TAB: PPKOM ===== */}
             {mainTab === 'ppkom' && (
-                <div style={{ paddingTop: 0 }}>
+                <div style={{ paddingTop: 0, maxWidth: '100%', overflow: 'hidden' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
                         <div className="table-search" style={{ maxWidth: 220 }}><Search size={14} className="search-icon" /><input placeholder="Search" value={ppkSearch} onChange={e => setPpkSearch(e.target.value)} /></div>
                         <button className="btn btn-primary btn-sm" onClick={() => setPpkEdit({ nip: '', nama: '', pangkat: '', jabatan: '', alamat: '', noTelp: '', email: '', _new: true })} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>＋ Tambah Data</button>
                     </div>
-                    <div style={{ overflowX: 'auto' }}>
-                        <table className="data-table" style={{ minWidth: 1400, tableLayout: 'fixed' }}>
-                            <thead><tr><th style={{ width: 40 }}></th><th style={{ width: 60 }}>AKSI</th><th style={{ width: 180 }}>NIP</th><th style={{ width: 200 }}>NAMA</th><th style={{ width: 140 }}>PANGKAT</th><th style={{ width: 200 }}>JABATAN</th><th style={{ width: 220 }}>ALAMAT</th><th style={{ width: 140 }}>NO TELP</th><th style={{ width: 200 }}>EMAIL</th></tr></thead>
+                    <div className="table-container" style={{ overflowX: 'auto', maxWidth: '100%' }}>
+                        <table className="data-table" style={{ minWidth: 1200, width: '100%' }}>
+                            <thead><tr><th style={{ width: 40 }}></th><th style={{ width: 55 }}>AKSI</th><th style={{ width: 170 }}>NIP</th><th>NAMA</th><th>PANGKAT</th><th>JABATAN</th><th>ALAMAT</th><th style={{ width: 120 }}>NO TELP</th><th>EMAIL</th></tr></thead>
                             <tbody>
                                 {ppkomData.filter(r => !ppkSearch || [r.nip, r.nama, r.email].some(f => f?.toLowerCase().includes(ppkSearch.toLowerCase()))).map(r => (
                                     <tr key={r.id}><td style={{ textAlign: 'center' }}><input type="checkbox" /></td>
                                         <td><div style={{ display: 'flex', gap: 4 }}><button title="Edit" onClick={() => setPpkEdit({ ...r })} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 4, padding: '3px 6px', cursor: 'pointer' }}><Pencil size={13} /></button><button title="Hapus" onClick={async () => { if (!confirm('Hapus?')) return; await referensiApi.deletePpkom(r.id); fetchRef(); toast.success('Dihapus'); }} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, padding: '3px 6px', cursor: 'pointer' }}><Trash2 size={13} /></button></div></td>
-                                        <td style={{ fontFamily: 'monospace', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{r.nip}</td><td style={{ whiteSpace: 'nowrap' }}>{r.nama}</td><td style={{ whiteSpace: 'nowrap' }}>{r.pangkat}</td><td style={{ whiteSpace: 'nowrap' }}>{r.jabatan}</td><td style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.alamat}</td><td style={{ whiteSpace: 'nowrap' }}>{r.noTelp}</td><td style={{ whiteSpace: 'nowrap' }}>{r.email}</td>
+                                        <td style={{ fontFamily: 'monospace', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{r.nip}</td><td style={{ whiteSpace: 'nowrap' }}>{r.nama}</td><td style={{ whiteSpace: 'nowrap' }}>{r.pangkat}</td><td style={{ whiteSpace: 'nowrap' }}>{r.jabatan}</td><td style={{ whiteSpace: 'nowrap', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.alamat}</td><td style={{ whiteSpace: 'nowrap' }}>{r.noTelp}</td><td style={{ whiteSpace: 'nowrap' }}>{r.email}</td>
                                     </tr>
                                 ))}
                                 {ppkomData.length === 0 && <tr><td colSpan={9} style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: 20 }}>Belum ada data</td></tr>}
