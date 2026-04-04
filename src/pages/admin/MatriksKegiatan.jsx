@@ -5,7 +5,6 @@ import { useSekolahData } from '../../data/dataProvider';
 import SearchableSelect from '../../components/ui/SearchableSelect';
 import useMatrikStore, { generateNoSpk, inferJenjang, fullTerbilang, formatNumberInput, parseFormattedNumber, naturalSort, SUMBER_DANA, JENIS_PENGADAAN, METODE_PEMILIHAN, STATUS_PEMILIK } from '../../store/matrikStore';
 import { matrikApi, templateApi } from '../../api/index';
-import { getAvailableVariables } from '../../utils/splGenerator';
 import toast from 'react-hot-toast';
 import * as XLSX from 'xlsx';
 
@@ -1527,22 +1526,6 @@ const SplTab = () => {
                                     {verifikators.map(v => <option key={v.id} value={v.id}>{v.name} {v.nip ? `(${v.nip})` : ''}</option>)}
                                 </select>
                             </div>
-                            <details style={{ marginTop: 8 }}>
-                                <summary style={{ cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>📋 Daftar Variabel Template</summary>
-                                <div style={{ marginTop: 8, maxHeight: 200, overflowY: 'auto', fontSize: '0.78rem', background: 'var(--bg-secondary)', padding: 10, borderRadius: 6 }}>
-                                    {getAvailableVariables().map(g => (
-                                        <div key={g.group} style={{ marginBottom: 8 }}>
-                                            <div style={{ fontWeight: 600, marginBottom: 2 }}>{g.group}</div>
-                                            {g.vars.map(v => (
-                                                <div key={v.name} style={{ display: 'flex', gap: 8, padding: '1px 0' }}>
-                                                    <code style={{ color: 'var(--accent-blue)', minWidth: 180 }}>{`{{${v.name}}}`}</code>
-                                                    <span>{v.desc}</span>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    ))}
-                                </div>
-                            </details>
                         </div>
                         <div className="modal-footer">
                             <button className="btn btn-ghost" onClick={() => setShowGenerateModal(false)}>Batal</button>
