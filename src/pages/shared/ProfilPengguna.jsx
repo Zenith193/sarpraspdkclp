@@ -96,19 +96,39 @@ const ProfilPengguna = () => {
         if (!file) return;
         e.target.value = null;
         if (!/^image\/(jpeg|png|webp|gif)$/.test(file.type)) { toast.error('Hanya file gambar (jpg, png, webp)'); return; }
-        if (file.size > 1 * 1024 * 1024) { toast.error('Ukuran foto maksimal 1MB'); return; }
+        if (file.size > 2 * 1024 * 1024) { toast.error('Ukuran foto maksimal 2MB'); return; }
         // Show preview
         const previewUrl = URL.createObjectURL(file);
         setPhotoPreview(previewUrl);
         setPendingPhotoFile(file);
     };
 
+    // Compress image client-side to speed up upload
+    const compressImage = (file, maxSize = 300, quality = 0.8) => new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let w = img.width, h = img.height;
+            if (w > h) { if (w > maxSize) { h = h * maxSize / w; w = maxSize; } }
+            else { if (h > maxSize) { w = w * maxSize / h; h = maxSize; } }
+            canvas.width = w; canvas.height = h;
+            canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+            canvas.toBlob((blob) => {
+                resolve(new File([blob], file.name.replace(/\.\w+$/, '.jpg'), { type: 'image/jpeg' }));
+            }, 'image/jpeg', quality);
+        };
+        img.src = URL.createObjectURL(file);
+    });
+
     // Confirm upload after preview
     const handlePhotoUpload = async () => {
         if (!pendingPhotoFile) return;
         setUploadingPhoto(true);
         try {
-            const result = await penggunaApi.uploadPhoto(user.id, pendingPhotoFile);
+            // Compress before upload for speed
+            const compressed = await compressImage(pendingPhotoFile);
+            console.log(`[Photo] Original: ${(pendingPhotoFile.size/1024).toFixed(0)}KB → Compressed: ${(compressed.size/1024).toFixed(0)}KB`);
+            const result = await penggunaApi.uploadPhoto(user.id, compressed);
             console.log('[Photo Upload] Result:', result);
             // Add cache-busting timestamp to force browser to reload
             const imageUrl = result.imageUrl ? `${result.imageUrl}?t=${Date.now()}` : result.image;
