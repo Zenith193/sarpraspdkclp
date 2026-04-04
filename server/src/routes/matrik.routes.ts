@@ -45,8 +45,8 @@ router.get('/spl/verifikator', requireAuth, requireRole('admin', 'verifikator'),
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-router.get('/spl/history', requireAuth, requireRole('admin', 'verifikator'), async (_req, res) => {
-    try { res.json(await splHistoryService.list()); } catch (e: any) { res.status(500).json({ error: e.message }); }
+router.get('/spl/history', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
+    try { const jenis = req.query.jenis as string | undefined; res.json(await splHistoryService.list(jenis)); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 router.post('/spl/history', requireAuth, requireRole('admin'), async (req, res) => {

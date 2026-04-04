@@ -1249,7 +1249,7 @@ const SplTab = () => {
         try { const v = await matrikApi.splVerifikator(); setVerifikators(v); } catch { }
     };
     const loadHistory = async () => {
-        try { const h = await matrikApi.splHistory(); setSplHistory(h); } catch { }
+        try { const h = await matrikApi.splHistory('spl'); setSplHistory(h); } catch { }
     };
 
     const [splJenisFilter, setSplJenisFilter] = useState('Pekerjaan Konstruksi');

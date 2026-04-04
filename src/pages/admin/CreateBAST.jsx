@@ -291,6 +291,8 @@ const CreateBAST = () => {
 
     // ===== GENERATE BAST =====
     const [generating, setGenerating] = useState(false);
+    const [bastHistory, setBastHistory] = useState([]);
+    const [showBastHistory, setShowBastHistory] = useState(false);
 
     const handleOpenGenerate = (item) => {
         setGenerateTarget(item);
@@ -573,7 +575,11 @@ const CreateBAST = () => {
                             </select>
                         </div>
                     </div>
-                    <div className="table-toolbar-right">
+                    <div className="table-toolbar-right" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                        <button className="btn btn-outline btn-sm" onClick={async () => { try { const h = await matrikApi.splHistory('bast'); setBastHistory(h); } catch {} setShowBastHistory(true); }}
+                            style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Clock size={14} /> Riwayat
+                        </button>
                         <div className="export-dropdown" ref={exportRef}>
                             <button className="btn btn-secondary btn-sm" onClick={() => setShowExport(!showExport)}>
                                 <Download size={14} /> Ekspor <ChevronDown size={12} />
@@ -972,6 +978,56 @@ const CreateBAST = () => {
                                 <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginBottom: 4 }}>Terbilang</div>
                                 <div style={{ fontSize: '0.85rem', fontStyle: 'italic' }}>{viewItem.terbilangBAST}</div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+            {/* Riwayat Generate BAST Modal */}
+            {showBastHistory && (
+                <div className="modal-overlay" onClick={() => setShowBastHistory(false)}>
+                    <div className="modal" style={{ maxWidth: 800 }} onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <div className="modal-title">Riwayat Generate BAST</div>
+                            <button className="modal-close" onClick={() => setShowBastHistory(false)}><X size={18} /></button>
+                        </div>
+                        <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+                            {bastHistory.length === 0 ? (
+                                <p style={{ textAlign: 'center', padding: 32, color: 'var(--text-secondary)' }}>Belum ada riwayat generate BAST</p>
+                            ) : (
+                                <table className="data-table">
+                                    <thead><tr><th>No</th><th>Matrik</th><th>Sekolah</th><th>Template</th><th>Tanggal</th><th style={{ width: 130 }}>Aksi</th></tr></thead>
+                                    <tbody>
+                                        {bastHistory.map((h, i) => (
+                                            <tr key={h.spl.id}>
+                                                <td>{i + 1}</td>
+                                                <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{h.matrikNo || '-'}</td>
+                                                <td>{h.namaSekolah || '-'}</td>
+                                                <td>{h.templateNama || '-'}</td>
+                                                <td style={{ fontSize: '0.8rem' }}>{formatDateShort(h.spl.createdAt)}</td>
+                                                <td>
+                                                    <div style={{ display: 'flex', gap: 4 }}>
+                                                        <button className="btn btn-sm btn-primary" style={{ padding: '3px 8px', fontSize: '0.75rem' }}
+                                                            onClick={() => window.open(`/api/template/spl-file/pdf/${h.spl.id}`, '_blank')}>PDF</button>
+                                                        <button className="btn btn-sm btn-secondary" style={{ padding: '3px 8px', fontSize: '0.75rem' }}
+                                                            onClick={async () => {
+                                                                try {
+                                                                    const blob = await templateApi.getSplFile('docx', h.spl.id);
+                                                                    const url = URL.createObjectURL(blob);
+                                                                    const a = document.createElement('a'); a.href = url; a.download = `${h.spl.namaFile || 'BAST'}.docx`; a.click(); URL.revokeObjectURL(url);
+                                                                } catch { toast.error('Gagal download DOCX'); }
+                                                            }}>DOCX</button>
+                                                        <button className="btn-icon" style={{ color: 'var(--accent-red, #ef4444)' }}
+                                                            onClick={async () => {
+                                                                if (!confirm('Hapus riwayat ini?')) return;
+                                                                try { await matrikApi.deleteSplHistory(h.spl.id); const updated = await matrikApi.splHistory('bast'); setBastHistory(updated); toast.success('Riwayat dihapus'); } catch { toast.error('Gagal menghapus'); }
+                                                            }}><RotateCcw size={14} /></button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
                         </div>
                     </div>
                 </div>

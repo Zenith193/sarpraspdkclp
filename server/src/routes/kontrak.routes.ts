@@ -86,11 +86,19 @@ router.get('/permohonan/:id/dokumen', requireAuth, async (req, res) => {
         }).from(splGenerated)
           .leftJoin(bastTemplate, eq(splGenerated.templateId, bastTemplate.id))
           .where(inArray(splGenerated.matrikId, matrikIds))
-          .orderBy(desc(splGenerated.createdAt))
-          .limit(1);
+          .orderBy(desc(splGenerated.createdAt));
 
-        console.log(`[Dokumen] kontrakId=${kontrakId}, matrikIds=${matrikIds}, found ${docs.length} docs`);
-        res.json(docs);
+        // Filter to only show kontrak-type documents (not SPL/BAST)
+        const kontrakDocs = docs.filter(d => {
+            const name = (d.templateNama || '').toLowerCase();
+            return name.includes('kontrak');
+        });
+
+        // Return only the latest kontrak document
+        const result = kontrakDocs.length > 0 ? [kontrakDocs[0]] : [];
+
+        console.log(`[Dokumen] kontrakId=${kontrakId}, matrikIds=${matrikIds}, found ${docs.length} total, ${kontrakDocs.length} kontrak docs`);
+        res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 

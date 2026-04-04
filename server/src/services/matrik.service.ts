@@ -119,8 +119,8 @@ export const matrikService = {
 };
 
 export const splHistoryService = {
-    async list() {
-        return db.select({
+    async list(jenis?: string) {
+        const query = db.select({
             spl: splGenerated,
             matrikNo: matrikKegiatan.noMatrik,
             namaSekolah: matrikKegiatan.namaSekolah,
@@ -130,6 +130,15 @@ export const splHistoryService = {
             .leftJoin(matrikKegiatan, eq(splGenerated.matrikId, matrikKegiatan.id))
             .leftJoin(bastTemplate, eq(splGenerated.templateId, bastTemplate.id))
             .orderBy(desc(splGenerated.createdAt));
+
+        const results = await query;
+
+        // Filter by jenis if provided (matches template name pattern)
+        if (jenis) {
+            const j = jenis.toLowerCase();
+            return results.filter(r => (r.templateNama || '').toLowerCase().includes(j));
+        }
+        return results;
     },
 
     async create(data: typeof splGenerated.$inferInsert) {

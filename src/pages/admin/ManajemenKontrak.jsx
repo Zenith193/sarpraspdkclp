@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { ClipboardCheck, Eye, Search, X, CheckCircle, XCircle, Clock, Save, ChevronRight, Plus, Minus, Edit2, ArrowLeft, Download, FileText } from 'lucide-react';
-import { kontrakApi } from '../../api';
+import { ClipboardCheck, Eye, Search, X, CheckCircle, XCircle, Clock, Save, ChevronRight, Plus, Minus, Edit2, ArrowLeft, Download, FileText, History, Trash2 } from 'lucide-react';
+import { kontrakApi, matrikApi } from '../../api';
 import { templateApi } from '../../api';
 
 // ===== Number to Terbilang (Indonesian) =====
@@ -67,6 +67,8 @@ const ManajemenKontrak = () => {
     const [templates, setTemplates] = useState([]);
     const [selectedTemplate, setSelectedTemplate] = useState(null);
     const [generating, setGenerating] = useState(false);
+    const [kontrakHistory, setKontrakHistory] = useState([]);
+    const [showKontrakHistory, setShowKontrakHistory] = useState(false);
     const [editTimData, setEditTimData] = useState([]);
     const [editPeralatanData, setEditPeralatanData] = useState([]);
     const emptyTimInput = { nama: '', posisi: '', statusTenaga: '', pendidikan: '', pengalaman: '', sertifikasi: '', keterangan: '', jadwal: Array(12).fill(false) };
@@ -529,11 +531,14 @@ const ManajemenKontrak = () => {
                 ))}
             </div>
 
-            <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
+            <div style={{ display: 'flex', gap: 12, marginBottom: 20, alignItems: 'center' }}>
                 <div style={{ position: 'relative', flex: 1, maxWidth: 400 }}>
                     <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
                     <input style={{ ...fieldStyle, paddingLeft: 36 }} placeholder="Cari..." value={search} onChange={e => setSearch(e.target.value)} />
                 </div>
+                <button onClick={async () => { try { const h = await matrikApi.splHistory('kontrak'); setKontrakHistory(h); } catch {} setShowKontrakHistory(true); }} className="btn btn-outline" style={{ padding: '10px 16px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
+                    <History size={16} /> Riwayat Generate
+                </button>
             </div>
 
             {loading ? (
@@ -890,6 +895,67 @@ const ManajemenKontrak = () => {
                 );
             })()}
             </>)}
+
+            {/* Riwayat Generate Kontrak Modal */}
+            {showKontrakHistory && (
+                <div className="modal-overlay" onClick={() => setShowKontrakHistory(false)}>
+                    <div className="modal" style={{ maxWidth: 800 }} onClick={e => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <div className="modal-title">Riwayat Generate Kontrak</div>
+                            <button className="modal-close" onClick={() => setShowKontrakHistory(false)}><X size={18} /></button>
+                        </div>
+                        <div className="modal-body" style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+                            {kontrakHistory.length === 0 ? (
+                                <p style={{ textAlign: 'center', padding: 32, color: 'var(--text-secondary)' }}>Belum ada riwayat generate kontrak</p>
+                            ) : (
+                                <table className="data-table">
+                                    <thead>
+                                        <tr>
+                                            <th>No</th>
+                                            <th>Matrik</th>
+                                            <th>Sekolah</th>
+                                            <th>Template</th>
+                                            <th>Tanggal</th>
+                                            <th style={{ width: 130 }}>Aksi</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {kontrakHistory.map((h, i) => (
+                                            <tr key={h.spl.id}>
+                                                <td>{i + 1}</td>
+                                                <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{h.matrikNo || '-'}</td>
+                                                <td>{h.namaSekolah || '-'}</td>
+                                                <td>{h.templateNama || '-'}</td>
+                                                <td style={{ fontSize: '0.8rem' }}>{formatDate(h.spl.createdAt)}</td>
+                                                <td>
+                                                    <div style={{ display: 'flex', gap: 4 }}>
+                                                        <button className="btn btn-sm btn-primary" style={{ padding: '3px 8px', fontSize: '0.75rem' }}
+                                                            onClick={() => window.open(`/api/template/spl-file/pdf/${h.spl.id}`, '_blank')} title="Preview PDF">PDF</button>
+                                                        <button className="btn btn-sm btn-secondary" style={{ padding: '3px 8px', fontSize: '0.75rem' }}
+                                                            onClick={async () => {
+                                                                try {
+                                                                    const blob = await templateApi.getSplFile('docx', h.spl.id);
+                                                                    const url = URL.createObjectURL(blob);
+                                                                    const a = document.createElement('a');
+                                                                    a.href = url; a.download = `${h.spl.namaFile || 'Kontrak'}.docx`; a.click(); URL.revokeObjectURL(url);
+                                                                } catch { showToast('Gagal download DOCX', true); }
+                                                            }} title="Download DOCX">DOCX</button>
+                                                        <button className="btn-icon" style={{ color: 'var(--accent-red)' }}
+                                                            onClick={async () => {
+                                                                if (!confirm('Hapus riwayat ini?')) return;
+                                                                try { await matrikApi.deleteSplHistory(h.spl.id); const updated = await matrikApi.splHistory('kontrak'); setKontrakHistory(updated); showToast('Riwayat dihapus'); } catch { showToast('Gagal menghapus', true); }
+                                                            }} title="Hapus"><Trash2 size={14} /></button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

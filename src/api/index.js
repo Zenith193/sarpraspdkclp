@@ -77,7 +77,7 @@ export const matrikApi = {
     // SPL
     listSpl: (params = {}) => { const q = new URLSearchParams(params).toString(); return api.get(`/matrik/spl?${q}`); },
     splVerifikator: () => api.get('/matrik/spl/verifikator'),
-    splHistory: () => api.get('/matrik/spl/history'),
+    splHistory: (jenis) => api.get(`/matrik/spl/history${jenis ? `?jenis=${encodeURIComponent(jenis)}` : ''}`),
     createSplHistory: (data) => api.post('/matrik/spl/history', data),
     deleteSplHistory: (id) => api.delete(`/matrik/spl/history/${id}`),
 };
