@@ -147,11 +147,14 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
 
         console.log('[Generate] nilaiItemsArr:', JSON.stringify(item.nilaiItemsArr), 'children:', JSON.stringify(item.children?.length));
         const vars = buildVariableMap(item, sekretaris || {}, refData) as any;
-        console.log('[Generate] ALL KEYS:', Object.keys(vars).join(', '));
+
+        // Extract internal data before passing vars to docxtemplater
+        const rincianItems = vars._rincianItems || [];
+        const rincianTotal = vars._rincianTotal || 0;
+        delete vars._rincianItems;
+        delete vars._rincianTotal;
+
         console.log('[Generate] rincianKontrak length:', vars.rincianKontrak?.length, 'rincianNama:', vars.rincianNama, 'rincianNilai:', vars.rincianNilai);
-        if (vars.rincianKontrak && vars.rincianKontrak.length > 0) {
-            console.log('[Generate] rincianKontrak[0]:', JSON.stringify(vars.rincianKontrak[0]));
-        }
 
         // Fill DOCX template with docxtemplater
         const PizZip = (await import('pizzip')).default;
@@ -159,20 +162,36 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
 
         const content = fs.readFileSync(tpl.filePath, 'binary');
         const zip = new PizZip(content);
-        const doc = new Docxtemplater(zip, {
+
+        const docxOptions: any = {
             paragraphLoop: true,
             linebreaks: true,
             delimiters: { start: '{{', end: '}}' },
             nullGetter(part: any) {
-                // Log missing variable names for debugging
                 if (!part.module) {
-                    console.log('[DOCX] Missing var:', part.value, 'in scope:', part.scopePathItem?.join('.') || 'root');
+                    console.log('[DOCX] Missing var:', part.value);
                 }
                 return '';
             },
-        });
+        };
 
-        // Log all tags found in template for debugging
+        let doc: any;
+        try {
+            doc = new Docxtemplater(zip, docxOptions);
+        } catch (compileErr: any) {
+            // Log specific template errors then retry without strict parsing
+            if (compileErr.properties?.errors) {
+                for (const e of compileErr.properties.errors) {
+                    console.error('[DOCX] Template error:', e.properties?.explanation || e.message, '| tag:', e.properties?.tag || 'unknown');
+                }
+            }
+            // Retry without paragraphLoop (more lenient)
+            console.log('[DOCX] Retrying without paragraphLoop...');
+            const zip2 = new PizZip(content);
+            doc = new Docxtemplater(zip2, { ...docxOptions, paragraphLoop: false });
+        }
+
+        // Log all tags found in template
         try {
             const fullText = doc.getFullText();
             const tagRegex = /\{\{[^}]+\}\}/g;
@@ -184,18 +203,17 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
 
         // Post-process: replace __RINCIAN_TABLE__ marker with actual Word table XML
         const generatedZip = doc.getZip();
-        if (vars._rincianItems && vars._rincianItems.length > 0) {
+        if (rincianItems.length > 0) {
             try {
                 let docXml = generatedZip.file('word/document.xml')?.asText() || '';
                 if (docXml.includes('__RINCIAN_TABLE__')) {
-                    const tableXml = buildWordTableXml(vars._rincianItems, vars._rincianTotal);
-                    // Replace the paragraph containing the marker with the table
+                    const tableXml = buildWordTableXml(rincianItems, rincianTotal);
                     docXml = docXml.replace(
                         /<w:p\b[^>]*>(?:[^<]*<[^>]*>)*?[^<]*__RINCIAN_TABLE__[^<]*(?:<[^>]*>[^<]*)*?<\/w:p>/,
                         tableXml
                     );
                     generatedZip.file('word/document.xml', docXml);
-                    console.log('[Template] Injected rincian table with', vars._rincianItems.length, 'rows');
+                    console.log('[Template] Injected rincian table with', rincianItems.length, 'rows');
                 }
             } catch (tblErr: any) {
                 console.error('[Template] Table injection error:', tblErr.message);
