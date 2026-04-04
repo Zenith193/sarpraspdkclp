@@ -75,7 +75,7 @@ router.get('/permohonan/:id/dokumen', requireAuth, async (req, res) => {
             }
         }
 
-        // Get generated SPL files for these matrik IDs
+        // Get only the latest generated SPL file for these matrik IDs
         const { inArray } = await import('drizzle-orm');
         const docs = await db.select({
             id: splGenerated.id,
@@ -86,7 +86,8 @@ router.get('/permohonan/:id/dokumen', requireAuth, async (req, res) => {
         }).from(splGenerated)
           .leftJoin(bastTemplate, eq(splGenerated.templateId, bastTemplate.id))
           .where(inArray(splGenerated.matrikId, matrikIds))
-          .orderBy(desc(splGenerated.createdAt));
+          .orderBy(desc(splGenerated.createdAt))
+          .limit(1);
 
         console.log(`[Dokumen] kontrakId=${kontrakId}, matrikIds=${matrikIds}, found ${docs.length} docs`);
         res.json(docs);
