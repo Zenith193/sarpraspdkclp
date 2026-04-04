@@ -21,6 +21,9 @@ export const permohonanKontrak = pgTable('permohonan_kontrak', {
     noBahpl: text('no_bahpl'),
     tanggalBahpl: date('tanggal_bahpl'),
     berkasPenawaranPath: text('berkas_penawaran_path'),
+    // Lampiran data (JSON)
+    timPenugasan: text('tim_penugasan'),       // JSON array
+    peralatanUtama: text('peralatan_utama'),    // JSON array
     // SPK data (filled by verifikator)
     noSpk: text('no_spk'),
     nilaiKontrak: bigint('nilai_kontrak', { mode: 'number' }),

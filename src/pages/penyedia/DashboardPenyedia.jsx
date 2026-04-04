@@ -111,6 +111,8 @@ const DashboardPenyedia = () => {
             formData.append('noBahpl', noBahpl);
             formData.append('tanggalBahpl', tanggalBahpl);
             if (berkasPenawaran) formData.append('berkasPenawaran', berkasPenawaran);
+            if (timRows.length > 0) formData.append('timPenugasan', JSON.stringify(timRows));
+            if (peralatanRows.length > 0) formData.append('peralatanUtama', JSON.stringify(peralatanRows));
             await kontrakApi.createPermohonan(formData);
             // Reset & reload
             setKodeSirup(''); setNamaPaket(''); setMetodePengadaan(''); setJenisPengadaan('');

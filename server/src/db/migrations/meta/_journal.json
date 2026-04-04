@@ -43,6 +43,13 @@
       "when": 1775197970811,
       "tag": "0005_pink_iron_lad",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1775274723422,
+      "tag": "0006_melted_tigra",
+      "breakpoints": true
     }
   ]
 }

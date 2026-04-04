@@ -85,6 +85,8 @@ export const kontrakService = {
             noBahpl: data.noBahpl || null,
             tanggalBahpl: data.tanggalBahpl || null,
             berkasPenawaranPath: data.berkasPenawaranPath || null,
+            timPenugasan: data.timPenugasan || null,
+            peralatanUtama: data.peralatanUtama || null,
             status: 'Menunggu',
             createdBy: userId,
         }).returning();

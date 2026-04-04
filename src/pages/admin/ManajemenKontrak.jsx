@@ -469,9 +469,58 @@ const ManajemenKontrak = () => {
                             })()}
 
                             {/* LAMPIRAN */}
-                            {tab === 'lampiran' && (
+                            {tab === 'lampiran' && (() => {
+                                const timData = (() => { try { return JSON.parse(detail.timPenugasan || '[]'); } catch { return []; } })();
+                                const peralatanData = (() => { try { return JSON.parse(detail.peralatanUtama || '[]'); } catch { return []; } })();
+                                return (
                                 <div>
-                                    <div style={{ background: 'var(--accent-blue)', color: '#fff', padding: '10px 20px', borderRadius: 8, marginBottom: 20, fontWeight: 600, fontSize: '0.9rem' }}>Lampiran Dokumen</div>
+                                    <div style={{ background: 'var(--accent-blue)', color: '#fff', padding: '10px 20px', borderRadius: 8, marginBottom: 20, fontWeight: 600, fontSize: '0.9rem' }}>Lampiran</div>
+
+                                    {/* Komposisi Tim */}
+                                    <h4 style={{ margin: '0 0 10px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}>👥 KOMPOSISI TIM DAN PENUGASAN</h4>
+                                    <div style={{ overflowX: 'auto', marginBottom: 24, maxWidth: '100%' }}>
+                                        <table className="data-table" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                                            <thead>
+                                                <tr>
+                                                    <th>Nama</th><th>Posisi</th><th>Status Tenaga</th><th>Pendidikan</th>
+                                                    <th>Pengalaman (tahun)</th><th>Sertifikasi</th><th>Keterangan</th>
+                                                    <th colSpan={12} style={{ textAlign: 'center' }}>Jadwal Pelaksanaan Kegiatan (Bulan)</th>
+                                                </tr>
+                                                <tr>
+                                                    <th colSpan={7}></th>
+                                                    {[1,2,3,4,5,6,7,8,9,10,11,12].map(m => <th key={m} style={{ textAlign: 'center', padding: '2px 4px' }}>{m}</th>)}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {timData.length > 0 ? timData.map((row, i) => (
+                                                    <tr key={i}>
+                                                        <td>{row.nama}</td><td>{row.posisi}</td><td>{row.statusTenaga}</td><td>{row.pendidikan}</td>
+                                                        <td>{row.pengalaman}</td><td>{row.sertifikasi}</td><td>{row.keterangan}</td>
+                                                        {(row.jadwal || Array(12).fill(false)).map((c, j) => <td key={j} style={{ textAlign: 'center' }}>{c ? '■' : '□'}</td>)}
+                                                    </tr>
+                                                )) : <tr><td colSpan={19} style={{ textAlign: 'center', color: 'var(--text-secondary)', fontStyle: 'italic' }}>Belum ada data tim</td></tr>}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    {/* Peralatan Utama */}
+                                    <h4 style={{ margin: '0 0 10px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}>🔧 PERALATAN UTAMA (Apabila dipersyaratkan)</h4>
+                                    <div style={{ overflowX: 'auto', marginBottom: 24, maxWidth: '100%' }}>
+                                        <table className="data-table" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                                            <thead><tr><th>Nama Peralatan</th><th>Merk</th><th>Type</th><th>Kapasitas</th><th>Jumlah</th><th>Kondisi</th><th>Status Kepemilikan</th><th>Keterangan</th></tr></thead>
+                                            <tbody>
+                                                {peralatanData.length > 0 ? peralatanData.map((row, i) => (
+                                                    <tr key={i}>
+                                                        <td>{row.nama}</td><td>{row.merk}</td><td>{row.type}</td><td>{row.kapasitas}</td>
+                                                        <td>{row.jumlah}</td><td>{row.kondisi}</td><td>{row.statusKepemilikan}</td><td>{row.keterangan}</td>
+                                                    </tr>
+                                                )) : <tr><td colSpan={8} style={{ textAlign: 'center', color: 'var(--text-secondary)', fontStyle: 'italic' }}>Belum ada data peralatan</td></tr>}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    {/* DPPL & BAHPL */}
+                                    <h4 style={{ margin: '0 0 10px', fontSize: '0.9rem' }}>📋 DPPL & BAHPL</h4>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
                                         <div style={cs}><div style={cl}>No DPPL</div><div style={cv}>{detail.noDppl || '-'}</div></div>
                                         <div style={cs}><div style={cl}>Tanggal DPPL</div><div style={cv}>{formatDate(detail.tanggalDppl)}</div></div>
@@ -486,7 +535,8 @@ const ManajemenKontrak = () => {
                                         </div>
                                     )}
                                 </div>
-                            )}
+                                );
+                            })()}
 
                             {/* SP/SPMK */}
                             {tab === 'sp_spmk' && (
