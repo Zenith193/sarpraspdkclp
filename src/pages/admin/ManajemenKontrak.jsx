@@ -236,6 +236,17 @@ const ManajemenKontrak = () => {
     const handleView = async (id) => {
         try {
             const res = await kontrakApi.getPermohonan(id);
+            // Restore saved template selection & historyId
+            try {
+                const saved = JSON.parse(localStorage.getItem(`kontrak_history_${id}`) || '{}');
+                if (saved.historyId) res._historyId = saved.historyId;
+                if (saved.hasPdf) res._hasPdf = saved.hasPdf;
+                if (saved.templateId) {
+                    setSelectedTemplate(saved.templateId);
+                    // Load templates if not loaded yet
+                    if (templates.length === 0) templateApi.list().then(t => setTemplates(t || [])).catch(() => {});
+                }
+            } catch {}
             setViewDetail(res);
         } catch { showToast('Gagal memuat detail', true); }
     };
@@ -317,15 +328,56 @@ const ManajemenKontrak = () => {
                                         if (!selectedTemplate) return showToast('Pilih template terlebih dahulu', true);
                                         setGenerating(true);
                                         try {
-                                            const item = { ...d, ...d.perusahaan, ...d.matrik };
+                                            // Map kontrak+perusahaan+matrik fields to match buildVariableMap expected names
+                                            const item = {
+                                                ...d,
+                                                // Matrik fields
+                                                noSpk: d.noSpk || m.noSpk || '',
+                                                nilaiKontrak: d.nilaiKontrak || m.nilaiKontrak || 0,
+                                                terbilangKontrak: d.terbilangKontrak || m.terbilangKontrak || '',
+                                                tanggalMulai: d.tanggalMulai || m.tanggalMulai || '',
+                                                tanggalSelesai: d.tanggalSelesai || m.tanggalSelesai || '',
+                                                jangkaWaktu: d.waktuPenyelesaian || m.jangkaWaktu || '',
+                                                paguAnggaran: m.paguAnggaran || 0,
+                                                paguPaket: m.paguPaket || 0,
+                                                hps: m.hps || 0,
+                                                subKegiatan: m.subKegiatan || '',
+                                                sumberDana: m.sumberDana || '',
+                                                tahunAnggaran: m.tahunAnggaran || new Date().getFullYear(),
+                                                // Penyedia fields (map from perusahaan names)
+                                                penyedia: p.namaPerusahaan || '',
+                                                namaPemilik: p.namaPemilik || '',
+                                                statusPemilik: 'Direktur',
+                                                alamatKantor: p.alamatPerusahaan || '',
+                                                noHp: p.noTelp || '',
+                                                metode: d.metodePengadaan || '',
+                                                // Bank & Akta
+                                                bank: p.bank || '',
+                                                noRekening: p.noRekening || '',
+                                                namaRekening: p.namaRekening || '',
+                                                emailPerusahaan: p.emailPerusahaan || '',
+                                                noAkta: p.noAkta || '',
+                                                tanggalAkta: p.tanggalAkta || '',
+                                                namaNotaris: p.namaNotaris || '',
+                                                // DPPL/BAHPL
+                                                noDppl: d.noDppl || '',
+                                                tanggalDppl: d.tanggalDppl || '',
+                                                noBahpl: d.noBahpl || '',
+                                                tanggalBahpl: d.tanggalBahpl || '',
+                                                kodeLampiran: d.kodeSirup || '',
+                                                kodeSirup: d.kodeSirup || '',
+                                            };
                                             const result = await templateApi.generate(selectedTemplate, item, {});
                                             if (result.historyId) {
+                                                // Save historyId for download buttons
+                                                localStorage.setItem(`kontrak_history_${d.id}`, JSON.stringify({ historyId: result.historyId, templateId: selectedTemplate, hasPdf: result.hasPdf }));
+                                                setViewDetail({ ...d, _historyId: result.historyId, _hasPdf: result.hasPdf });
                                                 const blob = await templateApi.getSplFile('docx', result.historyId);
                                                 const url = URL.createObjectURL(blob);
                                                 const a = document.createElement('a');
                                                 a.href = url; a.download = `Kontrak_${d.namaPaket || 'document'}.docx`;
                                                 a.click(); URL.revokeObjectURL(url);
-                                                showToast('✅ Dokumen berhasil diunduh');
+                                                showToast('✅ Dokumen berhasil di-generate & diunduh');
                                             }
                                         } catch (e) { showToast('Gagal generate: ' + e.message, true); }
                                         setGenerating(false);
@@ -338,15 +390,38 @@ const ManajemenKontrak = () => {
                             {!selectedTemplate && <div style={{ fontSize: '0.8rem', color: '#f59e0b' }}>⚠️ Pilih template dokumen terlebih dahulu</div>}
 
                             {/* Download section */}
-                            <div style={{ ...sectionHeader, background: '#1e293b', marginBottom: 12 }}>📥 UNDUH DOKUMEN KONTRAK LENGKAP</div>
-                            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-                                <button onClick={() => { if(d.berkasPenawaranPath) window.open(d.berkasPenawaranPath, '_blank'); else showToast('Tidak ada berkas PDF', true); }} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-primary)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                    <Download size={14} /> Unduh PDF
-                                </button>
-                                <button onClick={() => { if(!selectedTemplate) { showToast('Pilih template dulu', true); return; } }} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-primary)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                    <FileText size={14} /> Unduh DOCX
-                                </button>
-                            </div>
+                            {(() => {
+                                const saved = (() => { try { return JSON.parse(localStorage.getItem(`kontrak_history_${d.id}`) || '{}'); } catch { return {}; } })();
+                                const hid = d._historyId || saved.historyId;
+                                if (saved.templateId && !selectedTemplate) { /* auto-select saved template */ }
+                                return (<>
+                                    <div style={{ ...sectionHeader, background: '#1e293b', marginBottom: 12 }}>📥 UNDUH DOKUMEN KONTRAK LENGKAP</div>
+                                    {hid ? (
+                                        <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                                            <button onClick={async () => {
+                                                try {
+                                                    const blob = await templateApi.getSplFile('pdf', hid);
+                                                    const url = URL.createObjectURL(blob);
+                                                    window.open(url, '_blank');
+                                                } catch { showToast('PDF belum tersedia atau gagal diunduh', true); }
+                                            }} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#ef4444', color: '#fff', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                <Download size={14} /> Unduh PDF
+                                            </button>
+                                            <button onClick={async () => {
+                                                try {
+                                                    const blob = await templateApi.getSplFile('docx', hid);
+                                                    const url = URL.createObjectURL(blob);
+                                                    const a = document.createElement('a'); a.href = url; a.download = `Kontrak_${d.namaPaket || 'doc'}.docx`; a.click(); URL.revokeObjectURL(url);
+                                                } catch { showToast('DOCX gagal diunduh', true); }
+                                            }} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'var(--accent-blue)', color: '#fff', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                <FileText size={14} /> Unduh DOCX
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', fontStyle: 'italic', textAlign: 'center', padding: 12 }}>Belum ada dokumen yang di-generate. Klik "Simpan Template" terlebih dahulu.</div>
+                                    )}
+                                </>);
+                            })()}
 
                             {/* Variable Reference */}
                             <details style={{ marginTop: 16 }}>
