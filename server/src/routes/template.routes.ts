@@ -163,6 +163,40 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
         const content = fs.readFileSync(tpl.filePath, 'binary');
         const zip = new PizZip(content);
 
+        // PRE-PROCESS: Replace {{tabelRincian}} in XML BEFORE docxtemplater
+        if (rincianItems.length > 0) {
+            try {
+                let docXml = zip.file('word/document.xml')?.asText() || '';
+                // Match the paragraph containing {{tabelRincian}} (may be split across XML runs)
+                const tabelMarker = /(<w:p\b[^>]*>(?:[^<]*<[^>]*>)*?[^<]*)\{\{tabelRincian\}\}([^<]*(?:<[^>]*>[^<]*)*?<\/w:p>)/;
+                if (tabelMarker.test(docXml)) {
+                    const tableXml = buildWordTableXml(rincianItems, rincianTotal);
+                    docXml = docXml.replace(tabelMarker, tableXml);
+                    zip.file('word/document.xml', docXml);
+                    console.log('[Template] Pre-injected rincian table with', rincianItems.length, 'rows');
+                } else {
+                    // Tag might be split across Word XML runs, try simpler approach
+                    const simpleMarker = '{{tabelRincian}}';
+                    // Reconstruct: look for the runs containing the tag pieces
+                    const xmlParts = docXml.split('tabelRincian');
+                    if (xmlParts.length > 1) {
+                        // Find the full paragraph containing split tag and replace
+                        const fullParaRegex = /<w:p\b[^>]*>(?:(?!<w:p\b).)*?tabelRincian(?:(?!<\/w:p>).)*?<\/w:p>/s;
+                        if (fullParaRegex.test(docXml)) {
+                            const tableXml = buildWordTableXml(rincianItems, rincianTotal);
+                            docXml = docXml.replace(fullParaRegex, tableXml);
+                            zip.file('word/document.xml', docXml);
+                            console.log('[Template] Pre-injected rincian table (split tag) with', rincianItems.length, 'rows');
+                        }
+                    }
+                }
+            } catch (preErr: any) {
+                console.error('[Template] Pre-process tabelRincian error:', preErr.message);
+            }
+        }
+        // Remove tabelRincian from vars (already handled)
+        delete vars.tabelRincian;
+
         const docxOptions: any = {
             paragraphLoop: true,
             linebreaks: true,
@@ -179,15 +213,24 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
         try {
             doc = new Docxtemplater(zip, docxOptions);
         } catch (compileErr: any) {
-            // Log specific template errors then retry without strict parsing
             if (compileErr.properties?.errors) {
                 for (const e of compileErr.properties.errors) {
                     console.error('[DOCX] Template error:', e.properties?.explanation || e.message, '| tag:', e.properties?.tag || 'unknown');
                 }
             }
-            // Retry without paragraphLoop (more lenient)
             console.log('[DOCX] Retrying without paragraphLoop...');
             const zip2 = new PizZip(content);
+            // Pre-process again for retry zip
+            if (rincianItems.length > 0) {
+                try {
+                    let xml2 = zip2.file('word/document.xml')?.asText() || '';
+                    const regex2 = /<w:p\b[^>]*>(?:(?!<w:p\b).)*?tabelRincian(?:(?!<\/w:p>).)*?<\/w:p>/s;
+                    if (regex2.test(xml2)) {
+                        xml2 = xml2.replace(regex2, buildWordTableXml(rincianItems, rincianTotal));
+                        zip2.file('word/document.xml', xml2);
+                    }
+                } catch (_) {}
+            }
             doc = new Docxtemplater(zip2, { ...docxOptions, paragraphLoop: false });
         }
 
@@ -201,7 +244,7 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
 
         doc.render(vars);
 
-        // Post-process: replace __RINCIAN_TABLE__ marker with actual Word table XML
+        // Post-process table injection (fallback if pre-process missed it)
         const generatedZip = doc.getZip();
         if (rincianItems.length > 0) {
             try {
@@ -213,10 +256,9 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
                         tableXml
                     );
                     generatedZip.file('word/document.xml', docXml);
-                    console.log('[Template] Injected rincian table with', rincianItems.length, 'rows');
+                    console.log('[Template] Fallback: injected rincian table');
                 }
             } catch (tblErr: any) {
-                console.error('[Template] Table injection error:', tblErr.message);
             }
         }
 
@@ -760,9 +802,7 @@ function buildRincianVars(d: any) {
         rincianNilaiAll,
         // Indexed: rincian1Nama, rincian1Nilai, rincian2Nama, etc.
         ...indexedVars,
-        // Marker for auto-generated table (post-processed into Word table XML)
-        tabelRincian: items.length > 0 ? '__RINCIAN_TABLE__' : '',
-        // Store items data for post-processing
+        // Store items data for pre-processing (extracted before docxtemplater)
         _rincianItems: items,
         _rincianTotal: total,
     };
