@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ClipboardCheck, Eye, Search, X, CheckCircle, XCircle, Clock, Save, ChevronRight, Plus, Minus } from 'lucide-react';
+import { ClipboardCheck, Eye, Search, X, CheckCircle, XCircle, Clock, Save, ChevronRight, Plus, Minus, Edit2 } from 'lucide-react';
 import { kontrakApi } from '../../api';
 
 // ===== Number to Terbilang (Indonesian) =====
@@ -294,7 +294,14 @@ const ManajemenKontrak = () => {
                                             {p.status === 'Menunggu' && (
                                                 <button onClick={() => handleReject(p.id)} style={{ padding: '5px 10px', borderRadius: 6, border: 'none', background: '#ef4444', color: '#fff', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>Tolak</button>
                                             )}
-                                            <button onClick={() => handleDetail(p.id)} style={{ padding: '5px 10px', borderRadius: 6, border: 'none', background: '#f59e0b', color: '#fff', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>Detail</button>
+                                            {p.status === 'Menunggu' ? (
+                                                <button onClick={() => handleDetail(p.id)} style={{ padding: '5px 10px', borderRadius: 6, border: 'none', background: '#f59e0b', color: '#fff', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>Detail</button>
+                                            ) : (
+                                                <>
+                                                    <button onClick={() => handleDetail(p.id)} title="Lihat Detail" style={{ padding: '6px 8px', borderRadius: 6, border: 'none', background: '#3b82f6', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Eye size={15} /></button>
+                                                    <button onClick={() => handleDetail(p.id)} title="Edit Data" style={{ padding: '6px 8px', borderRadius: 6, border: 'none', background: '#f59e0b', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Edit2 size={15} /></button>
+                                                </>
+                                            )}
                                         </div>
                                     </td>
                                     <td>{p.namaPerusahaan}</td>
