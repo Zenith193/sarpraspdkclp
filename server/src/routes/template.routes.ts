@@ -467,6 +467,23 @@ function buildVariableMap(item: any, sekretaris: any = {}, refData: any = {}) {
         nipKetuaTimTeknis: TIM_TEKNIS_KETUA.nip,
         tahunTerbilang: ucFirst(terbilang(Number(tahun) || 2026)),
 
+        // ===== SPMK (Surat Perintah Mulai Kerja) =====
+        noSpmk: d.noSp || d.noSpmk || '',
+        tanggalSpmk: fmtDate(d.tanggalSp || d.tanggalSpmk),
+        hariTanggalSpmk: fmtHariTanggal(d.tanggalSp || d.tanggalSpmk),
+        terbilangTanggalSpmk: fmtTerbilangTanggal(d.tanggalSp || d.tanggalSpmk),
+        hariSpmk: getHari(d.tanggalSp || d.tanggalSpmk),
+        hariSpmkLower: getHariLower(d.tanggalSp || d.tanggalSpmk),
+        tglSpmkTerbilang: getTanggalTerbilang(d.tanggalSp || d.tanggalSpmk),
+        bulanSpmk: getBulan(d.tanggalSp || d.tanggalSpmk),
+        tahunSpmkTerbilang: getTahunTerbilang(d.tanggalSp || d.tanggalSpmk),
+        tanggalSpmkDash: fmtDateDash(d.tanggalSp || d.tanggalSpmk),
+        idPaket: d.idPaket || '',
+
+        // ===== SPK extras =====
+        hariTanggalSpk: fmtHariTanggal(d.tanggalMulai),
+        terbilangTanggalSpk: fmtTerbilangTanggal(d.tanggalMulai),
+
         // ===== KOP SEKOLAH =====
         kopSekolah: d.kopSekolah || '',
         kopSekolahAda: d.kopSekolah ? 'Ada' : 'Belum',
