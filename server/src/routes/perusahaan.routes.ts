@@ -63,10 +63,24 @@ router.put('/:id/verify', requireAuth, requireRole('admin', 'verifikator'), asyn
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// ===== ADMIN/VERIFIKATOR: Update =====
-router.put('/:id', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
+// ===== ADMIN/VERIFIKATOR/PENYEDIA: Update =====
+router.put('/:id', requireAuth, requireRole('admin', 'verifikator', 'penyedia'), async (req, res) => {
     try {
-        const updated = await perusahaanService.update(Number(req.params.id), req.body);
+        const id = Number(req.params.id);
+        // Penyedia can only update their own company
+        if (req.user!.role === 'Penyedia') {
+            const { perusahaan: perusahaanTable } = await import('../db/schema/index.js');
+            const { db: database } = await import('../db/index.js');
+            const { eq, and } = await import('drizzle-orm');
+            const [own] = await database.select({ id: perusahaanTable.id }).from(perusahaanTable)
+                .where(and(eq(perusahaanTable.id, id), eq(perusahaanTable.userId, req.user!.id)));
+            if (!own) return res.status(403).json({ error: 'Anda hanya dapat mengubah data perusahaan milik Anda sendiri' });
+            // Penyedia cannot change status or npwp
+            delete req.body.status;
+            delete req.body.npwp;
+            delete req.body.keteranganVerifikasi;
+        }
+        const updated = await perusahaanService.update(id, req.body);
         res.json(updated);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
