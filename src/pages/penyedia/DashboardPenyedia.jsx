@@ -209,7 +209,7 @@ const DashboardPenyedia = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
                     <div className="stat-card" style={{ padding: 24, background: 'var(--accent-blue)', color: '#fff' }}>
                         <h3 style={{ margin: '0 0 12px', fontSize: '1.1rem', color: '#fff' }}>Pengajuan Layanan Kontrak</h3>
-                        <p style={{ fontSize: '0.85rem', lineHeight: 1.6, margin: '0 0 20px', opacity: 0.9 }}>Gunakan SPIDOL untuk mengajukan permohonan kontrak dengan lebih efisien. Siapkan dokumen dan data pendukung untuk memperlancar proses pengajuan Anda.</p>
+                        <p style={{ fontSize: '0.85rem', lineHeight: 1.6, margin: '0 0 20px', opacity: 0.9 }}>Gunakan SARDIKA untuk mengajukan permohonan kontrak dengan lebih efisien. Siapkan dokumen dan data pendukung untuk memperlancar proses pengajuan Anda.</p>
                         <button onClick={() => { setShowForm(1); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
                             style={{ width: '100%', padding: '14px 0', border: '2px solid #fff', borderRadius: 10, background: 'transparent', color: '#fff', cursor: 'pointer', fontWeight: 700, fontSize: '0.95rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
                             <ArrowRight size={18} /> AJUKAN PERMOHONAN KONTRAK
