@@ -519,16 +519,6 @@ const ManajemenKontrak = () => {
                                         </table>
                                     </div>
 
-                                    {/* DPPL & BAHPL */}
-                                    <h4 style={{ margin: '0 0 10px', fontSize: '0.9rem' }}>📋 DPPL & BAHPL</h4>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-                                        <div style={cs}><div style={cl}>No DPPL</div><div style={cv}>{detail.noDppl || '-'}</div></div>
-                                        <div style={cs}><div style={cl}>Tanggal DPPL</div><div style={cv}>{formatDate(detail.tanggalDppl)}</div></div>
-                                    </div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-                                        <div style={cs}><div style={cl}>No BAHPL</div><div style={cv}>{detail.noBahpl || '-'}</div></div>
-                                        <div style={cs}><div style={cl}>Tanggal BAHPL</div><div style={cv}>{formatDate(detail.tanggalBahpl)}</div></div>
-                                    </div>
                                     {detail.berkasPenawaranPath && (
                                         <div style={{ ...cs, marginBottom: 12 }}><div style={cl}>Berkas Penawaran</div>
                                             <a href={detail.berkasPenawaranPath} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-blue)', textDecoration: 'underline', fontSize: '0.875rem' }}>📄 Lihat Dokumen PDF</a>
