@@ -40,6 +40,7 @@ const ManajemenPenyedia = () => {
     const [dhSearch, setDhSearch] = useState('');
     const [skSearch, setSkSearch] = useState('');
     const [ppkSearch, setPpkSearch] = useState('');
+    const [refTab, setRefTab] = useState('dasar-hukum');
 
     const fetchData = async () => {
         setLoading(true);
@@ -662,79 +663,97 @@ const ManajemenPenyedia = () => {
                 </div>
             )}
 
-            {/* ========== DASAR HUKUM ========== */}
+            {/* ========== REFERENSI DATA (TABS) ========== */}
             <div style={{ marginTop: 40 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                    <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700 }}>DASAR HUKUM</h2>
-                    <button className="btn btn-primary btn-sm" onClick={() => setDhEdit({ tahun: new Date().getFullYear(), isi: '', _new: true })} style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ fontSize: 16 }}>＋</span> Tambah Data</button>
+                <div style={{ display: 'flex', gap: 0, marginBottom: 0, borderBottom: '2px solid var(--border-color)' }}>
+                    {[{ key: 'dasar-hukum', label: 'Dasar Hukum' }, { key: 'satuan-kerja', label: 'Satuan Kerja' }, { key: 'ppkom', label: 'PPKOM' }].map(tab => (
+                        <button key={tab.key} onClick={() => setRefTab(tab.key)} style={{
+                            padding: '10px 24px', background: refTab === tab.key ? 'var(--accent-blue)' : 'none',
+                            border: 'none', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600,
+                            color: refTab === tab.key ? '#fff' : 'var(--text-secondary)',
+                            borderRadius: refTab === tab.key ? '8px 8px 0 0' : 0,
+                            marginBottom: -2, transition: 'all 0.2s'
+                        }}>{tab.label}</button>
+                    ))}
                 </div>
-                <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}><div className="table-search" style={{ flex: 1, maxWidth: 220 }}><Search size={14} className="search-icon" /><input placeholder="Search" value={dhSearch} onChange={e => setDhSearch(e.target.value)} /></div></div>
-                <div style={{ overflowX: 'auto' }}>
-                    <table className="data-table" style={{ minWidth: 700 }}>
-                        <thead><tr><th style={{ width: 50 }}></th><th style={{ width: 60 }}>AKSI</th><th style={{ width: 80 }}>TAHUN</th><th>DASAR HUKUM</th></tr></thead>
-                        <tbody>
-                            {dasarHukumData.filter(r => !dhSearch || r.isi?.toLowerCase().includes(dhSearch.toLowerCase()) || String(r.tahun).includes(dhSearch)).map((r, i) => (
-                                <tr key={r.id}><td style={{ textAlign: 'center' }}><input type="checkbox" /></td>
-                                    <td><div style={{ display: 'flex', gap: 4 }}><button title="Edit" onClick={() => setDhEdit({ ...r })} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 4, padding: '3px 6px', cursor: 'pointer' }}><Pencil size={13} /></button><button title="Hapus" onClick={async () => { if (!confirm('Hapus?')) return; await referensiApi.deleteDasarHukum(r.id); fetchRef(); toast.success('Dihapus'); }} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, padding: '3px 6px', cursor: 'pointer' }}><Trash2 size={13} /></button></div></td>
-                                    <td>{r.tahun}</td><td style={{ whiteSpace: 'normal', maxWidth: 500 }}>{r.isi}</td>
-                                </tr>
-                            ))}
-                            {dasarHukumData.length === 0 && <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: 20 }}>Belum ada data</td></tr>}
-                        </tbody>
-                    </table>
-                </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--accent-blue)', marginTop: 6 }}>Showing {dasarHukumData.length} results</div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: 6, background: 'var(--bg-secondary)', padding: '6px 10px', borderRadius: 6 }}>Variabel Template: <code>{'{dasarHukum}'}</code></div>
-            </div>
 
-            {/* ========== SATUAN KERJA ========== */}
-            <div style={{ marginTop: 40 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                    <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700 }}>SATUAN KERJA</h2>
-                    <button className="btn btn-primary btn-sm" onClick={() => setSkEdit({ nip: '', namaPimpinan: '', jabatan: '', website: '', email: '', telepon: '', klpd: '', _new: true })} style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ fontSize: 16 }}>＋</span> Tambah Data</button>
-                </div>
-                <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}><div className="table-search" style={{ flex: 1, maxWidth: 220 }}><Search size={14} className="search-icon" /><input placeholder="Search" value={skSearch} onChange={e => setSkSearch(e.target.value)} /></div></div>
-                <div style={{ overflowX: 'auto' }}>
-                    <table className="data-table" style={{ minWidth: 1000 }}>
-                        <thead><tr><th style={{ width: 50 }}></th><th style={{ width: 60 }}>AKSI</th><th>NIP</th><th>NAMA PIMPINAN</th><th>JABATAN</th><th>WEBSITE</th><th>EMAIL</th><th>TELEPON</th><th>KLPD</th></tr></thead>
-                        <tbody>
-                            {satuanKerjaData.filter(r => !skSearch || [r.nip, r.namaPimpinan, r.email].some(f => f?.toLowerCase().includes(skSearch.toLowerCase()))).map(r => (
-                                <tr key={r.id}><td style={{ textAlign: 'center' }}><input type="checkbox" /></td>
-                                    <td><div style={{ display: 'flex', gap: 4 }}><button title="Edit" onClick={() => setSkEdit({ ...r })} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 4, padding: '3px 6px', cursor: 'pointer' }}><Pencil size={13} /></button><button title="Hapus" onClick={async () => { if (!confirm('Hapus?')) return; await referensiApi.deleteSatuanKerja(r.id); fetchRef(); toast.success('Dihapus'); }} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, padding: '3px 6px', cursor: 'pointer' }}><Trash2 size={13} /></button></div></td>
-                                    <td style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{r.nip}</td><td>{r.namaPimpinan}</td><td>{r.jabatan}</td><td>{r.website}</td><td>{r.email}</td><td>{r.telepon}</td><td>{r.klpd}</td>
-                                </tr>
-                            ))}
-                            {satuanKerjaData.length === 0 && <tr><td colSpan={9} style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: 20 }}>Belum ada data</td></tr>}
-                        </tbody>
-                    </table>
-                </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--accent-blue)', marginTop: 6 }}>Showing {satuanKerjaData.length} results</div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: 6, background: 'var(--bg-secondary)', padding: '6px 10px', borderRadius: 6 }}>Variabel: <code>{'{nipSatker}'}</code> <code>{'{namaSatker}'}</code> <code>{'{jabatanSatker}'}</code> <code>{'{websiteSatker}'}</code> <code>{'{emailSatker}'}</code> <code>{'{teleponSatker}'}</code> <code>{'{klpdSatker}'}</code></div>
-            </div>
+                {/* ===== TAB: DASAR HUKUM ===== */}
+                {refTab === 'dasar-hukum' && (
+                    <div style={{ paddingTop: 16 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                            <div className="table-search" style={{ maxWidth: 220 }}><Search size={14} className="search-icon" /><input placeholder="Search" value={dhSearch} onChange={e => setDhSearch(e.target.value)} /></div>
+                            <button className="btn btn-primary btn-sm" onClick={() => setDhEdit({ tahun: new Date().getFullYear(), isi: '', _new: true })} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>＋ Tambah Data</button>
+                        </div>
+                        <div style={{ overflowX: 'auto' }}>
+                            <table className="data-table" style={{ minWidth: 700 }}>
+                                <thead><tr><th style={{ width: 50 }}></th><th style={{ width: 60 }}>AKSI</th><th style={{ width: 80 }}>TAHUN</th><th>DASAR HUKUM</th></tr></thead>
+                                <tbody>
+                                    {dasarHukumData.filter(r => !dhSearch || r.isi?.toLowerCase().includes(dhSearch.toLowerCase()) || String(r.tahun).includes(dhSearch)).map(r => (
+                                        <tr key={r.id}><td style={{ textAlign: 'center' }}><input type="checkbox" /></td>
+                                            <td><div style={{ display: 'flex', gap: 4 }}><button title="Edit" onClick={() => setDhEdit({ ...r })} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 4, padding: '3px 6px', cursor: 'pointer' }}><Pencil size={13} /></button><button title="Hapus" onClick={async () => { if (!confirm('Hapus?')) return; await referensiApi.deleteDasarHukum(r.id); fetchRef(); toast.success('Dihapus'); }} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, padding: '3px 6px', cursor: 'pointer' }}><Trash2 size={13} /></button></div></td>
+                                            <td>{r.tahun}</td><td style={{ whiteSpace: 'normal' }}>{r.isi}</td>
+                                        </tr>
+                                    ))}
+                                    {dasarHukumData.length === 0 && <tr><td colSpan={4} style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: 20 }}>Belum ada data</td></tr>}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--accent-blue)', marginTop: 6 }}>Showing {dasarHukumData.length} results</div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: 6, background: 'var(--bg-secondary)', padding: '6px 10px', borderRadius: 6 }}>Variabel Template: <code>{'{dasarHukum}'}</code></div>
+                    </div>
+                )}
 
-            {/* ========== PPKOM ========== */}
-            <div style={{ marginTop: 40 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                    <h2 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 700 }}>PPKOM</h2>
-                    <button className="btn btn-primary btn-sm" onClick={() => setPpkEdit({ nip: '', nama: '', pangkat: '', jabatan: '', alamat: '', noTelp: '', email: '', _new: true })} style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ fontSize: 16 }}>＋</span> Tambah Data</button>
-                </div>
-                <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}><div className="table-search" style={{ flex: 1, maxWidth: 220 }}><Search size={14} className="search-icon" /><input placeholder="Search" value={ppkSearch} onChange={e => setPpkSearch(e.target.value)} /></div></div>
-                <div style={{ overflowX: 'auto' }}>
-                    <table className="data-table" style={{ minWidth: 1000 }}>
-                        <thead><tr><th style={{ width: 50 }}></th><th style={{ width: 60 }}>AKSI</th><th>NIP</th><th>NAMA</th><th>PANGKAT</th><th>JABATAN</th><th>ALAMAT</th><th>NO TELP</th><th>EMAIL</th></tr></thead>
-                        <tbody>
-                            {ppkomData.filter(r => !ppkSearch || [r.nip, r.nama, r.email].some(f => f?.toLowerCase().includes(ppkSearch.toLowerCase()))).map(r => (
-                                <tr key={r.id}><td style={{ textAlign: 'center' }}><input type="checkbox" /></td>
-                                    <td><div style={{ display: 'flex', gap: 4 }}><button title="Edit" onClick={() => setPpkEdit({ ...r })} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 4, padding: '3px 6px', cursor: 'pointer' }}><Pencil size={13} /></button><button title="Hapus" onClick={async () => { if (!confirm('Hapus?')) return; await referensiApi.deletePpkom(r.id); fetchRef(); toast.success('Dihapus'); }} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, padding: '3px 6px', cursor: 'pointer' }}><Trash2 size={13} /></button></div></td>
-                                    <td style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{r.nip}</td><td>{r.nama}</td><td>{r.pangkat}</td><td>{r.jabatan}</td><td>{r.alamat}</td><td>{r.noTelp}</td><td>{r.email}</td>
-                                </tr>
-                            ))}
-                            {ppkomData.length === 0 && <tr><td colSpan={9} style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: 20 }}>Belum ada data</td></tr>}
-                        </tbody>
-                    </table>
-                </div>
-                <div style={{ fontSize: '0.8rem', color: 'var(--accent-blue)', marginTop: 6 }}>Showing {ppkomData.length} results</div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: 6, background: 'var(--bg-secondary)', padding: '6px 10px', borderRadius: 6 }}>Variabel: <code>{'{ppkom}'}</code> <code>{'{nipPpkom}'}</code> <code>{'{jabatanPpkom}'}</code> <code>{'{alamatPpkom}'}</code> <code>{'{pangkatPpkom}'}</code> <code>{'{telpPpkom}'}</code> <code>{'{emailPpkom}'}</code></div>
+                {/* ===== TAB: SATUAN KERJA ===== */}
+                {refTab === 'satuan-kerja' && (
+                    <div style={{ paddingTop: 16 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                            <div className="table-search" style={{ maxWidth: 220 }}><Search size={14} className="search-icon" /><input placeholder="Search" value={skSearch} onChange={e => setSkSearch(e.target.value)} /></div>
+                            <button className="btn btn-primary btn-sm" onClick={() => setSkEdit({ nip: '', namaPimpinan: '', jabatan: '', website: '', email: '', telepon: '', klpd: '', _new: true })} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>＋ Tambah Data</button>
+                        </div>
+                        <div style={{ overflowX: 'auto' }}>
+                            <table className="data-table" style={{ minWidth: 1000 }}>
+                                <thead><tr><th style={{ width: 50 }}></th><th style={{ width: 60 }}>AKSI</th><th>NIP</th><th>NAMA PIMPINAN</th><th>JABATAN</th><th>WEBSITE</th><th>EMAIL</th><th>TELEPON</th><th>KLPD</th></tr></thead>
+                                <tbody>
+                                    {satuanKerjaData.filter(r => !skSearch || [r.nip, r.namaPimpinan, r.email].some(f => f?.toLowerCase().includes(skSearch.toLowerCase()))).map(r => (
+                                        <tr key={r.id}><td style={{ textAlign: 'center' }}><input type="checkbox" /></td>
+                                            <td><div style={{ display: 'flex', gap: 4 }}><button title="Edit" onClick={() => setSkEdit({ ...r })} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 4, padding: '3px 6px', cursor: 'pointer' }}><Pencil size={13} /></button><button title="Hapus" onClick={async () => { if (!confirm('Hapus?')) return; await referensiApi.deleteSatuanKerja(r.id); fetchRef(); toast.success('Dihapus'); }} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, padding: '3px 6px', cursor: 'pointer' }}><Trash2 size={13} /></button></div></td>
+                                            <td style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{r.nip}</td><td>{r.namaPimpinan}</td><td>{r.jabatan}</td><td>{r.website}</td><td>{r.email}</td><td>{r.telepon}</td><td>{r.klpd}</td>
+                                        </tr>
+                                    ))}
+                                    {satuanKerjaData.length === 0 && <tr><td colSpan={9} style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: 20 }}>Belum ada data</td></tr>}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--accent-blue)', marginTop: 6 }}>Showing {satuanKerjaData.length} results</div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: 6, background: 'var(--bg-secondary)', padding: '6px 10px', borderRadius: 6 }}>Variabel: <code>{'{nipSatker}'}</code> <code>{'{namaSatker}'}</code> <code>{'{jabatanSatker}'}</code> <code>{'{websiteSatker}'}</code> <code>{'{emailSatker}'}</code> <code>{'{teleponSatker}'}</code> <code>{'{klpdSatker}'}</code></div>
+                    </div>
+                )}
+
+                {/* ===== TAB: PPKOM ===== */}
+                {refTab === 'ppkom' && (
+                    <div style={{ paddingTop: 16 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                            <div className="table-search" style={{ maxWidth: 220 }}><Search size={14} className="search-icon" /><input placeholder="Search" value={ppkSearch} onChange={e => setPpkSearch(e.target.value)} /></div>
+                            <button className="btn btn-primary btn-sm" onClick={() => setPpkEdit({ nip: '', nama: '', pangkat: '', jabatan: '', alamat: '', noTelp: '', email: '', _new: true })} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>＋ Tambah Data</button>
+                        </div>
+                        <div style={{ overflowX: 'auto' }}>
+                            <table className="data-table" style={{ minWidth: 1000 }}>
+                                <thead><tr><th style={{ width: 50 }}></th><th style={{ width: 60 }}>AKSI</th><th>NIP</th><th>NAMA</th><th>PANGKAT</th><th>JABATAN</th><th>ALAMAT</th><th>NO TELP</th><th>EMAIL</th></tr></thead>
+                                <tbody>
+                                    {ppkomData.filter(r => !ppkSearch || [r.nip, r.nama, r.email].some(f => f?.toLowerCase().includes(ppkSearch.toLowerCase()))).map(r => (
+                                        <tr key={r.id}><td style={{ textAlign: 'center' }}><input type="checkbox" /></td>
+                                            <td><div style={{ display: 'flex', gap: 4 }}><button title="Edit" onClick={() => setPpkEdit({ ...r })} style={{ background: '#f59e0b', color: '#fff', border: 'none', borderRadius: 4, padding: '3px 6px', cursor: 'pointer' }}><Pencil size={13} /></button><button title="Hapus" onClick={async () => { if (!confirm('Hapus?')) return; await referensiApi.deletePpkom(r.id); fetchRef(); toast.success('Dihapus'); }} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, padding: '3px 6px', cursor: 'pointer' }}><Trash2 size={13} /></button></div></td>
+                                            <td style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{r.nip}</td><td>{r.nama}</td><td>{r.pangkat}</td><td>{r.jabatan}</td><td>{r.alamat}</td><td>{r.noTelp}</td><td>{r.email}</td>
+                                        </tr>
+                                    ))}
+                                    {ppkomData.length === 0 && <tr><td colSpan={9} style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: 20 }}>Belum ada data</td></tr>}
+                                </tbody>
+                            </table>
+                        </div>
+                        <div style={{ fontSize: '0.8rem', color: 'var(--accent-blue)', marginTop: 6 }}>Showing {ppkomData.length} results</div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: 6, background: 'var(--bg-secondary)', padding: '6px 10px', borderRadius: 6 }}>Variabel: <code>{'{ppkom}'}</code> <code>{'{nipPpkom}'}</code> <code>{'{jabatanPpkom}'}</code> <code>{'{alamatPpkom}'}</code> <code>{'{pangkatPpkom}'}</code> <code>{'{telpPpkom}'}</code> <code>{'{emailPpkom}'}</code></div>
+                    </div>
+                )}
             </div>
 
             {/* ===== MODAL DASAR HUKUM ===== */}
