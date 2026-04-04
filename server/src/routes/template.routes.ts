@@ -657,8 +657,8 @@ function buildRincianVars(d: any) {
         // Provide both naming conventions for template compatibility
         rincianNama: it.nama,
         nama: it.nama,
-        rincianNilai: 'Rp. ' + fmtRp(it.nilai),
-        nilai: 'Rp. ' + fmtRp(it.nilai),
+        rincianNilai: fmtRp(it.nilai),
+        nilai: fmtRp(it.nilai),
         rincianNilaiRaw: String(it.nilai),
         nilaiRaw: String(it.nilai),
     }));
@@ -666,14 +666,21 @@ function buildRincianVars(d: any) {
     // lingkupPekerjaan: numbered list text
     const lingkupPekerjaan = items.map((it, i) => `${i + 1}. ${it.nama}`).join('\n');
 
+    // Top-level rincian variables (first item for non-loop templates)
+    const first = items[0] || { nama: '', nilai: 0 };
+
     return {
         rincianKontrak,
         lingkupPekerjaan,
-        totalRincian: 'Rp. ' + fmtRp(total),
+        totalRincian: fmtRp(total),
         totalRincianRaw: String(total),
         terbilangTotalRincian: ucFirst(terbilang(total)) + ' rupiah',
         jumlahRincian: String(items.length),
         adaRincian: 'Ya',
+        // Top-level aliases (so {{rincianNama}} works outside loop too)
+        rincianNama: first.nama,
+        rincianNilai: fmtRp(first.nilai),
+        rincianNilaiRaw: String(first.nilai),
     };
 }
 
