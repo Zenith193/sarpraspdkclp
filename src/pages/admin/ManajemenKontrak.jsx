@@ -69,6 +69,10 @@ const ManajemenKontrak = () => {
     const [generating, setGenerating] = useState(false);
     const [editTimData, setEditTimData] = useState([]);
     const [editPeralatanData, setEditPeralatanData] = useState([]);
+    const emptyTimInput = { nama: '', posisi: '', statusTenaga: '', pendidikan: '', pengalaman: '', sertifikasi: '', keterangan: '', jadwal: Array(12).fill(false) };
+    const emptyPeralatanInput = { nama: '', merk: '', type: '', kapasitas: '', jumlah: '', kondisi: '', statusKepemilikan: '', keterangan: '' };
+    const [timInput, setTimInput] = useState({ ...emptyTimInput });
+    const [peralatanInput, setPeralatanInput] = useState({ ...emptyPeralatanInput });
 
     const load = () => {
         setLoading(true);
@@ -867,26 +871,22 @@ const ManajemenKontrak = () => {
 
                             {/* LAMPIRAN */}
                             {tab === 'lampiran' && (() => {
-                                const emptyTim = { nama: '', posisi: '', statusTenaga: '', pendidikan: '', pengalaman: '', sertifikasi: '', keterangan: '', jadwal: Array(12).fill(false) };
-                                const emptyPeralatan = { nama: '', merk: '', type: '', kapasitas: '', jumlah: '', kondisi: '', statusKepemilikan: '', keterangan: '' };
-                                const cellInput = { width: '100%', padding: '4px 6px', border: '1px solid var(--border)', borderRadius: 4, fontSize: '0.72rem', background: 'var(--bg-primary)', color: 'var(--text-primary)', minWidth: 60 };
+                                const tblInput = { padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 6, fontSize: '0.78rem', background: 'var(--bg-secondary)', color: 'var(--text-primary)', boxSizing: 'border-box' };
+                                const tblSelect = { ...tblInput, padding: '5px 4px' };
                                 return (
                                 <div>
                                     <div style={{ background: 'var(--accent-blue)', color: '#fff', padding: '10px 20px', borderRadius: 8, marginBottom: 20, fontWeight: 600, fontSize: '0.9rem' }}>Lampiran</div>
 
                                     {/* Komposisi Tim */}
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                                        <h4 style={{ margin: 0, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}>👥 KOMPOSISI TIM DAN PENUGASAN</h4>
-                                        <button onClick={() => setEditTimData([...editTimData, { ...emptyTim }])} style={{ padding: '4px 12px', borderRadius: 6, border: 'none', background: '#22c55e', color: '#fff', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}><Plus size={13} /> Tambah</button>
-                                    </div>
+                                    <h4 style={{ margin: '0 0 10px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}>👥 KOMPOSISI TIM DAN PENUGASAN</h4>
                                     <div style={{ overflowX: 'auto', marginBottom: 24, maxWidth: '100%' }}>
-                                        <table className="data-table" style={{ fontSize: '0.72rem', whiteSpace: 'nowrap' }}>
+                                        <table className="data-table" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
                                             <thead>
                                                 <tr>
                                                     <th>Nama</th><th>Posisi</th><th>Status Tenaga</th><th>Pendidikan</th>
-                                                    <th>Pengalaman</th><th>Sertifikasi</th><th>Keterangan</th>
-                                                    <th colSpan={12} style={{ textAlign: 'center' }}>Jadwal (Bulan)</th>
-                                                    <th></th>
+                                                    <th>Pengalaman (tahun)</th><th>Sertifikasi</th><th>Keterangan</th>
+                                                    <th colSpan={12} style={{ textAlign: 'center' }}>Jadwal Pelaksanaan Kegiatan (Bulan)</th>
+                                                    <th>Aksi</th>
                                                 </tr>
                                                 <tr>
                                                     <th colSpan={7}></th>
@@ -895,47 +895,55 @@ const ManajemenKontrak = () => {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                {editTimData.length > 0 ? editTimData.map((row, i) => (
-                                                    <tr key={i}>
-                                                        <td><input style={cellInput} value={row.nama} onChange={e => { const n = [...editTimData]; n[i] = { ...n[i], nama: e.target.value }; setEditTimData(n); }} /></td>
-                                                        <td><input style={cellInput} value={row.posisi} onChange={e => { const n = [...editTimData]; n[i] = { ...n[i], posisi: e.target.value }; setEditTimData(n); }} /></td>
-                                                        <td><input style={cellInput} value={row.statusTenaga} onChange={e => { const n = [...editTimData]; n[i] = { ...n[i], statusTenaga: e.target.value }; setEditTimData(n); }} /></td>
-                                                        <td><input style={cellInput} value={row.pendidikan} onChange={e => { const n = [...editTimData]; n[i] = { ...n[i], pendidikan: e.target.value }; setEditTimData(n); }} /></td>
-                                                        <td><input style={{ ...cellInput, width: 50 }} value={row.pengalaman} onChange={e => { const n = [...editTimData]; n[i] = { ...n[i], pengalaman: e.target.value }; setEditTimData(n); }} /></td>
-                                                        <td><input style={cellInput} value={row.sertifikasi} onChange={e => { const n = [...editTimData]; n[i] = { ...n[i], sertifikasi: e.target.value }; setEditTimData(n); }} /></td>
-                                                        <td><input style={cellInput} value={row.keterangan} onChange={e => { const n = [...editTimData]; n[i] = { ...n[i], keterangan: e.target.value }; setEditTimData(n); }} /></td>
-                                                        {(row.jadwal || Array(12).fill(false)).map((c, j) => (
-                                                            <td key={j} style={{ textAlign: 'center', cursor: 'pointer' }} onClick={() => { const n = [...editTimData]; const jd = [...(n[i].jadwal || Array(12).fill(false))]; jd[j] = !jd[j]; n[i] = { ...n[i], jadwal: jd }; setEditTimData(n); }}>{c ? '■' : '□'}</td>
-                                                        ))}
-                                                        <td><button onClick={() => setEditTimData(editTimData.filter((_, idx) => idx !== i))} style={{ padding: '2px 6px', borderRadius: 4, border: 'none', background: '#ef4444', color: '#fff', cursor: 'pointer', fontSize: '0.7rem' }}><Minus size={12} /></button></td>
+                                                {editTimData.map((row, i) => (
+                                                    <tr key={'saved-'+i} style={{ background: 'rgba(34,197,94,0.05)' }}>
+                                                        <td>{row.nama}</td><td>{row.posisi}</td><td>{row.statusTenaga}</td><td>{row.pendidikan}</td>
+                                                        <td>{row.pengalaman}</td><td>{row.sertifikasi}</td><td>{row.keterangan}</td>
+                                                        {(row.jadwal || Array(12).fill(false)).map((c, j) => <td key={j} style={{ textAlign: 'center' }}>{c ? '■' : '□'}</td>)}
+                                                        <td><button onClick={() => setEditTimData(r => r.filter((_, idx) => idx !== i))} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, padding: '2px 6px', cursor: 'pointer', fontSize: '0.7rem' }}>Hapus</button></td>
                                                     </tr>
-                                                )) : <tr><td colSpan={20} style={{ textAlign: 'center', color: 'var(--text-secondary)', fontStyle: 'italic' }}>Belum ada data tim — klik Tambah</td></tr>}
+                                                ))}
+                                                <tr>
+                                                    <td><input style={tblInput} value={timInput.nama} onChange={e => setTimInput({ ...timInput, nama: e.target.value })} /></td>
+                                                    <td><input style={tblInput} value={timInput.posisi} onChange={e => setTimInput({ ...timInput, posisi: e.target.value })} /></td>
+                                                    <td><select style={tblSelect} value={timInput.statusTenaga} onChange={e => setTimInput({ ...timInput, statusTenaga: e.target.value })}><option value="">Pilih Status Tenaga</option><option>Tenaga Ahli</option><option>Tenaga Penunjang</option><option>Tenaga Teknis</option></select></td>
+                                                    <td><select style={tblSelect} value={timInput.pendidikan} onChange={e => setTimInput({ ...timInput, pendidikan: e.target.value })}><option value="">Pilih Pendidikan</option><option>SD</option><option>SMP</option><option>SMA</option><option>D1</option><option>D2</option><option>D3</option><option>D4/S1</option><option>S2</option><option>S3</option></select></td>
+                                                    <td><input type="number" style={tblInput} placeholder="0" value={timInput.pengalaman} onChange={e => setTimInput({ ...timInput, pengalaman: e.target.value })} /></td>
+                                                    <td><input style={tblInput} value={timInput.sertifikasi} onChange={e => setTimInput({ ...timInput, sertifikasi: e.target.value })} /></td>
+                                                    <td><input style={tblInput} value={timInput.keterangan} onChange={e => setTimInput({ ...timInput, keterangan: e.target.value })} /></td>
+                                                    {timInput.jadwal.map((checked, j) => (
+                                                        <td key={j} style={{ textAlign: 'center' }}><input type="checkbox" checked={checked} onChange={() => { const jd = [...timInput.jadwal]; jd[j] = !jd[j]; setTimInput({ ...timInput, jadwal: jd }); }} /></td>
+                                                    ))}
+                                                    <td><button onClick={() => { if (!timInput.nama.trim()) return; setEditTimData(r => [...r, { ...timInput }]); setTimInput({ ...emptyTimInput }); }} style={{ background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 12px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Simpan</button></td>
+                                                </tr>
                                             </tbody>
                                         </table>
                                     </div>
 
                                     {/* Peralatan Utama */}
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                                        <h4 style={{ margin: 0, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}>🔧 PERALATAN UTAMA (Apabila dipersyaratkan)</h4>
-                                        <button onClick={() => setEditPeralatanData([...editPeralatanData, { ...emptyPeralatan }])} style={{ padding: '4px 12px', borderRadius: 6, border: 'none', background: '#22c55e', color: '#fff', fontSize: '0.75rem', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}><Plus size={13} /> Tambah</button>
-                                    </div>
+                                    <h4 style={{ margin: '0 0 10px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}>🔧 PERALATAN UTAMA (Apabila dipersyaratkan)</h4>
                                     <div style={{ overflowX: 'auto', marginBottom: 24, maxWidth: '100%' }}>
-                                        <table className="data-table" style={{ fontSize: '0.72rem', whiteSpace: 'nowrap' }}>
-                                            <thead><tr><th>Nama Peralatan</th><th>Merk</th><th>Type</th><th>Kapasitas</th><th>Jumlah</th><th>Kondisi</th><th>Status Kepemilikan</th><th>Keterangan</th><th></th></tr></thead>
+                                        <table className="data-table" style={{ fontSize: '0.75rem', whiteSpace: 'nowrap' }}>
+                                            <thead><tr><th>Nama Peralatan</th><th>Merk</th><th>Type</th><th>Kapasitas</th><th>Jumlah</th><th>Kondisi</th><th>Status Kepemilikan</th><th>Keterangan</th><th>Aksi</th></tr></thead>
                                             <tbody>
-                                                {editPeralatanData.length > 0 ? editPeralatanData.map((row, i) => (
-                                                    <tr key={i}>
-                                                        <td><input style={cellInput} value={row.nama} onChange={e => { const n = [...editPeralatanData]; n[i] = { ...n[i], nama: e.target.value }; setEditPeralatanData(n); }} /></td>
-                                                        <td><input style={cellInput} value={row.merk} onChange={e => { const n = [...editPeralatanData]; n[i] = { ...n[i], merk: e.target.value }; setEditPeralatanData(n); }} /></td>
-                                                        <td><input style={cellInput} value={row.type} onChange={e => { const n = [...editPeralatanData]; n[i] = { ...n[i], type: e.target.value }; setEditPeralatanData(n); }} /></td>
-                                                        <td><input style={cellInput} value={row.kapasitas} onChange={e => { const n = [...editPeralatanData]; n[i] = { ...n[i], kapasitas: e.target.value }; setEditPeralatanData(n); }} /></td>
-                                                        <td><input style={{ ...cellInput, width: 50 }} value={row.jumlah} onChange={e => { const n = [...editPeralatanData]; n[i] = { ...n[i], jumlah: e.target.value }; setEditPeralatanData(n); }} /></td>
-                                                        <td><input style={cellInput} value={row.kondisi} onChange={e => { const n = [...editPeralatanData]; n[i] = { ...n[i], kondisi: e.target.value }; setEditPeralatanData(n); }} /></td>
-                                                        <td><input style={cellInput} value={row.statusKepemilikan} onChange={e => { const n = [...editPeralatanData]; n[i] = { ...n[i], statusKepemilikan: e.target.value }; setEditPeralatanData(n); }} /></td>
-                                                        <td><input style={cellInput} value={row.keterangan} onChange={e => { const n = [...editPeralatanData]; n[i] = { ...n[i], keterangan: e.target.value }; setEditPeralatanData(n); }} /></td>
-                                                        <td><button onClick={() => setEditPeralatanData(editPeralatanData.filter((_, idx) => idx !== i))} style={{ padding: '2px 6px', borderRadius: 4, border: 'none', background: '#ef4444', color: '#fff', cursor: 'pointer', fontSize: '0.7rem' }}><Minus size={12} /></button></td>
+                                                {editPeralatanData.map((row, i) => (
+                                                    <tr key={'saved-'+i} style={{ background: 'rgba(34,197,94,0.05)' }}>
+                                                        <td>{row.nama}</td><td>{row.merk}</td><td>{row.type}</td><td>{row.kapasitas}</td>
+                                                        <td>{row.jumlah}</td><td>{row.kondisi}</td><td>{row.statusKepemilikan}</td><td>{row.keterangan}</td>
+                                                        <td><button onClick={() => setEditPeralatanData(r => r.filter((_, idx) => idx !== i))} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, padding: '2px 6px', cursor: 'pointer', fontSize: '0.7rem' }}>Hapus</button></td>
                                                     </tr>
-                                                )) : <tr><td colSpan={9} style={{ textAlign: 'center', color: 'var(--text-secondary)', fontStyle: 'italic' }}>Belum ada data peralatan — klik Tambah</td></tr>}
+                                                ))}
+                                                <tr>
+                                                    <td><input style={tblInput} value={peralatanInput.nama} onChange={e => setPeralatanInput({ ...peralatanInput, nama: e.target.value })} /></td>
+                                                    <td><input style={tblInput} value={peralatanInput.merk} onChange={e => setPeralatanInput({ ...peralatanInput, merk: e.target.value })} /></td>
+                                                    <td><input style={tblInput} value={peralatanInput.type} onChange={e => setPeralatanInput({ ...peralatanInput, type: e.target.value })} /></td>
+                                                    <td><input style={tblInput} value={peralatanInput.kapasitas} onChange={e => setPeralatanInput({ ...peralatanInput, kapasitas: e.target.value })} /></td>
+                                                    <td><input type="number" style={tblInput} placeholder="0" value={peralatanInput.jumlah} onChange={e => setPeralatanInput({ ...peralatanInput, jumlah: e.target.value })} /></td>
+                                                    <td><select style={tblSelect} value={peralatanInput.kondisi} onChange={e => setPeralatanInput({ ...peralatanInput, kondisi: e.target.value })}><option value="">Pilih Kondisi</option><option>Baik</option><option>Sedang</option><option>Rusak</option></select></td>
+                                                    <td><select style={tblSelect} value={peralatanInput.statusKepemilikan} onChange={e => setPeralatanInput({ ...peralatanInput, statusKepemilikan: e.target.value })}><option value="">Pilih Status Kepemilikan</option><option>Milik Sendiri</option><option>Sewa</option></select></td>
+                                                    <td><input style={tblInput} value={peralatanInput.keterangan} onChange={e => setPeralatanInput({ ...peralatanInput, keterangan: e.target.value })} /></td>
+                                                    <td><button onClick={() => { if (!peralatanInput.nama.trim()) return; setEditPeralatanData(r => [...r, { ...peralatanInput }]); setPeralatanInput({ ...emptyPeralatanInput }); }} style={{ background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: 6, padding: '5px 12px', cursor: 'pointer', fontSize: '0.75rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Simpan</button></td>
+                                                </tr>
                                             </tbody>
                                         </table>
                                     </div>
@@ -946,9 +954,9 @@ const ManajemenKontrak = () => {
                                         </div>
                                     )}
 
-                                    <button className="btn btn-primary" onClick={handleSaveLampiran} disabled={saving}
-                                        style={{ marginTop: 16, padding: '10px 24px', borderRadius: 8, border: 'none', background: 'var(--accent-blue)', color: '#fff', fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.88rem' }}>
-                                        <Save size={16} /> {saving ? 'Menyimpan...' : 'Simpan Lampiran'}
+                                    <button onClick={handleSaveLampiran} disabled={saving}
+                                        style={{ width: '100%', padding: '14px 0', border: 'none', borderRadius: 10, background: '#22c55e', color: '#fff', cursor: saving ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 16 }}>
+                                        <CheckCircle size={18} /> {saving ? 'Menyimpan...' : '✓ Simpan Lampiran'}
                                     </button>
                                 </div>
                                 );
