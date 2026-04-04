@@ -168,6 +168,39 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
             vars.tabelRincian = '__RINCIAN_TABLE__';
         }
 
+        // PRE-PROCESS: Strip broken/unclosed loop tags from XML before docxtemplater
+        try {
+            let docXml = zip.file('word/document.xml')?.asText() || '';
+            // Strip XML tags to get plain text, find loop tags
+            const plainText = docXml.replace(/<[^>]+>/g, '');
+            const openLoops = [...plainText.matchAll(/\{\{#(\w+)\}\}/g)].map(m => m[1]);
+            const closeLoops = [...plainText.matchAll(/\{\{\/(\w+)\}\}/g)].map(m => m[1]);
+            // Find unmatched opens (no corresponding close)
+            const brokenOpens = openLoops.filter(tag => !closeLoops.includes(tag));
+            // Find unmatched closes (no corresponding open)
+            const brokenCloses = closeLoops.filter(tag => !openLoops.includes(tag));
+            if (brokenOpens.length > 0 || brokenCloses.length > 0) {
+                console.log('[Template] Stripping broken loop tags:', [...brokenOpens.map(t => '#' + t), ...brokenCloses.map(t => '/' + t)].join(', '));
+                // Remove the broken tag text from the XML (handles split across runs)
+                for (const tag of brokenOpens) {
+                    // Remove {{# and tagname and }} individually from the text nodes
+                    docXml = docXml.replace(new RegExp(`\\{\\{#${tag}\\}\\}`, 'g'), '');
+                    // Also handle split: the {{ and #tagname and }} might be in separate <w:t> elements
+                    // Remove just the tag text from <w:t> nodes
+                    docXml = docXml.replace(new RegExp(`#${tag}`, 'g'), '');
+                }
+                for (const tag of brokenCloses) {
+                    docXml = docXml.replace(new RegExp(`\\{\\{\\/${tag}\\}\\}`, 'g'), '');
+                    docXml = docXml.replace(new RegExp(`\\/${tag}`, 'g'), '');
+                }
+                // Clean up any leftover empty braces {{ }}
+                docXml = docXml.replace(/\{\{\s*\}\}/g, '');
+                zip.file('word/document.xml', docXml);
+            }
+        } catch (stripErr: any) {
+            console.error('[Template] Strip broken tags error:', stripErr.message);
+        }
+
         const docxOptions: any = {
             paragraphLoop: true,
             linebreaks: true,
