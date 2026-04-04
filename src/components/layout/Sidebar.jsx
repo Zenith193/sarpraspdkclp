@@ -27,16 +27,6 @@ const Sidebar = ({ collapsed, onToggle, className = '' }) => {
                 serverConfig = typeof res.value === 'string' ? JSON.parse(res.value) : res.value;
             }
             if (serverConfig && typeof serverConfig === 'object' && (serverConfig.admin || serverConfig.verifikator)) {
-                // Auto-add new default menu keys that don't exist in saved config
-                // This handles newly added features like manajemen-penyedia
-                for (const r of Object.keys(ALL_MENUS)) {
-                    if (!serverConfig[r]) continue;
-                    const allKeys = ALL_MENUS[r].map(m => m.path);
-                    const savedKeys = new Set(serverConfig[r]);
-                    allKeys.forEach(key => {
-                        if (!savedKeys.has(key)) serverConfig[r].push(key);
-                    });
-                }
                 setAccessConfig(serverConfig);
             }
         }).catch(() => {});
