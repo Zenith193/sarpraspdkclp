@@ -140,7 +140,7 @@ const ManajemenKontrak = () => {
             })();
             setSpSpmkData({
                 noSp: d.noSp || autoNoSp,
-                tanggalSp: d.tanggalSp || '',
+                tanggalSp: d.tanggalSp || tglMulai || '',
                 idPaket: d.idPaket || d.kodeSirup || '',
             });
             setEditDppl({
