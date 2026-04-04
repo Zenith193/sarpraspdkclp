@@ -82,6 +82,7 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
         const refData = await getRefData();
         console.log('[Generate] nilaiItemsArr:', JSON.stringify(item.nilaiItemsArr), 'children:', JSON.stringify(item.children?.length));
         const vars = buildVariableMap(item, sekretaris || {}, refData);
+        console.log('[Generate] rincianKontrak:', JSON.stringify(vars.rincianKontrak), 'lingkupPekerjaan:', vars.lingkupPekerjaan, 'adaRincian:', vars.adaRincian);
 
         // Fill DOCX template with docxtemplater
         const PizZip = (await import('pizzip')).default;
@@ -91,7 +92,7 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
         const zip = new PizZip(content);
         const doc = new Docxtemplater(zip, {
             paragraphLoop: true,
-            linebreaks: false,
+            linebreaks: true,
             delimiters: { start: '{{', end: '}}' },
         });
 
@@ -552,6 +553,10 @@ function buildChildrenVars(children: any[], parent: any, tahun: string | number)
 // Build rincian kontrak variables for paket with anakan
 // Uses nilaiItemsArr (from ManajemenKontrak) or children (from MatriksKegiatan SPL)
 function buildRincianVars(d: any) {
+    console.log('[buildRincianVars] nilaiItemsArr:', JSON.stringify(d.nilaiItemsArr), 
+        'children:', d.children?.length, 
+        'nilaiItemsArr type:', typeof d.nilaiItemsArr, 
+        'isArray:', Array.isArray(d.nilaiItemsArr));
     // Priority: nilaiItemsArr (from kontrak generate) > children (from SPL)
     let items: { nama: string; nilai: number }[] = [];
 
