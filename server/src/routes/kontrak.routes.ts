@@ -1,6 +1,9 @@
 import { Router } from 'express';
 import { kontrakService } from '../services/kontrak.service.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { db } from '../db/index.js';
+import { eq, desc } from 'drizzle-orm';
+import { perusahaan } from '../db/schema/index.js';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
@@ -31,7 +34,45 @@ router.get('/search-sirup', requireAuth, async (req, res) => {
         if (!kode) return res.status(400).json({ error: 'Kode SiRUP wajib diisi' });
         const result = await kontrakService.searchSirup(kode);
         if (!result) return res.status(404).json({ error: 'Paket tidak ditemukan' });
+        if ((result as any).blocked) {
+            return res.status(409).json({ error: (result as any).blockedReason });
+        }
         res.json(result);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// === Get generated documents for a permohonan (penyedia can download) ===
+router.get('/permohonan/:id/dokumen', requireAuth, async (req, res) => {
+    try {
+        const kontrakId = Number(req.params.id);
+        // Get the permohonan to find matrikId
+        const kontrakData = await kontrakService.getById(kontrakId);
+        if (!kontrakData) return res.status(404).json({ error: 'Permohonan tidak ditemukan' });
+        
+        // Penyedia can only access their own documents
+        if (req.user!.role === 'penyedia') {
+            const myPerusahaan = await db.select().from(perusahaan).where(eq(perusahaan.userId, req.user!.id));
+            if (!myPerusahaan[0] || kontrakData.perusahaanId !== myPerusahaan[0].id) {
+                return res.status(403).json({ error: 'Akses ditolak' });
+            }
+        }
+
+        if (!kontrakData.matrikId) return res.json([]);
+
+        // Get generated SPL files for this matrik
+        const { splGenerated, bastTemplate } = await import('../db/schema/index.js');
+        const docs = await db.select({
+            id: splGenerated.id,
+            namaFile: splGenerated.namaFile,
+            filePath: splGenerated.filePath,
+            templateNama: bastTemplate.nama,
+            createdAt: splGenerated.createdAt,
+        }).from(splGenerated)
+          .leftJoin(bastTemplate, eq(splGenerated.templateId, bastTemplate.id))
+          .where(eq(splGenerated.matrikId, kontrakData.matrikId))
+          .orderBy(desc(splGenerated.createdAt));
+
+        res.json(docs);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 

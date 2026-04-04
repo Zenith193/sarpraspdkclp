@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { History, Eye, Search, CheckCircle, Clock, XCircle, X } from 'lucide-react';
-import { kontrakApi } from '../../api';
+import { History, Eye, Search, CheckCircle, Clock, XCircle, X, FileText, Download, Printer } from 'lucide-react';
+import { kontrakApi, templateApi } from '../../api';
 
 const statusBadge = (status) => {
     const map = {
@@ -21,6 +21,8 @@ const RiwayatKontrakPenyedia = () => {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [detail, setDetail] = useState(null);
+    const [dokumen, setDokumen] = useState([]);
+    const [dokumenLoading, setDokumenLoading] = useState(false);
 
     useEffect(() => {
         kontrakApi.listPermohonan().then(r => setData(Array.isArray(r) ? r : []))
@@ -31,7 +33,42 @@ const RiwayatKontrakPenyedia = () => {
         try {
             const res = await kontrakApi.getPermohonan(id);
             setDetail(res);
+            // Load documents for this kontrak
+            setDokumenLoading(true);
+            try {
+                const docs = await kontrakApi.getDokumen(id);
+                setDokumen(Array.isArray(docs) ? docs : []);
+            } catch { setDokumen([]); }
+            setDokumenLoading(false);
         } catch { }
+    };
+
+    const handleDownloadPdf = (docId) => {
+        window.open(`/api/template/spl-file/pdf/${docId}`, '_blank');
+    };
+
+    const handleDownloadDocx = async (docId, namaFile) => {
+        try {
+            const blob = await templateApi.getSplFile('docx', docId);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${namaFile || 'Dokumen'}.docx`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(url), 10000);
+        } catch { }
+    };
+
+    const handlePrint = (docId) => {
+        // Open PDF in new tab for printing
+        const printWindow = window.open(`/api/template/spl-file/pdf/${docId}`, '_blank');
+        if (printWindow) {
+            printWindow.addEventListener('load', () => {
+                setTimeout(() => printWindow.print(), 500);
+            });
+        }
     };
 
     const filtered = data.filter(d => {
@@ -101,11 +138,11 @@ const RiwayatKontrakPenyedia = () => {
             {/* Detail Modal */}
             {detail && (
                 <div style={{ position: 'fixed', inset: 0, zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)' }} onClick={() => setDetail(null)} />
-                    <div style={{ position: 'relative', background: 'var(--bg-primary)', borderRadius: 16, width: 'min(90vw, 720px)', maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
+                    <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)' }} onClick={() => { setDetail(null); setDokumen([]); }} />
+                    <div style={{ position: 'relative', background: 'var(--bg-primary)', borderRadius: 16, width: 'min(90vw, 760px)', maxHeight: '85vh', display: 'flex', flexDirection: 'column', boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }}>
                         <div style={{ padding: '20px 24px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <h3 style={{ margin: 0 }}>Detail Permohonan Kontrak</h3>
-                            <button onClick={() => setDetail(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}><X size={20} /></button>
+                            <button onClick={() => { setDetail(null); setDokumen([]); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}><X size={20} /></button>
                         </div>
                         <div style={{ padding: 24, overflowY: 'auto', flex: 1 }}>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
@@ -145,6 +182,82 @@ const RiwayatKontrakPenyedia = () => {
                                             </div>
                                         ))}
                                     </div>
+
+                                    {/* DOKUMEN KONTRAK */}
+                                    <hr style={{ margin: '20px 0', border: 'none', borderTop: '1px solid var(--border)' }} />
+                                    <h4 style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                        <FileText size={18} style={{ color: 'var(--accent-blue)' }} />
+                                        Dokumen Kontrak
+                                    </h4>
+
+                                    {dokumenLoading ? (
+                                        <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                                            Memuat dokumen...
+                                        </div>
+                                    ) : dokumen.length === 0 ? (
+                                        <div style={{
+                                            padding: '16px 20px', borderRadius: 10,
+                                            background: 'rgba(251,191,36,0.08)', border: '1px solid rgba(251,191,36,0.2)',
+                                            color: '#f59e0b', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 8
+                                        }}>
+                                            ⏳ Dokumen belum tersedia. Admin/Verifikator belum men-generate dokumen untuk kontrak ini.
+                                        </div>
+                                    ) : (
+                                        <div style={{ display: 'grid', gap: 10 }}>
+                                            {dokumen.map((doc) => (
+                                                <div key={doc.id} style={{
+                                                    padding: '12px 16px', borderRadius: 10,
+                                                    background: 'var(--bg-secondary)', border: '1px solid var(--border)',
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                                    gap: 12,
+                                                }}>
+                                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                                        <div style={{ fontWeight: 600, fontSize: '0.88rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                            📄 {doc.namaFile || 'Dokumen'}
+                                                        </div>
+                                                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 2 }}>
+                                                            {doc.templateNama || 'Template'} • {formatDate(doc.createdAt)}
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                                                        <button
+                                                            onClick={() => handleDownloadPdf(doc.id)}
+                                                            style={{
+                                                                padding: '6px 12px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                                                                background: 'rgba(59,130,246,0.12)', color: 'var(--accent-blue)',
+                                                                fontSize: '0.78rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4,
+                                                            }}
+                                                            title="Lihat PDF"
+                                                        >
+                                                            <Eye size={13} /> PDF
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handleDownloadDocx(doc.id, doc.namaFile)}
+                                                            style={{
+                                                                padding: '6px 12px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                                                                background: 'rgba(16,185,129,0.12)', color: '#10b981',
+                                                                fontSize: '0.78rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4,
+                                                            }}
+                                                            title="Download DOCX"
+                                                        >
+                                                            <Download size={13} /> DOCX
+                                                        </button>
+                                                        <button
+                                                            onClick={() => handlePrint(doc.id)}
+                                                            style={{
+                                                                padding: '6px 12px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                                                                background: 'rgba(139,92,246,0.12)', color: '#8b5cf6',
+                                                                fontSize: '0.78rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4,
+                                                            }}
+                                                            title="Cetak"
+                                                        >
+                                                            <Printer size={13} /> Cetak
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </>
                             )}
                         </div>

@@ -53,7 +53,8 @@ const PermohonanKontrak = () => {
                 setMatrikId(res.data.id || null);
             }
         } catch (e) {
-            setSearchError(e?.response?.data?.error || 'Paket tidak ditemukan');
+            const msg = e?.response?.data?.error || e?.message || 'Paket tidak ditemukan';
+            setSearchError(msg);
         }
         setSearchLoading(false);
     };
@@ -201,7 +202,19 @@ const PermohonanKontrak = () => {
                                     </button>
                                 </div>
                                 {searchResult && <div style={{ color: 'var(--accent-green)', fontSize: '0.82rem', marginTop: 6, display: 'flex', alignItems: 'center', gap: 4 }}>✅ Paket berhasil ditemukan!</div>}
-                                {searchError && <div style={{ color: '#ef4444', fontSize: '0.82rem', marginTop: 6 }}>❌ {searchError}</div>}
+                                {searchError && (
+                                    <div style={{
+                                        marginTop: 8, padding: '10px 14px', borderRadius: 8, fontSize: '0.85rem', fontWeight: 500,
+                                        background: searchError.includes('berkontrak') || searchError.includes('pengajuan')
+                                            ? 'rgba(251,146,60,0.12)' : 'rgba(239,68,68,0.1)',
+                                        color: searchError.includes('berkontrak') || searchError.includes('pengajuan')
+                                            ? '#f59e0b' : '#ef4444',
+                                        display: 'flex', alignItems: 'center', gap: 8,
+                                        border: `1px solid ${searchError.includes('berkontrak') || searchError.includes('pengajuan') ? 'rgba(251,146,60,0.3)' : 'rgba(239,68,68,0.2)'}`,
+                                    }}>
+                                        {searchError.includes('berkontrak') ? '🔒' : searchError.includes('pengajuan') ? '⏳' : '❌'} {searchError}
+                                    </div>
+                                )}
                             </div>
                             <div><label style={labelStyle}>Nama Paket</label><input style={readOnlyStyle} value={namaPaket} readOnly /></div>
                             <div><label style={labelStyle}>Metode Pengadaan</label><input style={readOnlyStyle} value={metodePengadaan} readOnly /></div>

@@ -16,7 +16,31 @@ export const kontrakService = {
             paguAnggaran: matrikKegiatan.paguAnggaran,
             hps: matrikKegiatan.hps,
         }).from(matrikKegiatan).where(eq(matrikKegiatan.rup, kode));
-        return results[0] || null;
+        if (!results[0]) return null;
+
+        const matrik = results[0];
+
+        // Check if any active permohonan exists for this kode sirup or matrikId
+        const existingPermohonan = await db.select({
+            id: permohonanKontrak.id,
+            status: permohonanKontrak.status,
+        }).from(permohonanKontrak)
+          .where(
+              and(
+                  eq(permohonanKontrak.kodeSirup, kode),
+                  sql`${permohonanKontrak.status} IN ('Menunggu', 'Diverifikasi')`
+              )
+          );
+
+        if (existingPermohonan.length > 0) {
+            const status = existingPermohonan[0].status;
+            const reason = status === 'Diverifikasi'
+                ? 'Paket ini sudah berkontrak'
+                : 'Paket ini sedang dalam masa pengajuan kontrak';
+            return { ...matrik, blocked: true, blockedReason: reason };
+        }
+
+        return matrik;
     },
 
     // Find all matrik with same RUP or same noMatrik parent (siblings/anakan)
