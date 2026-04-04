@@ -129,4 +129,65 @@ router.delete('/realisasi/:id', requireAuth, async (req, res) => {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// === Bulk sync all verified kontrak to matrik ===
+router.post('/sync-matrik', requireAuth, requireRole('admin'), async (req, res) => {
+    try {
+        const { kontrakService: ks } = await import('../services/kontrak.service.js');
+        const { db: database } = await import('../db/index.js');
+        const { permohonanKontrak, perusahaan, matrikKegiatan } = await import('../db/schema/index.js');
+        const { eq } = await import('drizzle-orm');
+
+        // Get all verified contracts
+        const allKontrak = await database.select({
+            kontrak: permohonanKontrak,
+            namaPerusahaan: perusahaan.namaPerusahaan,
+            namaPemilik: perusahaan.namaPemilik,
+            alamatPerusahaan: perusahaan.alamatPerusahaan,
+            noTelp: perusahaan.noTelp,
+        }).from(permohonanKontrak)
+          .leftJoin(perusahaan, eq(permohonanKontrak.perusahaanId, perusahaan.id))
+          .where(eq(permohonanKontrak.status, 'Diverifikasi'));
+
+        let synced = 0;
+        for (const k of allKontrak) {
+            const matrikData: any = {
+                noSpk: k.kontrak.noSpk || null,
+                nilaiKontrak: k.kontrak.nilaiKontrak || null,
+                terbilangKontrak: k.kontrak.terbilangKontrak || null,
+                tanggalMulai: k.kontrak.tanggalMulai || null,
+                tanggalSelesai: k.kontrak.tanggalSelesai || null,
+                jangkaWaktu: k.kontrak.waktuPenyelesaian ? parseInt(k.kontrak.waktuPenyelesaian) : null,
+                penyedia: k.namaPerusahaan || null,
+                namaPemilik: k.namaPemilik || null,
+                alamatKantor: k.alamatPerusahaan || null,
+                noHp: k.noTelp || null,
+                metode: k.kontrak.metodePengadaan || null,
+                jenisPengadaan: k.kontrak.jenisPengadaan || null,
+                updatedAt: new Date(),
+            };
+
+            if (k.kontrak.matrikId) {
+                await database.update(matrikKegiatan).set(matrikData)
+                    .where(eq(matrikKegiatan.id, k.kontrak.matrikId));
+                synced++;
+            } else {
+                const [newMatrik] = await database.insert(matrikKegiatan).values({
+                    noMatrik: 'K-' + k.kontrak.id,
+                    rup: k.kontrak.kodeSirup || '',
+                    namaPaket: k.kontrak.namaPaket || '',
+                    jenisPengadaan: k.kontrak.jenisPengadaan || '',
+                    metode: k.kontrak.metodePengadaan || '',
+                    tahunAnggaran: new Date().getFullYear(),
+                    ...matrikData,
+                }).returning();
+                await database.update(permohonanKontrak).set({ matrikId: newMatrik.id })
+                    .where(eq(permohonanKontrak.id, k.kontrak.id));
+                synced++;
+            }
+        }
+        console.log(`[Kontrak→Matrik] Bulk synced ${synced} contracts`);
+        res.json({ success: true, synced, total: allKontrak.length });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 export default router;

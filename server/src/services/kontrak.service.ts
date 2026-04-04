@@ -229,8 +229,8 @@ export const kontrakService = {
             updatedAt: new Date(),
         }).where(eq(permohonanKontrak.id, id)).returning();
 
-        // === Sync to matrik_kegiatan when verified ===
-        if (data.status === 'Diverifikasi' && updated) {
+        // === Sync to matrik_kegiatan on every save (not just verification) ===
+        if (updated) {
             try {
                 // Get full permohonan with perusahaan info
                 const full = await db.select({
@@ -238,6 +238,7 @@ export const kontrakService = {
                     namaPerusahaan: perusahaan.namaPerusahaan,
                     namaPemilik: perusahaan.namaPemilik,
                     alamatPerusahaan: perusahaan.alamatPerusahaan,
+                    noTelp: perusahaan.noTelp,
                 }).from(permohonanKontrak)
                   .leftJoin(perusahaan, eq(permohonanKontrak.perusahaanId, perusahaan.id))
                   .where(eq(permohonanKontrak.id, id));
@@ -254,6 +255,9 @@ export const kontrakService = {
                     penyedia: k.namaPerusahaan || null,
                     namaPemilik: k.namaPemilik || null,
                     alamatKantor: k.alamatPerusahaan || null,
+                    noHp: k.noTelp || null,
+                    metode: k.kontrak.metodePengadaan || null,
+                    jenisPengadaan: k.kontrak.jenisPengadaan || null,
                     updatedAt: new Date(),
                 };
 
@@ -262,8 +266,8 @@ export const kontrakService = {
                     await db.update(matrikKegiatan).set(matrikData)
                         .where(eq(matrikKegiatan.id, k.kontrak.matrikId));
                     console.log(`[Kontrak→Matrik] Updated matrik #${k.kontrak.matrikId} from kontrak #${id}`);
-                } else {
-                    // Create new matrik entry
+                } else if (data.status === 'Diverifikasi') {
+                    // Create new matrik entry only on first verification
                     const [newMatrik] = await db.insert(matrikKegiatan).values({
                         noMatrik: 'K-' + id,
                         rup: k.kontrak.kodeSirup || '',
