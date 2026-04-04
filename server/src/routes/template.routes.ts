@@ -368,6 +368,10 @@ function buildVariableMap(item: any, sekretaris: any = {}) {
         noBahpl: d.noBahpl || '',
         tanggalBahpl: fmtDate(d.tanggalBahpl),
         kodeLampiran: d.kodeLampiran || d.kodeSirup || '',
+        bank: d.bank || '',
+        noRekening: d.noRekening || '',
+        namaRekening: d.namaRekening || '',
+        emailPerusahaan: d.emailPerusahaan || '',
 
         // ===== TANGGAL MULAI =====
         tanggalMulai: fmtDate(d.tanggalMulai),
