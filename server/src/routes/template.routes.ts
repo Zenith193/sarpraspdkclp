@@ -688,6 +688,19 @@ function buildRincianVars(d: any) {
     // Top-level rincian variables (first item for non-loop templates)
     const first = items[0] || { nama: '', nilai: 0 };
 
+    // Indexed variables: rincian1Nama, rincian1Nilai, rincian2Nama, rincian2Nilai, etc.
+    const indexedVars: Record<string, string> = {};
+    items.forEach((it, i) => {
+        const idx = i + 1;
+        indexedVars[`rincian${idx}Nama`] = it.nama;
+        indexedVars[`rincian${idx}Nilai`] = fmtRp(it.nilai);
+        indexedVars[`rincian${idx}NilaiRaw`] = String(it.nilai);
+    });
+
+    // Combined text variables (all items joined with newlines)
+    const rincianNamaAll = items.map((it) => it.nama).join('\n');
+    const rincianNilaiAll = items.map((it) => 'Rp. ' + fmtRp(it.nilai)).join('\n');
+
     return {
         rincianKontrak,
         lingkupPekerjaan,
@@ -700,6 +713,11 @@ function buildRincianVars(d: any) {
         rincianNama: first.nama,
         rincianNilai: fmtRp(first.nilai),
         rincianNilaiRaw: String(first.nilai),
+        // Combined text (all items as newline-separated text)
+        rincianNamaAll,
+        rincianNilaiAll,
+        // Indexed: rincian1Nama, rincian1Nilai, rincian2Nama, etc.
+        ...indexedVars,
     };
 }
 
