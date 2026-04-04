@@ -80,6 +80,7 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
 
         // Build variable map
         const refData = await getRefData();
+        console.log('[Generate] nilaiItemsArr:', JSON.stringify(item.nilaiItemsArr), 'children:', JSON.stringify(item.children?.length));
         const vars = buildVariableMap(item, sekretaris || {}, refData);
 
         // Fill DOCX template with docxtemplater
@@ -574,7 +575,7 @@ function buildRincianVars(d: any) {
             totalRincianRaw: String(d.nilaiKontrak || 0),
             terbilangTotalRincian: d.nilaiKontrak ? ucFirst(terbilang(Number(d.nilaiKontrak))) + ' rupiah' : '',
             jumlahRincian: '0',
-            adaRincian: false,
+            adaRincian: '',
         };
     }
 
@@ -598,7 +599,7 @@ function buildRincianVars(d: any) {
         totalRincianRaw: String(total),
         terbilangTotalRincian: ucFirst(terbilang(total)) + ' rupiah',
         jumlahRincian: String(items.length),
-        adaRincian: true,
+        adaRincian: 'Ya',
     };
 }
 
