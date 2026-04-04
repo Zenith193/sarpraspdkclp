@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ClipboardCheck, Eye, Search, X, CheckCircle, XCircle, Clock, Save, ChevronRight, Plus, Minus, Edit2, ArrowLeft, Download, FileText } from 'lucide-react';
 import { kontrakApi } from '../../api';
+import { templateApi } from '../../api';
 
 // ===== Number to Terbilang (Indonesian) =====
 const angka = ['', 'Satu', 'Dua', 'Tiga', 'Empat', 'Lima', 'Enam', 'Tujuh', 'Delapan', 'Sembilan', 'Sepuluh', 'Sebelas'];
@@ -63,6 +64,9 @@ const ManajemenKontrak = () => {
     const [nilaiItems, setNilaiItems] = useState([]);
     const [editDppl, setEditDppl] = useState({ noDppl: '', tanggalDppl: '', noBahpl: '', tanggalBahpl: '' });
     const [tabSaved, setTabSaved] = useState({ data_dasar: false, spk: false, lampiran: false, sp_spmk: false, verifikasi: false });
+    const [templates, setTemplates] = useState([]);
+    const [selectedTemplate, setSelectedTemplate] = useState(null);
+    const [generating, setGenerating] = useState(false);
 
     const load = () => {
         setLoading(true);
@@ -269,6 +273,59 @@ const ManajemenKontrak = () => {
                                 <ArrowLeft size={18} /> Kembali
                             </button>
                             <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)' }}>DETAIL KONTRAK</h2>
+                        </div>
+
+                        {/* Template Dokumen */}
+                        <div style={{ background: 'var(--bg-secondary)', borderRadius: 12, padding: 20, marginBottom: 20, border: '1px solid var(--border)' }}>
+                            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', marginBottom: 16 }}>
+                                <div style={{ flex: 1 }}>
+                                    <label style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Template Dokumen</label>
+                                    <select
+                                        style={{ width: '100%', padding: '10px 14px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-primary)', color: 'var(--text-primary)', fontSize: '0.9rem' }}
+                                        value={selectedTemplate || ''}
+                                        onFocus={() => { if (templates.length === 0) templateApi.list().then(t => setTemplates(t || [])).catch(() => {}); }}
+                                        onChange={e => setSelectedTemplate(Number(e.target.value) || null)}
+                                    >
+                                        <option value="">Pilih Template</option>
+                                        {templates.map(t => <option key={t.id} value={t.id}>{t.nama} {t.jenisCocok ? `(${t.jenisCocok})` : ''}</option>)}
+                                    </select>
+                                </div>
+                                <button
+                                    disabled={!selectedTemplate || generating}
+                                    onClick={async () => {
+                                        if (!selectedTemplate) return showToast('Pilih template terlebih dahulu', true);
+                                        setGenerating(true);
+                                        try {
+                                            const item = { ...d, ...d.perusahaan, ...d.matrik };
+                                            const result = await templateApi.generate(selectedTemplate, item, {});
+                                            if (result.historyId) {
+                                                const blob = await templateApi.getSplFile('docx', result.historyId);
+                                                const url = URL.createObjectURL(blob);
+                                                const a = document.createElement('a');
+                                                a.href = url; a.download = `Kontrak_${d.namaPaket || 'document'}.docx`;
+                                                a.click(); URL.revokeObjectURL(url);
+                                                showToast('✅ Dokumen berhasil diunduh');
+                                            }
+                                        } catch (e) { showToast('Gagal generate: ' + e.message, true); }
+                                        setGenerating(false);
+                                    }}
+                                    style={{ padding: '10px 20px', borderRadius: 8, border: 'none', background: selectedTemplate ? 'var(--accent-blue)' : '#555', color: '#fff', fontWeight: 600, fontSize: '0.88rem', cursor: selectedTemplate ? 'pointer' : 'not-allowed', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6 }}
+                                >
+                                    <Save size={16} /> {generating ? 'Generating...' : 'Simpan Template'}
+                                </button>
+                            </div>
+                            {!selectedTemplate && <div style={{ fontSize: '0.8rem', color: '#f59e0b' }}>⚠️ Pilih template dokumen terlebih dahulu</div>}
+
+                            {/* Download section */}
+                            <div style={{ ...sectionHeader, background: '#1e293b', marginBottom: 12 }}>📥 UNDUH DOKUMEN KONTRAK LENGKAP</div>
+                            <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                                <button onClick={() => { if(d.berkasPenawaranPath) window.open(d.berkasPenawaranPath, '_blank'); else showToast('Tidak ada berkas PDF', true); }} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-primary)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <Download size={14} /> Unduh PDF
+                                </button>
+                                <button onClick={() => { if(!selectedTemplate) { showToast('Pilih template dulu', true); return; } }} style={{ padding: '8px 16px', borderRadius: 8, border: '1px solid var(--border)', background: 'var(--bg-primary)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                    <FileText size={14} /> Unduh DOCX
+                                </button>
+                            </div>
                         </div>
 
                         {/* INFORMASI PAKET PEKERJAAN */}
