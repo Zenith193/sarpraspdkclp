@@ -377,8 +377,10 @@ const ManajemenKontrak = () => {
                                                 tanggalBahpl: d.tanggalBahpl || '',
                                                 kodeLampiran: d.kodeSirup || '',
                                                 kodeSirup: d.kodeSirup || '',
-                                                // Rincian anakan for rincianKontrak and lingkupPekerjaan vars
-                                                nilaiItemsArr: nilaiItems || [],
+                                                // Rincian anakan: state > stored JSON > empty
+                                                nilaiItemsArr: (nilaiItems && nilaiItems.length > 0)
+                                                    ? nilaiItems
+                                                    : (d.nilaiItems ? (typeof d.nilaiItems === 'string' ? JSON.parse(d.nilaiItems) : d.nilaiItems) : []),
                                             };
                                             const result = await templateApi.generate(selectedTemplate, item, {});
                                             if (result.historyId) {

@@ -300,6 +300,47 @@ export const kontrakService = {
                     await db.update(matrikKegiatan).set(matrikData)
                         .where(eq(matrikKegiatan.id, k.kontrak.matrikId));
                     console.log(`[Kontrak→Matrik] Updated matrik #${k.kontrak.matrikId} from kontrak #${id}`);
+
+                    // Sync nilaiItems to child matrik entries (anakan)
+                    if (k.kontrak.nilaiItems) {
+                        try {
+                            const items = typeof k.kontrak.nilaiItems === 'string'
+                                ? JSON.parse(k.kontrak.nilaiItems) : k.kontrak.nilaiItems;
+                            if (Array.isArray(items) && items.length > 0) {
+                                // Get parent noMatrik
+                                const parentRow = await db.select({ noMatrik: matrikKegiatan.noMatrik })
+                                    .from(matrikKegiatan).where(eq(matrikKegiatan.id, k.kontrak.matrikId));
+                                if (parentRow[0]) {
+                                    const baseNo = parentRow[0].noMatrik.includes('.')
+                                        ? parentRow[0].noMatrik.split('.')[0]
+                                        : parentRow[0].noMatrik;
+                                    // Find all anakan matrik
+                                    const allMatrik = await db.select({
+                                        id: matrikKegiatan.id,
+                                        noMatrik: matrikKegiatan.noMatrik,
+                                        namaPaket: matrikKegiatan.namaPaket,
+                                    }).from(matrikKegiatan);
+                                    const children = allMatrik.filter((m: any) =>
+                                        m.noMatrik.startsWith(baseNo + '.'));
+                                    // Match by namaPaket and update nilaiKontrak
+                                    for (const item of items) {
+                                        const match = children.find((c: any) =>
+                                            c.namaPaket && item.nama &&
+                                            c.namaPaket.toLowerCase().trim() === item.nama.toLowerCase().trim());
+                                        if (match && item.nilai) {
+                                            await db.update(matrikKegiatan).set({
+                                                nilaiKontrak: Number(item.nilai) || null,
+                                                updatedAt: new Date(),
+                                            }).where(eq(matrikKegiatan.id, match.id));
+                                            console.log(`[Kontrak→Matrik] Synced nilaiKontrak=${item.nilai} to anakan ${match.noMatrik}`);
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (syncErr: any) {
+                            console.error('[Kontrak→Matrik] nilaiItems sync error:', syncErr.message);
+                        }
+                    }
                 } else if (data.status === 'Diverifikasi') {
                     // Create new matrik entry only on first verification
                     const [newMatrik] = await db.insert(matrikKegiatan).values({
