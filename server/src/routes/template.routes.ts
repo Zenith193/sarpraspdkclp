@@ -258,7 +258,20 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
                 let docXml = generatedZip.file('word/document.xml')?.asText() || '';
                 const markerIdx = docXml.indexOf('__RINCIAN_TABLE__');
                 if (markerIdx > -1) {
-                    const pStart = docXml.lastIndexOf('<w:p', markerIdx);
+                    // Find the opening <w:p> or <w:p ...> (NOT <w:pPr>, <w:pStyle>, etc.)
+                    let pStart = -1;
+                    let searchPos = markerIdx;
+                    while (searchPos > 0) {
+                        const pos = docXml.lastIndexOf('<w:p', searchPos - 1);
+                        if (pos === -1) break;
+                        // Check that next char after '<w:p' is '>' or ' ' (not 'P', 'r', 'S', etc.)
+                        const nextChar = docXml[pos + 4];
+                        if (nextChar === '>' || nextChar === ' ') {
+                            pStart = pos;
+                            break;
+                        }
+                        searchPos = pos;
+                    }
                     const pEnd = docXml.indexOf('</w:p>', markerIdx);
                     if (pStart > -1 && pEnd > -1) {
                         const tableXml = buildWordTableXml(rincianItems, rincianTotal);
@@ -819,42 +832,65 @@ function buildRincianVars(d: any) {
 }
 
 
+// XML-escape text for OOXML
+function xmlEscape(s: string): string {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+// Format number as Indonesian currency string
+function fmtCurrency(v: number): string {
+    if (!v) return '';
+    const n = Math.abs(Number(v));
+    const parts = n.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    return 'Rp. ' + parts;
+}
+
 // Build a proper Word OOXML table for rincian kontrak
 function buildWordTableXml(items: { nama: string; nilai: number }[], total: number): string {
-    const fmtVal = (v: number) => v ? 'Rp. ' + Number(v).toLocaleString('id-ID') : '';
+    const tblPr = '<w:tblPr>' +
+        '<w:tblStyle w:val="TableGrid"/>' +
+        '<w:tblW w:w="0" w:type="auto"/>' +
+        '<w:tblBorders>' +
+        '<w:top w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
+        '<w:left w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
+        '<w:bottom w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
+        '<w:right w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
+        '<w:insideH w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
+        '<w:insideV w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
+        '</w:tblBorders>' +
+        '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>' +
+        '</w:tblPr>';
 
-    const tblPr = `<w:tblPr>` +
-        `<w:tblW w:w="5000" w:type="pct"/>` +
-        `<w:tblBorders>` +
-        `<w:top w:val="single" w:sz="4" w:space="0" w:color="000000"/>` +
-        `<w:left w:val="single" w:sz="4" w:space="0" w:color="000000"/>` +
-        `<w:bottom w:val="single" w:sz="4" w:space="0" w:color="000000"/>` +
-        `<w:right w:val="single" w:sz="4" w:space="0" w:color="000000"/>` +
-        `<w:insideH w:val="single" w:sz="4" w:space="0" w:color="000000"/>` +
-        `<w:insideV w:val="single" w:sz="4" w:space="0" w:color="000000"/>` +
-        `</w:tblBorders>` +
-        `<w:tblLook w:val="04A0" w:firstRow="1"/>` +
-        `</w:tblPr>`;
+    const tblGrid = '<w:tblGrid><w:gridCol w:w="6400"/><w:gridCol w:w="2600"/></w:tblGrid>';
 
-    const tblGrid = `<w:tblGrid><w:gridCol w:w="6500"/><w:gridCol w:w="2500"/></w:tblGrid>`;
-
-    const cell = (text: string, opts: { bold?: boolean; center?: boolean; right?: boolean } = {}) => {
+    function cell(text: string, width: number, opts: { bold?: boolean; center?: boolean; right?: boolean } = {}): string {
+        const safe = xmlEscape(text);
+        const tcPr = `<w:tcPr><w:tcW w:w="${width}" w:type="dxa"/></w:tcPr>`;
         const pPrParts: string[] = [];
-        if (opts.center) pPrParts.push(`<w:jc w:val="center"/>`);
-        if (opts.right) pPrParts.push(`<w:jc w:val="right"/>`);
-        if (opts.bold) pPrParts.push(`<w:rPr><w:b/><w:bCs/></w:rPr>`);
-        const pPr = pPrParts.length ? `<w:pPr>` + pPrParts.join('') + `</w:pPr>` : '';
-        const rPr = opts.bold ? `<w:rPr><w:b/><w:bCs/></w:rPr>` : '';
-        return `<w:tc><w:p>` + pPr + `<w:r>` + rPr + `<w:t xml:space="preserve">` + text + `</w:t></w:r></w:p></w:tc>`;
-    };
+        if (opts.center) pPrParts.push('<w:jc w:val="center"/>');
+        if (opts.right) pPrParts.push('<w:jc w:val="right"/>');
+        const rPrTag = opts.bold ? '<w:rPr><w:b/><w:bCs/></w:rPr>' : '';
+        if (opts.bold) pPrParts.push(rPrTag);
+        const pPr = pPrParts.length > 0 ? '<w:pPr>' + pPrParts.join('') + '</w:pPr>' : '';
+        return '<w:tc>' + tcPr + '<w:p>' + pPr + '<w:r>' + rPrTag + '<w:t xml:space="preserve">' + safe + '</w:t></w:r></w:p></w:tc>';
+    }
 
-    const headerRow = `<w:tr>` + cell('RINCIAN KONTRAK', { bold: true, center: true }) + cell('NILAI', { bold: true, center: true }) + `</w:tr>`;
+    const headerRow = '<w:tr>' +
+        cell('RINCIAN KONTRAK', 6400, { bold: true, center: true }) +
+        cell('NILAI', 2600, { bold: true, center: true }) +
+        '</w:tr>';
 
     const dataRows = items.map(it =>
-        `<w:tr>` + cell(it.nama) + cell(fmtVal(it.nilai), { right: true }) + `</w:tr>`
+        '<w:tr>' +
+        cell(it.nama, 6400) +
+        cell(fmtCurrency(it.nilai), 2600, { right: true }) +
+        '</w:tr>'
     ).join('');
 
-    const totalRow = `<w:tr>` + cell('TOTAL', { bold: true, center: true }) + cell('Rp. ' + Number(total).toLocaleString('id-ID'), { bold: true, right: true }) + `</w:tr>`;
+    const totalRow = '<w:tr>' +
+        cell('TOTAL', 6400, { bold: true, center: true }) +
+        cell(fmtCurrency(total), 2600, { bold: true, right: true }) +
+        '</w:tr>';
 
-    return `<w:tbl>` + tblPr + tblGrid + headerRow + dataRows + totalRow + `</w:tbl>`;
+    return '<w:tbl>' + tblPr + tblGrid + headerRow + dataRows + totalRow + '</w:tbl>';
 }
