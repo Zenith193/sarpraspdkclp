@@ -847,9 +847,9 @@ function fmtCurrency(v: number): string {
 
 // Build a proper Word OOXML table for rincian kontrak
 function buildWordTableXml(items: { nama: string; nilai: number }[], total: number): string {
-    // Font & size: Arial Narrow 11pt (sz=22 half-points)
-    const FONT = 'Arial Narrow';
-    const SZ = '22'; // 11pt in half-points
+    // Font & size: Arial 12pt (sz=24 half-points)
+    const FONT = 'Arial';
+    const SZ = '24'; // 12pt in half-points
 
     const tblPr = '<w:tblPr>' +
         '<w:tblStyle w:val="TableGrid"/>' +
