@@ -1,5 +1,5 @@
 import { db } from '../db/index.js';
-import { permohonanKontrak, realisasi, perusahaan, matrikKegiatan } from '../db/schema/index.js';
+import { permohonanKontrak, realisasi, perusahaan, matrikKegiatan, user } from '../db/schema/index.js';
 import { eq, desc, and, sql } from 'drizzle-orm';
 
 export const kontrakService = {
@@ -156,7 +156,7 @@ export const kontrakService = {
             noRekening: perusahaan.noRekening,
             namaRekening: perusahaan.namaRekening,
             bank: perusahaan.bank,
-            // Matrik data for SPK auto-fill
+            // Matrik data
             matrikNoSpk: matrikKegiatan.noSpk,
             matrikNilaiKontrak: matrikKegiatan.nilaiKontrak,
             matrikTerbilangKontrak: matrikKegiatan.terbilangKontrak,
@@ -165,12 +165,22 @@ export const kontrakService = {
             matrikJangkaWaktu: matrikKegiatan.jangkaWaktu,
             matrikPaguAnggaran: matrikKegiatan.paguAnggaran,
             matrikHps: matrikKegiatan.hps,
+            matrikSubKegiatan: matrikKegiatan.subKegiatan,
+            matrikSumberDana: matrikKegiatan.sumberDana,
+            matrikTahunAnggaran: matrikKegiatan.tahunAnggaran,
+            matrikPaguPaket: matrikKegiatan.paguPaket,
         }).from(permohonanKontrak)
           .leftJoin(perusahaan, eq(permohonanKontrak.perusahaanId, perusahaan.id))
           .leftJoin(matrikKegiatan, eq(permohonanKontrak.matrikId, matrikKegiatan.id))
           .where(eq(permohonanKontrak.id, id));
         if (!results[0]) return null;
         const r = results[0];
+        // Get verifikator name separately
+        let verifikatorName = null;
+        if (r.kontrak.verifiedBy) {
+            const vRows = await db.select({ name: user.name }).from(user).where(eq(user.id, r.kontrak.verifiedBy));
+            verifikatorName = vRows[0]?.name || null;
+        }
         return {
             ...r.kontrak,
             perusahaan: { ...r },
@@ -183,7 +193,12 @@ export const kontrakService = {
                 jangkaWaktu: r.matrikJangkaWaktu,
                 paguAnggaran: r.matrikPaguAnggaran,
                 hps: r.matrikHps,
+                subKegiatan: r.matrikSubKegiatan,
+                sumberDana: r.matrikSumberDana,
+                tahunAnggaran: r.matrikTahunAnggaran,
+                paguPaket: r.matrikPaguPaket,
             },
+            verifikatorName,
         };
     },
 

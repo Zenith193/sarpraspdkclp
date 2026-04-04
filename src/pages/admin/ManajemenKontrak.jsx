@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ClipboardCheck, Eye, Search, X, CheckCircle, XCircle, Clock, Save, ChevronRight, Plus, Minus, Edit2 } from 'lucide-react';
+import { ClipboardCheck, Eye, Search, X, CheckCircle, XCircle, Clock, Save, ChevronRight, Plus, Minus, Edit2, ArrowLeft, Download, FileText } from 'lucide-react';
 import { kontrakApi } from '../../api';
 
 // ===== Number to Terbilang (Indonesian) =====
@@ -50,6 +50,7 @@ const ManajemenKontrak = () => {
     const [search, setSearch] = useState('');
     const [filter, setFilter] = useState('Menunggu');
     const [detail, setDetail] = useState(null);
+    const [viewDetail, setViewDetail] = useState(null);
     const [tab, setTab] = useState('data_dasar');
     const [saving, setSaving] = useState(false);
     const [toast, setToast] = useState('');
@@ -207,6 +208,13 @@ const ManajemenKontrak = () => {
         } catch { showToast('Gagal menolak', true); }
     };
 
+    const handleView = async (id) => {
+        try {
+            const res = await kontrakApi.getPermohonan(id);
+            setViewDetail(res);
+        } catch { showToast('Gagal memuat detail', true); }
+    };
+
     const showToast = (msg, isError) => {
         setToast(msg);
         setTimeout(() => setToast(''), 3000);
@@ -241,6 +249,106 @@ const ManajemenKontrak = () => {
                     {toast}
                 </div>
             )}
+
+            {/* ===== FULL-PAGE VIEW DETAIL (like LAKON) ===== */}
+            {viewDetail ? (() => {
+                const d = viewDetail;
+                const p = d.perusahaan || {};
+                const m = d.matrik || {};
+                const infoCard = { background: 'var(--bg-secondary)', borderRadius: 10, padding: '10px 16px', border: '1px solid var(--border)' };
+                const infoLabel = { fontSize: '0.72rem', fontWeight: 600, color: 'var(--accent-blue)', marginBottom: 2 };
+                const infoVal = { fontSize: '0.88rem', color: 'var(--text-primary)', fontWeight: 500 };
+                const sectionHeader = { background: 'var(--accent-blue)', color: '#fff', padding: '10px 18px', borderRadius: 8, fontSize: '0.92rem', fontWeight: 700, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 };
+                const grid2 = { display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 };
+                const grid1 = { display: 'grid', gridTemplateColumns: '1fr', gap: 12, marginBottom: 12 };
+
+                return (
+                    <div>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+                            <button onClick={() => setViewDetail(null)} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', borderRadius: 8, border: 'none', background: 'var(--bg-secondary)', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600 }}>
+                                <ArrowLeft size={18} /> Kembali
+                            </button>
+                            <h2 style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--text-primary)' }}>DETAIL KONTRAK</h2>
+                        </div>
+
+                        {/* INFORMASI PAKET PEKERJAAN */}
+                        <div style={sectionHeader}>📋 INFORMASI PAKET PEKERJAAN</div>
+                        <div style={grid2}>
+                            <div style={infoCard}><div style={infoLabel}>KODE SIRUP</div><div style={infoVal}>{d.kodeSirup || '-'}</div></div>
+                            <div style={infoCard}><div style={infoLabel}>NAMA PAKET</div><div style={infoVal}>{d.namaPaket || '-'}</div></div>
+                        </div>
+                        <div style={grid2}>
+                            <div style={infoCard}><div style={infoLabel}>TANGGAL PEMBUATAN</div><div style={infoVal}>{formatDate(d.createdAt)}</div></div>
+                            <div style={infoCard}><div style={infoLabel}>KLPD</div><div style={infoVal}>{d.klpd || 'Pemerintah Daerah Kabupaten Cilacap'}</div></div>
+                        </div>
+                        <div style={grid1}>
+                            <div style={infoCard}><div style={infoLabel}>SATUAN KERJA</div><div style={infoVal}>{d.satuanKerja || 'DINAS PENDIDIKAN DAN KEBUDAYAAN KABUPATEN CILACAP'}</div></div>
+                        </div>
+                        <div style={grid2}>
+                            <div style={infoCard}><div style={infoLabel}>JENIS PENGADAAN</div><div style={infoVal}>{d.jenisPengadaan || '-'}</div></div>
+                            <div style={infoCard}><div style={infoLabel}>METODE PENGADAAN</div><div style={infoVal}>{d.metodePengadaan || '-'}</div></div>
+                        </div>
+                        <div style={grid2}>
+                            <div style={infoCard}><div style={infoLabel}>TAHUN ANGGARAN</div><div style={infoVal}>{m.tahunAnggaran || new Date().getFullYear()}</div></div>
+                            <div style={infoCard}><div style={infoLabel}>NILAI PAGU PAKET</div><div style={infoVal}>{formatCurrency(m.paguPaket || m.paguAnggaran)}</div></div>
+                        </div>
+                        <div style={grid2}>
+                            <div style={infoCard}><div style={infoLabel}>NILAI PAGU ANGGARAN</div><div style={infoVal}>{formatCurrency(m.paguAnggaran)}</div></div>
+                            <div style={infoCard}><div style={infoLabel}>NILAI HPS</div><div style={infoVal}>{formatCurrency(m.hps)}</div></div>
+                        </div>
+                        <div style={grid2}>
+                            <div style={infoCard}><div style={infoLabel}>JENIS KONTRAK</div><div style={infoVal}>{d.jenisPengadaan || '-'}</div></div>
+                            <div style={infoCard}><div style={infoLabel}>SUB KEGIATAN</div><div style={infoVal}>{m.subKegiatan || '-'}</div></div>
+                        </div>
+                        <div style={grid2}>
+                            <div style={infoCard}><div style={infoLabel}>NOMOR KONTRAK</div><div style={infoVal}>{d.noSpk || '-'}</div></div>
+                            <div style={infoCard}><div style={infoLabel}>NILAI KONTRAK</div><div style={infoVal}>{formatCurrency(d.nilaiKontrak)}</div></div>
+                        </div>
+                        <div style={grid2}>
+                            <div style={infoCard}><div style={infoLabel}>TANGGAL KONTRAK</div><div style={infoVal}>{formatDate(d.tanggalMulai)}</div></div>
+                            <div style={infoCard}><div style={infoLabel}>WAKTU PELAKSANAAN KONTRAK</div><div style={infoVal}>{d.waktuPenyelesaian ? `${d.waktuPenyelesaian} Hari Kalender` : '-'}</div></div>
+                        </div>
+
+                        {/* INFORMASI PENYEDIA */}
+                        <div style={{ ...sectionHeader, marginTop: 24 }}>🏢 INFORMASI PENYEDIA</div>
+                        <div style={grid2}>
+                            <div style={infoCard}><div style={infoLabel}>NAMA PENYEDIA</div><div style={infoVal}>{p.namaPerusahaan || '-'}</div></div>
+                            <div style={infoCard}><div style={infoLabel}>DIREKTUR</div><div style={infoVal}>{p.namaPemilik || '-'}</div></div>
+                        </div>
+                        <div style={grid2}>
+                            <div style={infoCard}><div style={infoLabel}>ALAMAT PENYEDIA</div><div style={infoVal}>{p.alamatPerusahaan || '-'}</div></div>
+                            <div style={infoCard}><div style={infoLabel}>NO. TELP</div><div style={infoVal}>{p.noTelp || '-'}</div></div>
+                        </div>
+                        <div style={grid2}>
+                            <div style={infoCard}><div style={infoLabel}>EMAIL</div><div style={infoVal}>{p.emailPerusahaan || '-'}</div></div>
+                            <div style={infoCard}><div style={infoLabel}>BANK</div><div style={infoVal}>{p.bank || '-'}</div></div>
+                        </div>
+                        <div style={grid2}>
+                            <div style={infoCard}><div style={infoLabel}>NOTARIS</div><div style={infoVal}>{p.noAkta ? `Nomor ${p.noAkta}, Tanggal ${formatDate(p.tanggalAkta)}` : '-'}</div></div>
+                            <div style={infoCard}><div style={infoLabel}>NAMA NOTARIS</div><div style={infoVal}>{p.namaNotaris || '-'}</div></div>
+                        </div>
+                        <div style={grid2}>
+                            <div style={infoCard}><div style={infoLabel}>NOMOR DPPL</div><div style={infoVal}>{d.noDppl || '-'}</div></div>
+                            <div style={infoCard}><div style={infoLabel}>TANGGAL DPPL</div><div style={infoVal}>{formatDate(d.tanggalDppl)}</div></div>
+                        </div>
+                        <div style={grid2}>
+                            <div style={infoCard}><div style={infoLabel}>NOMOR BAHPL</div><div style={infoVal}>{d.noBahpl || '-'}</div></div>
+                            <div style={infoCard}><div style={infoLabel}>TANGGAL BAHPL</div><div style={infoVal}>{formatDate(d.tanggalBahpl)}</div></div>
+                        </div>
+                        <div style={grid2}>
+                            <div style={infoCard}><div style={infoLabel}>NOMOR SPPBJ</div><div style={infoVal}>{d.noSp || '-'}</div></div>
+                            <div style={infoCard}><div style={infoLabel}>TANGGAL SPPBJ</div><div style={infoVal}>{formatDate(d.tanggalSp)}</div></div>
+                        </div>
+
+                        {/* INFORMASI VERIFIKATOR */}
+                        <div style={{ ...sectionHeader, marginTop: 24 }}>👤 INFORMASI VERIFIKATOR</div>
+                        <div style={grid2}>
+                            <div style={infoCard}><div style={infoLabel}>NAMA</div><div style={infoVal}>{d.verifikatorName || '-'}</div></div>
+                            <div style={infoCard}><div style={infoLabel}>TANGGAL VERIFIKASI</div><div style={infoVal}>{formatDate(d.updatedAt)}</div></div>
+                        </div>
+                    </div>
+                );
+            })() : (<>
 
             <div className="page-header">
                 <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -298,7 +406,7 @@ const ManajemenKontrak = () => {
                                                 <button onClick={() => handleDetail(p.id)} style={{ padding: '5px 10px', borderRadius: 6, border: 'none', background: '#f59e0b', color: '#fff', fontSize: '0.78rem', fontWeight: 600, cursor: 'pointer' }}>Detail</button>
                                             ) : (
                                                 <>
-                                                    <button onClick={() => handleDetail(p.id)} title="Lihat Detail" style={{ padding: '6px 8px', borderRadius: 6, border: 'none', background: '#3b82f6', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Eye size={15} /></button>
+                                                    <button onClick={() => handleView(p.id)} title="Lihat Detail" style={{ padding: '6px 8px', borderRadius: 6, border: 'none', background: '#3b82f6', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Eye size={15} /></button>
                                                     <button onClick={() => handleDetail(p.id)} title="Edit Data" style={{ padding: '6px 8px', borderRadius: 6, border: 'none', background: '#f59e0b', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Edit2 size={15} /></button>
                                                 </>
                                             )}
@@ -586,6 +694,7 @@ const ManajemenKontrak = () => {
                 </div>
                 );
             })()}
+            </>)}
         </div>
     );
 };
