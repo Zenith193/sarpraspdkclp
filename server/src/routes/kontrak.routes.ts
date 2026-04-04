@@ -57,10 +57,27 @@ router.get('/permohonan/:id/dokumen', requireAuth, async (req, res) => {
             }
         }
 
-        if (!kontrakData.matrikId) return res.json([]);
+        const { splGenerated, bastTemplate, matrikKegiatan } = await import('../db/schema/index.js');
 
-        // Get generated SPL files for this matrik
-        const { splGenerated, bastTemplate } = await import('../db/schema/index.js');
+        // Find the matrikId(s) to search: from permohonan directly, or via kodeSirup→matrik.rup
+        let matrikIds: number[] = [];
+        if (kontrakData.matrikId) {
+            matrikIds.push(kontrakData.matrikId);
+        }
+        // Also search matrik by kodeSirup (RUP) as fallback
+        if (kontrakData.kodeSirup) {
+            const matrikByRup = await db.select({ id: matrikKegiatan.id })
+                .from(matrikKegiatan)
+                .where(eq(matrikKegiatan.rup, kontrakData.kodeSirup));
+            for (const m of matrikByRup) {
+                if (!matrikIds.includes(m.id)) matrikIds.push(m.id);
+            }
+        }
+
+        if (matrikIds.length === 0) return res.json([]);
+
+        // Get generated SPL files for these matrik IDs
+        const { inArray } = await import('drizzle-orm');
         const docs = await db.select({
             id: splGenerated.id,
             namaFile: splGenerated.namaFile,
@@ -69,9 +86,10 @@ router.get('/permohonan/:id/dokumen', requireAuth, async (req, res) => {
             createdAt: splGenerated.createdAt,
         }).from(splGenerated)
           .leftJoin(bastTemplate, eq(splGenerated.templateId, bastTemplate.id))
-          .where(eq(splGenerated.matrikId, kontrakData.matrikId))
+          .where(inArray(splGenerated.matrikId, matrikIds))
           .orderBy(desc(splGenerated.createdAt));
 
+        console.log(`[Dokumen] kontrakId=${kontrakId}, matrikIds=${matrikIds}, found ${docs.length} docs`);
         res.json(docs);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });

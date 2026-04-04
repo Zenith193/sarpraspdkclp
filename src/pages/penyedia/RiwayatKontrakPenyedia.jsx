@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { History, Eye, Search, CheckCircle, Clock, XCircle, X, FileText, Download, Printer } from 'lucide-react';
-import { kontrakApi, templateApi } from '../../api';
+import { kontrakApi } from '../../api';
 
 const statusBadge = (status) => {
     const map = {
@@ -43,17 +43,15 @@ const RiwayatKontrakPenyedia = () => {
         } catch { }
     };
 
-    const handleDownloadPdf = (docId) => {
-        window.open(`/api/template/spl-file/pdf/${docId}`, '_blank');
-    };
-
-    const handleDownloadDocx = async (docId, namaFile) => {
+    const handleDownloadPdf = async (docId, namaFile) => {
         try {
-            const blob = await templateApi.getSplFile('docx', docId);
+            const res = await fetch(`/api/template/spl-file/pdf/${docId}`, { credentials: 'include' });
+            if (!res.ok) throw new Error('File tidak ditemukan');
+            const blob = await res.blob();
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `${namaFile || 'Dokumen'}.docx`;
+            a.download = `${namaFile || 'Dokumen'}.pdf`;
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
@@ -221,26 +219,15 @@ const RiwayatKontrakPenyedia = () => {
                                                     </div>
                                                     <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
                                                         <button
-                                                            onClick={() => handleDownloadPdf(doc.id)}
+                                                            onClick={() => handleDownloadPdf(doc.id, doc.namaFile)}
                                                             style={{
                                                                 padding: '6px 12px', borderRadius: 6, border: 'none', cursor: 'pointer',
                                                                 background: 'rgba(59,130,246,0.12)', color: 'var(--accent-blue)',
                                                                 fontSize: '0.78rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4,
                                                             }}
-                                                            title="Lihat PDF"
+                                                            title="Download PDF"
                                                         >
-                                                            <Eye size={13} /> PDF
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleDownloadDocx(doc.id, doc.namaFile)}
-                                                            style={{
-                                                                padding: '6px 12px', borderRadius: 6, border: 'none', cursor: 'pointer',
-                                                                background: 'rgba(16,185,129,0.12)', color: '#10b981',
-                                                                fontSize: '0.78rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4,
-                                                            }}
-                                                            title="Download DOCX"
-                                                        >
-                                                            <Download size={13} /> DOCX
+                                                            <Download size={13} /> PDF
                                                         </button>
                                                         <button
                                                             onClick={() => handlePrint(doc.id)}
