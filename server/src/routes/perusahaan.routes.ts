@@ -75,9 +75,8 @@ router.put('/:id', requireAuth, requireRole('admin', 'verifikator', 'penyedia'),
             const [own] = await database.select({ id: perusahaanTable.id }).from(perusahaanTable)
                 .where(and(eq(perusahaanTable.id, id), eq(perusahaanTable.userId, req.user!.id)));
             if (!own) return res.status(403).json({ error: 'Anda hanya dapat mengubah data perusahaan milik Anda sendiri' });
-            // Penyedia cannot change status or npwp
+            // Penyedia cannot change status
             delete req.body.status;
-            delete req.body.npwp;
             delete req.body.keteranganVerifikasi;
         }
         const updated = await perusahaanService.update(id, req.body);

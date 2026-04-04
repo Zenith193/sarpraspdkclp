@@ -506,8 +506,14 @@ const ProfilPengguna = () => {
                                     <button className="btn btn-primary btn-sm" disabled={savingPerusahaan} onClick={async () => {
                                         setSavingPerusahaan(true);
                                         try {
-                                            await perusahaanApi.update(perusahaanData.id, editPerusahaan);
-                                            setPerusahaanData({ ...editPerusahaan });
+                                            const payload = { ...editPerusahaan };
+                                            delete payload.id;
+                                            delete payload.userId;
+                                            delete payload.createdAt;
+                                            delete payload.status;
+                                            delete payload.keteranganVerifikasi;
+                                            await perusahaanApi.update(perusahaanData.id, payload);
+                                            setPerusahaanData({ ...perusahaanData, ...payload });
                                             setEditingPerusahaan(false);
                                             toast.success('Data perusahaan berhasil disimpan');
                                         } catch (err) { toast.error(err.message || 'Gagal menyimpan'); }
@@ -524,14 +530,13 @@ const ProfilPengguna = () => {
                                 { label: 'Alamat Pemilik', key: 'alamatPemilik' },
                                 { label: 'Nama Perusahaan', key: 'namaPerusahaan' },
                                 { label: 'Nama Singkat', key: 'namaPerusahaanSingkat' },
-                                { label: 'Tipe Perusahaan', key: 'tipePerusahaan' },
                                 { label: 'No. Akta', key: 'noAkta' },
                                 { label: 'Nama Notaris', key: 'namaNotaris' },
                                 { label: 'Tanggal Akta', key: 'tanggalAkta' },
                                 { label: 'Alamat Perusahaan', key: 'alamatPerusahaan' },
                                 { label: 'No. Telepon', key: 'noTelp' },
                                 { label: 'Email Perusahaan', key: 'emailPerusahaan' },
-                                { label: 'NPWP', key: 'npwp', readOnly: true },
+                                { label: 'NPWP', key: 'npwp' },
                                 { label: 'No. Rekening', key: 'noRekening' },
                                 { label: 'Nama Rekening', key: 'namaRekening' },
                                 { label: 'Bank', key: 'bank' },
