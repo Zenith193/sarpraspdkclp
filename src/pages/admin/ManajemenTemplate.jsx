@@ -226,7 +226,7 @@ const ManajemenTemplate = () => {
 
     // State Modal Panduan
     const [showGuide, setShowGuide] = useState(false);
-    const [activeGuideTab, setActiveGuideTab] = useState("Data Sekolah");
+    const [activeGuideTab, setActiveGuideTab] = useState("Identitas Paket");
     const [copiedId, setCopiedId] = useState(null);
 
     // Filter Data
