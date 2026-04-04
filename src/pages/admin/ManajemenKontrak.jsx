@@ -326,8 +326,105 @@ const ManajemenKontrak = () => {
                                     <FileText size={14} /> Unduh DOCX
                                 </button>
                             </div>
-                        </div>
 
+                            {/* Variable Reference */}
+                            <details style={{ marginTop: 16 }}>
+                                <summary style={{ cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, color: 'var(--accent-blue)' }}>📋 Daftar Variabel Template (klik untuk melihat)</summary>
+                                <div style={{ marginTop: 12, fontSize: '0.78rem', lineHeight: 1.8, color: 'var(--text-secondary)' }}>
+                                    <div style={{ overflowX: 'auto' }}>
+                                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+                                            <thead><tr style={{ background: 'var(--bg-primary)', textAlign: 'left' }}>
+                                                <th style={{ padding: '6px 10px', border: '1px solid var(--border)' }}>Variabel</th>
+                                                <th style={{ padding: '6px 10px', border: '1px solid var(--border)' }}>Keterangan</th>
+                                                <th style={{ padding: '6px 10px', border: '1px solid var(--border)' }}>Contoh</th>
+                                            </tr></thead>
+                                            <tbody>
+                                            {[
+                                                ['DATA UMUM', '', ''],
+                                                ['{{noMatrik}}', 'Nomor Matrik', '65'],
+                                                ['{{namaPaket}}', 'Nama Paket Pekerjaan', 'Pembangunan RKB SDN...'],
+                                                ['{{namaSekolah}}', 'Nama Sekolah', 'SDN Sidareja 01'],
+                                                ['{{namaSekolahUpper}}', 'Nama Sekolah (HURUF BESAR)', 'SDN SIDAREJA 01'],
+                                                ['{{npsn}}', 'NPSN Sekolah', '20301234'],
+                                                ['{{noSpk}}', 'No SPK/Kontrak', '400.3.13/30/A3/2026'],
+                                                ['{{nilaiKontrak}}', 'Nilai Kontrak (format Rp)', '85.000.000'],
+                                                ['{{nilaiKontrakRaw}}', 'Nilai Kontrak (angka)', '85000000'],
+                                                ['{{terbilangKontrak}}', 'Terbilang Kontrak', 'Delapan Puluh Lima Juta Rupiah'],
+                                                ['{{jangkaWaktu}}', 'Jangka Waktu (angka)', '90'],
+                                                ['{{jangkaWaktuText}}', 'Jangka Waktu (teks)', '90 Hari Kalender'],
+                                                ['{{sumberDana}}', 'Sumber Dana', 'APBD'],
+                                                ['{{tahunAnggaran}}', 'Tahun Anggaran', '2026'],
+                                                ['{{metode}}', 'Metode Pengadaan', 'Non Tender'],
+                                                ['PENYEDIA', '', ''],
+                                                ['{{penyedia}}', 'Nama Perusahaan', 'CV. JAGAT ALIT'],
+                                                ['{{namaPemilik}}', 'Nama Direktur/Pemilik', 'DINDA AURYSTA'],
+                                                ['{{statusPemilik}}', 'Status Pemilik', 'Direktur'],
+                                                ['{{alamatKantor}}', 'Alamat Kantor', 'Jl. Kebonmanis No.104...'],
+                                                ['{{noHp}}', 'No HP Penyedia', '08123456789'],
+                                                ['TANGGAL MULAI', '', ''],
+                                                ['{{tanggalMulai}}', 'Tanggal Mulai (format)', '06 April 2026'],
+                                                ['{{hariTanggalMulai}}', 'Hari, Tanggal Mulai', 'Senin, 06 April 2026'],
+                                                ['{{terbilangTanggalMulai}}', 'Terbilang Tgl Mulai', 'senin tanggal enam bulan April tahun...'],
+                                                ['{{hariMulai}}', 'Hari Mulai', 'Senin'],
+                                                ['{{hariMulaiLower}}', 'Hari Mulai (kecil)', 'senin'],
+                                                ['{{tglMulaiTerbilang}}', 'Tanggal Mulai Terbilang', 'enam'],
+                                                ['{{bulanMulai}}', 'Bulan Mulai', 'April'],
+                                                ['{{tahunMulaiTerbilang}}', 'Tahun Mulai Terbilang', 'Dua ribu dua puluh enam'],
+                                                ['{{tanggalMulaiDash}}', 'Tgl Mulai (dash)', '06-04-2026'],
+                                                ['TANGGAL SELESAI', '', ''],
+                                                ['{{tanggalSelesai}}', 'Tanggal Selesai (format)', '06 Juli 2026'],
+                                                ['{{hariTanggalSelesai}}', 'Hari, Tanggal Selesai', 'Senin, 06 Juli 2026'],
+                                                ['{{terbilangTanggalSelesai}}', 'Terbilang Tgl Selesai', 'senin tanggal enam bulan Juli...'],
+                                                ['{{hariSelesai}}', 'Hari Selesai', 'Senin'],
+                                                ['{{tglSelesaiTerbilang}}', 'Tanggal Selesai Terbilang', 'enam'],
+                                                ['{{bulanSelesai}}', 'Bulan Selesai', 'Juli'],
+                                                ['{{tahunSelesaiTerbilang}}', 'Tahun Selesai Terbilang', 'Dua ribu dua puluh enam'],
+                                                ['{{tanggalSelesaiDash}}', 'Tgl Selesai (dash)', '06-07-2026'],
+                                                ['PCM', '', ''],
+                                                ['{{noPcm}}', 'No PCM', ''],
+                                                ['{{tglPcm}}', 'Tanggal PCM', ''],
+                                                ['{{hariTanggalPcm}}', 'Hari, Tanggal PCM', ''],
+                                                ['MC-0%', '', ''],
+                                                ['{{noMc0}}', 'No MC-0%', ''],
+                                                ['{{tglMc0}}', 'Tanggal MC-0%', ''],
+                                                ['{{hariTanggalMc0}}', 'Hari, Tanggal MC-0%', ''],
+                                                ['MC-100%', '', ''],
+                                                ['{{noMc100}}', 'No MC-100%', ''],
+                                                ['{{tglMc100}}', 'Tanggal MC-100%', ''],
+                                                ['{{hariTanggalMc100}}', 'Hari, Tanggal MC-100%', ''],
+                                                ['PEJABAT', '', ''],
+                                                ['{{ppkom}}', 'Nama PPKom', 'SUNGEB, S.Sos,. M.M.'],
+                                                ['{{nipPpkom}}', 'NIP PPKom', '19780908 199703 1 001'],
+                                                ['{{jabatanPpkom}}', 'Jabatan PPKom', 'Pejabat Pembuat Komitmen...'],
+                                                ['{{alamatPpkom}}', 'Alamat PPKom', 'Jl. Kalimantan No.51 Cilacap'],
+                                                ['{{ketuaTimTeknis}}', 'Ketua Tim Teknis', 'M. TAKHMILUDDIN, ST.MT'],
+                                                ['{{nipKetuaTimTeknis}}', 'NIP Ketua Tim Teknis', '19840525 200903 1 005'],
+                                                ['{{sekretaris}}', 'Nama Sekretaris', ''],
+                                                ['{{nipSekretaris}}', 'NIP Sekretaris', ''],
+                                                ['LAINNYA', '', ''],
+                                                ['{{konsultanPengawas}}', 'Konsultan Pengawas', ''],
+                                                ['{{dirKonsultanPengawas}}', 'Dir. Konsultan Pengawas', ''],
+                                                ['{{kepsek}}', 'Nama Kepala Sekolah', ''],
+                                                ['{{nipKs}}', 'NIP Kepala Sekolah', ''],
+                                                ['{{tahunTerbilang}}', 'Tahun Terbilang', 'Dua ribu dua puluh enam'],
+                                                ['{{noBAST}}', 'No BAST (auto)', '400.3.13/065.n/A3/2026'],
+                                            ].map((row, i) => (
+                                                row[1] === '' && row[2] === '' ? (
+                                                    <tr key={i}><td colSpan={3} style={{ padding: '6px 10px', background: 'rgba(59,130,246,0.1)', fontWeight: 700, color: 'var(--accent-blue)', border: '1px solid var(--border)' }}>{row[0]}</td></tr>
+                                                ) : (
+                                                    <tr key={i}>
+                                                        <td style={{ padding: '4px 10px', border: '1px solid var(--border)', fontFamily: 'monospace', color: '#60a5fa', whiteSpace: 'nowrap' }}>{row[0]}</td>
+                                                        <td style={{ padding: '4px 10px', border: '1px solid var(--border)' }}>{row[1]}</td>
+                                                        <td style={{ padding: '4px 10px', border: '1px solid var(--border)', fontStyle: 'italic', opacity: 0.7 }}>{row[2]}</td>
+                                                    </tr>
+                                                )
+                                            ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </details>
+                        </div>
                         {/* INFORMASI PAKET PEKERJAAN */}
                         <div style={sectionHeader}>📋 INFORMASI PAKET PEKERJAAN</div>
                         <div style={grid2}>
