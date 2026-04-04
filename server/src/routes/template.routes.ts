@@ -499,6 +499,9 @@ function buildVariableMap(item: any, sekretaris: any = {}, refData: any = {}) {
         // ===== ANAKAN (children) =====
         jumlahAnakan: String((d.children || []).length),
         ...buildChildrenVars(d.children || [], d, tahun),
+
+        // ===== RINCIAN KONTRAK (for anakan/multi-paket) =====
+        ...buildRincianVars(d),
     };
 }
 
@@ -543,5 +546,59 @@ function buildChildrenVars(children: any[], parent: any, tahun: string | number)
     }
 
     return vars;
+}
+
+// Build rincian kontrak variables for paket with anakan
+// Uses nilaiItemsArr (from ManajemenKontrak) or children (from MatriksKegiatan SPL)
+function buildRincianVars(d: any) {
+    // Priority: nilaiItemsArr (from kontrak generate) > children (from SPL)
+    let items: { nama: string; nilai: number }[] = [];
+
+    if (d.nilaiItemsArr && Array.isArray(d.nilaiItemsArr) && d.nilaiItemsArr.length > 0) {
+        items = d.nilaiItemsArr.map((it: any) => ({
+            nama: it.nama || '',
+            nilai: Number(it.nilai) || 0,
+        }));
+    } else if (d.children && Array.isArray(d.children) && d.children.length > 0) {
+        items = d.children.map((c: any) => ({
+            nama: c.namaPaket || '',
+            nilai: Number(c.nilaiKontrak || c.hps || 0),
+        }));
+    }
+
+    if (items.length === 0) {
+        return {
+            rincianKontrak: [],
+            lingkupPekerjaan: '',
+            totalRincian: fmtRp(d.nilaiKontrak),
+            totalRincianRaw: String(d.nilaiKontrak || 0),
+            terbilangTotalRincian: d.nilaiKontrak ? ucFirst(terbilang(Number(d.nilaiKontrak))) + ' rupiah' : '',
+            jumlahRincian: '0',
+            adaRincian: false,
+        };
+    }
+
+    const total = items.reduce((sum, it) => sum + it.nilai, 0);
+
+    // rincianKontrak: loop array for docxtemplater {{#rincianKontrak}}...{{/rincianKontrak}}
+    const rincianKontrak = items.map((it, i) => ({
+        no: String(i + 1),
+        rincianNama: it.nama,
+        rincianNilai: fmtRp(it.nilai),
+        rincianNilaiRaw: String(it.nilai),
+    }));
+
+    // lingkupPekerjaan: numbered list text
+    const lingkupPekerjaan = items.map((it, i) => `${i + 1}. ${it.nama}`).join('\n');
+
+    return {
+        rincianKontrak,
+        lingkupPekerjaan,
+        totalRincian: fmtRp(total),
+        totalRincianRaw: String(total),
+        terbilangTotalRincian: ucFirst(terbilang(total)) + ' rupiah',
+        jumlahRincian: String(items.length),
+        adaRincian: true,
+    };
 }
 

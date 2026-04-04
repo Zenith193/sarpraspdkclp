@@ -377,6 +377,8 @@ const ManajemenKontrak = () => {
                                                 tanggalBahpl: d.tanggalBahpl || '',
                                                 kodeLampiran: d.kodeSirup || '',
                                                 kodeSirup: d.kodeSirup || '',
+                                                // Rincian anakan for rincianKontrak and lingkupPekerjaan vars
+                                                nilaiItemsArr: nilaiItems && nilaiItems.length > 1 ? nilaiItems : [],
                                             };
                                             const result = await templateApi.generate(selectedTemplate, item, {});
                                             if (result.historyId) {

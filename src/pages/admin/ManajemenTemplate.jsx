@@ -175,6 +175,20 @@ const GUIDE_DATA = {
         { variable: "{{anakan1KopSekolah}}", description: "Kop Sekolah anakan ke-1" },
         { variable: "{{anakan1Kecamatan}}", description: "Kecamatan anakan ke-1" },
     ],
+    "Rincian Kontrak (Anakan)": [
+        { variable: "{{jumlahRincian}}", description: "Jumlah rincian paket (angka)" },
+        { variable: "{{adaRincian}}", description: "true jika paket punya anakan/rincian" },
+        { variable: "{{lingkupPekerjaan}}", description: "Daftar pekerjaan (1. Rehab SDN... \\n 2. Rehab SDN...)" },
+        { variable: "{{totalRincian}}", description: "Total nilai rincian (Rp format)" },
+        { variable: "{{totalRincianRaw}}", description: "Total nilai rincian (angka)" },
+        { variable: "{{terbilangTotalRincian}}", description: "Terbilang total rincian" },
+        { variable: "{{#rincianKontrak}}", description: "⬇ Loop tabel rincian kontrak (baris per anakan)" },
+        { variable: "{{no}}", description: "Nomor urut (dalam loop)" },
+        { variable: "{{rincianNama}}", description: "Nama paket rincian (dalam loop)" },
+        { variable: "{{rincianNilai}}", description: "Nilai rincian Rp (dalam loop)" },
+        { variable: "{{rincianNilaiRaw}}", description: "Nilai rincian angka (dalam loop)" },
+        { variable: "{{/rincianKontrak}}", description: "⬆ Akhir loop tabel rincian" },
+    ],
 };
 
 
