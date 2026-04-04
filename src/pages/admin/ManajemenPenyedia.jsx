@@ -449,7 +449,6 @@ const ManajemenPenyedia = () => {
                         </table>
                     </div>
                     <div style={{ fontSize: '0.8rem', color: 'var(--accent-blue)', marginTop: 6 }}>Showing {dasarHukumData.length} results</div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: 6, background: 'var(--bg-secondary)', padding: '6px 10px', borderRadius: 6 }}>Variabel Template: <code>{'{dasarHukum}'}</code></div>
                 </div>
             )}
 
@@ -475,7 +474,6 @@ const ManajemenPenyedia = () => {
                         </table>
                     </div>
                     <div style={{ fontSize: '0.8rem', color: 'var(--accent-blue)', marginTop: 6 }}>Showing {satuanKerjaData.length} results</div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: 6, background: 'var(--bg-secondary)', padding: '6px 10px', borderRadius: 6 }}>Variabel: <code>{'{nipSatker}'}</code> <code>{'{namaSatker}'}</code> <code>{'{jabatanSatker}'}</code> <code>{'{websiteSatker}'}</code> <code>{'{emailSatker}'}</code> <code>{'{teleponSatker}'}</code> <code>{'{klpdSatker}'}</code></div>
                 </div>
             )}
 
@@ -501,7 +499,6 @@ const ManajemenPenyedia = () => {
                         </table>
                     </div>
                     <div style={{ fontSize: '0.8rem', color: 'var(--accent-blue)', marginTop: 6 }}>Showing {ppkomData.length} results</div>
-                    <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginTop: 6, background: 'var(--bg-secondary)', padding: '6px 10px', borderRadius: 6 }}>Variabel: <code>{'{ppkom}'}</code> <code>{'{nipPpkom}'}</code> <code>{'{jabatanPpkom}'}</code> <code>{'{alamatPpkom}'}</code> <code>{'{pangkatPpkom}'}</code> <code>{'{telpPpkom}'}</code> <code>{'{emailPpkom}'}</code></div>
                 </div>
             )}
 
