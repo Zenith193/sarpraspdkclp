@@ -217,6 +217,8 @@ export const kontrakService = {
             noSp: data.noSp,
             tanggalSp: data.tanggalSp,
             idPaket: data.idPaket,
+            timPenugasan: data.timPenugasan !== undefined ? data.timPenugasan : undefined,
+            peralatanUtama: data.peralatanUtama !== undefined ? data.peralatanUtama : undefined,
             status: data.status || undefined,
             catatan: data.catatan,
             verifiedBy: data.status === 'Diverifikasi' ? userId : undefined,
