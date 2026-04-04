@@ -121,21 +121,26 @@ export const kontrakService = {
     async listPermohonan(userId: string, role: string) {
         const isAdmin = ['admin', 'verifikator'].includes(role.toLowerCase());
 
+        // Common select fields with matrik override via COALESCE
+        const selectFields = {
+            id: permohonanKontrak.id,
+            kodeSirup: permohonanKontrak.kodeSirup,
+            namaPaket: sql<string>`COALESCE(${matrikKegiatan.namaPaket}, ${permohonanKontrak.namaPaket})`.as('namaPaket'),
+            metodePengadaan: sql<string>`COALESCE(${matrikKegiatan.metode}, ${permohonanKontrak.metodePengadaan})`.as('metodePengadaan'),
+            jenisPengadaan: sql<string>`COALESCE(${matrikKegiatan.jenisPengadaan}, ${permohonanKontrak.jenisPengadaan})`.as('jenisPengadaan'),
+            status: permohonanKontrak.status,
+            nilaiKontrak: sql<number>`COALESCE(${matrikKegiatan.nilaiKontrak}, ${permohonanKontrak.nilaiKontrak})`.as('nilaiKontrak'),
+            noSpk: sql<string>`COALESCE(${matrikKegiatan.noSpk}, ${permohonanKontrak.noSpk})`.as('noSpk'),
+            createdAt: permohonanKontrak.createdAt,
+            namaPerusahaan: perusahaan.namaPerusahaan,
+            perusahaanId: permohonanKontrak.perusahaanId,
+            matrikId: permohonanKontrak.matrikId,
+        };
+
         if (isAdmin) {
-            return db.select({
-                id: permohonanKontrak.id,
-                kodeSirup: permohonanKontrak.kodeSirup,
-                namaPaket: permohonanKontrak.namaPaket,
-                metodePengadaan: permohonanKontrak.metodePengadaan,
-                jenisPengadaan: permohonanKontrak.jenisPengadaan,
-                status: permohonanKontrak.status,
-                nilaiKontrak: permohonanKontrak.nilaiKontrak,
-                noSpk: permohonanKontrak.noSpk,
-                createdAt: permohonanKontrak.createdAt,
-                namaPerusahaan: perusahaan.namaPerusahaan,
-                perusahaanId: permohonanKontrak.perusahaanId,
-            }).from(permohonanKontrak)
+            return db.select(selectFields).from(permohonanKontrak)
               .leftJoin(perusahaan, eq(permohonanKontrak.perusahaanId, perusahaan.id))
+              .leftJoin(matrikKegiatan, eq(permohonanKontrak.matrikId, matrikKegiatan.id))
               .orderBy(desc(permohonanKontrak.createdAt));
         }
 
@@ -143,20 +148,9 @@ export const kontrakService = {
         const myPerusahaan = await db.select().from(perusahaan).where(eq(perusahaan.userId, userId));
         if (!myPerusahaan[0]) return [];
 
-        return db.select({
-            id: permohonanKontrak.id,
-            kodeSirup: permohonanKontrak.kodeSirup,
-            namaPaket: permohonanKontrak.namaPaket,
-            metodePengadaan: permohonanKontrak.metodePengadaan,
-            jenisPengadaan: permohonanKontrak.jenisPengadaan,
-            status: permohonanKontrak.status,
-            nilaiKontrak: permohonanKontrak.nilaiKontrak,
-            noSpk: permohonanKontrak.noSpk,
-            createdAt: permohonanKontrak.createdAt,
-            namaPerusahaan: perusahaan.namaPerusahaan,
-            perusahaanId: permohonanKontrak.perusahaanId,
-        }).from(permohonanKontrak)
+        return db.select(selectFields).from(permohonanKontrak)
           .leftJoin(perusahaan, eq(permohonanKontrak.perusahaanId, perusahaan.id))
+          .leftJoin(matrikKegiatan, eq(permohonanKontrak.matrikId, matrikKegiatan.id))
           .where(eq(permohonanKontrak.perusahaanId, myPerusahaan[0].id))
           .orderBy(desc(permohonanKontrak.createdAt));
     },
