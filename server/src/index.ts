@@ -35,6 +35,7 @@ import iklanRoutes from './routes/iklan.routes.js';
 import arsipDokumenRoutes from './routes/arsipDokumen.routes.js';
 import perusahaanRoutes from './routes/perusahaan.routes.js';
 import kontrakRoutes from './routes/kontrak.routes.js';
+import referensiRoutes from './routes/referensi.routes.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -684,6 +685,7 @@ app.use('/api/iklan', iklanRoutes);
 app.use('/api/arsip-dokumen', arsipDokumenRoutes);
 app.use('/api/perusahaan', perusahaanRoutes);
 app.use('/api/kontrak', kontrakRoutes);
+app.use('/api/referensi', referensiRoutes);
 
 // ===== PUBLIC STATS (no auth required for login page) =====
 

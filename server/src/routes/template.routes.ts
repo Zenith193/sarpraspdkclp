@@ -79,7 +79,8 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
         if (!item) return res.status(400).json({ error: 'Data matrik diperlukan' });
 
         // Build variable map
-        const vars = buildVariableMap(item, sekretaris || {});
+        const refData = await getRefData();
+        const vars = buildVariableMap(item, sekretaris || {}, refData);
 
         // Fill DOCX template with docxtemplater
         const PizZip = (await import('pizzip')).default;
@@ -246,16 +247,23 @@ router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
 export default router;
 
 // ===== VARIABLE MAP =====
-const PPKOM = {
-    nama: 'SUNGEB, S.Sos,. M.M.',
-    nip: '19780908 199703 1 001',
-    jabatan: 'Pejabat Pembuat Komitmen pada Bidang Sarpras Dinas P dan K Kab. Cilacap',
-    alamat: 'Jl. Kalimantan No.51 Cilacap',
-};
 const TIM_TEKNIS_KETUA = {
     nama: 'M. TAKHMILUDDIN, ST.MT',
     nip: '19840525 200903 1 005',
 };
+
+async function getRefData() {
+    const { dasarHukum, satuanKerja, ppkom } = await import('../db/schema/index.js');
+    const { db: database } = await import('../db/index.js');
+    const dhRows = await database.select().from(dasarHukum).orderBy(dasarHukum.id);
+    const skRows = await database.select().from(satuanKerja).limit(1);
+    const ppkRows = await database.select().from(ppkom).limit(1);
+    return {
+        dasarHukumText: dhRows.map(r => r.isi).join('\n'),
+        satker: skRows[0] || {},
+        ppkomData: ppkRows[0] || {},
+    };
+}
 
 function fmtRp(v: any) { return v ? Number(v).toLocaleString('id-ID') : '0'; }
 
@@ -325,10 +333,12 @@ function getTanggalTerbilang(d: any) { if (!d) return ''; const dt = new Date(d)
 function getBulan(d: any) { if (!d) return ''; const dt = new Date(d); return isNaN(dt.getTime()) ? '' : NAMA_BULAN[dt.getMonth()]; }
 function getTahunTerbilang(d: any) { if (!d) return ''; const dt = new Date(d); return isNaN(dt.getTime()) ? '' : ucFirst(terbilang(dt.getFullYear())); }
 
-function buildVariableMap(item: any, sekretaris: any = {}) {
+function buildVariableMap(item: any, sekretaris: any = {}, refData: any = {}) {
     const d = item;
     const sek = { nama: sekretaris.name || sekretaris.nama || '', nip: sekretaris.nip || '' };
     const tahun = d.tahunAnggaran || new Date().getFullYear();
+    const sk = refData.satker || {};
+    const ppk = refData.ppkomData || {};
 
     return {
         noMatrik: d.noMatrik || '',
@@ -438,10 +448,21 @@ function buildVariableMap(item: any, sekretaris: any = {}) {
         nipKs: d.nipKs || '',
         sekretaris: sek.nama,
         nipSekretaris: sek.nip,
-        ppkom: PPKOM.nama,
-        nipPpkom: PPKOM.nip,
-        jabatanPpkom: PPKOM.jabatan,
-        alamatPpkom: PPKOM.alamat,
+        ppkom: ppk.nama || '',
+        nipPpkom: ppk.nip || '',
+        jabatanPpkom: ppk.jabatan || '',
+        alamatPpkom: ppk.alamat || '',
+        pangkatPpkom: ppk.pangkat || '',
+        telpPpkom: ppk.noTelp || '',
+        emailPpkom: ppk.email || '',
+        nipSatker: sk.nip || '',
+        namaSatker: sk.namaPimpinan || '',
+        jabatanSatker: sk.jabatan || '',
+        websiteSatker: sk.website || '',
+        emailSatker: sk.email || '',
+        teleponSatker: sk.telepon || '',
+        klpdSatker: sk.klpd || '',
+        dasarHukum: refData.dasarHukumText || '',
         ketuaTimTeknis: TIM_TEKNIS_KETUA.nama,
         nipKetuaTimTeknis: TIM_TEKNIS_KETUA.nip,
         tahunTerbilang: ucFirst(terbilang(Number(tahun) || 2026)),

@@ -274,3 +274,21 @@ export const kontrakApi = {
     updateRealisasi: (id, data) => api.put(`/kontrak/realisasi/${id}`, data),
     deleteRealisasi: (id) => api.delete(`/kontrak/realisasi/${id}`),
 };
+
+export const referensiApi = {
+    // Dasar Hukum
+    listDasarHukum: () => api.get('/referensi/dasar-hukum'),
+    createDasarHukum: (data) => api.post('/referensi/dasar-hukum', data),
+    updateDasarHukum: (id, data) => api.put(`/referensi/dasar-hukum/${id}`, data),
+    deleteDasarHukum: (id) => api.delete(`/referensi/dasar-hukum/${id}`),
+    // Satuan Kerja
+    listSatuanKerja: () => api.get('/referensi/satuan-kerja'),
+    createSatuanKerja: (data) => api.post('/referensi/satuan-kerja', data),
+    updateSatuanKerja: (id, data) => api.put(`/referensi/satuan-kerja/${id}`, data),
+    deleteSatuanKerja: (id) => api.delete(`/referensi/satuan-kerja/${id}`),
+    // PPKOM
+    listPpkom: () => api.get('/referensi/ppkom'),
+    createPpkom: (data) => api.post('/referensi/ppkom', data),
+    updatePpkom: (id, data) => api.put(`/referensi/ppkom/${id}`, data),
+    deletePpkom: (id) => api.delete(`/referensi/ppkom/${id}`),
+};
