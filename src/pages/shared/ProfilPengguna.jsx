@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Edit, Save, X, Upload, FileText, CheckCircle, Eye, EyeOff, Lock, Download, Trash2, Loader2 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
-import { penggunaApi, sekolahApi } from '../../api/index';
+import { penggunaApi, sekolahApi, perusahaanApi } from '../../api/index';
 import toast from 'react-hot-toast';
 import ConfirmModal from '../../components/ui/ConfirmModal';
 import mammoth from 'mammoth';
@@ -33,7 +33,14 @@ const ProfilPengguna = () => {
     const [uploadProgress, setUploadProgress] = useState({}); // { kop: 0-100, denah: 0-100 }
 
     const isSekolah = user?.role === 'Sekolah';
+    const isPenyedia = user?.role === 'Penyedia';
     const sekolahId = user?.sekolahId;
+
+    // State perusahaan (penyedia)
+    const [perusahaanData, setPerusahaanData] = useState(null);
+    const [editPerusahaan, setEditPerusahaan] = useState({});
+    const [editingPerusahaan, setEditingPerusahaan] = useState(false);
+    const [savingPerusahaan, setSavingPerusahaan] = useState(false);
 
     // Fetch full user profile from API
     useEffect(() => {
@@ -68,6 +75,16 @@ const ProfilPengguna = () => {
             sekolahApi.getById(sekolahId).then(setSekolahData).catch(() => {});
         }
     }, [sekolahId]);
+
+    // Fetch perusahaan data for penyedia
+    useEffect(() => {
+        if (isPenyedia) {
+            fetch('/api/perusahaan/me', { credentials: 'include' })
+                .then(r => r.ok ? r.json() : null)
+                .then(data => { if (data) { setPerusahaanData(data); setEditPerusahaan(data); } })
+                .catch(() => {});
+        }
+    }, [isPenyedia]);
 
     // Photo preview state
     const [photoPreview, setPhotoPreview] = useState(null);
@@ -283,6 +300,10 @@ const ProfilPengguna = () => {
         { label: 'No Rekening', key: 'noRek' },
         { label: 'Nama Bank', key: 'namaBank' },
         { label: 'Jumlah Rombel', key: 'rombel' },
+    ] : isPenyedia ? [
+        { label: 'Nama Akun', key: 'namaAkun' },
+        { label: 'Role', key: 'role', readOnly: true },
+        { label: 'Email', key: 'email' },
     ] : [
         { label: 'Nama Akun', key: 'namaAkun' },
         { label: 'Role', key: 'role', readOnly: true },
@@ -467,6 +488,64 @@ const ProfilPengguna = () => {
                         <h3 style={{ fontSize: '1rem', marginBottom: 16, fontWeight: 600 }}>Dokumen Sekolah</h3>
                         {renderFileSection('kop', 'Kop Sekolah', '.doc,.docx', '1MB', uploadingKop, !!sekolahData?.kopSekolah)}
                         {renderFileSection('denah', 'Denah Sekolah', '.pdf', '5MB', uploadingDenah, !!sekolahData?.denahSekolah)}
+                    </div>
+                )}
+
+                {/* Data Perusahaan (Hanya untuk Role Penyedia) */}
+                {isPenyedia && perusahaanData && (
+                    <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid var(--border-color)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                            <h3 style={{ fontSize: '1rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8 }}>
+                                🏢 Data Perusahaan
+                            </h3>
+                            {!editingPerusahaan ? (
+                                <button className="btn btn-secondary btn-sm" onClick={() => setEditingPerusahaan(true)}><Edit size={14} /> Edit</button>
+                            ) : (
+                                <div style={{ display: 'flex', gap: 8 }}>
+                                    <button className="btn btn-ghost btn-sm" onClick={() => { setEditingPerusahaan(false); setEditPerusahaan({ ...perusahaanData }); }}><X size={14} /> Batal</button>
+                                    <button className="btn btn-primary btn-sm" disabled={savingPerusahaan} onClick={async () => {
+                                        setSavingPerusahaan(true);
+                                        try {
+                                            await perusahaanApi.update(perusahaanData.id, editPerusahaan);
+                                            setPerusahaanData({ ...editPerusahaan });
+                                            setEditingPerusahaan(false);
+                                            toast.success('Data perusahaan berhasil disimpan');
+                                        } catch (err) { toast.error(err.message || 'Gagal menyimpan'); }
+                                        setSavingPerusahaan(false);
+                                    }}><Save size={14} /> {savingPerusahaan ? 'Menyimpan...' : 'Simpan'}</button>
+                                </div>
+                            )}
+                        </div>
+                        <div className="form-row" style={{ gap: 20 }}>
+                            {[
+                                { label: 'Nama Direktur/Pemilik', key: 'namaPemilik' },
+                                { label: 'NIK Pemilik', key: 'nikPemilik' },
+                                { label: 'Jabatan', key: 'jabatanPemilik' },
+                                { label: 'Alamat Pemilik', key: 'alamatPemilik' },
+                                { label: 'Nama Perusahaan', key: 'namaPerusahaan' },
+                                { label: 'Nama Singkat', key: 'namaPerusahaanSingkat' },
+                                { label: 'Tipe Perusahaan', key: 'tipePerusahaan' },
+                                { label: 'No. Akta', key: 'noAkta' },
+                                { label: 'Nama Notaris', key: 'namaNotaris' },
+                                { label: 'Tanggal Akta', key: 'tanggalAkta' },
+                                { label: 'Alamat Perusahaan', key: 'alamatPerusahaan' },
+                                { label: 'No. Telepon', key: 'noTelp' },
+                                { label: 'Email Perusahaan', key: 'emailPerusahaan' },
+                                { label: 'NPWP', key: 'npwp', readOnly: true },
+                                { label: 'No. Rekening', key: 'noRekening' },
+                                { label: 'Nama Rekening', key: 'namaRekening' },
+                                { label: 'Bank', key: 'bank' },
+                            ].map(f => (
+                                <div className="form-group" key={f.key}>
+                                    <label className="form-label">{f.label}</label>
+                                    {editingPerusahaan && !f.readOnly ? (
+                                        <input className="form-input" value={editPerusahaan[f.key] || ''} onChange={e => setEditPerusahaan(prev => ({ ...prev, [f.key]: e.target.value }))} />
+                                    ) : (
+                                        <div style={{ padding: '10px 0', color: 'var(--text-primary)', borderBottom: '1px solid var(--border-color)' }}>{perusahaanData[f.key] || '-'}</div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>

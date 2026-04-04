@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, Send, CheckCircle, Upload, ArrowRight, Eye, X } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import { kontrakApi } from '../../api';
 
 const DashboardPenyedia = () => {
+    const navigate = useNavigate();
     const user = useAuthStore(s => s.user);
     const [perusahaan, setPerusahaan] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -193,7 +195,7 @@ const DashboardPenyedia = () => {
                         ))}
                     </div>
                     <div style={{ marginTop: 16, textAlign: 'center' }}>
-                        <a href="#" style={{ color: 'var(--accent-blue)', fontSize: '0.85rem', textDecoration: 'none' }}>Lengkapi Data Perusahaan →</a>
+                        <a onClick={() => navigate('/penyedia/profil')} style={{ color: 'var(--accent-blue)', fontSize: '0.85rem', textDecoration: 'none', cursor: 'pointer' }}>Lengkapi Data Perusahaan →</a>
                     </div>
                 </div>
 
