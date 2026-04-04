@@ -180,7 +180,13 @@ const DashboardPenyedia = () => {
                 {/* Left: Informasi Perusahaan */}
                 <div className="stat-card" style={{ padding: 24 }}>
                     <h3 style={{ margin: '0 0 20px', fontSize: '1.1rem' }}>Informasi Perusahaan</h3>
-                    <div style={{ width: 100, height: 100, borderRadius: '50%', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', border: '2px solid var(--border)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Company<br/>Logo</div>
+                    <div style={{ width: 100, height: 100, borderRadius: '50%', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 24px', border: '2px solid var(--border)', fontSize: '1.5rem', fontWeight: 700, color: 'var(--text-secondary)', overflow: 'hidden', position: 'relative' }}>
+                        {user?.image && !user.image.startsWith('gdrive://') ? (
+                            <img src={user.image} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'cover', position: 'absolute', top: 0, left: 0 }} onError={e => { e.target.style.display = 'none'; }} />
+                        ) : (
+                            <span>{(perusahaan?.namaPerusahaan || 'P').charAt(0)}</span>
+                        )}
+                    </div>
                     <div style={{ display: 'grid', gap: 12, fontSize: '0.88rem' }}>
                         {[
                             ['Nama Perusahaan', perusahaan?.namaPerusahaan],
