@@ -146,7 +146,7 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
         }
 
         console.log('[Generate] nilaiItemsArr:', JSON.stringify(item.nilaiItemsArr), 'children:', JSON.stringify(item.children?.length));
-        const vars = buildVariableMap(item, sekretaris || {}, refData);
+        const vars = buildVariableMap(item, sekretaris || {}, refData) as any;
         console.log('[Generate] ALL KEYS:', Object.keys(vars).join(', '));
         console.log('[Generate] rincianKontrak length:', vars.rincianKontrak?.length, 'rincianNama:', vars.rincianNama, 'rincianNilai:', vars.rincianNilai);
         if (vars.rincianKontrak && vars.rincianKontrak.length > 0) {
@@ -670,14 +670,16 @@ function buildRincianVars(d: any) {
 
     const total = items.reduce((sum, it) => sum + it.nilai, 0);
 
+    // Helper: format value with Rp. prefix, empty if 0
+    const fmtRpFull = (v: number) => v ? 'Rp. ' + fmtRp(v) : '';
+
     // rincianKontrak: loop array for docxtemplater {{#rincianKontrak}}...{{/rincianKontrak}}
     const rincianKontrak = items.map((it, i) => ({
         no: String(i + 1),
-        // Provide both naming conventions for template compatibility
         rincianNama: it.nama,
         nama: it.nama,
-        rincianNilai: fmtRp(it.nilai),
-        nilai: fmtRp(it.nilai),
+        rincianNilai: fmtRpFull(it.nilai),
+        nilai: fmtRpFull(it.nilai),
         rincianNilaiRaw: String(it.nilai),
         nilaiRaw: String(it.nilai),
     }));
@@ -693,13 +695,16 @@ function buildRincianVars(d: any) {
     items.forEach((it, i) => {
         const idx = i + 1;
         indexedVars[`rincian${idx}Nama`] = it.nama;
-        indexedVars[`rincian${idx}Nilai`] = fmtRp(it.nilai);
+        indexedVars[`rincian${idx}Nilai`] = fmtRpFull(it.nilai);
         indexedVars[`rincian${idx}NilaiRaw`] = String(it.nilai);
     });
 
-    // Combined text variables (all items joined with newlines)
-    const rincianNamaAll = items.map((it) => it.nama).join('\n');
-    const rincianNilaiAll = items.map((it) => 'Rp. ' + fmtRp(it.nilai)).join('\n');
+    // Filter items with actual values for combined text
+    const itemsWithValue = items.filter(it => it.nilai > 0);
+
+    // Combined text variables (all items joined with newlines, skip 0 values)
+    const rincianNamaAll = itemsWithValue.map((it) => it.nama).join('\n');
+    const rincianNilaiAll = itemsWithValue.map((it) => fmtRpFull(it.nilai)).join('\n');
 
     return {
         rincianKontrak,
@@ -711,7 +716,7 @@ function buildRincianVars(d: any) {
         adaRincian: 'Ya',
         // Top-level aliases (so {{rincianNama}} works outside loop too)
         rincianNama: first.nama,
-        rincianNilai: fmtRp(first.nilai),
+        rincianNilai: fmtRpFull(first.nilai),
         rincianNilaiRaw: String(first.nilai),
         // Combined text (all items as newline-separated text)
         rincianNamaAll,

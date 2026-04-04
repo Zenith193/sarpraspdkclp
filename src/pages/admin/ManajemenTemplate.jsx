@@ -185,11 +185,11 @@ const GUIDE_DATA = {
         { variable: "{{rincianNamaAll}}", description: "Semua nama anakan (baris baru per item)" },
         { variable: "{{rincianNilaiAll}}", description: "Semua nilai anakan Rp. (baris baru per item)" },
         { variable: "{{rincian1Nama}}", description: "Nama anakan ke-1" },
-        { variable: "{{rincian1Nilai}}", description: "Nilai anakan ke-1 (format angka)" },
+        { variable: "{{rincian1Nilai}}", description: "Nilai anakan ke-1 (sudah termasuk Rp., kosong jika 0)" },
         { variable: "{{rincian2Nama}}", description: "Nama anakan ke-2" },
-        { variable: "{{rincian2Nilai}}", description: "Nilai anakan ke-2 (format angka)" },
+        { variable: "{{rincian2Nilai}}", description: "Nilai anakan ke-2 (sudah termasuk Rp., kosong jika 0)" },
         { variable: "{{rincian3Nama}} dst", description: "Nama anakan ke-3, 4, 5... (maks 15)" },
-        { variable: "{{rincian3Nilai}} dst", description: "Nilai anakan ke-3, 4, 5... (maks 15)" },
+        { variable: "{{rincian3Nilai}} dst", description: "Nilai ke-3,4,5... (sudah termasuk Rp., kosong jika 0)" },
     ],
 };
 
