@@ -207,6 +207,61 @@ export const kontrakService = {
             verifiedBy: data.status === 'Diverifikasi' ? userId : undefined,
             updatedAt: new Date(),
         }).where(eq(permohonanKontrak.id, id)).returning();
+
+        // === Sync to matrik_kegiatan when verified ===
+        if (data.status === 'Diverifikasi' && updated) {
+            try {
+                // Get full permohonan with perusahaan info
+                const full = await db.select({
+                    kontrak: permohonanKontrak,
+                    namaPerusahaan: perusahaan.namaPerusahaan,
+                    namaPemilik: perusahaan.namaPemilik,
+                    alamatPerusahaan: perusahaan.alamatPerusahaan,
+                }).from(permohonanKontrak)
+                  .leftJoin(perusahaan, eq(permohonanKontrak.perusahaanId, perusahaan.id))
+                  .where(eq(permohonanKontrak.id, id));
+                const k = full[0];
+                if (!k) throw new Error('Kontrak not found after update');
+
+                const matrikData: any = {
+                    noSpk: k.kontrak.noSpk || null,
+                    nilaiKontrak: k.kontrak.nilaiKontrak || null,
+                    terbilangKontrak: k.kontrak.terbilangKontrak || null,
+                    tanggalMulai: k.kontrak.tanggalMulai || null,
+                    tanggalSelesai: k.kontrak.tanggalSelesai || null,
+                    jangkaWaktu: k.kontrak.waktuPenyelesaian ? parseInt(k.kontrak.waktuPenyelesaian) : null,
+                    penyedia: k.namaPerusahaan || null,
+                    namaPemilik: k.namaPemilik || null,
+                    alamatKantor: k.alamatPerusahaan || null,
+                    updatedAt: new Date(),
+                };
+
+                if (k.kontrak.matrikId) {
+                    // Update existing matrik
+                    await db.update(matrikKegiatan).set(matrikData)
+                        .where(eq(matrikKegiatan.id, k.kontrak.matrikId));
+                    console.log(`[Kontrak→Matrik] Updated matrik #${k.kontrak.matrikId} from kontrak #${id}`);
+                } else {
+                    // Create new matrik entry
+                    const [newMatrik] = await db.insert(matrikKegiatan).values({
+                        noMatrik: 'K-' + id,
+                        rup: k.kontrak.kodeSirup || '',
+                        namaPaket: k.kontrak.namaPaket || '',
+                        jenisPengadaan: k.kontrak.jenisPengadaan || '',
+                        metode: k.kontrak.metodePengadaan || '',
+                        tahunAnggaran: new Date().getFullYear(),
+                        ...matrikData,
+                    }).returning();
+                    // Link matrik to kontrak
+                    await db.update(permohonanKontrak).set({ matrikId: newMatrik.id })
+                        .where(eq(permohonanKontrak.id, id));
+                    console.log(`[Kontrak→Matrik] Created new matrik #${newMatrik.id} for kontrak #${id}`);
+                }
+            } catch (e: any) {
+                console.error('[Kontrak→Matrik] Sync error:', e.message);
+            }
+        }
+
         return updated;
     },
 
