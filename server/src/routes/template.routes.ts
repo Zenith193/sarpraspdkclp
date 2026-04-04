@@ -350,6 +350,8 @@ function buildVariableMap(item: any, sekretaris: any = {}) {
         alamatKantor: d.alamatKantor || '',
         noHp: d.noHp || '',
         metode: d.metode || '',
+        subKegiatan: d.subKegiatan || '',
+        noSubKegiatan: d.noSubKegiatan || '',
 
         // ===== TANGGAL MULAI =====
         tanggalMulai: fmtDate(d.tanggalMulai),

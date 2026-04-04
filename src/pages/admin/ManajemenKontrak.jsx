@@ -355,6 +355,8 @@ const ManajemenKontrak = () => {
                                                 ['{{sumberDana}}', 'Sumber Dana', 'APBD'],
                                                 ['{{tahunAnggaran}}', 'Tahun Anggaran', '2026'],
                                                 ['{{metode}}', 'Metode Pengadaan', 'Non Tender'],
+                                                ['{{subKegiatan}}', 'Sub Kegiatan', 'Rehabilitasi Sedang/Berat Ruang Kelas Sekolah'],
+                                                ['{{noSubKegiatan}}', 'No Sub Kegiatan', ''],
                                                 ['PENYEDIA', '', ''],
                                                 ['{{penyedia}}', 'Nama Perusahaan', 'CV. JAGAT ALIT'],
                                                 ['{{namaPemilik}}', 'Nama Direktur/Pemilik', 'DINDA AURYSTA'],
