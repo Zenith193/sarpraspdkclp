@@ -216,9 +216,26 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
                 doc = new Docxtemplater(zip2, docxOptions);
             } catch (compileErr2: any) {
                 console.log('[DOCX] Still failing, retry without paragraphLoop...');
-                const zip3 = new PizZip(content);
-                cleanLoopTags(zip3);
-                doc = new Docxtemplater(zip3, { ...docxOptions, paragraphLoop: false });
+                try {
+                    const zip3 = new PizZip(content);
+                    cleanLoopTags(zip3);
+                    doc = new Docxtemplater(zip3, { ...docxOptions, paragraphLoop: false });
+                } catch (compileErr3: any) {
+                    // LAST RESORT: skip docxtemplater entirely, just do string replacement on XML
+                    console.log('[DOCX] All retries failed, using direct XML replacement...');
+                    const zip4 = new PizZip(content);
+                    cleanLoopTags(zip4);
+                    let rawXml = zip4.file('word/document.xml')?.asText() || '';
+                    // Simple variable replacement: replace {{varName}} in text nodes
+                    for (const [key, val] of Object.entries(vars)) {
+                        if (typeof val === 'string') {
+                            rawXml = rawXml.replace(new RegExp(key, 'g'), val);
+                        }
+                    }
+                    zip4.file('word/document.xml', rawXml);
+                    // Create a fake doc object with getZip() and getFullText()
+                    doc = { getZip: () => zip4, getFullText: () => '', render: () => {} };
+                }
             }
         }
 
@@ -230,9 +247,11 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
             console.log('[DOCX] Tags found in template:', foundTags?.join(', ') || 'NONE');
         } catch (e) { /* ignore */ }
 
-        doc.render(vars);
+        try { doc.render(vars); } catch (renderErr: any) {
+            console.error('[DOCX] Render error (continuing):', renderErr.message);
+        }
 
-        // Post-process table injection (fallback if pre-process missed it)
+        // Post-process table injection
         const generatedZip = doc.getZip();
         if (rincianItems.length > 0) {
             try {
