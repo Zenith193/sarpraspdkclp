@@ -168,39 +168,6 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
             vars.tabelRincian = '__RINCIAN_TABLE__';
         }
 
-        // PRE-PROCESS: Strip broken/unclosed loop tags from XML before docxtemplater
-        try {
-            let docXml = zip.file('word/document.xml')?.asText() || '';
-            // Strip XML tags to get plain text, find loop tags
-            const plainText = docXml.replace(/<[^>]+>/g, '');
-            const openLoops = [...plainText.matchAll(/\{\{#(\w+)\}\}/g)].map(m => m[1]);
-            const closeLoops = [...plainText.matchAll(/\{\{\/(\w+)\}\}/g)].map(m => m[1]);
-            // Find unmatched opens (no corresponding close)
-            const brokenOpens = openLoops.filter(tag => !closeLoops.includes(tag));
-            // Find unmatched closes (no corresponding open)
-            const brokenCloses = closeLoops.filter(tag => !openLoops.includes(tag));
-            if (brokenOpens.length > 0 || brokenCloses.length > 0) {
-                console.log('[Template] Stripping broken loop tags:', [...brokenOpens.map(t => '#' + t), ...brokenCloses.map(t => '/' + t)].join(', '));
-                // Remove the broken tag text from the XML (handles split across runs)
-                for (const tag of brokenOpens) {
-                    // Remove {{# and tagname and }} individually from the text nodes
-                    docXml = docXml.replace(new RegExp(`\\{\\{#${tag}\\}\\}`, 'g'), '');
-                    // Also handle split: the {{ and #tagname and }} might be in separate <w:t> elements
-                    // Remove just the tag text from <w:t> nodes
-                    docXml = docXml.replace(new RegExp(`#${tag}`, 'g'), '');
-                }
-                for (const tag of brokenCloses) {
-                    docXml = docXml.replace(new RegExp(`\\{\\{\\/${tag}\\}\\}`, 'g'), '');
-                    docXml = docXml.replace(new RegExp(`\\/${tag}`, 'g'), '');
-                }
-                // Clean up any leftover empty braces {{ }}
-                docXml = docXml.replace(/\{\{\s*\}\}/g, '');
-                zip.file('word/document.xml', docXml);
-            }
-        } catch (stripErr: any) {
-            console.error('[Template] Strip broken tags error:', stripErr.message);
-        }
-
         const docxOptions: any = {
             paragraphLoop: true,
             linebreaks: true,
@@ -213,18 +180,46 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
             },
         };
 
+        // Helper: aggressively clean loop syntax from DOCX XML
+        function cleanLoopTags(zipObj: any) {
+            let xml = zipObj.file('word/document.xml')?.asText() || '';
+            // Remove #tagName and /tagName from inside <w:t> text nodes
+            // This handles both intact {{#tag}} and split-across-runs cases
+            xml = xml.replace(/(<w:t[^>]*>)([^<]*)<\/w:t>/g, (match: string, openTag: string, text: string) => {
+                // Remove loop markers: {{#xxx}} {{/xxx}} and fragments like #xxx /xxx
+                let cleaned = text;
+                cleaned = cleaned.replace(/\{\{[#\/][^}]*\}\}/g, ''); // full tags
+                cleaned = cleaned.replace(/#\w+/g, '');                // fragment: #tagName
+                cleaned = cleaned.replace(/\/\w+/g, (m: string) => {   // fragment: /tagName (but not file paths)
+                    return /^\/[A-Z]/.test(m) || /^\/[a-z]{1,2}$/.test(m) ? m : ''; // keep short words, remove camelCase tags
+                });
+                return openTag + cleaned + '</w:t>';
+            });
+            zipObj.file('word/document.xml', xml);
+            console.log('[Template] Cleaned loop tags from XML');
+        }
+
         let doc: any;
         try {
             doc = new Docxtemplater(zip, docxOptions);
         } catch (compileErr: any) {
             if (compileErr.properties?.errors) {
                 for (const e of compileErr.properties.errors) {
-                    console.error('[DOCX] Template error:', e.properties?.explanation || e.message, '| tag:', e.properties?.tag || 'unknown');
+                    console.error('[DOCX] Template error:', e.properties?.explanation || e.message);
                 }
             }
-            console.log('[DOCX] Retrying without paragraphLoop...');
+            // Aggressively clean and retry
+            console.log('[DOCX] Cleaning loop tags and retrying...');
             const zip2 = new PizZip(content);
-            doc = new Docxtemplater(zip2, { ...docxOptions, paragraphLoop: false });
+            cleanLoopTags(zip2);
+            try {
+                doc = new Docxtemplater(zip2, docxOptions);
+            } catch (compileErr2: any) {
+                console.log('[DOCX] Still failing, retry without paragraphLoop...');
+                const zip3 = new PizZip(content);
+                cleanLoopTags(zip3);
+                doc = new Docxtemplater(zip3, { ...docxOptions, paragraphLoop: false });
+            }
         }
 
         // Log all tags found in template
