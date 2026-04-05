@@ -10,6 +10,11 @@ const currentYear = new Date().getFullYear();
 // Fix image path — use file proxy that searches multiple directories
 const fixImgPath = (p) => {
     if (!p) return '';
+    // Handle GDrive paths: gdrive://fileId → proxy through kontrak file endpoint
+    if (p.startsWith('gdrive://')) {
+        const fileId = p.replace('gdrive://', '');
+        return '/api/file/kontrak/' + encodeURIComponent(fileId);
+    }
     // Extract filename from path like /uploads/kontrak/1234_file.jpg
     const match = p.match(/\/uploads\/kontrak\/(.+)$/);
     if (match) return '/api/file/kontrak/' + encodeURIComponent(match[1]);

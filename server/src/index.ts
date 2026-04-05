@@ -233,7 +233,27 @@ async function serveFileFromPath(filePath: string, res: any) {
 // ===== KONTRAK/REALISASI FILE PROXY =====
 app.get('/api/file/kontrak/:filename', async (req, res) => {
     try {
-        const filename = req.params.filename;
+        const filename = decodeURIComponent(req.params.filename);
+        // If it looks like a GDrive file ID (long alphanumeric, no extension), stream from GDrive
+        if (filename.length > 20 && !filename.includes('.')) {
+            try {
+                const { streamFromGDrive, isGDriveEnabled } = await import('./utils/googleDriveClient.js');
+                if (isGDriveEnabled()) {
+                    const gResult = await streamFromGDrive(filename);
+                    if (gResult) {
+                        res.setHeader('Content-Type', gResult.mimeType);
+                        res.setHeader('Cache-Control', 'public, max-age=86400');
+                        gResult.stream.pipe(res);
+                        return;
+                    }
+                }
+            } catch (gErr: any) { console.error('[FileProxy/GDrive]', gErr.message); }
+        }
+        // Also handle gdrive:// prefix passed directly
+        if (filename.startsWith('gdrive://')) {
+            await serveFileFromPath(filename, res);
+            return;
+        }
         const filePath = `uploads/kontrak/${filename}`;
         await serveFileFromPath(filePath, res);
     } catch (e: any) { res.status(500).json({ error: e.message }); }

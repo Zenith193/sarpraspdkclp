@@ -3,10 +3,12 @@ import { kontrakService } from '../services/kontrak.service.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { db } from '../db/index.js';
 import { eq, desc } from 'drizzle-orm';
-import { perusahaan } from '../db/schema/index.js';
+import { perusahaan, matrikKegiatan } from '../db/schema/index.js';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+
+const BULAN_NAMES = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
 const router = Router();
 
@@ -119,6 +121,26 @@ router.post('/permohonan', requireAuth, upload.single('berkasPenawaran'), async 
         const data = req.body;
         if (req.file) {
             data.berkasPenawaranPath = `/uploads/kontrak/${req.file.filename}`;
+            // Upload berkas penawaran to GDrive
+            try {
+                const { uploadToGDrive, isGDriveEnabled } = await import('../utils/googleDriveClient.js');
+                if (isGDriveEnabled()) {
+                    const tahun = String(new Date().getFullYear());
+                    const sanitize = (s: string) => (s || '').replace(/[<>:"/\\|?*]/g, '').substring(0, 100);
+                    const namaPaket = sanitize(data.namaPaket || '');
+                    const paketFolder = `${data.kodeSirup || 'XX'}. ${namaPaket}`;
+                    const gDrivePath = `Kontrak/${tahun}/${paketFolder}/Penawaran`;
+                    const localPath = path.join(uploadsDir, req.file.filename);
+                    const result = await uploadToGDrive(localPath, gDrivePath, req.file.originalname || req.file.filename);
+                    if (result.success) {
+                        data.berkasPenawaranPath = result.path;
+                        try { fs.unlinkSync(localPath); } catch {}
+                        console.log(`[GDrive] Berkas penawaran uploaded to: ${gDrivePath}`);
+                    }
+                }
+            } catch (gErr: any) {
+                console.error('[GDrive] Penawaran upload error:', gErr.message);
+            }
         }
         const created = await kontrakService.createPermohonan(data, req.user!.id);
         res.status(201).json(created);
@@ -239,8 +261,38 @@ router.post('/matrik/:matrikId/realisasi', requireAuth, (req: any, res: any, nex
         const data = req.body;
         data.matrikId = req.params.matrikId;
         if (req.files && req.files.length > 0) {
-            const paths = (req.files as any[]).map(f => `/uploads/kontrak/${f.filename}`);
-            data.dokumentasiPaths = JSON.stringify(paths);
+            const filePaths: string[] = [];
+            // Try GDrive upload
+            try {
+                const { uploadToGDrive, isGDriveEnabled } = await import('../utils/googleDriveClient.js');
+                if (isGDriveEnabled()) {
+                    const matrikInfo = await db.select().from(matrikKegiatan).where(eq(matrikKegiatan.id, Number(req.params.matrikId)));
+                    const m = matrikInfo[0];
+                    const tahun = String(data.tahun || new Date().getFullYear());
+                    const sanitize = (s: string) => (s || '').replace(/[<>:"/\\|?*]/g, '').substring(0, 100);
+                    const paketFolder = `${m?.noMatrik || req.params.matrikId}. ${sanitize(m?.namaPaket || '')}`;
+                    const bulanName = BULAN_NAMES[Number(data.bulan) - 1] || 'Unknown';
+                    const gDrivePath = `Kontrak/${tahun}/${paketFolder}/Realisasi/${bulanName}`;
+                    
+                    for (const f of (req.files as any[])) {
+                        const localPath = path.join(uploadsDir, f.filename);
+                        const result = await uploadToGDrive(localPath, gDrivePath, f.originalname || f.filename);
+                        if (result.success) {
+                            filePaths.push(result.path);
+                            try { fs.unlinkSync(localPath); } catch {}
+                        } else {
+                            filePaths.push(`/uploads/kontrak/${f.filename}`);
+                        }
+                    }
+                    console.log(`[GDrive] ${filePaths.length} realisasi photos uploaded to: ${gDrivePath}`);
+                } else {
+                    (req.files as any[]).forEach(f => filePaths.push(`/uploads/kontrak/${f.filename}`));
+                }
+            } catch (gErr: any) {
+                console.error('[GDrive] Realisasi upload error:', gErr.message);
+                (req.files as any[]).forEach(f => { if (!filePaths.includes(`/uploads/kontrak/${f.filename}`)) filePaths.push(`/uploads/kontrak/${f.filename}`); });
+            }
+            data.dokumentasiPaths = JSON.stringify(filePaths);
         }
         const created = await kontrakService.createRealisasi(null, data, req.user!.id);
         res.status(201).json(created);
@@ -262,10 +314,43 @@ router.post('/permohonan/:id/realisasi', requireAuth, (req: any, res: any, next:
 }, async (req: any, res) => {
     try {
         const data = req.body;
-        // Collect uploaded file paths
         if (req.files && req.files.length > 0) {
-            const paths = (req.files as any[]).map(f => `/uploads/kontrak/${f.filename}`);
-            data.dokumentasiPaths = JSON.stringify(paths);
+            const filePaths: string[] = [];
+            try {
+                const { uploadToGDrive, isGDriveEnabled } = await import('../utils/googleDriveClient.js');
+                const { matrikKegiatan: mk } = await import('../db/schema/index.js');
+                if (isGDriveEnabled()) {
+                    // Try to get matrik info from permohonan
+                    const kontrakData = await kontrakService.getById(Number(req.params.id));
+                    let matrikInfo: any = null;
+                    if (kontrakData?.matrikId) {
+                        const mRows = await db.select().from(mk).where(eq(mk.id, kontrakData.matrikId));
+                        matrikInfo = mRows[0];
+                    }
+                    const tahun = String(data.tahun || new Date().getFullYear());
+                    const sanitize = (s: string) => (s || '').replace(/[<>:"/\\|?*]/g, '').substring(0, 100);
+                    const paketFolder = `${matrikInfo?.noMatrik || req.params.id}. ${sanitize(matrikInfo?.namaPaket || kontrakData?.namaPaket || '')}`;
+                    const bulanName = BULAN_NAMES[Number(data.bulan) - 1] || 'Unknown';
+                    const gDrivePath = `Kontrak/${tahun}/${paketFolder}/Realisasi/${bulanName}`;
+                    
+                    for (const f of (req.files as any[])) {
+                        const localPath = path.join(uploadsDir, f.filename);
+                        const result = await uploadToGDrive(localPath, gDrivePath, f.originalname || f.filename);
+                        if (result.success) {
+                            filePaths.push(result.path);
+                            try { fs.unlinkSync(localPath); } catch {}
+                        } else {
+                            filePaths.push(`/uploads/kontrak/${f.filename}`);
+                        }
+                    }
+                } else {
+                    (req.files as any[]).forEach(f => filePaths.push(`/uploads/kontrak/${f.filename}`));
+                }
+            } catch (gErr: any) {
+                console.error('[GDrive] Realisasi upload error:', gErr.message);
+                (req.files as any[]).forEach(f => { if (!filePaths.includes(`/uploads/kontrak/${f.filename}`)) filePaths.push(`/uploads/kontrak/${f.filename}`); });
+            }
+            data.dokumentasiPaths = JSON.stringify(filePaths);
         }
         const created = await kontrakService.createRealisasi(Number(req.params.id), data, req.user!.id);
         res.status(201).json(created);

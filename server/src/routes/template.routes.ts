@@ -42,7 +42,29 @@ router.get('/spl-file/:format/:historyId', requireAuth, async (req, res) => {
         const historyId = req.params.historyId as string;
         if (!['pdf', 'docx'].includes(format)) return res.status(400).json({ error: 'Format harus pdf atau docx' });
 
-        // Find the file in spl-output directory (support both old spl_ and new naming)
+        // Check if history record has a GDrive path
+        const historyRecord = await splHistoryService.update(Number(historyId), {}); // get by updating nothing
+        if (historyRecord?.filePath?.startsWith('gdrive://')) {
+            const { streamFromGDrive, isGDriveEnabled } = await import('../utils/googleDriveClient.js');
+            if (isGDriveEnabled()) {
+                const fileId = historyRecord.filePath.replace('gdrive://', '');
+                const gResult = await streamFromGDrive(fileId);
+                if (gResult) {
+                    if (format === 'pdf') {
+                        res.setHeader('Content-Type', 'application/pdf');
+                        res.setHeader('Content-Disposition', `inline; filename="${historyRecord.namaFile || 'document'}.pdf"`);
+                    } else {
+                        res.setHeader('Content-Type', gResult.mimeType);
+                        res.setHeader('Content-Disposition', `attachment; filename="${historyRecord.namaFile || 'document'}.docx"`);
+                    }
+                    res.setHeader('Cache-Control', 'public, max-age=86400');
+                    gResult.stream.pipe(res);
+                    return;
+                }
+            }
+        }
+
+        // Fallback: find the file in local spl-output directory
         const files = fs.readdirSync(SPL_OUTPUT_DIR).filter(f => (f.startsWith(`${historyId}_`) || f.startsWith(`spl_${historyId}_`)) && f.endsWith(`.${format}`));
         if (files.length === 0) return res.status(404).json({ error: `File ${(format as string).toUpperCase()} tidak ditemukan` });
 
@@ -50,11 +72,9 @@ router.get('/spl-file/:format/:historyId', requireAuth, async (req, res) => {
         if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'File tidak ditemukan di server' });
 
         if (format === 'pdf') {
-            // Inline for preview
             res.setHeader('Content-Type', 'application/pdf');
             res.setHeader('Content-Disposition', `inline; filename="${files[0]}"`);
         } else {
-            // Download DOCX
             res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
             res.setHeader('Content-Disposition', `attachment; filename="${files[0]}"`);
         }
@@ -409,6 +429,50 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
 
         // Update history with file path
         await splHistoryService.update(historyId, { filePath: docxPath });
+
+        // ===== UPLOAD TO GDRIVE =====
+        let gdriveDocxPath = '';
+        let gdrivePdfPath = '';
+        try {
+            const { uploadToGDrive, isGDriveEnabled } = await import('../utils/googleDriveClient.js');
+            if (isGDriveEnabled()) {
+                const tahun = String(item.tahunAnggaran || new Date().getFullYear());
+                const sanitizeFolderName = (s: string) => (s || '').replace(/[<>:"/\\|?*]/g, '').substring(0, 100);
+                const paketFolder = `${item.noMatrik || ''}. ${sanitizeFolderName(item.namaPaket || '')}`;
+                // Detect subfolder from template name
+                const tplNameLower = (tpl.nama || '').toLowerCase();
+                let subFolder = 'SPL';
+                if (tplNameLower.includes('bast')) subFolder = 'BAST';
+                else if (tplNameLower.includes('kontrak') || tplNameLower.includes('spk')) subFolder = 'Kontrak';
+                
+                const gDrivePath = `Kontrak/${tahun}/${paketFolder}/${subFolder}`;
+                console.log(`[GDrive] Uploading to: ${gDrivePath}`);
+
+                // Upload DOCX
+                const docxResult = await uploadToGDrive(docxPath, gDrivePath, `${safeBasename}.docx`);
+                if (docxResult.success) {
+                    gdriveDocxPath = docxResult.path;
+                    await splHistoryService.update(historyId, { filePath: docxResult.path });
+                    try { fs.unlinkSync(docxPath); } catch {}
+                    console.log(`[GDrive] DOCX uploaded: ${docxResult.path}`);
+                }
+
+                // Upload PDF if exists
+                if (hasPdf) {
+                    const pdfLocalPath = path.join(SPL_OUTPUT_DIR, `${safeBasename}.pdf`);
+                    if (fs.existsSync(pdfLocalPath)) {
+                        const pdfResult = await uploadToGDrive(pdfLocalPath, gDrivePath, `${safeBasename}.pdf`);
+                        if (pdfResult.success) {
+                            gdrivePdfPath = pdfResult.path;
+                            try { fs.unlinkSync(pdfLocalPath); } catch {}
+                            console.log(`[GDrive] PDF uploaded: ${pdfResult.path}`);
+                        }
+                    }
+                }
+            }
+        } catch (gErr: any) {
+            console.error('[GDrive] Upload error (non-fatal):', gErr.message);
+        }
 
         // Return JSON with history info (not blob)
         res.json({

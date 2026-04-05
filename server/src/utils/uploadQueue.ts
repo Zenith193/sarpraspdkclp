@@ -13,6 +13,7 @@ import { sekolah } from '../db/schema/sekolah.js';
 import { eq, or, and, not, like, type AnyColumn } from 'drizzle-orm';
 import { isGDriveEnabled } from '../utils/googleDriveClient.js';
 import fs from 'fs';
+import path from 'path';
 
 /**
  * Build a condition that matches items needing GDrive upload:
@@ -289,6 +290,116 @@ async function processUploadQueue() {
             await db.update(sekolah).set({ denahUploadStatus: 'failed' }).where(eq(sekolah.id, item.id));
         }
     }
+
+    // 9. MIGRATE: realisasi photos — local paths → GDrive (Kontrak/Tahun/NoMatrik NamaPaket/Realisasi/Bulan/)
+    try {
+        const { realisasi } = await import('../db/schema/kontrak.js');
+        const { matrikKegiatan } = await import('../db/schema/matrik.js');
+        const BULAN_NAMES = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+        
+        const allRealisasi = await db.select().from(realisasi).limit(20);
+        for (const r of allRealisasi) {
+            if (!r.dokumentasiPaths) continue;
+            let paths: string[] = [];
+            try { paths = JSON.parse(r.dokumentasiPaths); } catch { continue; }
+            if (!Array.isArray(paths)) continue;
+            
+            // Check if any path is still local
+            const hasLocal = paths.some(p => p && !p.startsWith('gdrive://'));
+            if (!hasLocal) continue;
+            
+            // Get matrik info for folder structure
+            let matrikInfo: any = null;
+            if (r.matrikId) {
+                const mRows = await db.select().from(matrikKegiatan).where(eq(matrikKegiatan.id, r.matrikId));
+                matrikInfo = mRows[0];
+            }
+            
+            const tahun = String(r.tahun || new Date().getFullYear());
+            const sanitize = (s: string) => (s || '').replace(/[<>:"/\\|?*]/g, '').substring(0, 100);
+            const paketFolder = `${matrikInfo?.noMatrik || r.matrikId || 'XX'}. ${sanitize(matrikInfo?.namaPaket || '')}`;
+            const bulanName = BULAN_NAMES[(r.bulan || 1) - 1] || 'Unknown';
+            const gDrivePath = `Kontrak/${tahun}/${paketFolder}/Realisasi/${bulanName}`;
+            
+            const newPaths: string[] = [];
+            let changed = false;
+            for (const p of paths) {
+                if (!p || p.startsWith('gdrive://')) { newPaths.push(p); continue; }
+                // Resolve local file path
+                const basename = p.replace(/.*[/\\]/, '');
+                const uploadDir = process.env.UPLOAD_DIR || './uploads';
+                const localCandidates = [
+                    p,
+                    `${uploadDir}/kontrak/${basename}`,
+                    `./uploads/kontrak/${basename}`,
+                ];
+                let localFile = '';
+                for (const c of localCandidates) {
+                    const resolved = path.resolve(c);
+                    if (fs.existsSync(resolved)) { localFile = resolved; break; }
+                }
+                if (!localFile) { newPaths.push(p); continue; }
+                
+                try {
+                    const result = await uploadFileToGDrive(localFile, 'kontrak-migrate', gDrivePath);
+                    newPaths.push(result.path);
+                    try { fs.unlinkSync(localFile); } catch {}
+                    changed = true;
+                    console.log(`[Queue] Migrate realisasi foto #${r.id} → GDrive ✅`);
+                } catch { newPaths.push(p); }
+            }
+            if (changed) {
+                await db.update(realisasi).set({ dokumentasiPaths: JSON.stringify(newPaths) }).where(eq(realisasi.id, r.id));
+            }
+        }
+    } catch (e: any) { console.error('[Queue] Realisasi migrate error:', e.message); }
+    
+    // 10. MIGRATE: spl_generated — local DOCX/PDF → GDrive
+    try {
+        const { splGenerated } = await import('../db/schema/matrik.js');
+        const { matrikKegiatan } = await import('../db/schema/matrik.js');
+        
+        // Find spl_generated with local file paths (not gdrive://)
+        const localSpl = await db.select({
+            spl: splGenerated,
+            noMatrik: matrikKegiatan.noMatrik,
+            namaPaket: matrikKegiatan.namaPaket,
+            tahunAnggaran: matrikKegiatan.tahunAnggaran,
+        }).from(splGenerated)
+          .leftJoin(matrikKegiatan, eq(splGenerated.matrikId, matrikKegiatan.id))
+          .where(and(
+              not(like(splGenerated.filePath, 'gdrive://%')),
+              eq(splGenerated.uploadStatus, 'done')
+          ))
+          .limit(5);
+        
+        for (const row of localSpl) {
+            if (!row.spl.filePath || !fs.existsSync(row.spl.filePath)) continue;
+            
+            const tahun = String(row.tahunAnggaran || new Date().getFullYear());
+            const sanitize = (s: string) => (s || '').replace(/[<>:"/\\|?*]/g, '').substring(0, 100);
+            const paketFolder = `${row.noMatrik || 'XX'}. ${sanitize(row.namaPaket || '')}`;
+            const gDrivePath = `Kontrak/${tahun}/${paketFolder}/SPL`;
+            
+            try {
+                const result = await uploadFileToGDrive(row.spl.filePath, 'kontrak-migrate', gDrivePath);
+                const oldPath = row.spl.filePath;
+                await db.update(splGenerated).set({ filePath: result.path }).where(eq(splGenerated.id, row.spl.id));
+                try { fs.unlinkSync(oldPath); } catch {}
+                console.log(`[Queue] Migrate SPL #${row.spl.id} → GDrive ✅`);
+                
+                // Also try to upload corresponding PDF
+                const pdfPath = oldPath.replace(/\.docx$/i, '.pdf');
+                if (fs.existsSync(pdfPath)) {
+                    await uploadFileToGDrive(pdfPath, 'kontrak-migrate', gDrivePath);
+                    try { fs.unlinkSync(pdfPath); } catch {}
+                    console.log(`[Queue] Migrate SPL PDF #${row.spl.id} → GDrive ✅`);
+                }
+            } catch (e: any) {
+                console.error(`[Queue] Migrate SPL #${row.spl.id} failed:`, e.message);
+            }
+        }
+    } catch (e: any) { console.error('[Queue] SPL migrate error:', e.message); }
 }
 
 // ==================== MAIN LOOP ====================

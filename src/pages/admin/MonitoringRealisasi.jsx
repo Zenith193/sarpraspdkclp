@@ -9,6 +9,11 @@ const BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus
 // Fix image path — use file proxy that searches multiple directories
 const fixImgPath = (p) => {
     if (!p) return '';
+    // Handle GDrive paths: gdrive://fileId → proxy through kontrak file endpoint
+    if (p.startsWith('gdrive://')) {
+        const fileId = p.replace('gdrive://', '');
+        return '/api/file/kontrak/' + encodeURIComponent(fileId);
+    }
     const match = p.match(/\/uploads\/kontrak\/(.+)$/);
     if (match) return '/api/file/kontrak/' + encodeURIComponent(match[1]);
     return p;
