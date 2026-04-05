@@ -19,6 +19,7 @@ const MonitoringRealisasi = () => {
     const [realisasiData, setRealisasiData] = useState([]); // all submitted realisasi
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
+    const [filterJenis, setFilterJenis] = useState('');
     const [pageSize, setPageSize] = useState(15);
 
     // Lightbox state
@@ -84,18 +85,30 @@ const MonitoringRealisasi = () => {
         return { totalPaket, totalAnakan, totalRealisasi, avg, belowTarget };
     }, [matrikList, realisasiData]);
 
-    // Filter & pagination
     const filtered = useMemo(() => {
+        let list = matrikList;
+        // Filter by jenis
+        if (filterJenis) {
+            list = list.filter(k => (k.jenisPengadaan || '') === filterJenis);
+        }
+        // Filter by search
         const q = search.toLowerCase();
-        if (!q) return matrikList;
-        return matrikList.filter(k =>
+        if (!q) return list;
+        return list.filter(k =>
             (k.namaPaket || '').toLowerCase().includes(q) ||
             (k.penyedia || '').toLowerCase().includes(q) ||
             (k.noMatrik || '').toLowerCase().includes(q) ||
             (k.jenisPengadaan || '').toLowerCase().includes(q) ||
             (k.anakan || []).some(a => (a.namaSekolah || '').toLowerCase().includes(q))
         );
-    }, [matrikList, search]);
+    }, [matrikList, search, filterJenis]);
+
+    // Unique jenis list from data
+    const jenisList = useMemo(() => {
+        const set = new Set();
+        matrikList.forEach(k => { if (k.jenisPengadaan) set.add(k.jenisPengadaan); });
+        return [...set].sort();
+    }, [matrikList]);
 
     const totalPages = Math.ceil(filtered.length / pageSize) || 1;
     const paged = useMemo(() => {
@@ -430,6 +443,14 @@ const MonitoringRealisasi = () => {
                         <div className="table-search">
                             <Search size={16} className="search-icon" />
                             <input placeholder="Cari penyedia, paket, sekolah..." value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Jenis:</span>
+                            <select value={filterJenis} onChange={e => { setFilterJenis(e.target.value); setCurrentPage(1); }}
+                                style={{ padding: '4px 8px', background: 'var(--bg-input)', border: '1px solid var(--border-input)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.8rem' }}>
+                                <option value="">Semua Jenis</option>
+                                {jenisList.map(j => <option key={j} value={j}>{j}</option>)}
+                            </select>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Tampil:</span>
