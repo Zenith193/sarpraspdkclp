@@ -977,30 +977,41 @@ function buildWordTableXml(items: { nama: string; nilai: number }[], total: numb
     return '<w:tbl>' + tblPr + tblGrid + headerRow + dataRows + totalRow + '</w:tbl>';
 }
 
+// Helper: build a bold title paragraph
+function buildTitleParagraph(text: string, font: string, sz: string): string {
+    const rPrParts: string[] = [];
+    if (font) rPrParts.push(`<w:rFonts w:ascii="${font}" w:hAnsi="${font}" w:cs="${font}"/>`);
+    rPrParts.push(`<w:sz w:val="${sz}"/><w:szCs w:val="${sz}"/>`);
+    rPrParts.push('<w:b/><w:bCs/>');
+    const rPr = '<w:rPr>' + rPrParts.join('') + '</w:rPr>';
+    return '<w:p><w:pPr><w:spacing w:after="120" w:line="240" w:lineRule="auto"/>' + rPr + '</w:pPr>' +
+        '<w:r>' + rPr + '<w:t xml:space="preserve">' + xmlEscape(text) + '</w:t></w:r></w:p>';
+}
+
+// Helper: build empty paragraph (spacer)
+function buildEmptyParagraph(): string {
+    return '<w:p><w:pPr><w:spacing w:after="200" w:line="240" w:lineRule="auto"/></w:pPr></w:p>';
+}
+
+// Standard table borders (visible, 1pt black)
+function stdBorders(): string {
+    const b = '<w:top w:val="single" w:sz="12" w:space="0" w:color="000000"/>' +
+        '<w:left w:val="single" w:sz="12" w:space="0" w:color="000000"/>' +
+        '<w:bottom w:val="single" w:sz="12" w:space="0" w:color="000000"/>' +
+        '<w:right w:val="single" w:sz="12" w:space="0" w:color="000000"/>' +
+        '<w:insideH w:val="single" w:sz="6" w:space="0" w:color="000000"/>' +
+        '<w:insideV w:val="single" w:sz="6" w:space="0" w:color="000000"/>';
+    return '<w:tblBorders>' + b + '</w:tblBorders>';
+}
+
 // Build Personil table (Personil Inti yang ditugaskan)
 function buildPersonilTableXml(items: any[], fontInfo: { font: string; sz: string } = { font: '', sz: '' }): string {
     const SZ = fontInfo.sz || '24';
     const FONT = fontInfo.font || '';
 
-    function tblProps(): string {
-        return '<w:tblPr>' +
-            '<w:tblStyle w:val="TableGrid"/>' +
-            '<w:tblW w:w="5000" w:type="pct"/>' +
-            '<w:tblBorders>' +
-            '<w:top w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
-            '<w:left w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
-            '<w:bottom w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
-            '<w:right w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
-            '<w:insideH w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
-            '<w:insideV w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
-            '</w:tblBorders>' +
-            '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>' +
-            '</w:tblPr>';
-    }
-
     function cell(text: string, widthPct: number, opts: { bold?: boolean; center?: boolean } = {}): string {
         const safe = xmlEscape(text);
-        const tcPr = `<w:tcPr><w:tcW w:w="${widthPct}" w:type="pct"/></w:tcPr>`;
+        const tcPr = `<w:tcPr><w:tcW w:w="${widthPct}" w:type="pct"/><w:vAlign w:val="center"/></w:tcPr>`;
         const rPrParts: string[] = [];
         if (FONT) rPrParts.push(`<w:rFonts w:ascii="${FONT}" w:hAnsi="${FONT}" w:cs="${FONT}"/>`);
         rPrParts.push(`<w:sz w:val="${SZ}"/><w:szCs w:val="${SZ}"/>`);
@@ -1014,53 +1025,44 @@ function buildPersonilTableXml(items: any[], fontInfo: { font: string; sz: strin
         return '<w:tc>' + tcPr + '<w:p>' + pPr + '<w:r>' + rPr + '<w:t xml:space="preserve">' + safe + '</w:t></w:r></w:p></w:tc>';
     }
 
-    const grid = '<w:tblGrid><w:gridCol w:w="600"/><w:gridCol w:w="3200"/><w:gridCol w:w="2400"/><w:gridCol w:w="2800"/></w:tblGrid>';
+    const tblPr = '<w:tblPr>' +
+        '<w:tblStyle w:val="TableGrid"/>' +
+        '<w:tblW w:w="5000" w:type="pct"/>' +
+        stdBorders() +
+        '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>' +
+        '</w:tblPr>';
+
+    const grid = '<w:tblGrid><w:gridCol w:w="500"/><w:gridCol w:w="3000"/><w:gridCol w:w="2200"/><w:gridCol w:w="3300"/></w:tblGrid>';
 
     const headerRow = '<w:tr>' +
-        cell('No', 300, { bold: true, center: true }) +
-        cell('Nama Personel', 1700, { bold: true, center: true }) +
-        cell('Posisi', 1300, { bold: true, center: true }) +
-        cell('Sertifikat Kompetensi', 1700, { bold: true, center: true }) +
+        cell('No', 280, { bold: true, center: true }) +
+        cell('Nama Personel', 1650, { bold: true, center: true }) +
+        cell('Posisi', 1220, { bold: true, center: true }) +
+        cell('Sertifikat Kompetensi', 1850, { bold: true, center: true }) +
         '</w:tr>';
 
     const dataRows = items.map((it, i) =>
         '<w:tr>' +
-        cell(String(i + 1), 300, { center: true }) +
-        cell(it.nama || '', 1700) +
-        cell(it.posisi || '', 1300) +
-        cell(it.sertifikasi || '', 1700) +
+        cell(String(i + 1), 280) +
+        cell(it.nama || '', 1650) +
+        cell(it.posisi || '', 1220) +
+        cell(it.sertifikasi || '', 1850) +
         '</w:tr>'
     ).join('');
 
-    return '<w:tbl>' + tblProps() + grid + headerRow + dataRows + '</w:tbl>';
+    // Title + Table
+    return buildTitleParagraph('Personil Inti yang ditugaskan :', FONT, SZ) +
+        '<w:tbl>' + tblPr + grid + headerRow + dataRows + '</w:tbl>';
 }
 
 // Build Peralatan table (Peralatan yang digunakan)
 function buildPeralatanTableXml(items: any[], fontInfo: { font: string; sz: string } = { font: '', sz: '' }): string {
-    // Use slightly smaller size for 7 columns, but respect template font
-    const detectedSz = fontInfo.sz ? String(Math.max(Number(fontInfo.sz) - 4, 18)) : '20';
-    const SZ = detectedSz;
+    const SZ = fontInfo.sz || '24';
     const FONT = fontInfo.font || '';
-
-    function tblProps(): string {
-        return '<w:tblPr>' +
-            '<w:tblStyle w:val="TableGrid"/>' +
-            '<w:tblW w:w="5000" w:type="pct"/>' +
-            '<w:tblBorders>' +
-            '<w:top w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
-            '<w:left w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
-            '<w:bottom w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
-            '<w:right w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
-            '<w:insideH w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
-            '<w:insideV w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
-            '</w:tblBorders>' +
-            '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>' +
-            '</w:tblPr>';
-    }
 
     function cell(text: string, widthPct: number, opts: { bold?: boolean; center?: boolean } = {}): string {
         const safe = xmlEscape(text);
-        const tcPr = `<w:tcPr><w:tcW w:w="${widthPct}" w:type="pct"/></w:tcPr>`;
+        const tcPr = `<w:tcPr><w:tcW w:w="${widthPct}" w:type="pct"/><w:vAlign w:val="center"/></w:tcPr>`;
         const rPrParts: string[] = [];
         if (FONT) rPrParts.push(`<w:rFonts w:ascii="${FONT}" w:hAnsi="${FONT}" w:cs="${FONT}"/>`);
         rPrParts.push(`<w:sz w:val="${SZ}"/><w:szCs w:val="${SZ}"/>`);
@@ -1074,31 +1076,40 @@ function buildPeralatanTableXml(items: any[], fontInfo: { font: string; sz: stri
         return '<w:tc>' + tcPr + '<w:p>' + pPr + '<w:r>' + rPr + '<w:t xml:space="preserve">' + safe + '</w:t></w:r></w:p></w:tc>';
     }
 
-    // Wider columns to prevent text truncation
-    const grid = '<w:tblGrid><w:gridCol w:w="400"/><w:gridCol w:w="1600"/><w:gridCol w:w="1400"/><w:gridCol w:w="1100"/><w:gridCol w:w="800"/><w:gridCol w:w="1000"/><w:gridCol w:w="1200"/></w:tblGrid>';
+    const tblPr = '<w:tblPr>' +
+        '<w:tblStyle w:val="TableGrid"/>' +
+        '<w:tblW w:w="5000" w:type="pct"/>' +
+        stdBorders() +
+        '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>' +
+        '</w:tblPr>';
+
+    const grid = '<w:tblGrid><w:gridCol w:w="450"/><w:gridCol w:w="1500"/><w:gridCol w:w="1200"/><w:gridCol w:w="1100"/><w:gridCol w:w="900"/><w:gridCol w:w="1100"/><w:gridCol w:w="1250"/></w:tblGrid>';
 
     const headerRow = '<w:tr>' +
-        cell('No', 270, { bold: true, center: true }) +
-        cell('Nama Alat', 1100, { bold: true, center: true }) +
-        cell('Merk & Tipe', 950, { bold: true, center: true }) +
+        cell('No', 300, { bold: true, center: true }) +
+        cell('Nama Alat', 1000, { bold: true, center: true }) +
+        cell('Merk & Tipe', 800, { bold: true, center: true }) +
         cell('Kapasitas', 730, { bold: true, center: true }) +
-        cell('Jumlah', 530, { bold: true, center: true }) +
-        cell('Kondisi', 670, { bold: true, center: true }) +
-        cell('Status Milik', 750, { bold: true, center: true }) +
+        cell('Jumlah', 600, { bold: true, center: true }) +
+        cell('Kondisi', 730, { bold: true, center: true }) +
+        cell('Status Milik', 840, { bold: true, center: true }) +
         '</w:tr>';
 
     const dataRows = items.map((it, i) => {
         const merkTipe = [it.merk, it.type].filter(Boolean).join(' ');
         return '<w:tr>' +
-            cell(String(i + 1), 270, { center: true }) +
-            cell(it.nama || '', 1100) +
-            cell(merkTipe, 950) +
+            cell(String(i + 1), 300, { center: true }) +
+            cell(it.nama || '', 1000) +
+            cell(merkTipe, 800, { center: true }) +
             cell(it.kapasitas || '', 730, { center: true }) +
-            cell(String(it.jumlah || ''), 530, { center: true }) +
-            cell(it.kondisi || '', 670, { center: true }) +
-            cell(it.statusKepemilikan || '', 750, { center: true }) +
+            cell(String(it.jumlah || ''), 600, { center: true }) +
+            cell(it.kondisi || '', 730, { center: true }) +
+            cell(it.statusKepemilikan || '', 840, { center: true }) +
             '</w:tr>';
     }).join('');
 
-    return '<w:tbl>' + tblProps() + grid + headerRow + dataRows + '</w:tbl>';
+    // Spacer + Title + Table
+    return buildEmptyParagraph() +
+        buildTitleParagraph('Peralatan yang digunakan :', FONT, SZ) +
+        '<w:tbl>' + tblPr + grid + headerRow + dataRows + '</w:tbl>';
 }
