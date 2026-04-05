@@ -273,6 +273,8 @@ export const kontrakApi = {
     createRealisasi: (kontrakId, formData) => api.upload(`/kontrak/permohonan/${kontrakId}/realisasi`, formData),
     updateRealisasi: (id, data) => api.put(`/kontrak/realisasi/${id}`, data),
     deleteRealisasi: (id) => api.delete(`/kontrak/realisasi/${id}`),
+    allRealisasi: () => api.get('/kontrak/realisasi/all'),
+    getAnakan: (kontrakId) => api.get(`/kontrak/permohonan/${kontrakId}/anakan`),
     // Dokumen
     getDokumen: (kontrakId) => api.get(`/kontrak/permohonan/${kontrakId}/dokumen`),
 };

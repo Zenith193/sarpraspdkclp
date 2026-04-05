@@ -1,4 +1,4 @@
-import { pgTable, text, integer, serial, bigint, date, timestamp } from 'drizzle-orm/pg-core';
+import { pgTable, text, integer, serial, bigint, date, timestamp, numeric } from 'drizzle-orm/pg-core';
 import { user } from './auth';
 import { perusahaan } from './perusahaan';
 import { matrikKegiatan } from './matrik';
@@ -55,11 +55,12 @@ export const realisasi = pgTable('realisasi', {
     id: serial('id').primaryKey(),
     kontrakId: integer('kontrak_id').notNull().references(() => permohonanKontrak.id, { onDelete: 'cascade' }),
     namaSekolah: text('nama_sekolah'),
+    matrikId: integer('matrik_id').references(() => matrikKegiatan.id),
     tahun: integer('tahun').notNull(),
     bulan: integer('bulan').notNull(),
-    targetPersen: integer('target_persen').default(0),
-    realisasiPersen: integer('realisasi_persen').default(0),
-    dokumentasiPath: text('dokumentasi_path'),
+    targetPersen: numeric('target_persen', { precision: 5, scale: 2 }).default('0'),
+    realisasiPersen: numeric('realisasi_persen', { precision: 5, scale: 2 }).default('0'),
+    dokumentasiPaths: text('dokumentasi_paths'), // JSON array of up to 6 image paths
     keterangan: text('keterangan'),
     createdBy: text('created_by').references(() => user.id),
     createdAt: timestamp('created_at').defaultNow(),

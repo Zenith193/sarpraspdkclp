@@ -166,6 +166,33 @@ router.delete('/permohonan/:id', requireAuth, async (req, res) => {
 });
 
 // === REALISASI ===
+
+// Multi-file upload for realisasi (up to 6 images)
+const realisasiUpload = multer({
+    storage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB per file
+    fileFilter: (_req: any, file: any, cb: any) => {
+        if (file.mimetype.startsWith('image/')) cb(null, true);
+        else cb(new Error('Hanya file gambar yang diizinkan'));
+    },
+}).array('dokumentasi', 6);
+
+// All realisasi (admin/verifikator monitoring)
+router.get('/realisasi/all', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
+    try {
+        const data = await kontrakService.listAllRealisasi();
+        res.json(data);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// Get anakan for a kontrak (for dropdown)
+router.get('/permohonan/:id/anakan', requireAuth, async (req, res) => {
+    try {
+        const data = await kontrakService.getAnakan(Number(req.params.id));
+        res.json(data);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 router.get('/permohonan/:id/realisasi', requireAuth, async (req, res) => {
     try {
         const data = await kontrakService.listRealisasi(Number(req.params.id));
@@ -173,10 +200,19 @@ router.get('/permohonan/:id/realisasi', requireAuth, async (req, res) => {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/permohonan/:id/realisasi', requireAuth, upload.single('dokumentasi'), async (req, res) => {
+router.post('/permohonan/:id/realisasi', requireAuth, (req: any, res: any, next: any) => {
+    realisasiUpload(req, res, (err: any) => {
+        if (err) return res.status(400).json({ error: err.message });
+        next();
+    });
+}, async (req: any, res) => {
     try {
         const data = req.body;
-        if (req.file) data.dokumentasiPath = `/uploads/kontrak/${req.file.filename}`;
+        // Collect uploaded file paths
+        if (req.files && req.files.length > 0) {
+            const paths = (req.files as any[]).map(f => `/uploads/kontrak/${f.filename}`);
+            data.dokumentasiPaths = JSON.stringify(paths);
+        }
         const created = await kontrakService.createRealisasi(Number(req.params.id), data, req.user!.id);
         res.status(201).json(created);
     } catch (e: any) { res.status(400).json({ error: e.message }); }

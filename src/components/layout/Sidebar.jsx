@@ -4,7 +4,7 @@ import {
     LayoutDashboard, Database, FileText, DollarSign, Activity, Users, FileSpreadsheet,
     History, Grid3X3, FilePlus, Wallet, Map, Upload, Trophy, LogOut, School,
     ChevronLeft, ChevronRight, CheckCircle, Star, ClipboardList, Eye,
-    Shield, HardDrive, Timer, Megaphone, Briefcase, ClipboardCheck
+    Shield, HardDrive, Timer, Megaphone, Briefcase, ClipboardCheck, Target, BarChart3
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import useSettingsStore, { ALL_MENUS } from '../../store/settingsStore';
@@ -76,6 +76,7 @@ const Sidebar = ({ collapsed, onToggle, className = '' }) => {
         { label: 'Iklan', icon: <Megaphone size={18} />, path: '/admin/iklan' },
         { label: 'Manajemen Penyedia', icon: <Briefcase size={18} />, path: '/admin/manajemen-penyedia' },
         { label: 'Manajemen Kontrak', icon: <ClipboardCheck size={18} />, path: '/admin/manajemen-kontrak' },
+        { label: 'Monitoring Realisasi', icon: <BarChart3 size={18} />, path: '/admin/monitoring-realisasi' },
     ]);
 
     const adminSettingsMenu = filterByAccess([
@@ -101,6 +102,7 @@ const Sidebar = ({ collapsed, onToggle, className = '' }) => {
         { label: 'Iklan', icon: <Megaphone size={18} />, path: '/verifikator/iklan' },
         { label: 'Manajemen Penyedia', icon: <Briefcase size={18} />, path: '/verifikator/manajemen-penyedia' },
         { label: 'Manajemen Kontrak', icon: <ClipboardCheck size={18} />, path: '/verifikator/manajemen-kontrak' },
+        { label: 'Monitoring Realisasi', icon: <BarChart3 size={18} />, path: '/verifikator/monitoring-realisasi' },
     ]);
 
     const korwilMenu = filterByAccess([
@@ -127,6 +129,7 @@ const Sidebar = ({ collapsed, onToggle, className = '' }) => {
 
     const penyediaMenu = [
         { label: 'Dashboard', icon: <LayoutDashboard size={18} />, path: '/penyedia/dashboard' },
+        { label: 'Realisasi', icon: <Target size={18} />, path: '/penyedia/realisasi' },
         { label: 'Riwayat Kontrak', icon: <History size={18} />, path: '/penyedia/riwayat-kontrak' },
     ];
 

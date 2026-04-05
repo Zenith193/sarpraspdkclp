@@ -1,0 +1,471 @@
+import { useState, useMemo, useEffect, useRef } from 'react';
+import { Search, ChevronLeft, ChevronRight, Target, BarChart3, Camera, Trash2, Edit, X, Calendar, ArrowLeft, Image as ImageIcon, Plus, ChevronDown } from 'lucide-react';
+import { kontrakApi } from '../../api/index';
+import { formatCurrency } from '../../utils/formatters';
+import toast from 'react-hot-toast';
+
+const BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+const JENIS_ALLOWED = ['Jasa Konsultansi Pengawasan', 'Pekerjaan Konstruksi', 'Pengadaan Barang'];
+const currentYear = new Date().getFullYear();
+
+const RealisasiPenyedia = () => {
+    const [kontrakList, setKontrakList] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [search, setSearch] = useState('');
+    const [pageSize, setPageSize] = useState(10);
+    const [currentPage, setCurrentPage] = useState(1);
+
+    // Detail view
+    const [activeKontrak, setActiveKontrak] = useState(null);
+    const [realisasiList, setRealisasiList] = useState([]);
+    const [anakan, setAnakan] = useState([]);
+    const [loadingDetail, setLoadingDetail] = useState(false);
+
+    // Form state
+    const [formOpen, setFormOpen] = useState(false);
+    const [editId, setEditId] = useState(null);
+    const [form, setForm] = useState({
+        namaSekolah: '', matrikId: '', tahun: currentYear,
+        bulan: new Date().getMonth() + 1, targetPersen: '', realisasiPersen: '', keterangan: ''
+    });
+    const [files, setFiles] = useState([null, null, null, null, null, null]);
+    const fileRefs = [useRef(), useRef(), useRef(), useRef(), useRef(), useRef()];
+    const [submitting, setSubmitting] = useState(false);
+
+    // Fetch kontrak list
+    useEffect(() => {
+        kontrakApi.listPermohonan().then(data => {
+            const arr = Array.isArray(data) ? data : (data?.data || []);
+            // Only show verified contracts with allowed jenis
+            const filtered = arr.filter(k =>
+                k.status === 'Diverifikasi' &&
+                JENIS_ALLOWED.some(j => (k.jenisPengadaan || '').includes(j))
+            );
+            setKontrakList(filtered);
+        }).catch(e => toast.error('Gagal memuat kontrak')).finally(() => setLoading(false));
+    }, []);
+
+    // Filter & pagination
+    const filtered = useMemo(() => {
+        const q = search.toLowerCase();
+        if (!q) return kontrakList;
+        return kontrakList.filter(k =>
+            (k.namaPaket || '').toLowerCase().includes(q) ||
+            (k.noSpk || '').toLowerCase().includes(q) ||
+            (k.namaPerusahaan || '').toLowerCase().includes(q)
+        );
+    }, [kontrakList, search]);
+
+    const totalPages = Math.ceil(filtered.length / pageSize) || 1;
+    const paged = useMemo(() => {
+        const s = (currentPage - 1) * pageSize;
+        return filtered.slice(s, s + pageSize);
+    }, [filtered, currentPage, pageSize]);
+
+    // Open detail
+    const openDetail = async (kontrak) => {
+        setActiveKontrak(kontrak);
+        setLoadingDetail(true);
+        setFormOpen(false);
+        setEditId(null);
+        try {
+            const [rl, ak] = await Promise.all([
+                kontrakApi.listRealisasi(kontrak.id),
+                kontrakApi.getAnakan(kontrak.id).catch(() => [])
+            ]);
+            setRealisasiList(Array.isArray(rl) ? rl : (rl?.data || []));
+            setAnakan(Array.isArray(ak) ? ak : (ak?.data || []));
+        } catch { toast.error('Gagal memuat data realisasi'); }
+        setLoadingDetail(false);
+    };
+
+    // Reset form
+    const resetForm = () => {
+        setForm({ namaSekolah: activeKontrak?.namaSekolah || '', matrikId: '', tahun: currentYear, bulan: new Date().getMonth() + 1, targetPersen: '', realisasiPersen: '', keterangan: '' });
+        setFiles([null, null, null, null, null, null]);
+        setEditId(null);
+    };
+
+    const handleAnakanChange = (e) => {
+        const id = e.target.value;
+        if (!id) {
+            setForm(prev => ({ ...prev, matrikId: '', namaSekolah: '' }));
+            return;
+        }
+        const child = anakan.find(a => String(a.id) === id);
+        setForm(prev => ({ ...prev, matrikId: id, namaSekolah: child?.namaSekolah || '' }));
+    };
+
+    const handleFileChange = (index, e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setFiles(prev => { const n = [...prev]; n[index] = file; return n; });
+    };
+
+    const handleSubmit = async () => {
+        if (!form.namaSekolah) return toast.error('Nama Sekolah wajib diisi');
+        if (!form.targetPersen && !form.realisasiPersen) return toast.error('Target / Realisasi wajib diisi');
+
+        setSubmitting(true);
+        try {
+            if (editId) {
+                // Update (no file re-upload for simplicity)
+                await kontrakApi.updateRealisasi(editId, {
+                    namaSekolah: form.namaSekolah,
+                    matrikId: form.matrikId || null,
+                    tahun: form.tahun,
+                    bulan: form.bulan,
+                    targetPersen: form.targetPersen,
+                    realisasiPersen: form.realisasiPersen,
+                    keterangan: form.keterangan,
+                });
+                toast.success('Realisasi berhasil diperbarui');
+            } else {
+                const fd = new FormData();
+                fd.append('namaSekolah', form.namaSekolah);
+                if (form.matrikId) fd.append('matrikId', form.matrikId);
+                fd.append('tahun', String(form.tahun));
+                fd.append('bulan', String(form.bulan));
+                fd.append('targetPersen', String(form.targetPersen || 0));
+                fd.append('realisasiPersen', String(form.realisasiPersen || 0));
+                if (form.keterangan) fd.append('keterangan', form.keterangan);
+                files.forEach(f => { if (f) fd.append('dokumentasi', f); });
+                await kontrakApi.createRealisasi(activeKontrak.id, fd);
+                toast.success('Realisasi berhasil ditambahkan');
+            }
+            // Refresh
+            const rl = await kontrakApi.listRealisasi(activeKontrak.id);
+            setRealisasiList(Array.isArray(rl) ? rl : []);
+            resetForm();
+            setFormOpen(false);
+        } catch (e) {
+            toast.error('Gagal: ' + (e.message || ''));
+        }
+        setSubmitting(false);
+    };
+
+    const handleEdit = (item) => {
+        setEditId(item.id);
+        setForm({
+            namaSekolah: item.namaSekolah || '',
+            matrikId: item.matrikId || '',
+            tahun: item.tahun,
+            bulan: item.bulan,
+            targetPersen: item.targetPersen || '',
+            realisasiPersen: item.realisasiPersen || '',
+            keterangan: item.keterangan || '',
+        });
+        setFiles([null, null, null, null, null, null]);
+        setFormOpen(true);
+    };
+
+    const handleDelete = async (id) => {
+        if (!confirm('Hapus data realisasi ini?')) return;
+        try {
+            await kontrakApi.deleteRealisasi(id);
+            const rl = await kontrakApi.listRealisasi(activeKontrak.id);
+            setRealisasiList(Array.isArray(rl) ? rl : []);
+            toast.success('Data realisasi dihapus');
+        } catch { toast.error('Gagal menghapus'); }
+    };
+
+    const parsePaths = (p) => { try { return JSON.parse(p); } catch { return []; } };
+
+    // ===== DETAIL VIEW =====
+    if (activeKontrak) {
+        return (
+            <div>
+                <button className="btn btn-ghost btn-sm" onClick={() => setActiveKontrak(null)}
+                    style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 16 }}>
+                    <ArrowLeft size={16} /> Kembali ke Daftar Kontrak
+                </button>
+
+                {/* Header info */}
+                <div className="table-container" style={{ marginBottom: 16, padding: 20 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
+                        <div>
+                            <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Realisasi Kontrak</h2>
+                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: 4 }}>{activeKontrak.namaPaket}</div>
+                            <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: 2 }}>
+                                No. SPK: <strong>{activeKontrak.noSpk || '-'}</strong> • {activeKontrak.jenisPengadaan}
+                            </div>
+                            {activeKontrak.nilaiKontrak && (
+                                <div style={{ fontSize: '0.8rem', color: 'var(--accent-green)', marginTop: 2, fontWeight: 600 }}>
+                                    Nilai Kontrak: {formatCurrency(activeKontrak.nilaiKontrak)}
+                                </div>
+                            )}
+                        </div>
+                        <button className="btn btn-primary btn-sm" onClick={() => { resetForm(); setFormOpen(!formOpen); }}
+                            style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <Plus size={14} /> Tambah Realisasi
+                        </button>
+                    </div>
+                </div>
+
+                {/* Form */}
+                {formOpen && (
+                    <div className="table-container" style={{ marginBottom: 16, padding: 20 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                            <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600 }}>
+                                {editId ? 'Edit Realisasi' : 'Tambah Realisasi Baru'}
+                            </h3>
+                            <button className="btn-icon" onClick={() => { setFormOpen(false); resetForm(); }}><X size={18} /></button>
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 16 }}>
+                            {/* Anakan dropdown */}
+                            {anakan.length > 0 && (
+                                <div>
+                                    <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: 4, color: 'var(--text-secondary)' }}>Pilih Sekolah (Anakan)</label>
+                                    <select value={form.matrikId} onChange={handleAnakanChange}
+                                        style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.85rem' }}>
+                                        <option value="">-- Pilih Sekolah --</option>
+                                        {anakan.map(a => (
+                                            <option key={a.id} value={a.id}>{a.namaSekolah || a.namaPaket} ({a.noMatrik})</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+                            <div>
+                                <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: 4, color: 'var(--text-secondary)' }}>Nama Sekolah</label>
+                                <input value={form.namaSekolah} onChange={e => setForm(prev => ({ ...prev, namaSekolah: e.target.value }))}
+                                    placeholder="Nama Sekolah" readOnly={anakan.length > 0 && !!form.matrikId}
+                                    style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border-color)', background: anakan.length > 0 && form.matrikId ? 'var(--bg-secondary)' : 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.85rem' }} />
+                            </div>
+                            <div>
+                                <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: 4, color: 'var(--text-secondary)' }}>Tahun</label>
+                                <input type="number" value={form.tahun} onChange={e => setForm(prev => ({ ...prev, tahun: Number(e.target.value) }))}
+                                    style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.85rem' }} />
+                            </div>
+                            <div>
+                                <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: 4, color: 'var(--text-secondary)' }}>Bulan</label>
+                                <select value={form.bulan} onChange={e => setForm(prev => ({ ...prev, bulan: Number(e.target.value) }))}
+                                    style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.85rem' }}>
+                                    {BULAN.map((b, i) => <option key={i} value={i + 1}>{b}</option>)}
+                                </select>
+                            </div>
+                            <div>
+                                <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: 4, color: 'var(--text-secondary)' }}>Target (%)</label>
+                                <input type="number" step="0.01" value={form.targetPersen} onChange={e => setForm(prev => ({ ...prev, targetPersen: e.target.value }))}
+                                    placeholder="0.00" min="0" max="100"
+                                    style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.85rem' }} />
+                            </div>
+                            <div>
+                                <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: 4, color: 'var(--text-secondary)' }}>Realisasi (%)</label>
+                                <input type="number" step="0.01" value={form.realisasiPersen} onChange={e => setForm(prev => ({ ...prev, realisasiPersen: e.target.value }))}
+                                    placeholder="0.00" min="0" max="100"
+                                    style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.85rem' }} />
+                            </div>
+                        </div>
+
+                        {/* Image uploads */}
+                        {!editId && (
+                            <div style={{ marginBottom: 16 }}>
+                                <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: 8, color: 'var(--text-secondary)' }}>Dokumentasi (max 6 gambar)</label>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8 }}>
+                                    {files.map((file, i) => (
+                                        <div key={i} onClick={() => fileRefs[i].current.click()}
+                                            style={{
+                                                position: 'relative', height: 100, borderRadius: 8, cursor: 'pointer',
+                                                border: '2px dashed var(--border-color)', display: 'flex', flexDirection: 'column',
+                                                alignItems: 'center', justifyContent: 'center', gap: 4,
+                                                background: file ? 'var(--bg-secondary)' : 'var(--bg-input)',
+                                                overflow: 'hidden', transition: 'border-color 0.2s',
+                                            }}>
+                                            {file ? (
+                                                <>
+                                                    <img src={URL.createObjectURL(file)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    <button onClick={(e) => { e.stopPropagation(); setFiles(prev => { const n = [...prev]; n[i] = null; return n; }); }}
+                                                        style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: '50%', width: 20, height: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                        <X size={12} />
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Camera size={20} style={{ color: 'var(--text-secondary)' }} />
+                                                    <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Gambar {i + 1}</span>
+                                                </>
+                                            )}
+                                            <input ref={fileRefs[i]} type="file" accept="image/*" onChange={e => handleFileChange(i, e)} style={{ display: 'none' }} />
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Keterangan */}
+                        <div style={{ marginBottom: 16 }}>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: 4, color: 'var(--text-secondary)' }}>Keterangan</label>
+                            <textarea value={form.keterangan} onChange={e => setForm(prev => ({ ...prev, keterangan: e.target.value }))}
+                                rows={2} placeholder="Catatan tambahan (opsional)"
+                                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.85rem', resize: 'vertical' }} />
+                        </div>
+
+                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+                            <button className="btn btn-ghost btn-sm" onClick={() => { setFormOpen(false); resetForm(); }}>Batal</button>
+                            <button className="btn btn-primary btn-sm" onClick={handleSubmit} disabled={submitting}
+                                style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                {submitting ? 'Menyimpan...' : editId ? 'Update' : 'Simpan'}
+                            </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* History table */}
+                <div className="table-container">
+                    <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)' }}>
+                        <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600 }}>Riwayat Realisasi</h3>
+                    </div>
+                    {loadingDetail ? (
+                        <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-secondary)' }}>Memuat...</div>
+                    ) : (
+                        <div style={{ overflowX: 'auto' }}>
+                            <table className="data-table">
+                                <thead>
+                                    <tr>
+                                        <th style={{ width: 40 }}>No</th>
+                                        <th>Sekolah</th>
+                                        <th>Bulan</th>
+                                        <th style={{ textAlign: 'center' }}>Target</th>
+                                        <th style={{ textAlign: 'center' }}>Realisasi</th>
+                                        <th>Dokumentasi</th>
+                                        <th style={{ width: 90 }}>Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {realisasiList.map((r, i) => {
+                                        const target = Number(r.targetPersen) || 0;
+                                        const real = Number(r.realisasiPersen) || 0;
+                                        const photos = parsePaths(r.dokumentasiPaths);
+                                        return (
+                                            <tr key={r.id}>
+                                                <td>{i + 1}</td>
+                                                <td style={{ fontSize: '0.82rem' }}>{r.namaSekolah || '-'}</td>
+                                                <td style={{ fontSize: '0.82rem', whiteSpace: 'nowrap' }}>{BULAN[r.bulan - 1]} {r.tahun}</td>
+                                                <td style={{ textAlign: 'center', minWidth: 100 }}>
+                                                    <div style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: 2 }}>{target.toFixed(2)}%</div>
+                                                    <div style={{ width: '100%', height: 6, background: 'var(--bg-secondary)', borderRadius: 3, overflow: 'hidden' }}>
+                                                        <div style={{ width: `${Math.min(target, 100)}%`, height: '100%', background: 'var(--accent-blue)', borderRadius: 3, transition: 'width 0.3s' }} />
+                                                    </div>
+                                                </td>
+                                                <td style={{ textAlign: 'center', minWidth: 100 }}>
+                                                    <div style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: 2 }}>{real.toFixed(2)}%</div>
+                                                    <div style={{ width: '100%', height: 6, background: 'var(--bg-secondary)', borderRadius: 3, overflow: 'hidden' }}>
+                                                        <div style={{ width: `${Math.min(real, 100)}%`, height: '100%', background: 'var(--accent-green)', borderRadius: 3, transition: 'width 0.3s' }} />
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                                                        {photos.length > 0 ? photos.map((p, j) => (
+                                                            <a key={j} href={p} target="_blank" rel="noopener noreferrer">
+                                                                <img src={p} alt={`Foto ${j + 1}`}
+                                                                    style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border-color)' }} />
+                                                            </a>
+                                                        )) : <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>Tidak ada foto</span>}
+                                                    </div>
+                                                </td>
+                                                <td>
+                                                    <div style={{ display: 'flex', gap: 4 }}>
+                                                        <button className="btn-icon" onClick={() => handleEdit(r)} title="Edit" style={{ color: 'var(--accent-orange, #f59e0b)' }}><Edit size={16} /></button>
+                                                        <button className="btn-icon" onClick={() => handleDelete(r.id)} title="Hapus" style={{ color: 'var(--accent-red, #ef4444)' }}><Trash2 size={16} /></button>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                    {realisasiList.length === 0 && (
+                                        <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>Belum ada data realisasi</td></tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
+            </div>
+        );
+    }
+
+    // ===== LIST VIEW =====
+    return (
+        <div>
+            <div className="page-header">
+                <div className="page-header-left">
+                    <h1>Realisasi Kontrak</h1>
+                    <p>Laporkan progress pelaksanaan pekerjaan</p>
+                </div>
+            </div>
+
+            <div className="table-container">
+                <div className="table-toolbar">
+                    <div className="table-toolbar-left" style={{ gap: 8 }}>
+                        <div className="table-search">
+                            <Search size={16} className="search-icon" />
+                            <input placeholder="Cari paket, No SPK..." value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Tampil:</span>
+                            <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
+                                style={{ padding: '4px 8px', background: 'var(--bg-input)', border: '1px solid var(--border-input)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.8rem' }}>
+                                <option value="10">10</option><option value="25">25</option><option value="50">50</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                {loading ? (
+                    <div style={{ padding: 60, textAlign: 'center', color: 'var(--text-secondary)' }}>Memuat data kontrak...</div>
+                ) : (
+                    <div style={{ overflowX: 'auto' }}>
+                        <table className="data-table">
+                            <thead>
+                                <tr>
+                                    <th style={{ width: 40 }}>#</th>
+                                    <th>Aksi</th>
+                                    <th>No SPK</th>
+                                    <th>Nama Perusahaan</th>
+                                    <th style={{ minWidth: 250 }}>Nama Paket</th>
+                                    <th>Jenis</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {paged.map((k, i) => (
+                                    <tr key={k.id}>
+                                        <td>{(currentPage - 1) * pageSize + i + 1}</td>
+                                        <td>
+                                            <button className="btn btn-primary btn-sm" onClick={() => openDetail(k)}
+                                                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 12px', fontSize: '0.78rem', whiteSpace: 'nowrap' }}>
+                                                <Target size={13} /> Realisasi
+                                            </button>
+                                        </td>
+                                        <td style={{ fontFamily: 'monospace', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>{k.noSpk || '-'}</td>
+                                        <td style={{ fontSize: '0.85rem', fontWeight: 500 }}>{k.namaPerusahaan}</td>
+                                        <td style={{ fontSize: '0.82rem' }}>{k.namaPaket}</td>
+                                        <td><span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: 'var(--radius-full)', background: 'rgba(59,130,246,0.08)', color: 'var(--accent-blue)', fontWeight: 500, whiteSpace: 'nowrap' }}>{k.jenisPengadaan}</span></td>
+                                    </tr>
+                                ))}
+                                {paged.length === 0 && (
+                                    <tr><td colSpan={6} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>
+                                        Tidak ada kontrak yang sesuai. Pastikan kontrak sudah diverifikasi.
+                                    </td></tr>
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+
+                <div className="table-pagination">
+                    <div className="table-pagination-info">
+                        Menampilkan {filtered.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}-{Math.min(currentPage * pageSize, filtered.length)} dari {filtered.length} kontrak
+                    </div>
+                    <div className="table-pagination-controls">
+                        <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}><ChevronLeft size={16} /></button>
+                        <span style={{ padding: '0 10px', fontSize: '0.875rem' }}>Hal {currentPage} dari {totalPages}</span>
+                        <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages}><ChevronRight size={16} /></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default RealisasiPenyedia;

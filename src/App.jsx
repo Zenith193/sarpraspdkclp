@@ -41,7 +41,9 @@ import DashboardSekolah from './pages/sekolah/DashboardSekolah';
 import DashboardPenyedia from './pages/penyedia/DashboardPenyedia';
 import PermohonanKontrak from './pages/penyedia/PermohonanKontrak';
 import RiwayatKontrakPenyedia from './pages/penyedia/RiwayatKontrakPenyedia';
+import RealisasiPenyedia from './pages/penyedia/RealisasiPenyedia';
 import ManajemenKontrak from './pages/admin/ManajemenKontrak';
+import MonitoringRealisasi from './pages/admin/MonitoringRealisasi';
 
 // Public
 import RegistrasiPenyedia from './pages/RegistrasiPenyedia';
@@ -131,6 +133,7 @@ function App() {
           <Route path="iklan" element={<Iklan />} />
           <Route path="manajemen-penyedia" element={<ManajemenPenyedia />} />
           <Route path="manajemen-kontrak" element={<ManajemenKontrak />} />
+          <Route path="monitoring-realisasi" element={<MonitoringRealisasi />} />
           <Route path="profil" element={<ProfilPengguna />} />
         </Route>
 
@@ -152,6 +155,7 @@ function App() {
           <Route path="iklan" element={<Iklan />} />
           <Route path="manajemen-penyedia" element={<ManajemenPenyedia />} />
           <Route path="manajemen-kontrak" element={<ManajemenKontrak />} />
+          <Route path="monitoring-realisasi" element={<MonitoringRealisasi />} />
           <Route path="profil" element={<ProfilPengguna />} />
           <Route path="aktivitas" element={<AktivitasPengguna />} />
         </Route>
@@ -189,6 +193,7 @@ function App() {
           <Route path="dashboard" element={<DashboardPenyedia />} />
           <Route path="permohonan-kontrak" element={<PermohonanKontrak />} />
           <Route path="riwayat-kontrak" element={<RiwayatKontrakPenyedia />} />
+          <Route path="realisasi" element={<RealisasiPenyedia />} />
           <Route path="profil" element={<ProfilPengguna />} />
         </Route>
 

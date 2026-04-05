@@ -377,15 +377,67 @@ export const kontrakService = {
             .orderBy(desc(realisasi.tahun), desc(realisasi.bulan));
     },
 
+    // All realisasi for admin/verifikator monitoring
+    async listAllRealisasi() {
+        return db.select({
+            realisasi: realisasi,
+            namaPerusahaan: perusahaan.namaPerusahaan,
+            namaPaket: sql<string>`COALESCE(${matrikKegiatan.namaPaket}, ${permohonanKontrak.namaPaket})`.as('namaPaket'),
+            noSpk: sql<string>`COALESCE(${matrikKegiatan.noSpk}, ${permohonanKontrak.noSpk})`.as('noSpk'),
+            jenisPengadaan: sql<string>`COALESCE(${matrikKegiatan.jenisPengadaan}, ${permohonanKontrak.jenisPengadaan})`.as('jenisPengadaan'),
+        }).from(realisasi)
+          .leftJoin(permohonanKontrak, eq(realisasi.kontrakId, permohonanKontrak.id))
+          .leftJoin(perusahaan, eq(permohonanKontrak.perusahaanId, perusahaan.id))
+          .leftJoin(matrikKegiatan, eq(permohonanKontrak.matrikId, matrikKegiatan.id))
+          .orderBy(desc(realisasi.createdAt));
+    },
+
+    // Get anakan (child matrik entries) for a kontrak
+    async getAnakan(kontrakId: number) {
+        // Get the kontrak to find matrikId
+        const kontrakRow = await db.select({
+            matrikId: permohonanKontrak.matrikId,
+            kodeSirup: permohonanKontrak.kodeSirup,
+        }).from(permohonanKontrak).where(eq(permohonanKontrak.id, kontrakId));
+        if (!kontrakRow[0] || !kontrakRow[0].matrikId) return [];
+
+        // Get parent noMatrik
+        const parentRow = await db.select({
+            noMatrik: matrikKegiatan.noMatrik,
+        }).from(matrikKegiatan).where(eq(matrikKegiatan.id, kontrakRow[0].matrikId));
+        if (!parentRow[0]) return [];
+
+        const baseNo = parentRow[0].noMatrik.includes(',')
+            ? parentRow[0].noMatrik.split(',')[0]
+            : parentRow[0].noMatrik;
+
+        // Find all children (noMatrik starts with baseNo + ',')
+        const allMatrik = await db.select({
+            id: matrikKegiatan.id,
+            noMatrik: matrikKegiatan.noMatrik,
+            namaPaket: matrikKegiatan.namaPaket,
+            namaSekolah: matrikKegiatan.namaSekolah,
+            npsn: matrikKegiatan.npsn,
+            nilaiKontrak: matrikKegiatan.nilaiKontrak,
+        }).from(matrikKegiatan);
+
+        const children = allMatrik.filter((m: any) =>
+            m.noMatrik.startsWith(baseNo + ',') && m.noMatrik !== baseNo
+        );
+
+        return children;
+    },
+
     async createRealisasi(kontrakId: number, data: any, userId: string) {
         const [created] = await db.insert(realisasi).values({
             kontrakId,
+            matrikId: data.matrikId ? Number(data.matrikId) : null,
             namaSekolah: data.namaSekolah,
             tahun: Number(data.tahun),
             bulan: Number(data.bulan),
-            targetPersen: Number(data.targetPersen || 0),
-            realisasiPersen: Number(data.realisasiPersen || 0),
-            dokumentasiPath: data.dokumentasiPath || null,
+            targetPersen: String(data.targetPersen || 0),
+            realisasiPersen: String(data.realisasiPersen || 0),
+            dokumentasiPaths: data.dokumentasiPaths || null,
             keterangan: data.keterangan || null,
             createdBy: userId,
         }).returning();
@@ -395,11 +447,12 @@ export const kontrakService = {
     async updateRealisasi(id: number, data: any) {
         const [updated] = await db.update(realisasi).set({
             namaSekolah: data.namaSekolah,
+            matrikId: data.matrikId !== undefined ? (data.matrikId ? Number(data.matrikId) : null) : undefined,
             tahun: data.tahun ? Number(data.tahun) : undefined,
             bulan: data.bulan ? Number(data.bulan) : undefined,
-            targetPersen: data.targetPersen !== undefined ? Number(data.targetPersen) : undefined,
-            realisasiPersen: data.realisasiPersen !== undefined ? Number(data.realisasiPersen) : undefined,
-            dokumentasiPath: data.dokumentasiPath,
+            targetPersen: data.targetPersen !== undefined ? String(data.targetPersen) : undefined,
+            realisasiPersen: data.realisasiPersen !== undefined ? String(data.realisasiPersen) : undefined,
+            dokumentasiPaths: data.dokumentasiPaths,
             keterangan: data.keterangan,
         }).where(eq(realisasi.id, id)).returning();
         return updated;

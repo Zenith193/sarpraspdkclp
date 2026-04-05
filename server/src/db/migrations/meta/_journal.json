@@ -50,6 +50,13 @@
       "when": 1775274723422,
       "tag": "0006_melted_tigra",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1775364790744,
+      "tag": "0007_neat_colleen_wing",
+      "breakpoints": true
     }
   ]
 }
