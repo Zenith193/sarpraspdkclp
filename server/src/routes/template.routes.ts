@@ -430,49 +430,36 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
         // Update history with file path
         await splHistoryService.update(historyId, { filePath: docxPath });
 
-        // ===== UPLOAD TO GDRIVE =====
-        let gdriveDocxPath = '';
-        let gdrivePdfPath = '';
-        try {
-            const { uploadToGDrive, isGDriveEnabled } = await import('../utils/googleDriveClient.js');
-            if (isGDriveEnabled()) {
+        // ===== UPLOAD TO GDRIVE (fire-and-forget, non-blocking) =====
+        (async () => {
+            try {
+                const { uploadToGDrive, isGDriveEnabled } = await import('../utils/googleDriveClient.js');
+                if (!isGDriveEnabled()) return;
                 const tahun = String(item.tahunAnggaran || new Date().getFullYear());
                 const sanitizeFolderName = (s: string) => (s || '').replace(/[<>:"/\\|?*]/g, '').substring(0, 100);
                 const paketFolder = `${item.noMatrik || ''}. ${sanitizeFolderName(item.namaPaket || '')}`;
-                // Detect subfolder from template name
                 const tplNameLower = (tpl.nama || '').toLowerCase();
                 let subFolder = 'SPL';
                 if (tplNameLower.includes('bast')) subFolder = 'BAST';
                 else if (tplNameLower.includes('kontrak') || tplNameLower.includes('spk')) subFolder = 'Kontrak';
-                
                 const gDrivePath = `Kontrak/${tahun}/${paketFolder}/${subFolder}`;
-                console.log(`[GDrive] Uploading to: ${gDrivePath}`);
+                console.log(`[GDrive] Background uploading to: ${gDrivePath}`);
 
-                // Upload DOCX
                 const docxResult = await uploadToGDrive(docxPath, gDrivePath, `${safeBasename}.docx`);
                 if (docxResult.success) {
-                    gdriveDocxPath = docxResult.path;
                     await splHistoryService.update(historyId, { filePath: docxResult.path });
                     try { fs.unlinkSync(docxPath); } catch {}
                     console.log(`[GDrive] DOCX uploaded: ${docxResult.path}`);
                 }
-
-                // Upload PDF if exists
                 if (hasPdf) {
                     const pdfLocalPath = path.join(SPL_OUTPUT_DIR, `${safeBasename}.pdf`);
                     if (fs.existsSync(pdfLocalPath)) {
                         const pdfResult = await uploadToGDrive(pdfLocalPath, gDrivePath, `${safeBasename}.pdf`);
-                        if (pdfResult.success) {
-                            gdrivePdfPath = pdfResult.path;
-                            try { fs.unlinkSync(pdfLocalPath); } catch {}
-                            console.log(`[GDrive] PDF uploaded: ${pdfResult.path}`);
-                        }
+                        if (pdfResult.success) { try { fs.unlinkSync(pdfLocalPath); } catch {} }
                     }
                 }
-            }
-        } catch (gErr: any) {
-            console.error('[GDrive] Upload error (non-fatal):', gErr.message);
-        }
+            } catch (gErr: any) { console.error('[GDrive] Background upload error:', gErr.message); }
+        })();
 
         // Return JSON with history info (not blob)
         res.json({

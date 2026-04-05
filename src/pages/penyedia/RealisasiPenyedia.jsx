@@ -305,12 +305,13 @@ const RealisasiPenyedia = () => {
     const buildMergedRows = () => {
         if (realisasiList.length === 0) return [];
 
-        // Sort by sekolah, tahun desc, bulan asc (Januari → Desember)
+        // Sort by sekolah, tahun desc, bulan asc (Januari → Desember), then target ascending
         const sorted = [...realisasiList].sort((a, b) => {
             const sa = (a.namaSekolah || '').localeCompare(b.namaSekolah || '');
             if (sa !== 0) return sa;
             if (a.tahun !== b.tahun) return b.tahun - a.tahun;
-            return a.bulan - b.bulan;
+            if (a.bulan !== b.bulan) return a.bulan - b.bulan;
+            return (Number(a.targetPersen) || 0) - (Number(b.targetPersen) || 0);
         });
 
         // Group by sekolah → tahun → bulan

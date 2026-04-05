@@ -321,12 +321,13 @@ const MonitoringRealisasi = () => {
                                         if (detailRealisasi.length === 0) return (
                                             <tr><td colSpan={8} style={{ textAlign: 'center', padding: 30, color: 'var(--text-secondary)' }}>Belum ada data realisasi</td></tr>
                                         );
-                                        // Sort by school, tahun desc, bulan asc
+                                        // Sort by school, tahun desc, bulan asc, then target ascending
                                         const sorted = [...detailRealisasi].sort((a, b) => {
                                             const sa = (a.namaSekolah || a._anakanName || '').localeCompare(b.namaSekolah || b._anakanName || '');
                                             if (sa !== 0) return sa;
                                             if (a.tahun !== b.tahun) return b.tahun - a.tahun;
-                                            return a.bulan - b.bulan;
+                                            if (a.bulan !== b.bulan) return a.bulan - b.bulan;
+                                            return (Number(a.targetPersen) || 0) - (Number(b.targetPersen) || 0);
                                         });
                                         // Build merged rows
                                         const rows = [];
