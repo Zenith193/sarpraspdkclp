@@ -431,6 +431,7 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
         await splHistoryService.update(historyId, { filePath: docxPath });
 
         // ===== UPLOAD TO GDRIVE (fire-and-forget, non-blocking) =====
+        // Files stay local until background queue confirms GDrive sync
         (async () => {
             try {
                 const { uploadToGDrive, isGDriveEnabled } = await import('../utils/googleDriveClient.js');
@@ -447,15 +448,15 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
 
                 const docxResult = await uploadToGDrive(docxPath, gDrivePath, `${safeBasename}.docx`);
                 if (docxResult.success) {
-                    await splHistoryService.update(historyId, { filePath: docxResult.path });
-                    try { fs.unlinkSync(docxPath); } catch {}
                     console.log(`[GDrive] DOCX uploaded: ${docxResult.path}`);
+                    // Don't update filePath yet - keep local path so PDF download still works
+                    // Background queue (section 10) will update path + cleanup local files
                 }
                 if (hasPdf) {
                     const pdfLocalPath = path.join(SPL_OUTPUT_DIR, `${safeBasename}.pdf`);
                     if (fs.existsSync(pdfLocalPath)) {
                         const pdfResult = await uploadToGDrive(pdfLocalPath, gDrivePath, `${safeBasename}.pdf`);
-                        if (pdfResult.success) { try { fs.unlinkSync(pdfLocalPath); } catch {} }
+                        if (pdfResult.success) console.log(`[GDrive] PDF uploaded: ${pdfResult.path}`);
                     }
                 }
             } catch (gErr: any) { console.error('[GDrive] Background upload error:', gErr.message); }
