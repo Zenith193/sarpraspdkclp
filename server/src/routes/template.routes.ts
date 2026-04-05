@@ -271,6 +271,23 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
         }
 
         // Helper: replace paragraph containing marker with table XML
+        // Also extracts font info from the paragraph's run properties
+        function extractFontFromParagraph(xml: string, marker: string): { font: string; sz: string } {
+            const idx = xml.indexOf(marker);
+            if (idx === -1) return { font: '', sz: '' };
+            const pStart = findParagraphStart(xml, idx);
+            if (pStart === -1) return { font: '', sz: '' };
+            const pFragment = xml.substring(pStart, idx);
+            // Extract font name from rFonts
+            const fontMatch = pFragment.match(/w:ascii="([^"]+)"/);
+            // Extract font size from sz
+            const szMatch = pFragment.match(/<w:sz\s+w:val="(\d+)"/);
+            return {
+                font: fontMatch ? fontMatch[1] : '',
+                sz: szMatch ? szMatch[1] : '',
+            };
+        }
+
         function injectTable(xml: string, marker: string, tableXml: string): string {
             const idx = xml.indexOf(marker);
             if (idx === -1) return xml;
@@ -290,22 +307,25 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
 
             // Inject rincian table
             if (rincianItems.length > 0 && docXml.includes('__RINCIAN_TABLE__')) {
-                docXml = injectTable(docXml, '__RINCIAN_TABLE__', buildWordTableXml(rincianItems, rincianTotal));
-                console.log('[Template] Injected rincian table with', rincianItems.length, 'rows');
+                const fi = extractFontFromParagraph(docXml, '__RINCIAN_TABLE__');
+                docXml = injectTable(docXml, '__RINCIAN_TABLE__', buildWordTableXml(rincianItems, rincianTotal, fi));
+                console.log('[Template] Injected rincian table with', rincianItems.length, 'rows, font:', fi.font || 'inherit', fi.sz || 'inherit');
                 changed = true;
             }
 
             // Inject personil table
             if (personilItems.length > 0 && docXml.includes('__PERSONIL_TABLE__')) {
-                docXml = injectTable(docXml, '__PERSONIL_TABLE__', buildPersonilTableXml(personilItems));
-                console.log('[Template] Injected personil table with', personilItems.length, 'rows');
+                const fi = extractFontFromParagraph(docXml, '__PERSONIL_TABLE__');
+                docXml = injectTable(docXml, '__PERSONIL_TABLE__', buildPersonilTableXml(personilItems, fi));
+                console.log('[Template] Injected personil table with', personilItems.length, 'rows, font:', fi.font || 'inherit', fi.sz || 'inherit');
                 changed = true;
             }
 
             // Inject peralatan table
             if (peralatanItems.length > 0 && docXml.includes('__PERALATAN_TABLE__')) {
-                docXml = injectTable(docXml, '__PERALATAN_TABLE__', buildPeralatanTableXml(peralatanItems));
-                console.log('[Template] Injected peralatan table with', peralatanItems.length, 'rows');
+                const fi = extractFontFromParagraph(docXml, '__PERALATAN_TABLE__');
+                docXml = injectTable(docXml, '__PERALATAN_TABLE__', buildPeralatanTableXml(peralatanItems, fi));
+                console.log('[Template] Injected peralatan table with', peralatanItems.length, 'rows, font:', fi.font || 'inherit', fi.sz || 'inherit');
                 changed = true;
             }
 
@@ -529,7 +549,11 @@ function terbilang(n: number): string {
 }
 
 // Capitalize first letter
-function ucFirst(s: string) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : ''; }
+function ucFirst(s: string) {
+    if (!s) return '';
+    // Ensure only the very first letter is uppercase, rest stays lowercase
+    return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+}
 
 // Format: "senin tanggal enam bulan April tahun dua ribu dua puluh enam (06-04-2026)"
 function fmtTerbilangTanggal(d: any) {
@@ -891,8 +915,9 @@ function fmtCurrency(v: number): string {
 }
 
 // Build a proper Word OOXML table for rincian kontrak
-function buildWordTableXml(items: { nama: string; nilai: number }[], total: number): string {
-    const SZ = '24'; // 12pt in half-points
+function buildWordTableXml(items: { nama: string; nilai: number }[], total: number, fontInfo: { font: string; sz: string } = { font: '', sz: '' }): string {
+    const SZ = fontInfo.sz || '24'; // default 12pt
+    const FONT = fontInfo.font || ''; // inherit from doc if empty
 
     const tblPr = '<w:tblPr>' +
         '<w:tblStyle w:val="TableGrid"/>' +
@@ -915,8 +940,10 @@ function buildWordTableXml(items: { nama: string; nilai: number }[], total: numb
         const safe = xmlEscape(text);
         const tcPr = `<w:tcPr><w:tcW w:w="${widthPct}" w:type="pct"/></w:tcPr>`;
 
-        // Run properties: size + optional bold (inherit font from document)
-        const rPrParts = [`<w:sz w:val="${SZ}"/><w:szCs w:val="${SZ}"/>`];
+        // Run properties: size + optional bold + font from template
+        const rPrParts: string[] = [];
+        if (FONT) rPrParts.push(`<w:rFonts w:ascii="${FONT}" w:hAnsi="${FONT}" w:cs="${FONT}"/>`);
+        rPrParts.push(`<w:sz w:val="${SZ}"/><w:szCs w:val="${SZ}"/>`);
         if (opts.bold) rPrParts.push('<w:b/><w:bCs/>');
         const rPr = '<w:rPr>' + rPrParts.join('') + '</w:rPr>';
 
@@ -951,8 +978,9 @@ function buildWordTableXml(items: { nama: string; nilai: number }[], total: numb
 }
 
 // Build Personil table (Personil Inti yang ditugaskan)
-function buildPersonilTableXml(items: any[]): string {
-    const SZ = '24';
+function buildPersonilTableXml(items: any[], fontInfo: { font: string; sz: string } = { font: '', sz: '' }): string {
+    const SZ = fontInfo.sz || '24';
+    const FONT = fontInfo.font || '';
 
     function tblProps(): string {
         return '<w:tblPr>' +
@@ -973,7 +1001,9 @@ function buildPersonilTableXml(items: any[]): string {
     function cell(text: string, widthPct: number, opts: { bold?: boolean; center?: boolean } = {}): string {
         const safe = xmlEscape(text);
         const tcPr = `<w:tcPr><w:tcW w:w="${widthPct}" w:type="pct"/></w:tcPr>`;
-        const rPrParts = [`<w:sz w:val="${SZ}"/><w:szCs w:val="${SZ}"/>`];
+        const rPrParts: string[] = [];
+        if (FONT) rPrParts.push(`<w:rFonts w:ascii="${FONT}" w:hAnsi="${FONT}" w:cs="${FONT}"/>`);
+        rPrParts.push(`<w:sz w:val="${SZ}"/><w:szCs w:val="${SZ}"/>`);
         if (opts.bold) rPrParts.push('<w:b/><w:bCs/>');
         const rPr = '<w:rPr>' + rPrParts.join('') + '</w:rPr>';
         const pPrParts: string[] = [];
@@ -1006,8 +1036,11 @@ function buildPersonilTableXml(items: any[]): string {
 }
 
 // Build Peralatan table (Peralatan yang digunakan)
-function buildPeralatanTableXml(items: any[]): string {
-    const SZ = '20'; // 10pt - smaller to fit 7 columns
+function buildPeralatanTableXml(items: any[], fontInfo: { font: string; sz: string } = { font: '', sz: '' }): string {
+    // Use slightly smaller size for 7 columns, but respect template font
+    const detectedSz = fontInfo.sz ? String(Math.max(Number(fontInfo.sz) - 4, 18)) : '20';
+    const SZ = detectedSz;
+    const FONT = fontInfo.font || '';
 
     function tblProps(): string {
         return '<w:tblPr>' +
@@ -1028,7 +1061,9 @@ function buildPeralatanTableXml(items: any[]): string {
     function cell(text: string, widthPct: number, opts: { bold?: boolean; center?: boolean } = {}): string {
         const safe = xmlEscape(text);
         const tcPr = `<w:tcPr><w:tcW w:w="${widthPct}" w:type="pct"/></w:tcPr>`;
-        const rPrParts = [`<w:sz w:val="${SZ}"/><w:szCs w:val="${SZ}"/>`];
+        const rPrParts: string[] = [];
+        if (FONT) rPrParts.push(`<w:rFonts w:ascii="${FONT}" w:hAnsi="${FONT}" w:cs="${FONT}"/>`);
+        rPrParts.push(`<w:sz w:val="${SZ}"/><w:szCs w:val="${SZ}"/>`);
         if (opts.bold) rPrParts.push('<w:b/><w:bCs/>');
         const rPr = '<w:rPr>' + rPrParts.join('') + '</w:rPr>';
         const pPrParts: string[] = [];
