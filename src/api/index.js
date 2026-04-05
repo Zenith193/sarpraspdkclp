@@ -274,6 +274,7 @@ export const kontrakApi = {
     updateRealisasi: (id, data) => api.put(`/kontrak/realisasi/${id}`, data),
     deleteRealisasi: (id) => api.delete(`/kontrak/realisasi/${id}`),
     allRealisasi: () => api.get('/kontrak/realisasi/all'),
+    allMatrikRealisasi: () => api.get('/kontrak/matrik-realisasi/all'),
     getAnakan: (kontrakId) => api.get(`/kontrak/permohonan/${kontrakId}/anakan`),
     // Matrik-based realisasi
     listMatrikRealisasi: () => api.get('/kontrak/matrik-realisasi'),

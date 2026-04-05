@@ -185,6 +185,15 @@ router.get('/realisasi/all', requireAuth, requireRole('admin', 'verifikator'), a
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// All matrik packages for admin/verifikator monitoring (no user filter)
+router.get('/matrik-realisasi/all', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
+    try {
+        const jenis = ['Jasa Konsultansi Pengawasan', 'Pekerjaan Konstruksi', 'Pengadaan Barang'];
+        const data = await kontrakService.listMatrikByJenis(jenis); // no userId = all
+        res.json(data);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 // Get anakan for a kontrak (for dropdown)
 router.get('/permohonan/:id/anakan', requireAuth, async (req, res) => {
     try {
