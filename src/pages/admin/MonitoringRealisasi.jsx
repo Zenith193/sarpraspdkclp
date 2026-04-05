@@ -32,6 +32,7 @@ const MonitoringRealisasi = () => {
 
     // Detail modal
     const [detailMatrik, setDetailMatrik] = useState(null);
+    const [detailAnakan, setDetailAnakan] = useState(null); // null = indukan mode
     const [detailRealisasi, setDetailRealisasi] = useState([]);
     const [loadingDetail, setLoadingDetail] = useState(false);
 
@@ -130,24 +131,44 @@ const MonitoringRealisasi = () => {
         return { target: latestTarget, realisasi: latestRealisasi, count: all.length };
     };
 
-    // Open detail
-    const openDetail = async (matrik) => {
+    // Open detail - supports both indukan (all) and anakan-specific mode
+    const openDetail = async (matrik, anakanItem = null) => {
         setDetailMatrik(matrik);
+        setDetailAnakan(anakanItem);
         setLoadingDetail(true);
         try {
-            const rl = await kontrakApi.listRealisasiByMatrik(matrik.id);
-            const parentList = Array.isArray(rl) ? rl : [];
-            // Also fetch anakan realisasi
-            const anakanLists = await Promise.all(
-                (matrik.anakan || []).map(a => kontrakApi.listRealisasiByMatrik(a.id).then(r => {
-                    const arr = Array.isArray(r) ? r : [];
-                    return arr.map(item => ({ ...item, _anakanName: a.namaSekolah || a.namaPaket, _noMatrik: a.noMatrik }));
-                }))
-            );
-            setDetailRealisasi([
-                ...parentList.map(i => ({ ...i, _anakanName: matrik.namaPaket, _noMatrik: matrik.noMatrik })),
-                ...anakanLists.flat()
-            ]);
+            if (anakanItem) {
+                // ANAKAN MODE: fetch anakan + parent filtered by school name
+                const schoolName = (anakanItem.namaSekolah || anakanItem.namaPaket || '').toUpperCase();
+                
+                const anakanRl = await kontrakApi.listRealisasiByMatrik(anakanItem.id);
+                const anakanArr = (Array.isArray(anakanRl) ? anakanRl : []).map(i => ({
+                    ...i, _anakanName: anakanItem.namaSekolah || anakanItem.namaPaket, _noMatrik: anakanItem.noMatrik
+                }));
+                
+                const parentRl = await kontrakApi.listRealisasiByMatrik(matrik.id);
+                const parentFiltered = (Array.isArray(parentRl) ? parentRl : []).filter(i => {
+                    const s = (i.namaSekolah || '').toUpperCase();
+                    return s && s.includes(schoolName.substring(0, 15));
+                }).map(i => ({ ...i, _anakanName: i.namaSekolah || anakanItem.namaSekolah, _noMatrik: matrik.noMatrik }));
+                
+                const existingIds = new Set(anakanArr.map(i => i.id));
+                setDetailRealisasi([...anakanArr, ...parentFiltered.filter(i => !existingIds.has(i.id))]);
+            } else {
+                // INDUKAN MODE: fetch parent + all anakan
+                const rl = await kontrakApi.listRealisasiByMatrik(matrik.id);
+                const parentList = Array.isArray(rl) ? rl : [];
+                const anakanLists = await Promise.all(
+                    (matrik.anakan || []).map(a => kontrakApi.listRealisasiByMatrik(a.id).then(r => {
+                        const arr = Array.isArray(r) ? r : [];
+                        return arr.map(item => ({ ...item, _anakanName: a.namaSekolah || a.namaPaket, _noMatrik: a.noMatrik }));
+                    }))
+                );
+                setDetailRealisasi([
+                    ...parentList.map(i => ({ ...i, _anakanName: matrik.namaPaket, _noMatrik: matrik.noMatrik })),
+                    ...anakanLists.flat()
+                ]);
+            }
         } catch { toast.error('Gagal memuat detail realisasi'); }
         setLoadingDetail(false);
     };
@@ -236,8 +257,17 @@ const MonitoringRealisasi = () => {
                         </div>
                     </div>
 
-                    {/* Anakan info */}
-                    {detailMatrik.anakan?.length > 0 && (
+                    {/* Anakan badge when viewing specific anakan */}
+                    {detailAnakan && (
+                        <div style={{ marginBottom: 16, padding: '8px 14px', borderRadius: 8, background: 'rgba(59,130,246,0.1)', border: '1px solid rgba(59,130,246,0.15)', display: 'inline-block' }}>
+                            <span style={{ fontSize: '0.82rem', color: 'var(--accent-blue)', fontWeight: 600 }}>
+                                📍 {detailAnakan.namaSekolah || detailAnakan.namaPaket}
+                            </span>
+                        </div>
+                    )}
+
+                    {/* Anakan info - only show in indukan mode */}
+                    {!detailAnakan && detailMatrik.anakan?.length > 0 && (
                         <div style={{ marginBottom: 16, padding: '10px 14px', borderRadius: 8, background: 'rgba(59,130,246,0.05)', border: '1px solid rgba(59,130,246,0.1)' }}>
                             <div style={{ fontSize: '0.78rem', fontWeight: 600, color: 'var(--accent-blue)', marginBottom: 6 }}>Anakan ({detailMatrik.anakan.length} sekolah)</div>
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -258,62 +288,100 @@ const MonitoringRealisasi = () => {
                             <table className="data-table">
                                 <thead>
                                     <tr>
-                                        <th style={{ width: 35 }}>No</th>
-                                        <th>Sekolah/Paket</th>
-                                        <th>Periode</th>
-                                        <th style={{ textAlign: 'center' }}>Target</th>
-                                        <th style={{ textAlign: 'center' }}>Realisasi</th>
-                                        <th>Dokumentasi</th>
+                                        <th style={{ width: 35, borderRight: '1px solid var(--border-color)' }}>No</th>
+                                        <th style={{ borderRight: '1px solid var(--border-color)' }}>Sekolah/Paket</th>
+                                        <th style={{ width: 60, textAlign: 'center', borderRight: '1px solid var(--border-color)' }}>Tahun</th>
+                                        <th style={{ width: 90, textAlign: 'center', borderRight: '1px solid var(--border-color)' }}>Bulan</th>
+                                        <th style={{ textAlign: 'center', borderRight: '1px solid var(--border-color)' }}>Target</th>
+                                        <th style={{ textAlign: 'center', borderRight: '1px solid var(--border-color)' }}>Realisasi</th>
+                                        <th style={{ borderRight: '1px solid var(--border-color)' }}>Dokumentasi</th>
                                         <th>Keterangan</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {detailRealisasi.map((r, i) => {
-                                        const target = Number(r.targetPersen) || 0;
-                                        const real = Number(r.realisasiPersen) || 0;
-                                        const photos = parsePaths(r.dokumentasiPaths);
-                                        return (
-                                            <tr key={r.id || i}>
-                                                <td>{i + 1}</td>
-                                                <td style={{ fontSize: '0.82rem' }}>
-                                                    <div>{r.namaSekolah || r._anakanName || '-'}</div>
-                                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>{r._noMatrik}</div>
-                                                </td>
-                                                <td style={{ fontSize: '0.82rem', whiteSpace: 'nowrap' }}>{BULAN[r.bulan - 1]} {r.tahun}</td>
-                                                <td style={{ textAlign: 'center', minWidth: 90 }}>
-                                                    <div style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: 2 }}>{target.toFixed(2)}%</div>
-                                                    <div style={{ width: '100%', height: 5, background: 'var(--bg-secondary)', borderRadius: 3, overflow: 'hidden' }}>
-                                                        <div style={{ width: `${Math.min(target, 100)}%`, height: '100%', background: 'var(--accent-blue)', borderRadius: 3 }} />
-                                                    </div>
-                                                </td>
-                                                <td style={{ textAlign: 'center', minWidth: 90 }}>
-                                                    <div style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: 2 }}>{real.toFixed(2)}%</div>
-                                                    <div style={{ width: '100%', height: 5, background: 'var(--bg-secondary)', borderRadius: 3, overflow: 'hidden' }}>
-                                                        <div style={{ width: `${Math.min(real, 100)}%`, height: '100%', background: real < target * 0.8 ? 'var(--accent-red, #ef4444)' : 'var(--accent-green)', borderRadius: 3 }} />
-                                                    </div>
-                                                </td>
-                                                <td>
-                                                    <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
-                                                        {photos.length > 0 ? photos.map((p, j) => {
-                                                            const allPhotos = photos.map(pp => fixImgPath(pp));
-                                                            return (
-                                                                <div key={j} onClick={() => openLightbox(allPhotos, j)} style={{ cursor: 'pointer' }}>
-                                                                    <img src={fixImgPath(p)} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4, border: '1px solid var(--border-color)', transition: 'transform 0.15s' }}
-                                                                        onMouseEnter={e => e.target.style.transform = 'scale(1.1)'}
-                                                                        onMouseLeave={e => e.target.style.transform = 'scale(1)'}
-                                                                        onError={e => { e.target.style.display = 'none'; }} />
-                                                                </div>
-                                                            );
-                                                        }) : <span style={{ color: 'var(--text-secondary)', fontSize: '0.72rem' }}>-</span>}
-                                                    </div>
-                                                </td>
-                                                <td style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{r.keterangan || '-'}</td>
-                                            </tr>
+                                    {(() => {
+                                        if (detailRealisasi.length === 0) return (
+                                            <tr><td colSpan={8} style={{ textAlign: 'center', padding: 30, color: 'var(--text-secondary)' }}>Belum ada data realisasi</td></tr>
                                         );
-                                    })}
-                                    {detailRealisasi.length === 0 && (
-                                        <tr><td colSpan={7} style={{ textAlign: 'center', padding: 30, color: 'var(--text-secondary)' }}>Belum ada data realisasi</td></tr>
-                                    )}
+                                        // Sort by school, tahun desc, bulan asc
+                                        const sorted = [...detailRealisasi].sort((a, b) => {
+                                            const sa = (a.namaSekolah || a._anakanName || '').localeCompare(b.namaSekolah || b._anakanName || '');
+                                            if (sa !== 0) return sa;
+                                            if (a.tahun !== b.tahun) return b.tahun - a.tahun;
+                                            return a.bulan - b.bulan;
+                                        });
+                                        // Build merged rows
+                                        const rows = [];
+                                        let prevSchool = null, prevTahun = null;
+                                        let schoolCount = 0, tahunCount = 0;
+                                        let schoolStart = 0, tahunStart = 0;
+                                        sorted.forEach((item) => {
+                                            const school = item.namaSekolah || item._anakanName || '-';
+                                            const isNewSchool = school !== prevSchool;
+                                            const isNewTahun = isNewSchool || item.tahun !== prevTahun;
+                                            if (isNewSchool && prevSchool !== null) rows[schoolStart].schoolRowSpan = schoolCount;
+                                            if (isNewTahun && prevTahun !== null) rows[tahunStart].tahunRowSpan = tahunCount;
+                                            if (isNewSchool) { schoolCount = 0; schoolStart = rows.length; }
+                                            if (isNewTahun) { tahunCount = 0; tahunStart = rows.length; }
+                                            schoolCount++; tahunCount++;
+                                            rows.push({ ...item, _school: school, showSchool: isNewSchool, showTahun: isNewTahun });
+                                            prevSchool = school; prevTahun = item.tahun;
+                                        });
+                                        if (rows.length > 0) { rows[schoolStart].schoolRowSpan = schoolCount; rows[tahunStart].tahunRowSpan = tahunCount; }
+                                        
+                                        let noCounter = 0;
+                                        return rows.map((r, i) => {
+                                            const target = Number(r.targetPersen) || 0;
+                                            const real = Number(r.realisasiPersen) || 0;
+                                            const photos = parsePaths(r.dokumentasiPaths);
+                                            if (r.showSchool) noCounter++;
+                                            return (
+                                                <tr key={r.id || i} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                                                    {r.showSchool && (
+                                                        <td rowSpan={r.schoolRowSpan} style={{ textAlign: 'center', verticalAlign: 'middle', borderRight: '1px solid var(--border-color)', fontWeight: 600 }}>{noCounter}</td>
+                                                    )}
+                                                    {r.showSchool && (
+                                                        <td rowSpan={r.schoolRowSpan} style={{ verticalAlign: 'middle', borderRight: '1px solid var(--border-color)', fontSize: '0.82rem', fontWeight: 600, padding: '10px 8px' }}>
+                                                            <div>{r._school}</div>
+                                                            <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', fontWeight: 400 }}>{r._noMatrik}</div>
+                                                        </td>
+                                                    )}
+                                                    {r.showTahun && (
+                                                        <td rowSpan={r.tahunRowSpan} style={{ textAlign: 'center', verticalAlign: 'middle', borderRight: '1px solid var(--border-color)', fontSize: '0.82rem', fontWeight: 600 }}>{r.tahun}</td>
+                                                    )}
+                                                    <td style={{ textAlign: 'center', verticalAlign: 'middle', borderRight: '1px solid var(--border-color)', fontSize: '0.82rem' }}>{BULAN[r.bulan - 1]}</td>
+                                                    <td style={{ textAlign: 'center', minWidth: 90, verticalAlign: 'middle', borderRight: '1px solid var(--border-color)', padding: '8px 6px' }}>
+                                                        <div style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: 2 }}>{target.toFixed(2)}%</div>
+                                                        <div style={{ width: '100%', height: 5, background: 'var(--bg-secondary)', borderRadius: 3, overflow: 'hidden' }}>
+                                                            <div style={{ width: `${Math.min(target, 100)}%`, height: '100%', background: 'var(--accent-blue)', borderRadius: 3 }} />
+                                                        </div>
+                                                    </td>
+                                                    <td style={{ textAlign: 'center', minWidth: 90, verticalAlign: 'middle', borderRight: '1px solid var(--border-color)', padding: '8px 6px' }}>
+                                                        <div style={{ fontSize: '0.8rem', fontWeight: 600, marginBottom: 2 }}>{real.toFixed(2)}%</div>
+                                                        <div style={{ width: '100%', height: 5, background: 'var(--bg-secondary)', borderRadius: 3, overflow: 'hidden' }}>
+                                                            <div style={{ width: `${Math.min(real, 100)}%`, height: '100%', background: real < target * 0.8 ? 'var(--accent-red, #ef4444)' : 'var(--accent-green)', borderRadius: 3 }} />
+                                                        </div>
+                                                    </td>
+                                                    <td style={{ verticalAlign: 'middle', borderRight: '1px solid var(--border-color)', padding: '6px' }}>
+                                                        <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+                                                            {photos.length > 0 ? photos.map((p, j) => {
+                                                                const allPhotos = photos.map(pp => fixImgPath(pp));
+                                                                return (
+                                                                    <div key={j} onClick={() => openLightbox(allPhotos, j)} style={{ cursor: 'pointer' }}>
+                                                                        <img src={fixImgPath(p)} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4, border: '1px solid var(--border-color)', transition: 'transform 0.15s' }}
+                                                                            onMouseEnter={e => e.target.style.transform = 'scale(1.1)'}
+                                                                            onMouseLeave={e => e.target.style.transform = 'scale(1)'}
+                                                                            onError={e => { e.target.style.display = 'none'; e.target.parentElement.style.display = 'flex'; e.target.parentElement.style.alignItems = 'center'; e.target.parentElement.style.justifyContent = 'center'; e.target.parentElement.style.width = '40px'; e.target.parentElement.style.height = '40px'; e.target.parentElement.style.background = 'var(--bg-secondary)'; e.target.parentElement.style.borderRadius = '4px'; const s = document.createElement('span'); s.textContent = '📷'; s.style.fontSize = '0.9rem'; s.style.opacity = '0.4'; e.target.parentElement.appendChild(s); }} />
+                                                                    </div>
+                                                                );
+                                                            }) : <span style={{ color: 'var(--text-secondary)', fontSize: '0.72rem' }}>-</span>}
+                                                        </div>
+                                                    </td>
+                                                    <td style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', verticalAlign: 'middle' }}>{r.keterangan || '-'}</td>
+                                                </tr>
+                                            );
+                                        });
+                                    })()}
                                 </tbody>
                             </table>
                         </div>
@@ -466,7 +534,7 @@ const MonitoringRealisasi = () => {
                                                         ) : null}
                                                     </td>
                                                     <td>
-                                                        <button className="btn-icon" onClick={() => openDetail(k)} title="Detail (via indukan)"
+                                                        <button className="btn-icon" onClick={() => openDetail(k, a)} title="Detail anakan"
                                                             style={{ color: 'var(--accent-green)' }}>
                                                             <Eye size={14} />
                                                         </button>
