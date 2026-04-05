@@ -86,14 +86,31 @@ const RealisasiPenyedia = () => {
         setEditId(null);
         try {
             if (preSelectedAnakan) {
-                // ANAKAN MODE: only fetch realisasi for this specific anakan
+                // ANAKAN MODE: fetch from anakan matrikId + also from parent (filtered by school name)
+                const schoolName = (preSelectedAnakan.namaSekolah || preSelectedAnakan.namaPaket || '').toUpperCase();
+                
+                // Fetch directly from anakan matrikId
                 const anakanRl = await kontrakApi.listRealisasiByMatrik(preSelectedAnakan.id);
-                const arr = Array.isArray(anakanRl) ? anakanRl : [];
-                setRealisasiList(arr.map(item => ({
+                const anakanArr = (Array.isArray(anakanRl) ? anakanRl : []).map(item => ({
                     ...item,
                     namaSekolah: item.namaSekolah || preSelectedAnakan.namaSekolah || preSelectedAnakan.namaPaket,
                     matrikId: item.matrikId || preSelectedAnakan.id,
-                })));
+                }));
+                
+                // Also fetch from parent matrikId and filter by school name match
+                const parentRl = await kontrakApi.listRealisasiByMatrik(matrik.id);
+                const parentFiltered = (Array.isArray(parentRl) ? parentRl : []).filter(item => {
+                    const itemSchool = (item.namaSekolah || '').toUpperCase();
+                    return itemSchool && itemSchool.includes(schoolName.substring(0, 15));
+                }).map(item => ({
+                    ...item,
+                    matrikId: item.matrikId || matrik.id,
+                }));
+                
+                // Combine, avoiding duplicates by id
+                const existingIds = new Set(anakanArr.map(i => i.id));
+                const combined = [...anakanArr, ...parentFiltered.filter(i => !existingIds.has(i.id))];
+                setRealisasiList(combined);
             } else {
                 // INDUKAN MODE: fetch parent + all anakan
                 const parentRl = await kontrakApi.listRealisasiByMatrik(matrik.id);
@@ -153,14 +170,27 @@ const RealisasiPenyedia = () => {
         if (!activeMatrik) return;
         try {
             if (activeAnakan) {
-                // ANAKAN MODE: only reload this anakan
+                // ANAKAN MODE: fetch from anakan + parent (filtered by school name)
+                const schoolName = (activeAnakan.namaSekolah || activeAnakan.namaPaket || '').toUpperCase();
+                
                 const anakanRl = await kontrakApi.listRealisasiByMatrik(activeAnakan.id);
-                const arr = Array.isArray(anakanRl) ? anakanRl : [];
-                setRealisasiList(arr.map(item => ({
+                const anakanArr = (Array.isArray(anakanRl) ? anakanRl : []).map(item => ({
                     ...item,
                     namaSekolah: item.namaSekolah || activeAnakan.namaSekolah || activeAnakan.namaPaket,
                     matrikId: item.matrikId || activeAnakan.id,
-                })));
+                }));
+                
+                const parentRl = await kontrakApi.listRealisasiByMatrik(activeMatrik.id);
+                const parentFiltered = (Array.isArray(parentRl) ? parentRl : []).filter(item => {
+                    const itemSchool = (item.namaSekolah || '').toUpperCase();
+                    return itemSchool && itemSchool.includes(schoolName.substring(0, 15));
+                }).map(item => ({
+                    ...item,
+                    matrikId: item.matrikId || activeMatrik.id,
+                }));
+                
+                const existingIds = new Set(anakanArr.map(i => i.id));
+                setRealisasiList([...anakanArr, ...parentFiltered.filter(i => !existingIds.has(i.id))]);
             } else {
                 // INDUKAN MODE: reload parent + all anakan
                 const parentRl = await kontrakApi.listRealisasiByMatrik(activeMatrik.id);
@@ -209,7 +239,8 @@ const RealisasiPenyedia = () => {
                 fd.append('realisasiPersen', String(form.realisasiPersen || 0));
                 if (form.keterangan) fd.append('keterangan', form.keterangan);
                 files.forEach(f => { if (f) fd.append('dokumentasi', f); });
-                await kontrakApi.createRealisasiByMatrik(activeMatrik.id, fd);
+                const submitMatrikId = form.matrikId ? Number(form.matrikId) : activeMatrik.id;
+                await kontrakApi.createRealisasiByMatrik(submitMatrikId, fd);
                 toast.success('Realisasi berhasil ditambahkan');
             }
             await reloadRealisasi();
