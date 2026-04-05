@@ -39,49 +39,73 @@ router.get('/download/:id', requireAuth, async (req, res) => {
 router.get('/spl-file/:format/:historyId', requireAuth, async (req, res) => {
     try {
         const format = req.params.format as string;
-        const historyId = req.params.historyId as string;
+        const historyId = Number(req.params.historyId);
         if (!['pdf', 'docx'].includes(format)) return res.status(400).json({ error: 'Format harus pdf atau docx' });
+        if (!historyId || isNaN(historyId)) return res.status(400).json({ error: 'Invalid historyId' });
 
-        // Check if history record has a GDrive path
-        const historyRecord = await splHistoryService.getById(Number(historyId));
-        if (historyRecord?.filePath?.startsWith('gdrive://')) {
-            const { streamFromGDrive, isGDriveEnabled } = await import('../utils/googleDriveClient.js');
-            if (isGDriveEnabled()) {
-                const fileId = historyRecord.filePath.replace('gdrive://', '');
-                const gResult = await streamFromGDrive(fileId);
-                if (gResult) {
-                    if (format === 'pdf') {
-                        res.setHeader('Content-Type', 'application/pdf');
-                        res.setHeader('Content-Disposition', `inline; filename="${historyRecord.namaFile || 'document'}.pdf"`);
-                    } else {
-                        res.setHeader('Content-Type', gResult.mimeType);
-                        res.setHeader('Content-Disposition', `attachment; filename="${historyRecord.namaFile || 'document'}.docx"`);
+        // Get the history record
+        const record = await splHistoryService.getById(historyId);
+        if (!record) return res.status(404).json({ error: `Record #${historyId} tidak ditemukan` });
+
+        console.log(`[SPL-DL] id=${historyId} format=${format} filePath=${record.filePath} namaFile=${record.namaFile}`);
+
+        // If filePath is GDrive, stream from GDrive
+        if (record.filePath?.startsWith('gdrive://')) {
+            try {
+                const { streamFromGDrive, isGDriveEnabled } = await import('../utils/googleDriveClient.js');
+                if (isGDriveEnabled()) {
+                    const fileId = record.filePath.replace('gdrive://', '');
+                    const gResult = await streamFromGDrive(fileId);
+                    if (gResult) {
+                        const contentType = format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+                        const disposition = format === 'pdf' ? 'inline' : 'attachment';
+                        res.setHeader('Content-Type', contentType);
+                        res.setHeader('Content-Disposition', `${disposition}; filename="${(record.namaFile || 'document')}.${format}"`);
+                        res.setHeader('Cache-Control', 'public, max-age=86400');
+                        gResult.stream.pipe(res);
+                        return;
                     }
-                    res.setHeader('Cache-Control', 'public, max-age=86400');
-                    gResult.stream.pipe(res);
-                    return;
                 }
+            } catch (gErr: any) {
+                console.error(`[SPL-DL] GDrive stream error:`, gErr.message);
             }
         }
 
-        // Fallback: find the file in local spl-output directory
-        const files = fs.readdirSync(SPL_OUTPUT_DIR).filter(f => (f.startsWith(`${historyId}_`) || f.startsWith(`spl_${historyId}_`)) && f.endsWith(`.${format}`));
-        if (files.length === 0) return res.status(404).json({ error: `File ${(format as string).toUpperCase()} tidak ditemukan` });
-
-        const filePath = path.join(SPL_OUTPUT_DIR, files[0]);
-        if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'File tidak ditemukan di server' });
-
+        // Local file: the filePath stores the DOCX path
+        // For PDF, replace .docx extension with .pdf
+        let localFile = record.filePath || '';
         if (format === 'pdf') {
-            res.setHeader('Content-Type', 'application/pdf');
-            res.setHeader('Content-Disposition', `inline; filename="${files[0]}"`);
-        } else {
-            res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
-            res.setHeader('Content-Disposition', `attachment; filename="${files[0]}"`);
+            localFile = localFile.replace(/\.docx$/i, '.pdf');
         }
-        const buf = fs.readFileSync(filePath);
+
+        // Also try scanning SPL_OUTPUT_DIR by historyId prefix
+        if (!localFile || !fs.existsSync(localFile)) {
+            try {
+                const candidates = fs.readdirSync(SPL_OUTPUT_DIR).filter(
+                    f => f.startsWith(`${historyId}_`) && f.endsWith(`.${format}`)
+                );
+                if (candidates.length > 0) {
+                    localFile = path.join(SPL_OUTPUT_DIR, candidates[0]);
+                }
+            } catch {}
+        }
+
+        if (!localFile || !fs.existsSync(localFile)) {
+            console.error(`[SPL-DL] File not found: ${localFile}`);
+            return res.status(404).json({ error: `File ${format.toUpperCase()} tidak ditemukan di server` });
+        }
+
+        const contentType = format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+        const disposition = format === 'pdf' ? 'inline' : 'attachment';
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Content-Disposition', `${disposition}; filename="${(record.namaFile || 'document')}.${format}"`);
+        const buf = fs.readFileSync(localFile);
         res.setHeader('Content-Length', buf.length);
         res.send(buf);
-    } catch (e: any) { res.status(500).json({ error: e.message }); }
+    } catch (e: any) {
+        console.error(`[SPL-DL] Error:`, e.message);
+        res.status(500).json({ error: e.message }); 
+    }
 });
 
 // ===== GENERATE: fill DOCX → save both DOCX & PDF → auto-save history → return JSON =====
