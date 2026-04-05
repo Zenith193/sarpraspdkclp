@@ -187,6 +187,10 @@ const GUIDE_DATA = {
         { variable: "{{rincian2Nama}}", description: "Nama anakan ke-2" },
         { variable: "{{rincian2Nilai}}", description: "Nilai anakan ke-2 (sudah Rp., kosong jika 0)" },
     ],
+    "Lampiran (Personil & Peralatan)": [
+        { variable: "{{tabelPersonil}}", description: "⭐ TABEL OTOMATIS: Personil Inti (No + Nama + Posisi + Sertifikasi)" },
+        { variable: "{{tabelPeralatan}}", description: "⭐ TABEL OTOMATIS: Peralatan (No + Nama + Merk&Tipe + Kapasitas + Jumlah + Kondisi + Status)" },
+    ],
 };
 
 
