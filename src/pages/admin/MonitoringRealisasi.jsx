@@ -20,6 +20,13 @@ const MonitoringRealisasi = () => {
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [pageSize, setPageSize] = useState(15);
+
+    // Lightbox state
+    const [lightbox, setLightbox] = useState({ open: false, photos: [], index: 0 });
+    const openLightbox = (photos, index) => setLightbox({ open: true, photos, index });
+    const closeLightbox = () => setLightbox({ open: false, photos: [], index: 0 });
+    const lbPrev = () => setLightbox(prev => ({ ...prev, index: (prev.index - 1 + prev.photos.length) % prev.photos.length }));
+    const lbNext = () => setLightbox(prev => ({ ...prev, index: (prev.index + 1) % prev.photos.length }));
     const [currentPage, setCurrentPage] = useState(1);
     const [expandedId, setExpandedId] = useState(null);
 
@@ -147,6 +154,38 @@ const MonitoringRealisasi = () => {
 
     const parsePaths = (p) => { try { return JSON.parse(p); } catch { return []; } };
 
+    // ===== LIGHTBOX =====
+    const renderLightbox = () => {
+        if (!lightbox.open || lightbox.photos.length === 0) return null;
+        return (
+            <div style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }}
+                onClick={closeLightbox}>
+                <button onClick={closeLightbox}
+                    style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', width: 40, height: 40, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+                    <X size={24} />
+                </button>
+                <div style={{ position: 'absolute', top: 20, left: '50%', transform: 'translateX(-50%)', color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', zIndex: 10 }}>
+                    {lightbox.index + 1} / {lightbox.photos.length}
+                </div>
+                {lightbox.photos.length > 1 && (
+                    <button onClick={e => { e.stopPropagation(); lbPrev(); }}
+                        style={{ position: 'absolute', left: 16, background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', width: 48, height: 48, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+                        <ChevronLeft size={28} />
+                    </button>
+                )}
+                <img src={lightbox.photos[lightbox.index]} alt=""
+                    onClick={e => e.stopPropagation()}
+                    style={{ maxWidth: '85vw', maxHeight: '85vh', objectFit: 'contain', borderRadius: 8, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }} />
+                {lightbox.photos.length > 1 && (
+                    <button onClick={e => { e.stopPropagation(); lbNext(); }}
+                        style={{ position: 'absolute', right: 16, background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', width: 48, height: 48, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10 }}>
+                        <ChevronRight size={28} />
+                    </button>
+                )}
+            </div>
+        );
+    };
+
     // ===== DETAIL MODAL =====
     const renderDetailModal = () => {
         if (!detailMatrik) return null;
@@ -243,11 +282,17 @@ const MonitoringRealisasi = () => {
                                                 </td>
                                                 <td>
                                                     <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
-                                                        {photos.length > 0 ? photos.map((p, j) => (
-                                                            <a key={j} href={fixImgPath(p)} target="_blank" rel="noopener noreferrer">
-                                                                <img src={fixImgPath(p)} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4, border: '1px solid var(--border-color)' }} onError={e => { e.target.style.display = 'none'; }} />
-                                                            </a>
-                                                        )) : <span style={{ color: 'var(--text-secondary)', fontSize: '0.72rem' }}>-</span>}
+                                                        {photos.length > 0 ? photos.map((p, j) => {
+                                                            const allPhotos = photos.map(pp => fixImgPath(pp));
+                                                            return (
+                                                                <div key={j} onClick={() => openLightbox(allPhotos, j)} style={{ cursor: 'pointer' }}>
+                                                                    <img src={fixImgPath(p)} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4, border: '1px solid var(--border-color)', transition: 'transform 0.15s' }}
+                                                                        onMouseEnter={e => e.target.style.transform = 'scale(1.1)'}
+                                                                        onMouseLeave={e => e.target.style.transform = 'scale(1)'}
+                                                                        onError={e => { e.target.style.display = 'none'; }} />
+                                                                </div>
+                                                            );
+                                                        }) : <span style={{ color: 'var(--text-secondary)', fontSize: '0.72rem' }}>-</span>}
                                                     </div>
                                                 </td>
                                                 <td style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>{r.keterangan || '-'}</td>
@@ -269,6 +314,7 @@ const MonitoringRealisasi = () => {
     // ===== MAIN PAGE =====
     return (
         <div>
+            {renderLightbox()}
             {renderDetailModal()}
 
             <h1 style={{ fontSize: '1.5rem', fontWeight: 800, background: 'linear-gradient(135deg, var(--accent-blue), var(--accent-green))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', margin: 0 }}>
