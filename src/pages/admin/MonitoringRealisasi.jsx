@@ -152,7 +152,19 @@ const MonitoringRealisasi = () => {
         setLoadingDetail(false);
     };
 
-    const parsePaths = (p) => { try { return JSON.parse(p); } catch { return []; } };
+    const parsePaths = (p) => {
+        if (!p) return [];
+        if (Array.isArray(p)) return p.filter(Boolean);
+        try {
+            const parsed = JSON.parse(p);
+            if (Array.isArray(parsed)) return parsed.filter(Boolean);
+            if (typeof parsed === 'string' && parsed) return [parsed];
+            return [];
+        } catch {
+            if (typeof p === 'string' && p.trim()) return [p.trim()];
+            return [];
+        }
+    };
 
     // ===== LIGHTBOX =====
     const renderLightbox = () => {

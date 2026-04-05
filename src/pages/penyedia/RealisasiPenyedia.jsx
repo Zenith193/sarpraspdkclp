@@ -243,12 +243,12 @@ const RealisasiPenyedia = () => {
     const buildMergedRows = () => {
         if (realisasiList.length === 0) return [];
 
-        // Sort by sekolah, tahun desc, bulan desc
+        // Sort by sekolah, tahun desc, bulan asc (Januari → Desember)
         const sorted = [...realisasiList].sort((a, b) => {
             const sa = (a.namaSekolah || '').localeCompare(b.namaSekolah || '');
             if (sa !== 0) return sa;
             if (a.tahun !== b.tahun) return b.tahun - a.tahun;
-            return b.bulan - a.bulan;
+            return a.bulan - b.bulan;
         });
 
         // Group by sekolah → tahun → bulan
@@ -397,7 +397,7 @@ const RealisasiPenyedia = () => {
                                     <select value={form.matrikId} onChange={handleAnakanChange}
                                         style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.85rem' }}>
                                         <option value="">-- Pilih Sekolah --</option>
-                                        {anakan.map(a => <option key={a.id} value={a.id}>{a.namaSekolah || a.namaPaket} ({a.noMatrik})</option>)}
+                                        {anakan.map(a => <option key={a.id} value={String(a.id)}>{a.namaSekolah || a.namaPaket} ({a.noMatrik})</option>)}
                                     </select>
                                 </div>
                             )}
