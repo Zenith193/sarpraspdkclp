@@ -43,7 +43,7 @@ router.get('/spl-file/:format/:historyId', requireAuth, async (req, res) => {
         if (!['pdf', 'docx'].includes(format)) return res.status(400).json({ error: 'Format harus pdf atau docx' });
 
         // Check if history record has a GDrive path
-        const historyRecord = await splHistoryService.update(Number(historyId), {}); // get by updating nothing
+        const historyRecord = await splHistoryService.getById(Number(historyId));
         if (historyRecord?.filePath?.startsWith('gdrive://')) {
             const { streamFromGDrive, isGDriveEnabled } = await import('../utils/googleDriveClient.js');
             if (isGDriveEnabled()) {

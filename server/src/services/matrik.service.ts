@@ -155,6 +155,11 @@ export const splHistoryService = {
         return result[0];
     },
 
+    async getById(id: number) {
+        const result = await db.select().from(splGenerated).where(eq(splGenerated.id, id));
+        return result[0] || null;
+    },
+
     async delete(id: number) {
         await db.delete(splGenerated).where(eq(splGenerated.id, id));
     },
