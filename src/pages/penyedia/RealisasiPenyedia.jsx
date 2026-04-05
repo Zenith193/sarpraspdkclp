@@ -75,17 +75,44 @@ const RealisasiPenyedia = () => {
         return filtered.slice(s, s + pageSize);
     }, [filtered, currentPage, pageSize]);
 
-    const openDetail = async (matrik) => {
+    const openDetail = async (matrik, preSelectedAnakan = null) => {
         setActiveMatrik(matrik);
-        setAnakan(matrik.anakan || []);
+        const anakanList = matrik.anakan || [];
+        setAnakan(anakanList);
         setLoadingDetail(true);
         setFormOpen(false);
         setEditId(null);
         try {
-            const rl = await kontrakApi.listRealisasiByMatrik(matrik.id);
-            setRealisasiList(Array.isArray(rl) ? rl : (rl?.data || []));
+            // Fetch realisasi from parent + all anakan
+            const parentRl = await kontrakApi.listRealisasiByMatrik(matrik.id);
+            const parentArr = Array.isArray(parentRl) ? parentRl : (parentRl?.data || []);
+            
+            // Also fetch realisasi from all anakan
+            const anakanResults = await Promise.all(
+                anakanList.map(a => kontrakApi.listRealisasiByMatrik(a.id).then(r => {
+                    const arr = Array.isArray(r) ? r : [];
+                    // Tag with anakan info so we know which school it belongs to
+                    return arr.map(item => ({
+                        ...item,
+                        namaSekolah: item.namaSekolah || a.namaSekolah || a.namaPaket,
+                        matrikId: item.matrikId || a.id,
+                    }));
+                }).catch(() => []))
+            );
+            
+            setRealisasiList([...parentArr, ...anakanResults.flat()]);
         } catch { toast.error('Gagal memuat data realisasi'); }
         setLoadingDetail(false);
+
+        // If pre-selected anakan, open form with it
+        if (preSelectedAnakan) {
+            setForm(prev => ({
+                ...prev,
+                matrikId: String(preSelectedAnakan.id),
+                namaSekolah: preSelectedAnakan.namaSekolah || preSelectedAnakan.namaPaket || '',
+            }));
+            setFormOpen(true);
+        }
     };
 
     const resetForm = () => {
@@ -110,6 +137,26 @@ const RealisasiPenyedia = () => {
         const file = e.target.files?.[0];
         if (!file) return;
         setFiles(prev => { const n = [...prev]; n[index] = file; return n; });
+    };
+
+    // Helper to reload all realisasi (parent + anakan)
+    const reloadRealisasi = async () => {
+        if (!activeMatrik) return;
+        try {
+            const parentRl = await kontrakApi.listRealisasiByMatrik(activeMatrik.id);
+            const parentArr = Array.isArray(parentRl) ? parentRl : [];
+            const anakanResults = await Promise.all(
+                (activeMatrik.anakan || []).map(a => kontrakApi.listRealisasiByMatrik(a.id).then(r => {
+                    const arr = Array.isArray(r) ? r : [];
+                    return arr.map(item => ({
+                        ...item,
+                        namaSekolah: item.namaSekolah || a.namaSekolah || a.namaPaket,
+                        matrikId: item.matrikId || a.id,
+                    }));
+                }).catch(() => []))
+            );
+            setRealisasiList([...parentArr, ...anakanResults.flat()]);
+        } catch {}
     };
 
     const handleSubmit = async () => {
@@ -139,8 +186,7 @@ const RealisasiPenyedia = () => {
                 await kontrakApi.createRealisasiByMatrik(activeMatrik.id, fd);
                 toast.success('Realisasi berhasil ditambahkan');
             }
-            const rl = await kontrakApi.listRealisasiByMatrik(activeMatrik.id);
-            setRealisasiList(Array.isArray(rl) ? rl : []);
+            await reloadRealisasi();
             resetForm();
             setFormOpen(false);
         } catch (e) { toast.error('Gagal: ' + (e.message || '')); }
@@ -166,8 +212,7 @@ const RealisasiPenyedia = () => {
         if (!confirm('Hapus data realisasi ini?')) return;
         try {
             await kontrakApi.deleteRealisasi(id);
-            const rl = await kontrakApi.listRealisasiByMatrik(activeMatrik.id);
-            setRealisasiList(Array.isArray(rl) ? rl : []);
+            await reloadRealisasi();
             toast.success('Data realisasi dihapus');
         } catch { toast.error('Gagal menghapus'); }
     };
@@ -595,7 +640,12 @@ const RealisasiPenyedia = () => {
                                                 <tr key={`${k.id}-${a.id}`} style={{ background: 'rgba(59,130,246,0.03)' }}>
                                                     <td></td>
                                                     <td style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: 'var(--text-secondary)', paddingLeft: 16 }}>{a.noMatrik}</td>
-                                                    <td></td>
+                                                    <td>
+                                                        <button className="btn btn-sm" onClick={() => openDetail(k, a)}
+                                                            style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '3px 10px', fontSize: '0.72rem', whiteSpace: 'nowrap', background: 'rgba(34,197,94,0.1)', color: 'var(--accent-green)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 6, cursor: 'pointer' }}>
+                                                            <Target size={11} /> Realisasi
+                                                        </button>
+                                                    </td>
                                                     <td colSpan={2} style={{ fontSize: '0.82rem', paddingLeft: 8 }}>
                                                         <span style={{ color: 'var(--accent-blue)', marginRight: 6 }}>↳</span>
                                                         {a.namaSekolah || a.namaPaket}
