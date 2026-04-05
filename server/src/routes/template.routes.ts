@@ -1050,9 +1050,8 @@ function buildPersonilTableXml(items: any[], fontInfo: { font: string; sz: strin
         '</w:tr>'
     ).join('');
 
-    // Title + Table
-    return buildTitleParagraph('Personil Inti yang ditugaskan :', FONT, SZ) +
-        '<w:tbl>' + tblPr + grid + headerRow + dataRows + '</w:tbl>';
+    // Table only (title is already in the template)
+    return '<w:tbl>' + tblPr + grid + headerRow + dataRows + '</w:tbl>';
 }
 
 // Build Peralatan table (Peralatan yang digunakan)
@@ -1108,8 +1107,6 @@ function buildPeralatanTableXml(items: any[], fontInfo: { font: string; sz: stri
             '</w:tr>';
     }).join('');
 
-    // Spacer + Title + Table
-    return buildEmptyParagraph() +
-        buildTitleParagraph('Peralatan yang digunakan :', FONT, SZ) +
-        '<w:tbl>' + tblPr + grid + headerRow + dataRows + '</w:tbl>';
+    // Table only (title is already in the template)
+    return '<w:tbl>' + tblPr + grid + headerRow + dataRows + '</w:tbl>';
 }
