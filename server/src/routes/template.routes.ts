@@ -578,7 +578,7 @@ function buildVariableMap(item: any, sekretaris: any = {}, refData: any = {}) {
         alamatKantor: d.alamatKantor || '',
         noHp: d.noHp || '',
         metode: d.metode || '',
-        subKegiatan: d.subKegiatan || '',
+        subKegiatan: stripLeadingCode(d.subKegiatan || ''),
         noSubKegiatan: d.noSubKegiatan || '',
         paguAnggaran: fmtRp(d.paguAnggaran),
         paguAnggaranRaw: String(d.paguAnggaran || 0),
@@ -875,6 +875,13 @@ function xmlEscape(s: string): string {
     return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
+// Strip leading code like "1.01.02.2.01.0051 " from text
+function stripLeadingCode(text: string): string {
+    if (!text) return '';
+    // Match pattern: digits and dots at start, followed by space
+    return text.replace(/^[\d.]+\s+/, '');
+}
+
 // Format number as Indonesian currency string
 function fmtCurrency(v: number): string {
     if (!v) return '';
@@ -885,13 +892,11 @@ function fmtCurrency(v: number): string {
 
 // Build a proper Word OOXML table for rincian kontrak
 function buildWordTableXml(items: { nama: string; nilai: number }[], total: number): string {
-    // Font & size: Arial 12pt (sz=24 half-points)
-    const FONT = 'Arial';
     const SZ = '24'; // 12pt in half-points
 
     const tblPr = '<w:tblPr>' +
         '<w:tblStyle w:val="TableGrid"/>' +
-        '<w:tblW w:w="5000" w:type="pct"/>' + // 100% page width
+        '<w:tblW w:w="5000" w:type="pct"/>' +
         '<w:tblBorders>' +
         '<w:top w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
         '<w:left w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
@@ -910,20 +915,16 @@ function buildWordTableXml(items: { nama: string; nilai: number }[], total: numb
         const safe = xmlEscape(text);
         const tcPr = `<w:tcPr><w:tcW w:w="${widthPct}" w:type="pct"/></w:tcPr>`;
 
-        // Run properties: font + size + optional bold
-        const rPrParts = [
-            `<w:rFonts w:ascii="${FONT}" w:hAnsi="${FONT}" w:cs="${FONT}"/>`,
-            `<w:sz w:val="${SZ}"/><w:szCs w:val="${SZ}"/>`,
-        ];
+        // Run properties: size + optional bold (inherit font from document)
+        const rPrParts = [`<w:sz w:val="${SZ}"/><w:szCs w:val="${SZ}"/>`];
         if (opts.bold) rPrParts.push('<w:b/><w:bCs/>');
         const rPr = '<w:rPr>' + rPrParts.join('') + '</w:rPr>';
 
-        // Paragraph properties: alignment + paragraph-level rPr
         const pPrParts: string[] = [];
         if (opts.center) pPrParts.push('<w:jc w:val="center"/>');
         if (opts.right) pPrParts.push('<w:jc w:val="right"/>');
         pPrParts.push('<w:spacing w:after="0" w:line="240" w:lineRule="auto"/>');
-        pPrParts.push(rPr); // inheritable rPr
+        pPrParts.push(rPr);
         const pPr = '<w:pPr>' + pPrParts.join('') + '</w:pPr>';
 
         return '<w:tc>' + tcPr + '<w:p>' + pPr + '<w:r>' + rPr + '<w:t xml:space="preserve">' + safe + '</w:t></w:r></w:p></w:tc>';
@@ -951,7 +952,6 @@ function buildWordTableXml(items: { nama: string; nilai: number }[], total: numb
 
 // Build Personil table (Personil Inti yang ditugaskan)
 function buildPersonilTableXml(items: any[]): string {
-    const FONT = 'Arial';
     const SZ = '24';
 
     function tblProps(): string {
@@ -973,7 +973,7 @@ function buildPersonilTableXml(items: any[]): string {
     function cell(text: string, widthPct: number, opts: { bold?: boolean; center?: boolean } = {}): string {
         const safe = xmlEscape(text);
         const tcPr = `<w:tcPr><w:tcW w:w="${widthPct}" w:type="pct"/></w:tcPr>`;
-        const rPrParts = [`<w:rFonts w:ascii="${FONT}" w:hAnsi="${FONT}" w:cs="${FONT}"/>`, `<w:sz w:val="${SZ}"/><w:szCs w:val="${SZ}"/>`];
+        const rPrParts = [`<w:sz w:val="${SZ}"/><w:szCs w:val="${SZ}"/>`];
         if (opts.bold) rPrParts.push('<w:b/><w:bCs/>');
         const rPr = '<w:rPr>' + rPrParts.join('') + '</w:rPr>';
         const pPrParts: string[] = [];
@@ -1007,8 +1007,7 @@ function buildPersonilTableXml(items: any[]): string {
 
 // Build Peralatan table (Peralatan yang digunakan)
 function buildPeralatanTableXml(items: any[]): string {
-    const FONT = 'Arial';
-    const SZ = '24';
+    const SZ = '20'; // 10pt - smaller to fit 7 columns
 
     function tblProps(): string {
         return '<w:tblPr>' +
@@ -1029,7 +1028,7 @@ function buildPeralatanTableXml(items: any[]): string {
     function cell(text: string, widthPct: number, opts: { bold?: boolean; center?: boolean } = {}): string {
         const safe = xmlEscape(text);
         const tcPr = `<w:tcPr><w:tcW w:w="${widthPct}" w:type="pct"/></w:tcPr>`;
-        const rPrParts = [`<w:rFonts w:ascii="${FONT}" w:hAnsi="${FONT}" w:cs="${FONT}"/>`, `<w:sz w:val="${SZ}"/><w:szCs w:val="${SZ}"/>`];
+        const rPrParts = [`<w:sz w:val="${SZ}"/><w:szCs w:val="${SZ}"/>`];
         if (opts.bold) rPrParts.push('<w:b/><w:bCs/>');
         const rPr = '<w:rPr>' + rPrParts.join('') + '</w:rPr>';
         const pPrParts: string[] = [];
@@ -1040,28 +1039,29 @@ function buildPeralatanTableXml(items: any[]): string {
         return '<w:tc>' + tcPr + '<w:p>' + pPr + '<w:r>' + rPr + '<w:t xml:space="preserve">' + safe + '</w:t></w:r></w:p></w:tc>';
     }
 
-    const grid = '<w:tblGrid><w:gridCol w:w="500"/><w:gridCol w:w="1800"/><w:gridCol w:w="1400"/><w:gridCol w:w="1000"/><w:gridCol w:w="800"/><w:gridCol w:w="1000"/><w:gridCol w:w="1200"/></w:tblGrid>';
+    // Wider columns to prevent text truncation
+    const grid = '<w:tblGrid><w:gridCol w:w="400"/><w:gridCol w:w="1600"/><w:gridCol w:w="1400"/><w:gridCol w:w="1100"/><w:gridCol w:w="800"/><w:gridCol w:w="1000"/><w:gridCol w:w="1200"/></w:tblGrid>';
 
     const headerRow = '<w:tr>' +
-        cell('No', 350, { bold: true, center: true }) +
+        cell('No', 270, { bold: true, center: true }) +
         cell('Nama Alat', 1100, { bold: true, center: true }) +
-        cell('Merk & Tipe', 900, { bold: true, center: true }) +
-        cell('Kapasitas', 650, { bold: true, center: true }) +
-        cell('Jumlah', 500, { bold: true, center: true }) +
-        cell('Kondisi', 650, { bold: true, center: true }) +
-        cell('Status Milik', 850, { bold: true, center: true }) +
+        cell('Merk & Tipe', 950, { bold: true, center: true }) +
+        cell('Kapasitas', 730, { bold: true, center: true }) +
+        cell('Jumlah', 530, { bold: true, center: true }) +
+        cell('Kondisi', 670, { bold: true, center: true }) +
+        cell('Status Milik', 750, { bold: true, center: true }) +
         '</w:tr>';
 
     const dataRows = items.map((it, i) => {
         const merkTipe = [it.merk, it.type].filter(Boolean).join(' ');
         return '<w:tr>' +
-            cell(String(i + 1), 350, { center: true }) +
+            cell(String(i + 1), 270, { center: true }) +
             cell(it.nama || '', 1100) +
-            cell(merkTipe, 900) +
-            cell(it.kapasitas || '', 650, { center: true }) +
-            cell(String(it.jumlah || ''), 500, { center: true }) +
-            cell(it.kondisi || '', 650, { center: true }) +
-            cell(it.statusKepemilikan || '', 850, { center: true }) +
+            cell(merkTipe, 950) +
+            cell(it.kapasitas || '', 730, { center: true }) +
+            cell(String(it.jumlah || ''), 530, { center: true }) +
+            cell(it.kondisi || '', 670, { center: true }) +
+            cell(it.statusKepemilikan || '', 750, { center: true }) +
             '</w:tr>';
     }).join('');
 
