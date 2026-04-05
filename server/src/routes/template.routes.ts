@@ -519,7 +519,7 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
 });
 
 // Create template
-router.post('/', requireAuth, requireRole('admin'), uploadTemplate.single('file'), async (req, res) => {
+router.post('/', requireAuth, requireRole('admin', 'verifikator'), uploadTemplate.single('file'), async (req, res) => {
     try {
         const data: any = {
             nama: req.body.name || req.body.nama,
@@ -534,7 +534,7 @@ router.post('/', requireAuth, requireRole('admin'), uploadTemplate.single('file'
 });
 
 // Update template
-router.put('/:id', requireAuth, requireRole('admin'), uploadTemplate.single('file'), async (req, res) => {
+router.put('/:id', requireAuth, requireRole('admin', 'verifikator'), uploadTemplate.single('file'), async (req, res) => {
     try {
         const data: any = {};
         if (req.body.name || req.body.nama) data.nama = req.body.name || req.body.nama;
@@ -552,7 +552,7 @@ router.put('/:id', requireAuth, requireRole('admin'), uploadTemplate.single('fil
 });
 
 // Delete template
-router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
+router.delete('/:id', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
     try {
         const templateId = Number(req.params.id);
         const tpl = await templateService.getById(templateId);

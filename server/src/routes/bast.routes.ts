@@ -23,16 +23,16 @@ router.get('/:id', requireAuth, requireRole('admin', 'verifikator'), async (req,
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
-router.post('/', requireAuth, requireRole('admin'), async (req, res) => {
+router.post('/', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
     try { res.status(201).json(await bastService.create(req.body, req.user!.id)); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
-router.put('/:id', requireAuth, requireRole('admin'), async (req, res) => {
+router.put('/:id', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
     try { res.json(await bastService.update(Number(req.params.id), req.body)); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
-router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
+router.delete('/:id', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
     try { await bastService.delete(Number(req.params.id)); res.json({ success: true }); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
-router.post('/revert/:matrikId', requireAuth, requireRole('admin'), async (req, res) => {
+router.post('/revert/:matrikId', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
     try {
         const matrikId = Number(req.params.matrikId);
         console.log('[BAST] Revert request for matrikId:', matrikId);
@@ -72,7 +72,7 @@ async function injectSekolahInfo(req: any, _res: any, next: any) {
 }
 
 // ===== Upload BAST Fisik PDF (by matrikId) → GDrive school folder =====
-router.post('/by-matrik/:matrikId/upload-fisik', requireAuth, requireRole('admin'),
+router.post('/by-matrik/:matrikId/upload-fisik', requireAuth, requireRole('admin', 'verifikator'),
     uploadBast.single('file'), injectSekolahInfo, forwardToNas('bast'),
     async (req, res) => {
         try {
