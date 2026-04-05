@@ -162,6 +162,11 @@ const RealisasiPenyedia = () => {
     const handleSubmit = async () => {
         if (!form.namaSekolah) return toast.error('Nama Sekolah wajib diisi');
         if (!form.targetPersen && !form.realisasiPersen) return toast.error('Target / Realisasi wajib diisi');
+        // Validate 6 photos mandatory on create
+        if (!editId) {
+            const filledPhotos = files.filter(f => f !== null).length;
+            if (filledPhotos < 6) return toast.error(`Wajib upload 6 gambar (baru ${filledPhotos} gambar)`);
+        }
         setSubmitting(true);
         try {
             if (editId) {
@@ -389,8 +394,8 @@ const RealisasiPenyedia = () => {
                             </div>
                             <div>
                                 <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: 4, color: 'var(--text-secondary)' }}>Tahun</label>
-                                <input type="number" value={form.tahun} onChange={e => setForm(prev => ({ ...prev, tahun: Number(e.target.value) }))}
-                                    style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.85rem' }} />
+                                <input type="number" value={form.tahun} readOnly
+                                    style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '0.85rem', cursor: 'not-allowed' }} />
                             </div>
                             <div>
                                 <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: 4, color: 'var(--text-secondary)' }}>Bulan</label>
@@ -412,40 +417,67 @@ const RealisasiPenyedia = () => {
                                     style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.85rem' }} />
                             </div>
                         </div>
-                        {/* Show existing photos in edit mode */}
-                        {editId && editPhotos.length > 0 && (
+                        {/* Photo section */}
+                        {editId ? (
+                            /* EDIT MODE: Show existing photos with click-to-replace */
                             <div style={{ marginBottom: 16 }}>
-                                <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: 8, color: 'var(--text-secondary)' }}>Foto yang sudah ada</label>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: 8 }}>
-                                    {editPhotos.map((src, i) => (
-                                        <div key={i} style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border-color)', aspectRatio: '1', cursor: 'pointer' }}
-                                            onClick={() => openLightbox(editPhotos, i)}>
-                                            <img src={src} alt={`Foto ${i + 1}`}
-                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                                                onError={e => { e.target.src = ''; e.target.alt = 'Gagal'; e.target.style.background = 'var(--bg-secondary)'; e.target.style.display = 'flex'; }} />
+                                <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: 8, color: 'var(--text-secondary)' }}>
+                                    Dokumentasi <span style={{ fontWeight: 400, color: 'var(--text-secondary)', fontSize: '0.72rem' }}>(klik foto untuk mengganti)</span>
+                                </label>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8 }}>
+                                    {Array.from({ length: 6 }).map((_, i) => {
+                                        const hasNewFile = files[i] !== null;
+                                        const existingSrc = editPhotos[i] || null;
+                                        return (
+                                            <div key={i} onClick={() => fileRefs[i].current.click()}
+                                                style={{ position: 'relative', height: 110, borderRadius: 8, cursor: 'pointer', border: hasNewFile ? '2px solid var(--accent-green)' : existingSrc ? '1px solid var(--border-color)' : '2px dashed var(--border-color)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, background: 'var(--bg-input)', overflow: 'hidden' }}>
+                                                {hasNewFile ? (
+                                                    <>
+                                                        <img src={URL.createObjectURL(files[i])} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, background: 'rgba(34,197,94,0.8)', color: '#fff', fontSize: '0.6rem', textAlign: 'center', padding: '2px 0', fontWeight: 600 }}>BARU</div>
+                                                        <button onClick={(e) => { e.stopPropagation(); setFiles(prev => { const n = [...prev]; n[i] = null; return n; }); }}
+                                                            style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: '50%', width: 20, height: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={12} /></button>
+                                                    </>
+                                                ) : existingSrc ? (
+                                                    <>
+                                                        <img src={existingSrc} alt={`Foto ${i + 1}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                            onError={e => { e.target.style.display = 'none'; }} />
+                                                        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: 0, transition: 'opacity 0.2s' }}
+                                                            onMouseEnter={e => e.target.style.opacity = '1'}
+                                                            onMouseLeave={e => e.target.style.opacity = '0'}>
+                                                            <Camera size={22} style={{ color: '#fff' }} />
+                                                        </div>
+                                                    </>
+                                                ) : (
+                                                    <><Camera size={20} style={{ color: 'var(--text-secondary)' }} /><span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Gambar {i + 1}</span></>
+                                                )}
+                                                <input ref={fileRefs[i]} type="file" accept="image/*" onChange={e => handleFileChange(i, e)} style={{ display: 'none' }} />
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+                        ) : (
+                            /* CREATE MODE: 6 mandatory upload slots */
+                            <div style={{ marginBottom: 16 }}>
+                                <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: 8, color: 'var(--text-secondary)' }}>Dokumentasi (wajib 6 gambar)</label>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8 }}>
+                                    {files.map((file, i) => (
+                                        <div key={i} onClick={() => fileRefs[i].current.click()}
+                                            style={{ position: 'relative', height: 100, borderRadius: 8, cursor: 'pointer', border: '2px dashed var(--border-color)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, background: file ? 'var(--bg-secondary)' : 'var(--bg-input)', overflow: 'hidden' }}>
+                                            {file ? (
+                                                <>
+                                                    <img src={URL.createObjectURL(file)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    <button onClick={(e) => { e.stopPropagation(); setFiles(prev => { const n = [...prev]; n[i] = null; return n; }); }}
+                                                        style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: '50%', width: 20, height: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={12} /></button>
+                                                </>
+                                            ) : (<><Camera size={20} style={{ color: 'var(--text-secondary)' }} /><span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Gambar {i + 1}</span></>)}
+                                            <input ref={fileRefs[i]} type="file" accept="image/*" onChange={e => handleFileChange(i, e)} style={{ display: 'none' }} />
                                         </div>
                                     ))}
                                 </div>
                             </div>
                         )}
-                        <div style={{ marginBottom: 16 }}>
-                            <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: 8, color: 'var(--text-secondary)' }}>{editId ? 'Ganti/Tambah Foto (opsional)' : 'Dokumentasi (max 6 gambar)'}</label>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8 }}>
-                                {files.map((file, i) => (
-                                    <div key={i} onClick={() => fileRefs[i].current.click()}
-                                        style={{ position: 'relative', height: 100, borderRadius: 8, cursor: 'pointer', border: '2px dashed var(--border-color)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, background: file ? 'var(--bg-secondary)' : 'var(--bg-input)', overflow: 'hidden' }}>
-                                        {file ? (
-                                            <>
-                                                <img src={URL.createObjectURL(file)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                <button onClick={(e) => { e.stopPropagation(); setFiles(prev => { const n = [...prev]; n[i] = null; return n; }); }}
-                                                    style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: '50%', width: 20, height: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={12} /></button>
-                                            </>
-                                        ) : (<><Camera size={20} style={{ color: 'var(--text-secondary)' }} /><span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Gambar {i + 1}</span></>)}
-                                        <input ref={fileRefs[i]} type="file" accept="image/*" onChange={e => handleFileChange(i, e)} style={{ display: 'none' }} />
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
                         <div style={{ marginBottom: 16 }}>
                             <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: 4, color: 'var(--text-secondary)' }}>Keterangan</label>
                             <textarea value={form.keterangan} onChange={e => setForm(prev => ({ ...prev, keterangan: e.target.value }))}
