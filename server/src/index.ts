@@ -166,6 +166,7 @@ async function serveFileFromPath(filePath: string, res: any) {
         path.join(process.cwd(), filePath),
         path.join(process.cwd(), 'uploads', basename),
         path.join(uploadDir, 'proposal', basename),
+        path.join(uploadDir, 'kontrak', basename),
         path.join(uploadDir, 'fotos', basename),
         path.join(uploadDir, 'kerusakan', basename),
         path.join(uploadDir, 'prestasi', basename),

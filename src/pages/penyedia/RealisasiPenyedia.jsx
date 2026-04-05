@@ -577,12 +577,12 @@ const RealisasiPenyedia = () => {
                                                         {photos.length > 0 ? photos.map((p, j) => {
                                                             const allPhotos = photos.map(pp => fixImgPath(pp));
                                                             return (
-                                                                <div key={j} onClick={() => openLightbox(allPhotos, j)} style={{ cursor: 'pointer' }}>
+                                                                <div key={j} onClick={() => openLightbox(allPhotos, j)} style={{ cursor: 'pointer', position: 'relative', aspectRatio: '1', borderRadius: 6, overflow: 'hidden', border: '1px solid var(--border-color)', background: 'var(--bg-secondary)' }}>
                                                                     <img src={fixImgPath(p)} alt={`Foto ${j + 1}`}
-                                                                        style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border-color)', display: 'block', transition: 'transform 0.15s, opacity 0.15s' }}
+                                                                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block', transition: 'transform 0.15s, opacity 0.15s' }}
                                                                         onMouseEnter={e => { e.target.style.transform = 'scale(1.05)'; e.target.style.opacity = '0.85'; }}
                                                                         onMouseLeave={e => { e.target.style.transform = 'scale(1)'; e.target.style.opacity = '1'; }}
-                                                                        onError={e => { e.target.style.display = 'none'; }} />
+                                                                        onError={e => { e.target.style.display = 'none'; e.target.parentElement.style.display = 'flex'; e.target.parentElement.style.alignItems = 'center'; e.target.parentElement.style.justifyContent = 'center'; const span = document.createElement('span'); span.textContent = '📷'; span.style.fontSize = '1.2rem'; span.style.opacity = '0.4'; e.target.parentElement.appendChild(span); }} />
                                                                 </div>
                                                             );
                                                         }) : <span style={{ color: 'var(--text-secondary)', fontSize: '0.72rem', gridColumn: 'span 3' }}>Tidak ada foto</span>}
