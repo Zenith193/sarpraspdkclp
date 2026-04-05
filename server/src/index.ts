@@ -63,6 +63,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Static file serving for uploads
 app.use('/uploads', express.static(process.env.UPLOAD_DIR || './uploads'));
+app.use('/api/uploads', express.static(process.env.UPLOAD_DIR || './uploads'));
 
 // ===== FILE PROXY: serve sarpras photos from local or NAS =====
 import fs from 'fs';
