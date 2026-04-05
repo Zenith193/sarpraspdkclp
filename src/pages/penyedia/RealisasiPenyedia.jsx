@@ -201,7 +201,7 @@ const RealisasiPenyedia = () => {
     const handleEdit = (item) => {
         setEditId(item.id);
         setForm({
-            namaSekolah: item.namaSekolah || '', matrikId: item.matrikId || '',
+            namaSekolah: item.namaSekolah || '', matrikId: String(item.matrikId || ''),
             tahun: item.tahun, bulan: item.bulan,
             targetPersen: item.targetPersen || '', realisasiPersen: item.realisasiPersen || '',
             keterangan: item.keterangan || '',
@@ -222,7 +222,22 @@ const RealisasiPenyedia = () => {
         } catch { toast.error('Gagal menghapus'); }
     };
 
-    const parsePaths = (p) => { try { return JSON.parse(p); } catch { return []; } };
+    const parsePaths = (p) => {
+        if (!p) return [];
+        // Already an array
+        if (Array.isArray(p)) return p.filter(Boolean);
+        // Try JSON parse
+        try {
+            const parsed = JSON.parse(p);
+            if (Array.isArray(parsed)) return parsed.filter(Boolean);
+            if (typeof parsed === 'string' && parsed) return [parsed];
+            return [];
+        } catch {
+            // Not JSON — treat as a single path string
+            if (typeof p === 'string' && p.trim()) return [p.trim()];
+            return [];
+        }
+    };
 
     // ===== Build merged table rows =====
     const buildMergedRows = () => {
