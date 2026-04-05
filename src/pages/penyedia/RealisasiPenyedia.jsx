@@ -7,10 +7,12 @@ import toast from 'react-hot-toast';
 const BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 const currentYear = new Date().getFullYear();
 
-// Fix image path — if path starts with /uploads, use /api/uploads
+// Fix image path — use file proxy that searches multiple directories
 const fixImgPath = (p) => {
     if (!p) return '';
-    if (p.startsWith('/uploads')) return '/api' + p;
+    // Extract filename from path like /uploads/kontrak/1234_file.jpg
+    const match = p.match(/\/uploads\/kontrak\/(.+)$/);
+    if (match) return '/api/file/kontrak/' + encodeURIComponent(match[1]);
     return p;
 };
 

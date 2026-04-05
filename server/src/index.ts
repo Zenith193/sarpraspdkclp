@@ -62,8 +62,10 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Static file serving for uploads
-app.use('/uploads', express.static(process.env.UPLOAD_DIR || './uploads'));
-app.use('/api/uploads', express.static(process.env.UPLOAD_DIR || './uploads'));
+const uploadDir = resolve(process.env.UPLOAD_DIR || './uploads');
+console.log(`[Static] Serving uploads from: ${uploadDir}`);
+app.use('/uploads', express.static(uploadDir));
+app.use('/api/uploads', express.static(uploadDir));
 
 // ===== FILE PROXY: serve sarpras photos from local or NAS =====
 import fs from 'fs';
@@ -226,6 +228,15 @@ async function serveFileFromPath(filePath: string, res: any) {
     console.error(`[FileProxy] Not found: ${filePath}`);
     res.status(404).json({ error: 'File not found' });
 }
+
+// ===== KONTRAK/REALISASI FILE PROXY =====
+app.get('/api/file/kontrak/:filename', async (req, res) => {
+    try {
+        const filename = req.params.filename;
+        const filePath = `uploads/kontrak/${filename}`;
+        await serveFileFromPath(filePath, res);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
 
 // ===== KERUSAKAN FILE PROXY =====
 app.get('/api/file/kerusakan/:id', async (req, res) => {

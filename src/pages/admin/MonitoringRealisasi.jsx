@@ -6,6 +6,14 @@ import toast from 'react-hot-toast';
 
 const BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
+// Fix image path — use file proxy that searches multiple directories
+const fixImgPath = (p) => {
+    if (!p) return '';
+    const match = p.match(/\/uploads\/kontrak\/(.+)$/);
+    if (match) return '/api/file/kontrak/' + encodeURIComponent(match[1]);
+    return p;
+};
+
 const MonitoringRealisasi = () => {
     const [matrikList, setMatrikList] = useState([]);
     const [realisasiData, setRealisasiData] = useState([]); // all submitted realisasi
@@ -236,8 +244,8 @@ const MonitoringRealisasi = () => {
                                                 <td>
                                                     <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
                                                         {photos.length > 0 ? photos.map((p, j) => (
-                                                            <a key={j} href={p} target="_blank" rel="noopener noreferrer">
-                                                                <img src={p} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4, border: '1px solid var(--border-color)' }} />
+                                                            <a key={j} href={fixImgPath(p)} target="_blank" rel="noopener noreferrer">
+                                                                <img src={fixImgPath(p)} alt="" style={{ width: 40, height: 40, objectFit: 'cover', borderRadius: 4, border: '1px solid var(--border-color)' }} onError={e => { e.target.style.display = 'none'; }} />
                                                             </a>
                                                         )) : <span style={{ color: 'var(--text-secondary)', fontSize: '0.72rem' }}>-</span>}
                                                     </div>

@@ -10,8 +10,9 @@ import fs from 'fs';
 
 const router = Router();
 
-// Multer for upload berkas penawaran
-const uploadsDir = path.join(process.cwd(), 'uploads', 'kontrak');
+// Multer for upload berkas kontrak
+const baseUploadDir = path.resolve(process.env.UPLOAD_DIR || './uploads');
+const uploadsDir = path.join(baseUploadDir, 'kontrak');
 if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
 
 const storage = multer.diskStorage({
