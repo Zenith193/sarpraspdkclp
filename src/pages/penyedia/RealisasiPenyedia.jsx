@@ -27,6 +27,7 @@ const RealisasiPenyedia = () => {
     // Detail view
     const [activeMatrik, setActiveMatrik] = useState(null);
     const [anakan, setAnakan] = useState([]);
+    const [activeAnakan, setActiveAnakan] = useState(null); // null = indukan mode, object = anakan-only mode
     const [realisasiList, setRealisasiList] = useState([]);
     const [loadingDetail, setLoadingDetail] = useState(false);
 
@@ -79,28 +80,36 @@ const RealisasiPenyedia = () => {
         setActiveMatrik(matrik);
         const anakanList = matrik.anakan || [];
         setAnakan(anakanList);
+        setActiveAnakan(preSelectedAnakan); // null = indukan, object = anakan-only
         setLoadingDetail(true);
         setFormOpen(false);
         setEditId(null);
         try {
-            // Fetch realisasi from parent + all anakan
-            const parentRl = await kontrakApi.listRealisasiByMatrik(matrik.id);
-            const parentArr = Array.isArray(parentRl) ? parentRl : (parentRl?.data || []);
-            
-            // Also fetch realisasi from all anakan
-            const anakanResults = await Promise.all(
-                anakanList.map(a => kontrakApi.listRealisasiByMatrik(a.id).then(r => {
-                    const arr = Array.isArray(r) ? r : [];
-                    // Tag with anakan info so we know which school it belongs to
-                    return arr.map(item => ({
-                        ...item,
-                        namaSekolah: item.namaSekolah || a.namaSekolah || a.namaPaket,
-                        matrikId: item.matrikId || a.id,
-                    }));
-                }).catch(() => []))
-            );
-            
-            setRealisasiList([...parentArr, ...anakanResults.flat()]);
+            if (preSelectedAnakan) {
+                // ANAKAN MODE: only fetch realisasi for this specific anakan
+                const anakanRl = await kontrakApi.listRealisasiByMatrik(preSelectedAnakan.id);
+                const arr = Array.isArray(anakanRl) ? anakanRl : [];
+                setRealisasiList(arr.map(item => ({
+                    ...item,
+                    namaSekolah: item.namaSekolah || preSelectedAnakan.namaSekolah || preSelectedAnakan.namaPaket,
+                    matrikId: item.matrikId || preSelectedAnakan.id,
+                })));
+            } else {
+                // INDUKAN MODE: fetch parent + all anakan
+                const parentRl = await kontrakApi.listRealisasiByMatrik(matrik.id);
+                const parentArr = Array.isArray(parentRl) ? parentRl : (parentRl?.data || []);
+                const anakanResults = await Promise.all(
+                    anakanList.map(a => kontrakApi.listRealisasiByMatrik(a.id).then(r => {
+                        const arr = Array.isArray(r) ? r : [];
+                        return arr.map(item => ({
+                            ...item,
+                            namaSekolah: item.namaSekolah || a.namaSekolah || a.namaPaket,
+                            matrikId: item.matrikId || a.id,
+                        }));
+                    }).catch(() => []))
+                );
+                setRealisasiList([...parentArr, ...anakanResults.flat()]);
+            }
         } catch { toast.error('Gagal memuat data realisasi'); }
         setLoadingDetail(false);
 
@@ -139,23 +148,35 @@ const RealisasiPenyedia = () => {
         setFiles(prev => { const n = [...prev]; n[index] = file; return n; });
     };
 
-    // Helper to reload all realisasi (parent + anakan)
+    // Helper to reload realisasi (respects anakan-only mode)
     const reloadRealisasi = async () => {
         if (!activeMatrik) return;
         try {
-            const parentRl = await kontrakApi.listRealisasiByMatrik(activeMatrik.id);
-            const parentArr = Array.isArray(parentRl) ? parentRl : [];
-            const anakanResults = await Promise.all(
-                (activeMatrik.anakan || []).map(a => kontrakApi.listRealisasiByMatrik(a.id).then(r => {
-                    const arr = Array.isArray(r) ? r : [];
-                    return arr.map(item => ({
-                        ...item,
-                        namaSekolah: item.namaSekolah || a.namaSekolah || a.namaPaket,
-                        matrikId: item.matrikId || a.id,
-                    }));
-                }).catch(() => []))
-            );
-            setRealisasiList([...parentArr, ...anakanResults.flat()]);
+            if (activeAnakan) {
+                // ANAKAN MODE: only reload this anakan
+                const anakanRl = await kontrakApi.listRealisasiByMatrik(activeAnakan.id);
+                const arr = Array.isArray(anakanRl) ? anakanRl : [];
+                setRealisasiList(arr.map(item => ({
+                    ...item,
+                    namaSekolah: item.namaSekolah || activeAnakan.namaSekolah || activeAnakan.namaPaket,
+                    matrikId: item.matrikId || activeAnakan.id,
+                })));
+            } else {
+                // INDUKAN MODE: reload parent + all anakan
+                const parentRl = await kontrakApi.listRealisasiByMatrik(activeMatrik.id);
+                const parentArr = Array.isArray(parentRl) ? parentRl : [];
+                const anakanResults = await Promise.all(
+                    (activeMatrik.anakan || []).map(a => kontrakApi.listRealisasiByMatrik(a.id).then(r => {
+                        const arr = Array.isArray(r) ? r : [];
+                        return arr.map(item => ({
+                            ...item,
+                            namaSekolah: item.namaSekolah || a.namaSekolah || a.namaPaket,
+                            matrikId: item.matrikId || a.id,
+                        }));
+                    }).catch(() => []))
+                );
+                setRealisasiList([...parentArr, ...anakanResults.flat()]);
+            }
         } catch {}
     };
 
@@ -375,6 +396,11 @@ const RealisasiPenyedia = () => {
                             </div>
                             {activeMatrik.penyedia && <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: 2 }}>Penyedia: <strong>{activeMatrik.penyedia}</strong></div>}
                             {activeMatrik.nilaiKontrak && <div style={{ fontSize: '0.8rem', color: 'var(--accent-green)', marginTop: 2, fontWeight: 600 }}>Nilai Kontrak: {formatCurrency(activeMatrik.nilaiKontrak)}</div>}
+                            {activeAnakan && (
+                                <div style={{ fontSize: '0.82rem', color: 'var(--accent-blue)', marginTop: 6, padding: '4px 10px', background: 'rgba(59,130,246,0.1)', borderRadius: 6, display: 'inline-block' }}>
+                                    📍 Sekolah: <strong>{activeAnakan.namaSekolah || activeAnakan.namaPaket}</strong>
+                                </div>
+                            )}
                         </div>
                         <button className="btn btn-primary btn-sm" onClick={() => { resetForm(); setFormOpen(!formOpen); }}
                             style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -391,7 +417,7 @@ const RealisasiPenyedia = () => {
                             <button className="btn-icon" onClick={() => { setFormOpen(false); resetForm(); }}><X size={18} /></button>
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12, marginBottom: 16 }}>
-                            {anakan.length > 0 && (
+                            {anakan.length > 0 && !activeAnakan && (
                                 <div>
                                     <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: 4, color: 'var(--text-secondary)' }}>Pilih Sekolah (Anakan)</label>
                                     <select value={form.matrikId} onChange={handleAnakanChange}
