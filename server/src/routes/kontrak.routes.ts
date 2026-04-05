@@ -193,11 +193,11 @@ router.get('/permohonan/:id/anakan', requireAuth, async (req, res) => {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// List matrik by jenis pengadaan (for penyedia realisasi)
-router.get('/matrik-realisasi', requireAuth, async (req, res) => {
+// List matrik by jenis pengadaan (for penyedia realisasi - filtered by logged-in penyedia)
+router.get('/matrik-realisasi', requireAuth, async (req: any, res) => {
     try {
         const jenis = ['Jasa Konsultansi Pengawasan', 'Pekerjaan Konstruksi', 'Pengadaan Barang'];
-        const data = await kontrakService.listMatrikByJenis(jenis);
+        const data = await kontrakService.listMatrikByJenis(jenis, req.user?.id);
         res.json(data);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });

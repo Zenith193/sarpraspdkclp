@@ -400,7 +400,17 @@ export const kontrakService = {
     },
 
     // List matrik by jenis pengadaan (for penyedia realisasi page)
-    async listMatrikByJenis(jenisList: string[]) {
+    async listMatrikByJenis(jenisList: string[], userId?: string) {
+        // If userId provided (penyedia), filter by their company name
+        let penyediaName: string | null = null;
+        if (userId) {
+            const myPerusahaan = await db.select({ namaPerusahaan: perusahaan.namaPerusahaan })
+                .from(perusahaan).where(eq(perusahaan.userId, userId));
+            if (myPerusahaan[0]) {
+                penyediaName = myPerusahaan[0].namaPerusahaan;
+            }
+        }
+
         const allMatrik = await db.select({
             id: matrikKegiatan.id,
             noMatrik: matrikKegiatan.noMatrik,
@@ -419,7 +429,12 @@ export const kontrakService = {
             const nm = m.noMatrik;
             const isChild = /^\d+\.\d+/.test(nm) || nm.includes(',');
             if (isChild) return false;
-            return jenisList.some(j => (m.jenisPengadaan || '').includes(j));
+            if (!jenisList.some(j => (m.jenisPengadaan || '').includes(j))) return false;
+            // If penyedia filter, match company name (case-insensitive)
+            if (penyediaName) {
+                return (m.penyedia || '').toLowerCase().includes(penyediaName.toLowerCase());
+            }
+            return true;
         });
 
         // For each parent, find its children
