@@ -925,7 +925,7 @@ const ManajemenKontrak = () => {
                                                 <td style={{ fontFamily: 'monospace', fontWeight: 600 }}>{h.matrikNo || '-'}</td>
                                                 <td>{h.namaSekolah || '-'}</td>
                                                 <td>{h.templateNama || '-'}</td>
-                                                <td style={{ fontSize: '0.8rem' }}>{formatDate(h.spl.createdAt)}</td>
+                                                <td style={{ fontSize: '0.8rem' }}>{h.spl.createdAt ? new Date(h.spl.createdAt).toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' }) + ' WIB' : '-'}</td>
                                                 <td>
                                                     <div style={{ display: 'flex', gap: 4 }}>
                                                         <button className="btn btn-sm btn-primary" style={{ padding: '3px 8px', fontSize: '0.75rem' }}

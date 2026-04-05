@@ -49,7 +49,7 @@ const formatDateShort = (dateStr) => {
     if (!dateStr) return '-';
     try {
         const d = new Date(dateStr);
-        return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}`;
+        return d.toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' }) + ' WIB';
     } catch (e) { return '-'; }
 };
 

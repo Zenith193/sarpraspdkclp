@@ -1339,7 +1339,7 @@ const SplTab = () => {
         if (!d) return '-';
         const dt = new Date(d);
         if (isNaN(dt)) return d;
-        return `${dt.getDate()}/${dt.getMonth()+1}/${dt.getFullYear()}`;
+        return dt.toLocaleString('id-ID', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' }) + ' WIB';
     };
 
     const SPL_COLS = [
