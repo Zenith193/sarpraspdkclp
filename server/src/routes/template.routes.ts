@@ -154,6 +154,12 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
         delete vars._rincianItems;
         delete vars._rincianTotal;
 
+        // Extract personil & peralatan data
+        const personilItems = vars._personilItems || [];
+        const peralatanItems = vars._peralatanItems || [];
+        delete vars._personilItems;
+        delete vars._peralatanItems;
+
         console.log('[Generate] rincianKontrak length:', vars.rincianKontrak?.length, 'rincianNama:', vars.rincianNama, 'rincianNilai:', vars.rincianNilai);
 
         // Fill DOCX template with docxtemplater
@@ -163,10 +169,10 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
         const content = fs.readFileSync(tpl.filePath, 'binary');
         const zip = new PizZip(content);
 
-        // Add tabelRincian as a regular variable (marker text, post-processed after render)
-        if (rincianItems.length > 0) {
-            vars.tabelRincian = '__RINCIAN_TABLE__';
-        }
+        // Add table markers as regular variables (post-processed after render)
+        if (rincianItems.length > 0) vars.tabelRincian = '__RINCIAN_TABLE__';
+        if (personilItems.length > 0) vars.tabelPersonil = '__PERSONIL_TABLE__';
+        if (peralatanItems.length > 0) vars.tabelPeralatan = '__PERALATAN_TABLE__';
 
         const docxOptions: any = {
             paragraphLoop: true,
@@ -251,38 +257,61 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
             console.error('[DOCX] Render error (continuing):', renderErr.message);
         }
 
+        // Helper: find correct <w:p> opening (not <w:pPr> etc.) before a marker index
+        function findParagraphStart(xml: string, markerPos: number): number {
+            let searchPos = markerPos;
+            while (searchPos > 0) {
+                const pos = xml.lastIndexOf('<w:p', searchPos - 1);
+                if (pos === -1) return -1;
+                const nextChar = xml[pos + 4];
+                if (nextChar === '>' || nextChar === ' ') return pos;
+                searchPos = pos;
+            }
+            return -1;
+        }
+
+        // Helper: replace paragraph containing marker with table XML
+        function injectTable(xml: string, marker: string, tableXml: string): string {
+            const idx = xml.indexOf(marker);
+            if (idx === -1) return xml;
+            const pStart = findParagraphStart(xml, idx);
+            const pEnd = xml.indexOf('</w:p>', idx);
+            if (pStart > -1 && pEnd > -1) {
+                return xml.substring(0, pStart) + tableXml + xml.substring(pEnd + '</w:p>'.length);
+            }
+            return xml;
+        }
+
         // Post-process table injection
         const generatedZip = doc.getZip();
-        if (rincianItems.length > 0) {
-            try {
-                let docXml = generatedZip.file('word/document.xml')?.asText() || '';
-                const markerIdx = docXml.indexOf('__RINCIAN_TABLE__');
-                if (markerIdx > -1) {
-                    // Find the opening <w:p> or <w:p ...> (NOT <w:pPr>, <w:pStyle>, etc.)
-                    let pStart = -1;
-                    let searchPos = markerIdx;
-                    while (searchPos > 0) {
-                        const pos = docXml.lastIndexOf('<w:p', searchPos - 1);
-                        if (pos === -1) break;
-                        // Check that next char after '<w:p' is '>' or ' ' (not 'P', 'r', 'S', etc.)
-                        const nextChar = docXml[pos + 4];
-                        if (nextChar === '>' || nextChar === ' ') {
-                            pStart = pos;
-                            break;
-                        }
-                        searchPos = pos;
-                    }
-                    const pEnd = docXml.indexOf('</w:p>', markerIdx);
-                    if (pStart > -1 && pEnd > -1) {
-                        const tableXml = buildWordTableXml(rincianItems, rincianTotal);
-                        docXml = docXml.substring(0, pStart) + tableXml + docXml.substring(pEnd + '</w:p>'.length);
-                        generatedZip.file('word/document.xml', docXml);
-                        console.log('[Template] Injected rincian table with', rincianItems.length, 'rows');
-                    }
-                }
-            } catch (tblErr: any) {
-                console.error('[Template] Table injection error:', tblErr.message);
+        try {
+            let docXml = generatedZip.file('word/document.xml')?.asText() || '';
+            let changed = false;
+
+            // Inject rincian table
+            if (rincianItems.length > 0 && docXml.includes('__RINCIAN_TABLE__')) {
+                docXml = injectTable(docXml, '__RINCIAN_TABLE__', buildWordTableXml(rincianItems, rincianTotal));
+                console.log('[Template] Injected rincian table with', rincianItems.length, 'rows');
+                changed = true;
             }
+
+            // Inject personil table
+            if (personilItems.length > 0 && docXml.includes('__PERSONIL_TABLE__')) {
+                docXml = injectTable(docXml, '__PERSONIL_TABLE__', buildPersonilTableXml(personilItems));
+                console.log('[Template] Injected personil table with', personilItems.length, 'rows');
+                changed = true;
+            }
+
+            // Inject peralatan table
+            if (peralatanItems.length > 0 && docXml.includes('__PERALATAN_TABLE__')) {
+                docXml = injectTable(docXml, '__PERALATAN_TABLE__', buildPeralatanTableXml(peralatanItems));
+                console.log('[Template] Injected peralatan table with', peralatanItems.length, 'rows');
+                changed = true;
+            }
+
+            if (changed) generatedZip.file('word/document.xml', docXml);
+        } catch (tblErr: any) {
+            console.error('[Template] Table injection error:', tblErr.message);
         }
 
         // Post-process: strip empty Word Header sections that cause extra top spacing
@@ -690,7 +719,16 @@ function buildVariableMap(item: any, sekretaris: any = {}, refData: any = {}) {
 
         // ===== RINCIAN KONTRAK (for anakan/multi-paket) =====
         ...buildRincianVars(d),
+
+        // ===== PERSONIL & PERALATAN =====
+        _personilItems: parseJsonSafe(d.timPenugasan),
+        _peralatanItems: parseJsonSafe(d.peralatanUtama),
     };
+}
+
+function parseJsonSafe(str: any): any[] {
+    if (!str) return [];
+    try { return JSON.parse(str); } catch { return []; }
 }
 
 // BAST kode mapping (same as frontend)
@@ -909,4 +947,123 @@ function buildWordTableXml(items: { nama: string; nilai: number }[], total: numb
         '</w:tr>';
 
     return '<w:tbl>' + tblPr + tblGrid + headerRow + dataRows + totalRow + '</w:tbl>';
+}
+
+// Build Personil table (Personil Inti yang ditugaskan)
+function buildPersonilTableXml(items: any[]): string {
+    const FONT = 'Arial';
+    const SZ = '24';
+
+    function tblProps(): string {
+        return '<w:tblPr>' +
+            '<w:tblStyle w:val="TableGrid"/>' +
+            '<w:tblW w:w="5000" w:type="pct"/>' +
+            '<w:tblBorders>' +
+            '<w:top w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
+            '<w:left w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
+            '<w:bottom w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
+            '<w:right w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
+            '<w:insideH w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
+            '<w:insideV w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
+            '</w:tblBorders>' +
+            '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>' +
+            '</w:tblPr>';
+    }
+
+    function cell(text: string, widthPct: number, opts: { bold?: boolean; center?: boolean } = {}): string {
+        const safe = xmlEscape(text);
+        const tcPr = `<w:tcPr><w:tcW w:w="${widthPct}" w:type="pct"/></w:tcPr>`;
+        const rPrParts = [`<w:rFonts w:ascii="${FONT}" w:hAnsi="${FONT}" w:cs="${FONT}"/>`, `<w:sz w:val="${SZ}"/><w:szCs w:val="${SZ}"/>`];
+        if (opts.bold) rPrParts.push('<w:b/><w:bCs/>');
+        const rPr = '<w:rPr>' + rPrParts.join('') + '</w:rPr>';
+        const pPrParts: string[] = [];
+        if (opts.center) pPrParts.push('<w:jc w:val="center"/>');
+        pPrParts.push('<w:spacing w:after="0" w:line="240" w:lineRule="auto"/>');
+        pPrParts.push(rPr);
+        const pPr = '<w:pPr>' + pPrParts.join('') + '</w:pPr>';
+        return '<w:tc>' + tcPr + '<w:p>' + pPr + '<w:r>' + rPr + '<w:t xml:space="preserve">' + safe + '</w:t></w:r></w:p></w:tc>';
+    }
+
+    const grid = '<w:tblGrid><w:gridCol w:w="600"/><w:gridCol w:w="3200"/><w:gridCol w:w="2400"/><w:gridCol w:w="2800"/></w:tblGrid>';
+
+    const headerRow = '<w:tr>' +
+        cell('No', 300, { bold: true, center: true }) +
+        cell('Nama Personel', 1700, { bold: true, center: true }) +
+        cell('Posisi', 1300, { bold: true, center: true }) +
+        cell('Sertifikat Kompetensi', 1700, { bold: true, center: true }) +
+        '</w:tr>';
+
+    const dataRows = items.map((it, i) =>
+        '<w:tr>' +
+        cell(String(i + 1), 300, { center: true }) +
+        cell(it.nama || '', 1700) +
+        cell(it.posisi || '', 1300) +
+        cell(it.sertifikasi || '', 1700) +
+        '</w:tr>'
+    ).join('');
+
+    return '<w:tbl>' + tblProps() + grid + headerRow + dataRows + '</w:tbl>';
+}
+
+// Build Peralatan table (Peralatan yang digunakan)
+function buildPeralatanTableXml(items: any[]): string {
+    const FONT = 'Arial';
+    const SZ = '24';
+
+    function tblProps(): string {
+        return '<w:tblPr>' +
+            '<w:tblStyle w:val="TableGrid"/>' +
+            '<w:tblW w:w="5000" w:type="pct"/>' +
+            '<w:tblBorders>' +
+            '<w:top w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
+            '<w:left w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
+            '<w:bottom w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
+            '<w:right w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
+            '<w:insideH w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
+            '<w:insideV w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
+            '</w:tblBorders>' +
+            '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>' +
+            '</w:tblPr>';
+    }
+
+    function cell(text: string, widthPct: number, opts: { bold?: boolean; center?: boolean } = {}): string {
+        const safe = xmlEscape(text);
+        const tcPr = `<w:tcPr><w:tcW w:w="${widthPct}" w:type="pct"/></w:tcPr>`;
+        const rPrParts = [`<w:rFonts w:ascii="${FONT}" w:hAnsi="${FONT}" w:cs="${FONT}"/>`, `<w:sz w:val="${SZ}"/><w:szCs w:val="${SZ}"/>`];
+        if (opts.bold) rPrParts.push('<w:b/><w:bCs/>');
+        const rPr = '<w:rPr>' + rPrParts.join('') + '</w:rPr>';
+        const pPrParts: string[] = [];
+        if (opts.center) pPrParts.push('<w:jc w:val="center"/>');
+        pPrParts.push('<w:spacing w:after="0" w:line="240" w:lineRule="auto"/>');
+        pPrParts.push(rPr);
+        const pPr = '<w:pPr>' + pPrParts.join('') + '</w:pPr>';
+        return '<w:tc>' + tcPr + '<w:p>' + pPr + '<w:r>' + rPr + '<w:t xml:space="preserve">' + safe + '</w:t></w:r></w:p></w:tc>';
+    }
+
+    const grid = '<w:tblGrid><w:gridCol w:w="500"/><w:gridCol w:w="1800"/><w:gridCol w:w="1400"/><w:gridCol w:w="1000"/><w:gridCol w:w="800"/><w:gridCol w:w="1000"/><w:gridCol w:w="1200"/></w:tblGrid>';
+
+    const headerRow = '<w:tr>' +
+        cell('No', 350, { bold: true, center: true }) +
+        cell('Nama Alat', 1100, { bold: true, center: true }) +
+        cell('Merk & Tipe', 900, { bold: true, center: true }) +
+        cell('Kapasitas', 650, { bold: true, center: true }) +
+        cell('Jumlah', 500, { bold: true, center: true }) +
+        cell('Kondisi', 650, { bold: true, center: true }) +
+        cell('Status Milik', 850, { bold: true, center: true }) +
+        '</w:tr>';
+
+    const dataRows = items.map((it, i) => {
+        const merkTipe = [it.merk, it.type].filter(Boolean).join(' ');
+        return '<w:tr>' +
+            cell(String(i + 1), 350, { center: true }) +
+            cell(it.nama || '', 1100) +
+            cell(merkTipe, 900) +
+            cell(it.kapasitas || '', 650, { center: true }) +
+            cell(String(it.jumlah || ''), 500, { center: true }) +
+            cell(it.kondisi || '', 650, { center: true }) +
+            cell(it.statusKepemilikan || '', 850, { center: true }) +
+            '</w:tr>';
+    }).join('');
+
+    return '<w:tbl>' + tblProps() + grid + headerRow + dataRows + '</w:tbl>';
 }
