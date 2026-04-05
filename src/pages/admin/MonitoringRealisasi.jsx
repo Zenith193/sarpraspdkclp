@@ -453,7 +453,12 @@ const MonitoringRealisasi = () => {
                                                             <span style={{ fontSize: '0.7rem', color: 'var(--accent-green)' }}>{formatCurrency(a.nilaiKontrak)}</span>
                                                         ) : null}
                                                     </td>
-                                                    <td></td>
+                                                    <td>
+                                                        <button className="btn-icon" onClick={() => openDetail(k)} title="Detail (via indukan)"
+                                                            style={{ color: 'var(--accent-green)' }}>
+                                                            <Eye size={14} />
+                                                        </button>
+                                                    </td>
                                                 </tr>
                                             ))}
                                         </>
