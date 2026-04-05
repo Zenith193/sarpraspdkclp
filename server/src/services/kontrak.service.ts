@@ -377,41 +377,72 @@ export const kontrakService = {
             .orderBy(desc(realisasi.tahun), desc(realisasi.bulan));
     },
 
+    // List realisasi by matrikId (direct matrik link)
+    async listRealisasiByMatrik(matrikId: number) {
+        return db.select().from(realisasi)
+            .where(eq(realisasi.matrikId, matrikId))
+            .orderBy(desc(realisasi.tahun), desc(realisasi.bulan));
+    },
+
     // All realisasi for admin/verifikator monitoring
     async listAllRealisasi() {
         return db.select({
             realisasi: realisasi,
-            namaPerusahaan: perusahaan.namaPerusahaan,
+            namaPerusahaan: sql<string>`COALESCE(${perusahaan.namaPerusahaan}, ${matrikKegiatan.penyedia})`.as('namaPerusahaan'),
             namaPaket: sql<string>`COALESCE(${matrikKegiatan.namaPaket}, ${permohonanKontrak.namaPaket})`.as('namaPaket'),
             noSpk: sql<string>`COALESCE(${matrikKegiatan.noSpk}, ${permohonanKontrak.noSpk})`.as('noSpk'),
             jenisPengadaan: sql<string>`COALESCE(${matrikKegiatan.jenisPengadaan}, ${permohonanKontrak.jenisPengadaan})`.as('jenisPengadaan'),
         }).from(realisasi)
           .leftJoin(permohonanKontrak, eq(realisasi.kontrakId, permohonanKontrak.id))
           .leftJoin(perusahaan, eq(permohonanKontrak.perusahaanId, perusahaan.id))
-          .leftJoin(matrikKegiatan, eq(permohonanKontrak.matrikId, matrikKegiatan.id))
+          .leftJoin(matrikKegiatan, eq(realisasi.matrikId, matrikKegiatan.id))
           .orderBy(desc(realisasi.createdAt));
     },
 
-    // Get anakan (child matrik entries) for a kontrak
-    async getAnakan(kontrakId: number) {
-        // Get the kontrak to find matrikId
-        const kontrakRow = await db.select({
-            matrikId: permohonanKontrak.matrikId,
-            kodeSirup: permohonanKontrak.kodeSirup,
-        }).from(permohonanKontrak).where(eq(permohonanKontrak.id, kontrakId));
-        if (!kontrakRow[0] || !kontrakRow[0].matrikId) return [];
+    // List matrik by jenis pengadaan (for penyedia realisasi page)
+    async listMatrikByJenis(jenisList: string[]) {
+        const allMatrik = await db.select({
+            id: matrikKegiatan.id,
+            noMatrik: matrikKegiatan.noMatrik,
+            namaPaket: matrikKegiatan.namaPaket,
+            namaSekolah: matrikKegiatan.namaSekolah,
+            npsn: matrikKegiatan.npsn,
+            jenisPengadaan: matrikKegiatan.jenisPengadaan,
+            penyedia: matrikKegiatan.penyedia,
+            nilaiKontrak: matrikKegiatan.nilaiKontrak,
+            noSpk: matrikKegiatan.noSpk,
+            tahunAnggaran: matrikKegiatan.tahunAnggaran,
+        }).from(matrikKegiatan);
 
-        // Get parent noMatrik
+        // Filter: only indukan (parent) — noMatrik tanpa titik (bukan x.1, x.2, etc.)
+        const parents = allMatrik.filter((m: any) => {
+            const nm = m.noMatrik;
+            const isChild = /^\d+\.\d+/.test(nm) || nm.includes(',');
+            if (isChild) return false;
+            return jenisList.some(j => (m.jenisPengadaan || '').includes(j));
+        });
+
+        // For each parent, find its children
+        const result = parents.map((p: any) => {
+            const children = allMatrik.filter((m: any) => {
+                const nm = m.noMatrik;
+                return (nm.startsWith(p.noMatrik + '.') || nm.startsWith(p.noMatrik + ',')) && nm !== p.noMatrik;
+            });
+            return { ...p, anakan: children };
+        });
+
+        return result;
+    },
+
+    // Get anakan by matrikId directly
+    async getAnakanByMatrik(matrikId: number) {
         const parentRow = await db.select({
             noMatrik: matrikKegiatan.noMatrik,
-        }).from(matrikKegiatan).where(eq(matrikKegiatan.id, kontrakRow[0].matrikId));
+        }).from(matrikKegiatan).where(eq(matrikKegiatan.id, matrikId));
         if (!parentRow[0]) return [];
 
-        const baseNo = parentRow[0].noMatrik.includes(',')
-            ? parentRow[0].noMatrik.split(',')[0]
-            : parentRow[0].noMatrik;
+        const baseNo = parentRow[0].noMatrik;
 
-        // Find all children (noMatrik starts with baseNo + ',')
         const allMatrik = await db.select({
             id: matrikKegiatan.id,
             noMatrik: matrikKegiatan.noMatrik,
@@ -421,16 +452,24 @@ export const kontrakService = {
             nilaiKontrak: matrikKegiatan.nilaiKontrak,
         }).from(matrikKegiatan);
 
-        const children = allMatrik.filter((m: any) =>
-            m.noMatrik.startsWith(baseNo + ',') && m.noMatrik !== baseNo
+        return allMatrik.filter((m: any) =>
+            (m.noMatrik.startsWith(baseNo + '.') || m.noMatrik.startsWith(baseNo + ',')) && m.noMatrik !== baseNo
         );
-
-        return children;
     },
 
-    async createRealisasi(kontrakId: number, data: any, userId: string) {
+    // Get anakan (child matrik entries) for a kontrak
+    async getAnakan(kontrakId: number) {
+        const kontrakRow = await db.select({
+            matrikId: permohonanKontrak.matrikId,
+        }).from(permohonanKontrak).where(eq(permohonanKontrak.id, kontrakId));
+        if (!kontrakRow[0] || !kontrakRow[0].matrikId) return [];
+
+        return this.getAnakanByMatrik(kontrakRow[0].matrikId);
+    },
+
+    async createRealisasi(kontrakId: number | null, data: any, userId: string) {
         const [created] = await db.insert(realisasi).values({
-            kontrakId,
+            kontrakId: kontrakId || null,
             matrikId: data.matrikId ? Number(data.matrikId) : null,
             namaSekolah: data.namaSekolah,
             tahun: Number(data.tahun),

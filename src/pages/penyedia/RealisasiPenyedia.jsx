@@ -1,24 +1,24 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
-import { Search, ChevronLeft, ChevronRight, Target, BarChart3, Camera, Trash2, Edit, X, Calendar, ArrowLeft, Image as ImageIcon, Plus, ChevronDown } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Target, Camera, Trash2, Edit, X, ArrowLeft, Plus, ChevronDown, ChevronUp } from 'lucide-react';
 import { kontrakApi } from '../../api/index';
 import { formatCurrency } from '../../utils/formatters';
 import toast from 'react-hot-toast';
 
 const BULAN = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-const JENIS_ALLOWED = ['Jasa Konsultansi Pengawasan', 'Pekerjaan Konstruksi', 'Pengadaan Barang'];
 const currentYear = new Date().getFullYear();
 
 const RealisasiPenyedia = () => {
-    const [kontrakList, setKontrakList] = useState([]);
+    const [matrikList, setMatrikList] = useState([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState('');
     const [pageSize, setPageSize] = useState(10);
     const [currentPage, setCurrentPage] = useState(1);
+    const [expandedId, setExpandedId] = useState(null); // Show anakan inline
 
     // Detail view
-    const [activeKontrak, setActiveKontrak] = useState(null);
-    const [realisasiList, setRealisasiList] = useState([]);
+    const [activeMatrik, setActiveMatrik] = useState(null);
     const [anakan, setAnakan] = useState([]);
+    const [realisasiList, setRealisasiList] = useState([]);
     const [loadingDetail, setLoadingDetail] = useState(false);
 
     // Form state
@@ -32,29 +32,27 @@ const RealisasiPenyedia = () => {
     const fileRefs = [useRef(), useRef(), useRef(), useRef(), useRef(), useRef()];
     const [submitting, setSubmitting] = useState(false);
 
-    // Fetch kontrak list
+    // Fetch matrik list
     useEffect(() => {
-        kontrakApi.listPermohonan().then(data => {
+        kontrakApi.listMatrikRealisasi().then(data => {
             const arr = Array.isArray(data) ? data : (data?.data || []);
-            // Only show verified contracts with allowed jenis
-            const filtered = arr.filter(k =>
-                k.status === 'Diverifikasi' &&
-                JENIS_ALLOWED.some(j => (k.jenisPengadaan || '').includes(j))
-            );
-            setKontrakList(filtered);
-        }).catch(e => toast.error('Gagal memuat kontrak')).finally(() => setLoading(false));
+            setMatrikList(arr);
+        }).catch(e => toast.error('Gagal memuat data paket')).finally(() => setLoading(false));
     }, []);
 
     // Filter & pagination
     const filtered = useMemo(() => {
         const q = search.toLowerCase();
-        if (!q) return kontrakList;
-        return kontrakList.filter(k =>
+        if (!q) return matrikList;
+        return matrikList.filter(k =>
             (k.namaPaket || '').toLowerCase().includes(q) ||
             (k.noSpk || '').toLowerCase().includes(q) ||
-            (k.namaPerusahaan || '').toLowerCase().includes(q)
+            (k.penyedia || '').toLowerCase().includes(q) ||
+            (k.noMatrik || '').toLowerCase().includes(q) ||
+            (k.jenisPengadaan || '').toLowerCase().includes(q) ||
+            (k.anakan || []).some(a => (a.namaSekolah || '').toLowerCase().includes(q))
         );
-    }, [kontrakList, search]);
+    }, [matrikList, search]);
 
     const totalPages = Math.ceil(filtered.length / pageSize) || 1;
     const paged = useMemo(() => {
@@ -63,25 +61,26 @@ const RealisasiPenyedia = () => {
     }, [filtered, currentPage, pageSize]);
 
     // Open detail
-    const openDetail = async (kontrak) => {
-        setActiveKontrak(kontrak);
+    const openDetail = async (matrik) => {
+        setActiveMatrik(matrik);
+        setAnakan(matrik.anakan || []);
         setLoadingDetail(true);
         setFormOpen(false);
         setEditId(null);
         try {
-            const [rl, ak] = await Promise.all([
-                kontrakApi.listRealisasi(kontrak.id),
-                kontrakApi.getAnakan(kontrak.id).catch(() => [])
-            ]);
+            const rl = await kontrakApi.listRealisasiByMatrik(matrik.id);
             setRealisasiList(Array.isArray(rl) ? rl : (rl?.data || []));
-            setAnakan(Array.isArray(ak) ? ak : (ak?.data || []));
         } catch { toast.error('Gagal memuat data realisasi'); }
         setLoadingDetail(false);
     };
 
     // Reset form
     const resetForm = () => {
-        setForm({ namaSekolah: activeKontrak?.namaSekolah || '', matrikId: '', tahun: currentYear, bulan: new Date().getMonth() + 1, targetPersen: '', realisasiPersen: '', keterangan: '' });
+        setForm({
+            namaSekolah: activeMatrik?.namaSekolah || '',
+            matrikId: '', tahun: currentYear,
+            bulan: new Date().getMonth() + 1, targetPersen: '', realisasiPersen: '', keterangan: ''
+        });
         setFiles([null, null, null, null, null, null]);
         setEditId(null);
     };
@@ -109,10 +108,9 @@ const RealisasiPenyedia = () => {
         setSubmitting(true);
         try {
             if (editId) {
-                // Update (no file re-upload for simplicity)
                 await kontrakApi.updateRealisasi(editId, {
                     namaSekolah: form.namaSekolah,
-                    matrikId: form.matrikId || null,
+                    matrikId: form.matrikId || activeMatrik.id,
                     tahun: form.tahun,
                     bulan: form.bulan,
                     targetPersen: form.targetPersen,
@@ -123,18 +121,18 @@ const RealisasiPenyedia = () => {
             } else {
                 const fd = new FormData();
                 fd.append('namaSekolah', form.namaSekolah);
-                if (form.matrikId) fd.append('matrikId', form.matrikId);
+                fd.append('matrikId', form.matrikId || String(activeMatrik.id));
                 fd.append('tahun', String(form.tahun));
                 fd.append('bulan', String(form.bulan));
                 fd.append('targetPersen', String(form.targetPersen || 0));
                 fd.append('realisasiPersen', String(form.realisasiPersen || 0));
                 if (form.keterangan) fd.append('keterangan', form.keterangan);
                 files.forEach(f => { if (f) fd.append('dokumentasi', f); });
-                await kontrakApi.createRealisasi(activeKontrak.id, fd);
+                await kontrakApi.createRealisasiByMatrik(activeMatrik.id, fd);
                 toast.success('Realisasi berhasil ditambahkan');
             }
             // Refresh
-            const rl = await kontrakApi.listRealisasi(activeKontrak.id);
+            const rl = await kontrakApi.listRealisasiByMatrik(activeMatrik.id);
             setRealisasiList(Array.isArray(rl) ? rl : []);
             resetForm();
             setFormOpen(false);
@@ -163,7 +161,7 @@ const RealisasiPenyedia = () => {
         if (!confirm('Hapus data realisasi ini?')) return;
         try {
             await kontrakApi.deleteRealisasi(id);
-            const rl = await kontrakApi.listRealisasi(activeKontrak.id);
+            const rl = await kontrakApi.listRealisasiByMatrik(activeMatrik.id);
             setRealisasiList(Array.isArray(rl) ? rl : []);
             toast.success('Data realisasi dihapus');
         } catch { toast.error('Gagal menghapus'); }
@@ -172,26 +170,31 @@ const RealisasiPenyedia = () => {
     const parsePaths = (p) => { try { return JSON.parse(p); } catch { return []; } };
 
     // ===== DETAIL VIEW =====
-    if (activeKontrak) {
+    if (activeMatrik) {
         return (
             <div>
-                <button className="btn btn-ghost btn-sm" onClick={() => setActiveKontrak(null)}
+                <button className="btn btn-ghost btn-sm" onClick={() => setActiveMatrik(null)}
                     style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 16 }}>
-                    <ArrowLeft size={16} /> Kembali ke Daftar Kontrak
+                    <ArrowLeft size={16} /> Kembali ke Daftar Paket
                 </button>
 
                 {/* Header info */}
                 <div className="table-container" style={{ marginBottom: 16, padding: 20 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 12 }}>
                         <div>
-                            <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Realisasi Kontrak</h2>
-                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: 4 }}>{activeKontrak.namaPaket}</div>
+                            <h2 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 700 }}>Realisasi Paket</h2>
+                            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: 4 }}>{activeMatrik.namaPaket}</div>
                             <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: 2 }}>
-                                No. SPK: <strong>{activeKontrak.noSpk || '-'}</strong> • {activeKontrak.jenisPengadaan}
+                                No. Matrik: <strong>{activeMatrik.noMatrik}</strong> • {activeMatrik.jenisPengadaan}
                             </div>
-                            {activeKontrak.nilaiKontrak && (
+                            {activeMatrik.penyedia && (
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: 2 }}>
+                                    Penyedia: <strong>{activeMatrik.penyedia}</strong>
+                                </div>
+                            )}
+                            {activeMatrik.nilaiKontrak && (
                                 <div style={{ fontSize: '0.8rem', color: 'var(--accent-green)', marginTop: 2, fontWeight: 600 }}>
-                                    Nilai Kontrak: {formatCurrency(activeKontrak.nilaiKontrak)}
+                                    Nilai Kontrak: {formatCurrency(activeMatrik.nilaiKontrak)}
                                 </div>
                             )}
                         </div>
@@ -400,7 +403,7 @@ const RealisasiPenyedia = () => {
                     <div className="table-toolbar-left" style={{ gap: 8 }}>
                         <div className="table-search">
                             <Search size={16} className="search-icon" />
-                            <input placeholder="Cari paket, No SPK..." value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
+                            <input placeholder="Cari paket, No SPK, penyedia..." value={search} onChange={e => { setSearch(e.target.value); setCurrentPage(1); }} />
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Tampil:</span>
@@ -413,39 +416,71 @@ const RealisasiPenyedia = () => {
                 </div>
 
                 {loading ? (
-                    <div style={{ padding: 60, textAlign: 'center', color: 'var(--text-secondary)' }}>Memuat data kontrak...</div>
+                    <div style={{ padding: 60, textAlign: 'center', color: 'var(--text-secondary)' }}>Memuat data paket...</div>
                 ) : (
                     <div style={{ overflowX: 'auto' }}>
                         <table className="data-table">
                             <thead>
                                 <tr>
                                     <th style={{ width: 40 }}>#</th>
+                                    <th style={{ width: 70 }}>Matrik</th>
                                     <th>Aksi</th>
-                                    <th>No SPK</th>
-                                    <th>Nama Perusahaan</th>
                                     <th style={{ minWidth: 250 }}>Nama Paket</th>
+                                    <th>Penyedia</th>
                                     <th>Jenis</th>
+                                    <th>Anakan</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {paged.map((k, i) => (
-                                    <tr key={k.id}>
-                                        <td>{(currentPage - 1) * pageSize + i + 1}</td>
-                                        <td>
-                                            <button className="btn btn-primary btn-sm" onClick={() => openDetail(k)}
-                                                style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 12px', fontSize: '0.78rem', whiteSpace: 'nowrap' }}>
-                                                <Target size={13} /> Realisasi
-                                            </button>
-                                        </td>
-                                        <td style={{ fontFamily: 'monospace', fontSize: '0.82rem', whiteSpace: 'nowrap' }}>{k.noSpk || '-'}</td>
-                                        <td style={{ fontSize: '0.85rem', fontWeight: 500 }}>{k.namaPerusahaan}</td>
-                                        <td style={{ fontSize: '0.82rem' }}>{k.namaPaket}</td>
-                                        <td><span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: 'var(--radius-full)', background: 'rgba(59,130,246,0.08)', color: 'var(--accent-blue)', fontWeight: 500, whiteSpace: 'nowrap' }}>{k.jenisPengadaan}</span></td>
-                                    </tr>
-                                ))}
+                                {paged.map((k, i) => {
+                                    const hasAnakan = k.anakan && k.anakan.length > 0;
+                                    const isExpanded = expandedId === k.id;
+                                    return (
+                                        <>
+                                            <tr key={k.id}>
+                                                <td>{(currentPage - 1) * pageSize + i + 1}</td>
+                                                <td style={{ fontFamily: 'monospace', fontSize: '0.82rem', fontWeight: 600 }}>{k.noMatrik}</td>
+                                                <td>
+                                                    <button className="btn btn-primary btn-sm" onClick={() => openDetail(k)}
+                                                        style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 12px', fontSize: '0.78rem', whiteSpace: 'nowrap' }}>
+                                                        <Target size={13} /> Realisasi
+                                                    </button>
+                                                </td>
+                                                <td style={{ fontSize: '0.82rem' }}>{k.namaPaket}</td>
+                                                <td style={{ fontSize: '0.82rem', fontWeight: 500 }}>{k.penyedia || '-'}</td>
+                                                <td><span style={{ fontSize: '0.72rem', padding: '2px 8px', borderRadius: 'var(--radius-full)', background: 'rgba(59,130,246,0.08)', color: 'var(--accent-blue)', fontWeight: 500, whiteSpace: 'nowrap' }}>{k.jenisPengadaan}</span></td>
+                                                <td>
+                                                    {hasAnakan ? (
+                                                        <button className="btn btn-ghost btn-sm" onClick={() => setExpandedId(isExpanded ? null : k.id)}
+                                                            style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.78rem', color: 'var(--accent-blue)' }}>
+                                                            {k.anakan.length} sekolah {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                                                        </button>
+                                                    ) : <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>-</span>}
+                                                </td>
+                                            </tr>
+                                            {hasAnakan && isExpanded && k.anakan.map((a, j) => (
+                                                <tr key={`${k.id}-${a.id}`} style={{ background: 'rgba(59,130,246,0.03)' }}>
+                                                    <td></td>
+                                                    <td style={{ fontFamily: 'monospace', fontSize: '0.78rem', color: 'var(--text-secondary)', paddingLeft: 16 }}>{a.noMatrik}</td>
+                                                    <td></td>
+                                                    <td colSpan={2} style={{ fontSize: '0.82rem', paddingLeft: 8 }}>
+                                                        <span style={{ color: 'var(--accent-blue)', marginRight: 6 }}>↳</span>
+                                                        {a.namaSekolah || a.namaPaket}
+                                                    </td>
+                                                    <td></td>
+                                                    <td>
+                                                        {a.nilaiKontrak ? (
+                                                            <span style={{ fontSize: '0.72rem', color: 'var(--accent-green)' }}>{formatCurrency(a.nilaiKontrak)}</span>
+                                                        ) : null}
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </>
+                                    );
+                                })}
                                 {paged.length === 0 && (
-                                    <tr><td colSpan={6} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>
-                                        Tidak ada kontrak yang sesuai. Pastikan kontrak sudah diverifikasi.
+                                    <tr><td colSpan={7} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>
+                                        Tidak ada paket yang sesuai.
                                     </td></tr>
                                 )}
                             </tbody>
@@ -455,7 +490,7 @@ const RealisasiPenyedia = () => {
 
                 <div className="table-pagination">
                     <div className="table-pagination-info">
-                        Menampilkan {filtered.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}-{Math.min(currentPage * pageSize, filtered.length)} dari {filtered.length} kontrak
+                        Menampilkan {filtered.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}-{Math.min(currentPage * pageSize, filtered.length)} dari {filtered.length} paket
                     </div>
                     <div className="table-pagination-controls">
                         <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}><ChevronLeft size={16} /></button>

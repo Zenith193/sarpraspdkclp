@@ -275,6 +275,11 @@ export const kontrakApi = {
     deleteRealisasi: (id) => api.delete(`/kontrak/realisasi/${id}`),
     allRealisasi: () => api.get('/kontrak/realisasi/all'),
     getAnakan: (kontrakId) => api.get(`/kontrak/permohonan/${kontrakId}/anakan`),
+    // Matrik-based realisasi
+    listMatrikRealisasi: () => api.get('/kontrak/matrik-realisasi'),
+    getAnakanByMatrik: (matrikId) => api.get(`/kontrak/matrik/${matrikId}/anakan`),
+    listRealisasiByMatrik: (matrikId) => api.get(`/kontrak/matrik/${matrikId}/realisasi`),
+    createRealisasiByMatrik: (matrikId, formData) => api.upload(`/kontrak/matrik/${matrikId}/realisasi`, formData),
     // Dokumen
     getDokumen: (kontrakId) => api.get(`/kontrak/permohonan/${kontrakId}/dokumen`),
 };

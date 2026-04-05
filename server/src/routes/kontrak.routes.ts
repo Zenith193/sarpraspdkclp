@@ -193,6 +193,50 @@ router.get('/permohonan/:id/anakan', requireAuth, async (req, res) => {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// List matrik by jenis pengadaan (for penyedia realisasi)
+router.get('/matrik-realisasi', requireAuth, async (req, res) => {
+    try {
+        const jenis = ['Jasa Konsultansi Pengawasan', 'Pekerjaan Konstruksi', 'Pengadaan Barang'];
+        const data = await kontrakService.listMatrikByJenis(jenis);
+        res.json(data);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// Get anakan by matrikId directly
+router.get('/matrik/:matrikId/anakan', requireAuth, async (req, res) => {
+    try {
+        const data = await kontrakService.getAnakanByMatrik(Number(req.params.matrikId));
+        res.json(data);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// List realisasi by matrikId
+router.get('/matrik/:matrikId/realisasi', requireAuth, async (req, res) => {
+    try {
+        const data = await kontrakService.listRealisasiByMatrik(Number(req.params.matrikId));
+        res.json(data);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// Create realisasi by matrikId (no kontrakId needed)
+router.post('/matrik/:matrikId/realisasi', requireAuth, (req: any, res: any, next: any) => {
+    realisasiUpload(req, res, (err: any) => {
+        if (err) return res.status(400).json({ error: err.message });
+        next();
+    });
+}, async (req: any, res) => {
+    try {
+        const data = req.body;
+        data.matrikId = req.params.matrikId;
+        if (req.files && req.files.length > 0) {
+            const paths = (req.files as any[]).map(f => `/uploads/kontrak/${f.filename}`);
+            data.dokumentasiPaths = JSON.stringify(paths);
+        }
+        const created = await kontrakService.createRealisasi(null, data, req.user!.id);
+        res.status(201).json(created);
+    } catch (e: any) { res.status(400).json({ error: e.message }); }
+});
+
 router.get('/permohonan/:id/realisasi', requireAuth, async (req, res) => {
     try {
         const data = await kontrakService.listRealisasi(Number(req.params.id));

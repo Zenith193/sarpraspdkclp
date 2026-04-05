@@ -53,7 +53,7 @@ export const permohonanKontrak = pgTable('permohonan_kontrak', {
 // ============================================================
 export const realisasi = pgTable('realisasi', {
     id: serial('id').primaryKey(),
-    kontrakId: integer('kontrak_id').notNull().references(() => permohonanKontrak.id, { onDelete: 'cascade' }),
+    kontrakId: integer('kontrak_id').references(() => permohonanKontrak.id, { onDelete: 'cascade' }),
     namaSekolah: text('nama_sekolah'),
     matrikId: integer('matrik_id').references(() => matrikKegiatan.id),
     tahun: integer('tahun').notNull(),
