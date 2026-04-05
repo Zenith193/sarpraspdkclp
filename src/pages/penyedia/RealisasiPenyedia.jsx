@@ -167,6 +167,11 @@ const RealisasiPenyedia = () => {
     const handleFileChange = (index, e) => {
         const file = e.target.files?.[0];
         if (!file) return;
+        if (file.size > 500 * 1024) {
+            toast.error(`Ukuran foto maksimal 500KB. File "${file.name}" berukuran ${(file.size / 1024).toFixed(0)}KB`);
+            e.target.value = '';
+            return;
+        }
         setFiles(prev => { const n = [...prev]; n[index] = file; return n; });
     };
 
@@ -537,7 +542,7 @@ const RealisasiPenyedia = () => {
                         ) : (
                             /* CREATE MODE: 6 mandatory upload slots */
                             <div style={{ marginBottom: 16 }}>
-                                <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: 8, color: 'var(--text-secondary)' }}>Dokumentasi (wajib 6 gambar)</label>
+                                <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: 8, color: 'var(--text-secondary)' }}>Dokumentasi (wajib 6 gambar, maks. 500KB/foto)</label>
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8 }}>
                                     {files.map((file, i) => (
                                         <div key={i} onClick={() => fileRefs[i].current.click()}

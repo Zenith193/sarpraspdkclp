@@ -193,7 +193,7 @@ router.delete('/permohonan/:id', requireAuth, async (req, res) => {
 // Multi-file upload for realisasi (up to 6 images)
 const realisasiUpload = multer({
     storage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB per file
+    limits: { fileSize: 500 * 1024 }, // 500KB per file
     fileFilter: (_req: any, file: any, cb: any) => {
         if (file.mimetype.startsWith('image/')) cb(null, true);
         else cb(new Error('Hanya file gambar yang diizinkan'));
