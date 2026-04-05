@@ -1032,21 +1032,21 @@ function buildPersonilTableXml(items: any[], fontInfo: { font: string; sz: strin
         '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>' +
         '</w:tblPr>';
 
-    const grid = '<w:tblGrid><w:gridCol w:w="500"/><w:gridCol w:w="3000"/><w:gridCol w:w="2200"/><w:gridCol w:w="3300"/></w:tblGrid>';
+    const grid = '<w:tblGrid><w:gridCol w:w="700"/><w:gridCol w:w="2900"/><w:gridCol w:w="2100"/><w:gridCol w:w="3300"/></w:tblGrid>';
 
     const headerRow = '<w:tr>' +
-        cell('No', 280, { bold: true, center: true }) +
-        cell('Nama Personel', 1650, { bold: true, center: true }) +
-        cell('Posisi', 1220, { bold: true, center: true }) +
-        cell('Sertifikat Kompetensi', 1850, { bold: true, center: true }) +
+        cell('No', 400, { bold: true, center: true }) +
+        cell('Nama Personel', 1600, { bold: true, center: true }) +
+        cell('Posisi', 1200, { bold: true, center: true }) +
+        cell('Sertifikat Kompetensi', 1800, { bold: true, center: true }) +
         '</w:tr>';
 
     const dataRows = items.map((it, i) =>
         '<w:tr>' +
-        cell(String(i + 1), 280) +
-        cell(it.nama || '', 1650) +
-        cell(it.posisi || '', 1220) +
-        cell(it.sertifikasi || '', 1850) +
+        cell(String(i + 1), 400, { center: true }) +
+        cell(it.nama || '', 1600) +
+        cell(it.posisi || '', 1200) +
+        cell(it.sertifikasi || '', 1800) +
         '</w:tr>'
     ).join('');
 
