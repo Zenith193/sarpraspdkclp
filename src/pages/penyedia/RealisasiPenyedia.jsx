@@ -40,6 +40,14 @@ const RealisasiPenyedia = () => {
     const [files, setFiles] = useState([null, null, null, null, null, null]);
     const fileRefs = [useRef(), useRef(), useRef(), useRef(), useRef(), useRef()];
     const [submitting, setSubmitting] = useState(false);
+    const [editPhotos, setEditPhotos] = useState([]); // existing photos when editing
+
+    // Lightbox state
+    const [lightbox, setLightbox] = useState({ open: false, photos: [], index: 0 });
+    const openLightbox = (photos, index) => setLightbox({ open: true, photos, index });
+    const closeLightbox = () => setLightbox({ open: false, photos: [], index: 0 });
+    const lbPrev = () => setLightbox(prev => ({ ...prev, index: (prev.index - 1 + prev.photos.length) % prev.photos.length }));
+    const lbNext = () => setLightbox(prev => ({ ...prev, index: (prev.index + 1) % prev.photos.length }));
 
     useEffect(() => {
         kontrakApi.listMatrikRealisasi().then(data => {
@@ -88,6 +96,7 @@ const RealisasiPenyedia = () => {
         });
         setFiles([null, null, null, null, null, null]);
         setEditId(null);
+        setEditPhotos([]);
     };
 
     const handleAnakanChange = (e) => {
@@ -147,6 +156,9 @@ const RealisasiPenyedia = () => {
             keterangan: item.keterangan || '',
         });
         setFiles([null, null, null, null, null, null]);
+        // Parse existing photos for display in edit form
+        const existingPhotos = parsePaths(item.dokumentasiPaths).map(p => fixImgPath(p));
+        setEditPhotos(existingPhotos);
         setFormOpen(true);
     };
 
@@ -233,6 +245,47 @@ const RealisasiPenyedia = () => {
         return rows;
     };
 
+    // ===== LIGHTBOX =====
+    const renderLightbox = () => {
+        if (!lightbox.open || lightbox.photos.length === 0) return null;
+        return (
+            <div style={{ position: 'fixed', inset: 0, zIndex: 2000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.85)', backdropFilter: 'blur(8px)' }}
+                onClick={closeLightbox}>
+                {/* Close button */}
+                <button onClick={closeLightbox}
+                    style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', width: 40, height: 40, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, fontSize: '1.2rem' }}>
+                    <X size={24} />
+                </button>
+                {/* Counter */}
+                <div style={{ position: 'absolute', top: 20, left: '50%', transform: 'translateX(-50%)', color: 'rgba(255,255,255,0.7)', fontSize: '0.9rem', zIndex: 10 }}>
+                    {lightbox.index + 1} / {lightbox.photos.length}
+                </div>
+                {/* Prev button */}
+                {lightbox.photos.length > 1 && (
+                    <button onClick={e => { e.stopPropagation(); lbPrev(); }}
+                        style={{ position: 'absolute', left: 16, background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', width: 48, height: 48, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, transition: 'background 0.2s' }}
+                        onMouseEnter={e => e.target.style.background = 'rgba(255,255,255,0.2)'}
+                        onMouseLeave={e => e.target.style.background = 'rgba(255,255,255,0.1)'}>
+                        <ChevronLeft size={28} />
+                    </button>
+                )}
+                {/* Image */}
+                <img src={lightbox.photos[lightbox.index]} alt=""
+                    onClick={e => e.stopPropagation()}
+                    style={{ maxWidth: '85vw', maxHeight: '85vh', objectFit: 'contain', borderRadius: 8, boxShadow: '0 20px 60px rgba(0,0,0,0.5)' }} />
+                {/* Next button */}
+                {lightbox.photos.length > 1 && (
+                    <button onClick={e => { e.stopPropagation(); lbNext(); }}
+                        style={{ position: 'absolute', right: 16, background: 'rgba(255,255,255,0.1)', border: 'none', color: '#fff', width: 48, height: 48, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10, transition: 'background 0.2s' }}
+                        onMouseEnter={e => e.target.style.background = 'rgba(255,255,255,0.2)'}
+                        onMouseLeave={e => e.target.style.background = 'rgba(255,255,255,0.1)'}>
+                        <ChevronRight size={28} />
+                    </button>
+                )}
+            </div>
+        );
+    };
+
     // ===== DETAIL VIEW =====
     if (activeMatrik) {
         const mergedRows = buildMergedRows();
@@ -240,6 +293,7 @@ const RealisasiPenyedia = () => {
 
         return (
             <div>
+                {renderLightbox()}
                 <button className="btn btn-ghost btn-sm" onClick={() => setActiveMatrik(null)}
                     style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 16 }}>
                     <ArrowLeft size={16} /> Kembali ke Daftar Paket
@@ -313,26 +367,40 @@ const RealisasiPenyedia = () => {
                                     style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border-color)', background: 'var(--bg-input)', color: 'var(--text-primary)', fontSize: '0.85rem' }} />
                             </div>
                         </div>
-                        {!editId && (
+                        {/* Show existing photos in edit mode */}
+                        {editId && editPhotos.length > 0 && (
                             <div style={{ marginBottom: 16 }}>
-                                <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: 8, color: 'var(--text-secondary)' }}>Dokumentasi (max 6 gambar)</label>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8 }}>
-                                    {files.map((file, i) => (
-                                        <div key={i} onClick={() => fileRefs[i].current.click()}
-                                            style={{ position: 'relative', height: 100, borderRadius: 8, cursor: 'pointer', border: '2px dashed var(--border-color)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, background: file ? 'var(--bg-secondary)' : 'var(--bg-input)', overflow: 'hidden' }}>
-                                            {file ? (
-                                                <>
-                                                    <img src={URL.createObjectURL(file)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                    <button onClick={(e) => { e.stopPropagation(); setFiles(prev => { const n = [...prev]; n[i] = null; return n; }); }}
-                                                        style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: '50%', width: 20, height: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={12} /></button>
-                                                </>
-                                            ) : (<><Camera size={20} style={{ color: 'var(--text-secondary)' }} /><span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Gambar {i + 1}</span></>)}
-                                            <input ref={fileRefs[i]} type="file" accept="image/*" onChange={e => handleFileChange(i, e)} style={{ display: 'none' }} />
+                                <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: 8, color: 'var(--text-secondary)' }}>Foto yang sudah ada</label>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: 8 }}>
+                                    {editPhotos.map((src, i) => (
+                                        <div key={i} style={{ position: 'relative', borderRadius: 8, overflow: 'hidden', border: '1px solid var(--border-color)', aspectRatio: '1', cursor: 'pointer' }}
+                                            onClick={() => openLightbox(editPhotos, i)}>
+                                            <img src={src} alt={`Foto ${i + 1}`}
+                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                onError={e => { e.target.src = ''; e.target.alt = 'Gagal'; e.target.style.background = 'var(--bg-secondary)'; e.target.style.display = 'flex'; }} />
                                         </div>
                                     ))}
                                 </div>
                             </div>
                         )}
+                        <div style={{ marginBottom: 16 }}>
+                            <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: 8, color: 'var(--text-secondary)' }}>{editId ? 'Ganti/Tambah Foto (opsional)' : 'Dokumentasi (max 6 gambar)'}</label>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8 }}>
+                                {files.map((file, i) => (
+                                    <div key={i} onClick={() => fileRefs[i].current.click()}
+                                        style={{ position: 'relative', height: 100, borderRadius: 8, cursor: 'pointer', border: '2px dashed var(--border-color)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, background: file ? 'var(--bg-secondary)' : 'var(--bg-input)', overflow: 'hidden' }}>
+                                        {file ? (
+                                            <>
+                                                <img src={URL.createObjectURL(file)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                <button onClick={(e) => { e.stopPropagation(); setFiles(prev => { const n = [...prev]; n[i] = null; return n; }); }}
+                                                    style={{ position: 'absolute', top: 4, right: 4, background: 'rgba(0,0,0,0.6)', color: '#fff', border: 'none', borderRadius: '50%', width: 20, height: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={12} /></button>
+                                            </>
+                                        ) : (<><Camera size={20} style={{ color: 'var(--text-secondary)' }} /><span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>Gambar {i + 1}</span></>)}
+                                        <input ref={fileRefs[i]} type="file" accept="image/*" onChange={e => handleFileChange(i, e)} style={{ display: 'none' }} />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                         <div style={{ marginBottom: 16 }}>
                             <label style={{ fontSize: '0.8rem', fontWeight: 600, display: 'block', marginBottom: 4, color: 'var(--text-secondary)' }}>Keterangan</label>
                             <textarea value={form.keterangan} onChange={e => setForm(prev => ({ ...prev, keterangan: e.target.value }))}
@@ -414,13 +482,18 @@ const RealisasiPenyedia = () => {
                                                 </td>
                                                 <td style={{ verticalAlign: 'middle', borderRight: '1px solid var(--border-color)', padding: '8px 6px' }}>
                                                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4 }}>
-                                                        {photos.length > 0 ? photos.map((p, j) => (
-                                                            <a key={j} href={fixImgPath(p)} target="_blank" rel="noopener noreferrer">
-                                                                <img src={fixImgPath(p)} alt={`Foto ${j + 1}`}
-                                                                    style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border-color)', display: 'block' }}
-                                                                    onError={e => { e.target.style.display = 'none'; }} />
-                                                            </a>
-                                                        )) : <span style={{ color: 'var(--text-secondary)', fontSize: '0.72rem', gridColumn: 'span 3' }}>Tidak ada foto</span>}
+                                                        {photos.length > 0 ? photos.map((p, j) => {
+                                                            const allPhotos = photos.map(pp => fixImgPath(pp));
+                                                            return (
+                                                                <div key={j} onClick={() => openLightbox(allPhotos, j)} style={{ cursor: 'pointer' }}>
+                                                                    <img src={fixImgPath(p)} alt={`Foto ${j + 1}`}
+                                                                        style={{ width: '100%', aspectRatio: '1', objectFit: 'cover', borderRadius: 6, border: '1px solid var(--border-color)', display: 'block', transition: 'transform 0.15s, opacity 0.15s' }}
+                                                                        onMouseEnter={e => { e.target.style.transform = 'scale(1.05)'; e.target.style.opacity = '0.85'; }}
+                                                                        onMouseLeave={e => { e.target.style.transform = 'scale(1)'; e.target.style.opacity = '1'; }}
+                                                                        onError={e => { e.target.style.display = 'none'; }} />
+                                                                </div>
+                                                            );
+                                                        }) : <span style={{ color: 'var(--text-secondary)', fontSize: '0.72rem', gridColumn: 'span 3' }}>Tidak ada foto</span>}
                                                     </div>
                                                 </td>
                                                 <td style={{ textAlign: 'center', verticalAlign: 'middle', padding: '8px 4px' }}>
