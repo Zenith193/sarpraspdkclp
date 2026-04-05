@@ -327,7 +327,7 @@ const ManajemenTemplate = () => {
 
     const formatDate = (dateString) => {
         if (!dateString) return '-';
-        return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'UTC' }).format(new Date(dateString));
+        return new Intl.DateTimeFormat('id-ID', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' }).format(new Date(dateString));
     };
 
     const handleCopy = (text, id) => {
