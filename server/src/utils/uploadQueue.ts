@@ -354,12 +354,15 @@ async function processUploadQueue() {
         }
     } catch (e: any) { console.error('[Queue] Realisasi migrate error:', e.message); }
     
-    // 10. MIGRATE: spl_generated — local DOCX/PDF → GDrive
+    // 10. MIGRATE: spl_generated — local DOCX/PDF → GDrive (only files older than 2 hours)
     try {
         const { splGenerated } = await import('../db/schema/matrik.js');
         const { matrikKegiatan } = await import('../db/schema/matrik.js');
+        const { lt } = await import('drizzle-orm');
         
-        // Find spl_generated with local file paths (not gdrive://)
+        const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000);
+        
+        // Find spl_generated with local file paths (not gdrive://), older than 2 hours
         const localSpl = await db.select({
             spl: splGenerated,
             noMatrik: matrikKegiatan.noMatrik,
@@ -369,7 +372,8 @@ async function processUploadQueue() {
           .leftJoin(matrikKegiatan, eq(splGenerated.matrikId, matrikKegiatan.id))
           .where(and(
               not(like(splGenerated.filePath, 'gdrive://%')),
-              eq(splGenerated.uploadStatus, 'done')
+              eq(splGenerated.uploadStatus, 'done'),
+              lt(splGenerated.createdAt, twoHoursAgo)
           ))
           .limit(5);
         
@@ -379,22 +383,33 @@ async function processUploadQueue() {
             const tahun = String(row.tahunAnggaran || new Date().getFullYear());
             const sanitize = (s: string) => (s || '').replace(/[<>:"/\\|?*]/g, '').substring(0, 100);
             const paketFolder = `${row.noMatrik || 'XX'}. ${sanitize(row.namaPaket || '')}`;
-            const gDrivePath = `Kontrak/${tahun}/${paketFolder}/SPL`;
+            
+            // Detect subfolder from template or default to SPL
+            const tplName = (row.spl as any).templateNama || '';
+            let subFolder = 'SPL';
+            if (tplName.toLowerCase().includes('bast')) subFolder = 'BAST';
+            else if (tplName.toLowerCase().includes('kontrak') || tplName.toLowerCase().includes('spk')) subFolder = 'Kontrak';
+            const gDrivePath = `Kontrak/${tahun}/${paketFolder}/${subFolder}`;
             
             try {
+                // Upload DOCX
                 const result = await uploadFileToGDrive(row.spl.filePath, 'kontrak-migrate', gDrivePath);
-                const oldPath = row.spl.filePath;
-                await db.update(splGenerated).set({ filePath: result.path }).where(eq(splGenerated.id, row.spl.id));
-                try { fs.unlinkSync(oldPath); } catch {}
-                console.log(`[Queue] Migrate SPL #${row.spl.id} → GDrive ✅`);
+                let finalPath = result.path; // gdrive://DOCX_ID
                 
-                // Also try to upload corresponding PDF
-                const pdfPath = oldPath.replace(/\.docx$/i, '.pdf');
+                // Upload PDF if exists
+                const oldDocxPath = row.spl.filePath;
+                const pdfPath = oldDocxPath.replace(/\.docx$/i, '.pdf');
                 if (fs.existsSync(pdfPath)) {
-                    await uploadFileToGDrive(pdfPath, 'kontrak-migrate', gDrivePath);
+                    const pdfResult = await uploadFileToGDrive(pdfPath, 'kontrak-migrate', gDrivePath);
+                    // Store both: gdrive://DOCX_ID|PDF_ID
+                    finalPath = `${result.path}|${pdfResult.path}`;
                     try { fs.unlinkSync(pdfPath); } catch {}
                     console.log(`[Queue] Migrate SPL PDF #${row.spl.id} → GDrive ✅`);
                 }
+                
+                await db.update(splGenerated).set({ filePath: finalPath }).where(eq(splGenerated.id, row.spl.id));
+                try { fs.unlinkSync(oldDocxPath); } catch {}
+                console.log(`[Queue] Migrate SPL #${row.spl.id} → GDrive ✅ path=${finalPath}`);
             } catch (e: any) {
                 console.error(`[Queue] Migrate SPL #${row.spl.id} failed:`, e.message);
             }

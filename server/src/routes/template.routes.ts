@@ -49,13 +49,25 @@ router.get('/spl-file/:format/:historyId', requireAuth, async (req, res) => {
 
         console.log(`[SPL-DL] id=${historyId} format=${format} filePath=${record.filePath} namaFile=${record.namaFile}`);
 
-        // If filePath is GDrive, stream from GDrive
-        if (record.filePath?.startsWith('gdrive://')) {
+        // If filePath contains GDrive path(s), stream from GDrive
+        // Format: "gdrive://DOCX_ID" or "gdrive://DOCX_ID|gdrive://PDF_ID"
+        if (record.filePath?.includes('gdrive://')) {
             try {
                 const { streamFromGDrive, isGDriveEnabled } = await import('../utils/googleDriveClient.js');
                 if (isGDriveEnabled()) {
-                    const fileId = record.filePath.replace('gdrive://', '');
-                    const gResult = await streamFromGDrive(fileId);
+                    const parts = record.filePath.split('|');
+                    let targetFileId = '';
+                    
+                    if (parts.length >= 2 && format === 'pdf') {
+                        // Use PDF GDrive ID (second part)
+                        targetFileId = parts[1].replace('gdrive://', '');
+                    } else {
+                        // Use DOCX GDrive ID (first part)
+                        targetFileId = parts[0].replace('gdrive://', '');
+                    }
+                    
+                    console.log(`[SPL-DL] Streaming from GDrive: ${targetFileId} (format=${format})`);
+                    const gResult = await streamFromGDrive(targetFileId);
                     if (gResult) {
                         const contentType = format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
                         const disposition = format === 'pdf' ? 'inline' : 'attachment';
