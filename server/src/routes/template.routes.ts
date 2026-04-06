@@ -216,6 +216,10 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
         delete vars._personilItems;
         delete vars._peralatanItems;
 
+        // Extract uraian singkat data
+        const uraianItems: string[] = vars._uraianItems || [];
+        delete vars._uraianItems;
+
         console.log('[Generate] rincianKontrak length:', vars.rincianKontrak?.length, 'rincianNama:', vars.rincianNama, 'rincianNilai:', vars.rincianNilai);
 
         // Fill DOCX template with docxtemplater
@@ -229,6 +233,7 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
         if (rincianItems.length > 0) vars.tabelRincian = '__RINCIAN_TABLE__';
         if (personilItems.length > 0) vars.tabelPersonil = '__PERSONIL_TABLE__';
         if (peralatanItems.length > 0) vars.tabelPeralatan = '__PERALATAN_TABLE__';
+        if (uraianItems.length > 0) vars.tabelUraianSingkat = '__URAIAN_TABLE__';
 
         const docxOptions: any = {
             paragraphLoop: true,
@@ -382,6 +387,14 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
                 const fi = extractFontFromParagraph(docXml, '__PERALATAN_TABLE__');
                 docXml = injectTable(docXml, '__PERALATAN_TABLE__', buildPeralatanTableXml(peralatanItems, fi));
                 console.log('[Template] Injected peralatan table with', peralatanItems.length, 'rows, font:', fi.font || 'inherit', fi.sz || 'inherit');
+                changed = true;
+            }
+
+            // Inject uraian singkat table
+            if (uraianItems.length > 0 && docXml.includes('__URAIAN_TABLE__')) {
+                const fi = extractFontFromParagraph(docXml, '__URAIAN_TABLE__');
+                docXml = injectTable(docXml, '__URAIAN_TABLE__', buildUraianTableXml(uraianItems, fi));
+                console.log('[Template] Injected uraian table with', uraianItems.length, 'items');
                 changed = true;
             }
 
@@ -835,12 +848,60 @@ function buildVariableMap(item: any, sekretaris: any = {}, refData: any = {}) {
         // ===== PERSONIL & PERALATAN =====
         _personilItems: parseJsonSafe(d.timPenugasan),
         _peralatanItems: parseJsonSafe(d.peralatanUtama),
+
+        // ===== URAIAN SINGKAT (Lingkup Pekerjaan) =====
+        ...buildUraianSingkatVars(d),
     };
 }
 
 function parseJsonSafe(str: any): any[] {
     if (!str) return [];
     try { return JSON.parse(str); } catch { return []; }
+}
+
+// Build uraian singkat (lingkup pekerjaan) variables
+function buildUraianSingkatVars(d: any) {
+    // Priority: uraianSingkatArr (from generate payload) > uraianSingkat (JSON string from DB)
+    let items: string[] = [];
+    if (d.uraianSingkatArr && Array.isArray(d.uraianSingkatArr) && d.uraianSingkatArr.length > 0) {
+        items = d.uraianSingkatArr.filter((s: any) => typeof s === 'string' && s.trim());
+    } else if (d.uraianSingkat) {
+        try {
+            const parsed = typeof d.uraianSingkat === 'string' ? JSON.parse(d.uraianSingkat) : d.uraianSingkat;
+            if (Array.isArray(parsed)) items = parsed.filter((s: any) => typeof s === 'string' && s.trim());
+        } catch { /* ignore */ }
+    }
+
+    if (items.length === 0) {
+        return {
+            uraianSingkat: '',
+            uraianSingkatList: [],
+            jumlahUraian: '0',
+        };
+    }
+
+    // Numbered text (e.g. "1. Pekerjaan Persiapan\n2. Pekerjaan Tanah\n...")
+    const uraianSingkat = items.map((item, i) => `${i + 1}. ${item}`).join('\n');
+
+    // Loop array for docxtemplater: {{#uraianSingkatList}}{{no}}. {{uraian}}{{/uraianSingkatList}}
+    const uraianSingkatList = items.map((item, i) => ({
+        no: String(i + 1),
+        uraian: item,
+    }));
+
+    // Indexed variables: uraian1, uraian2, etc.
+    const indexedVars: Record<string, string> = {};
+    items.forEach((item, i) => {
+        indexedVars[`uraian${i + 1}`] = item;
+    });
+
+    return {
+        uraianSingkat,
+        uraianSingkatList,
+        jumlahUraian: String(items.length),
+        ...indexedVars,
+        _uraianItems: items,
+    };
 }
 
 // BAST kode mapping (same as frontend)
@@ -1196,5 +1257,50 @@ function buildPeralatanTableXml(items: any[], fontInfo: { font: string; sz: stri
     }).join('');
 
     // Table only (title is already in the template)
+    return '<w:tbl>' + tblPr + grid + headerRow + dataRows + '</w:tbl>';
+}
+
+// Build Uraian Singkat table (Lingkup Pekerjaan - numbered list)
+function buildUraianTableXml(items: string[], fontInfo: { font: string; sz: string } = { font: '', sz: '' }): string {
+    const SZ = fontInfo.sz || '24';
+    const FONT = fontInfo.font || '';
+
+    function cell(text: string, widthPct: number, opts: { bold?: boolean; center?: boolean } = {}): string {
+        const safe = xmlEscape(text);
+        const tcPr = `<w:tcPr><w:tcW w:w="${widthPct}" w:type="pct"/><w:vAlign w:val="center"/></w:tcPr>`;
+        const rPrParts: string[] = [];
+        if (FONT) rPrParts.push(`<w:rFonts w:ascii="${FONT}" w:hAnsi="${FONT}" w:cs="${FONT}"/>`);
+        rPrParts.push(`<w:sz w:val="${SZ}"/><w:szCs w:val="${SZ}"/>`);
+        if (opts.bold) rPrParts.push('<w:b/><w:bCs/>');
+        const rPr = '<w:rPr>' + rPrParts.join('') + '</w:rPr>';
+        const pPrParts: string[] = [];
+        if (opts.center) pPrParts.push('<w:jc w:val="center"/>');
+        pPrParts.push('<w:spacing w:after="0" w:line="240" w:lineRule="auto"/>');
+        pPrParts.push(rPr);
+        const pPr = '<w:pPr>' + pPrParts.join('') + '</w:pPr>';
+        return '<w:tc>' + tcPr + '<w:p>' + pPr + '<w:r>' + rPr + '<w:t xml:space="preserve">' + safe + '</w:t></w:r></w:p></w:tc>';
+    }
+
+    const tblPr = '<w:tblPr>' +
+        '<w:tblStyle w:val="TableGrid"/>' +
+        '<w:tblW w:w="5000" w:type="pct"/>' +
+        stdBorders() +
+        '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>' +
+        '</w:tblPr>';
+
+    const grid = '<w:tblGrid><w:gridCol w:w="600"/><w:gridCol w:w="8400"/></w:tblGrid>';
+
+    const headerRow = '<w:tr>' +
+        cell('No', 400, { bold: true, center: true }) +
+        cell('Uraian Pekerjaan', 4600, { bold: true, center: true }) +
+        '</w:tr>';
+
+    const dataRows = items.map((item, i) => {
+        return '<w:tr>' +
+            cell(String(i + 1), 400, { center: true }) +
+            cell(item, 4600) +
+            '</w:tr>';
+    }).join('');
+
     return '<w:tbl>' + tblPr + grid + headerRow + dataRows + '</w:tbl>';
 }

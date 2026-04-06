@@ -57,6 +57,13 @@
       "when": 1775364790744,
       "tag": "0007_neat_colleen_wing",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1775464100394,
+      "tag": "0008_rich_tiger_shark",
+      "breakpoints": true
     }
   ]
 }

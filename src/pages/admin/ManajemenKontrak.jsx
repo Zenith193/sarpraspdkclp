@@ -75,6 +75,8 @@ const ManajemenKontrak = () => {
     const emptyPeralatanInput = { nama: '', merk: '', type: '', kapasitas: '', jumlah: '', kondisi: '', statusKepemilikan: '', keterangan: '' };
     const [timInput, setTimInput] = useState({ ...emptyTimInput });
     const [peralatanInput, setPeralatanInput] = useState({ ...emptyPeralatanInput });
+    const [editUraianSingkat, setEditUraianSingkat] = useState([]);
+    const [uraianInput, setUraianInput] = useState('');
 
     const load = () => {
         setLoading(true);
@@ -165,6 +167,7 @@ const ManajemenKontrak = () => {
             // Init lampiran editable data
             try { setEditTimData(JSON.parse(d.timPenugasan || '[]')); } catch { setEditTimData([]); }
             try { setEditPeralatanData(JSON.parse(d.peralatanUtama || '[]')); } catch { setEditPeralatanData([]); }
+            try { setEditUraianSingkat(JSON.parse(d.uraianSingkat || '[]')); } catch { setEditUraianSingkat([]); }
         } catch { }
     };
 
@@ -199,8 +202,9 @@ const ManajemenKontrak = () => {
                 ...editDppl,
                 timPenugasan: JSON.stringify(editTimData),
                 peralatanUtama: JSON.stringify(editPeralatanData),
+                uraianSingkat: JSON.stringify(editUraianSingkat),
             });
-            setDetail(prev => ({ ...prev, ...editDppl, timPenugasan: JSON.stringify(editTimData), peralatanUtama: JSON.stringify(editPeralatanData) }));
+            setDetail(prev => ({ ...prev, ...editDppl, timPenugasan: JSON.stringify(editTimData), peralatanUtama: JSON.stringify(editPeralatanData), uraianSingkat: JSON.stringify(editUraianSingkat) }));
             setTabSaved(prev => ({ ...prev, lampiran: true }));
             showToast('Data lampiran berhasil disimpan');
         } catch { showToast('Gagal menyimpan lampiran', true); }
@@ -381,6 +385,9 @@ const ManajemenKontrak = () => {
                                                 nilaiItemsArr: (nilaiItems && nilaiItems.length > 0)
                                                     ? nilaiItems
                                                     : (d.nilaiItems ? (typeof d.nilaiItems === 'string' ? JSON.parse(d.nilaiItems) : d.nilaiItems) : []),
+                                                uraianSingkatArr: (() => {
+                                                    try { return JSON.parse(d.uraianSingkat || '[]'); } catch { return []; }
+                                                })(),
                                             };
                                             const result = await templateApi.generate(selectedTemplate, item, {});
                                             if (result.historyId) {
@@ -834,6 +841,25 @@ const ManajemenKontrak = () => {
                                                 </tr>
                                             </tbody>
                                         </table>
+                                    </div>
+
+                                    {/* Uraian Singkat / Lingkup Pekerjaan */}
+                                    <h4 style={{ margin: '0 0 10px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: 6 }}>📝 URAIAN SINGKAT (Ruang Lingkup Pekerjaan)</h4>
+                                    <div style={{ marginBottom: 24 }}>
+                                        {editUraianSingkat.map((item, i) => (
+                                            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                                                <span style={{ minWidth: 28, fontWeight: 600, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{i + 1}.</span>
+                                                <input style={{ flex: 1, padding: '7px 10px', border: '1px solid var(--border)', borderRadius: 6, fontSize: '0.82rem', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} value={item} onChange={e => { const arr = [...editUraianSingkat]; arr[i] = e.target.value; setEditUraianSingkat(arr); }} />
+                                                <button onClick={() => setEditUraianSingkat(r => r.filter((_, idx) => idx !== i))} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, padding: '4px 8px', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 600 }}>Hapus</button>
+                                            </div>
+                                        ))}
+                                        <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                                            <input style={{ flex: 1, padding: '7px 10px', border: '1px solid var(--border)', borderRadius: 6, fontSize: '0.82rem', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} value={uraianInput} onChange={e => setUraianInput(e.target.value)} placeholder="Contoh: Pekerjaan Persiapan" onKeyDown={e => { if (e.key === 'Enter' && uraianInput.trim()) { setEditUraianSingkat(r => [...r, uraianInput.trim()]); setUraianInput(''); } }} />
+                                            <button onClick={() => { if (!uraianInput.trim()) return; setEditUraianSingkat(r => [...r, uraianInput.trim()]); setUraianInput(''); }} style={{ background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: 6, padding: '7px 16px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600, whiteSpace: 'nowrap' }}>+ Tambah</button>
+                                        </div>
+                                        {editUraianSingkat.length === 0 && (
+                                            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontStyle: 'italic', marginTop: 8 }}>Belum ada uraian. Tambahkan item pekerjaan seperti: Pekerjaan Persiapan, Pekerjaan Tanah, Pekerjaan Beton, dll.</div>
+                                        )}
                                     </div>
 
                                     {detail.berkasPenawaranPath && (

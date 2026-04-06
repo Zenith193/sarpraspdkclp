@@ -191,6 +191,14 @@ const GUIDE_DATA = {
         { variable: "{{tabelPersonil}}", description: "⭐ TABEL OTOMATIS: Personil Inti (No + Nama + Posisi + Sertifikasi)" },
         { variable: "{{tabelPeralatan}}", description: "⭐ TABEL OTOMATIS: Peralatan (No + Nama + Merk&Tipe + Kapasitas + Jumlah + Kondisi + Status)" },
     ],
+    "Uraian Singkat": [
+        { variable: "{{tabelUraianSingkat}}", description: "⭐ TABEL OTOMATIS: Uraian Pekerjaan (No + Uraian)" },
+        { variable: "{{uraianSingkat}}", description: "Daftar uraian pekerjaan bernomor (1. Pekerjaan Persiapan\\n2. Pekerjaan Tanah\\n...)" },
+        { variable: "{{jumlahUraian}}", description: "Jumlah item uraian pekerjaan (angka)" },
+        { variable: "{{uraian1}}", description: "Uraian pekerjaan ke-1" },
+        { variable: "{{uraian2}}", description: "Uraian pekerjaan ke-2" },
+        { variable: "{{uraian3}}", description: "Uraian pekerjaan ke-3" },
+    ],
 };
 
 
