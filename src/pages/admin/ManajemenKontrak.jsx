@@ -854,11 +854,42 @@ const ManajemenKontrak = () => {
                                             </div>
                                         ))}
                                         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                                            <input style={{ flex: 1, padding: '7px 10px', border: '1px solid var(--border)', borderRadius: 6, fontSize: '0.82rem', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} value={uraianInput} onChange={e => setUraianInput(e.target.value)} placeholder="Contoh: Pekerjaan Persiapan" onKeyDown={e => { if (e.key === 'Enter' && uraianInput.trim()) { setEditUraianSingkat(r => [...r, uraianInput.trim()]); setUraianInput(''); } }} />
-                                            <button onClick={() => { if (!uraianInput.trim()) return; setEditUraianSingkat(r => [...r, uraianInput.trim()]); setUraianInput(''); }} style={{ background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: 6, padding: '7px 16px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600, whiteSpace: 'nowrap' }}>+ Tambah</button>
+                                            <textarea
+                                                rows={1}
+                                                style={{ flex: 1, padding: '7px 10px', border: '1px solid var(--border)', borderRadius: 6, fontSize: '0.82rem', background: 'var(--bg-secondary)', color: 'var(--text-primary)', resize: 'vertical', minHeight: 36, fontFamily: 'inherit' }}
+                                                value={uraianInput}
+                                                onChange={e => setUraianInput(e.target.value)}
+                                                placeholder="Ketik satu item atau paste banyak (1. Pekerjaan Persiapan&#10;2. Pekerjaan Tanah&#10;...)"
+                                                onKeyDown={e => {
+                                                    if (e.key === 'Enter' && !e.shiftKey && uraianInput.trim() && !uraianInput.includes('\n')) {
+                                                        e.preventDefault();
+                                                        setEditUraianSingkat(r => [...r, uraianInput.trim()]);
+                                                        setUraianInput('');
+                                                    }
+                                                }}
+                                                onPaste={e => {
+                                                    const text = e.clipboardData.getData('text');
+                                                    if (text && text.includes('\n')) {
+                                                        e.preventDefault();
+                                                        const lines = text.split(/\r?\n/)
+                                                            .map(l => l.replace(/^\s*\d+[\.\)]\s*/, '').trim())
+                                                            .filter(Boolean);
+                                                        if (lines.length > 0) {
+                                                            setEditUraianSingkat(r => [...r, ...lines]);
+                                                            setUraianInput('');
+                                                        }
+                                                    }
+                                                }}
+                                            />
+                                            <button onClick={() => {
+                                                if (!uraianInput.trim()) return;
+                                                const lines = uraianInput.split(/\r?\n/).map(l => l.replace(/^\s*\d+[\.\)]\s*/, '').trim()).filter(Boolean);
+                                                setEditUraianSingkat(r => [...r, ...lines]);
+                                                setUraianInput('');
+                                            }} style={{ background: 'var(--accent-blue)', color: '#fff', border: 'none', borderRadius: 6, padding: '7px 16px', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 600, whiteSpace: 'nowrap', alignSelf: 'flex-start' }}>+ Tambah</button>
                                         </div>
                                         {editUraianSingkat.length === 0 && (
-                                            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontStyle: 'italic', marginTop: 8 }}>Belum ada uraian. Tambahkan item pekerjaan seperti: Pekerjaan Persiapan, Pekerjaan Tanah, Pekerjaan Beton, dll.</div>
+                                            <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontStyle: 'italic', marginTop: 8 }}>Belum ada uraian. Ketik satu-satu atau paste daftar bernomor langsung dari dokumen.</div>
                                         )}
                                     </div>
 
