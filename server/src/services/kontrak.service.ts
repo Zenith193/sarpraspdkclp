@@ -257,6 +257,7 @@ export const kontrakService = {
             tanggalBahpl: data.tanggalBahpl !== undefined ? data.tanggalBahpl : undefined,
             timPenugasan: data.timPenugasan !== undefined ? data.timPenugasan : undefined,
             peralatanUtama: data.peralatanUtama !== undefined ? data.peralatanUtama : undefined,
+            uraianSingkat: data.uraianSingkat !== undefined ? data.uraianSingkat : undefined,
             status: data.status || undefined,
             catatan: data.catatan,
             verifiedBy: data.status === 'Diverifikasi' ? userId : undefined,
