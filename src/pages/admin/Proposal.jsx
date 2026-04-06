@@ -1166,7 +1166,6 @@ const Proposal = ({ readOnly = false }) => {
                                 <div className="form-group"><label className="form-label">Nilai (Rp)</label><input className="form-input" type="text" inputMode="numeric" placeholder="Contoh: 50.000.000" value={rekomendasiForm.nilai ? String(rekomendasiForm.nilai).replace(/\./g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.') : ''} onChange={e => { const raw = e.target.value.replace(/\./g, ''); if (/^\d*$/.test(raw)) handleRekomendasiChange('nilai', raw); }} /></div>
                                 <div className="form-group"><label className="form-label">Target</label><input className="form-input" placeholder="Contoh: 1 Unit" value={rekomendasiForm.target} onChange={e => handleRekomendasiChange('target', e.target.value)} /></div>
                                 <div className="form-group"><label className="form-label">No Agenda</label><input className="form-input" placeholder="Nomor Agenda" value={rekomendasiForm.noAgenda} onChange={e => handleRekomendasiChange('noAgenda', e.target.value)} /></div>
-                                <div className="form-group"><label className="form-label">Surat Masuk</label><input className="form-input" placeholder="Sumber surat masuk" value={rekomendasiForm.suratMasuk} onChange={e => handleRekomendasiChange('suratMasuk', e.target.value)} /></div>
                                 <div className="form-group"><label className="form-label">Tanggal Surat</label><input className="form-input" type="date" value={rekomendasiForm.tanggalSurat} onChange={e => handleRekomendasiChange('tanggalSurat', e.target.value)} /></div>
                                 <div className="form-group"><label className="form-label">Nomor Surat</label><input className="form-input" placeholder="Nomor surat" value={rekomendasiForm.nomorSurat} onChange={e => handleRekomendasiChange('nomorSurat', e.target.value)} /></div>
                                 <div className="form-group"><label className="form-label">Sumber</label><input className="form-input" placeholder="Sumber dana/keterangan" value={rekomendasiForm.sumber} onChange={e => handleRekomendasiChange('sumber', e.target.value)} /></div>
@@ -1220,7 +1219,6 @@ const Proposal = ({ readOnly = false }) => {
                                             <th>Nilai</th>
                                             <th>Target</th>
                                             <th>No Agenda</th>
-                                            <th>Surat Masuk</th>
                                             <th>Tanggal Surat</th>
                                             <th>Nomor Surat</th>
                                             <th>Kondisi Sebenarnya</th>
@@ -1243,7 +1241,6 @@ const Proposal = ({ readOnly = false }) => {
                                                     <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>{formatCurrency(item.nilai)}</td>
                                                     <td>{item.target}</td>
                                                     <td>{item.noAgenda}</td>
-                                                    <td>{item.suratMasuk}</td>
                                                     <td style={{ whiteSpace: 'nowrap' }}>{item.tanggalSurat}</td>
                                                     <td>{item.nomorSurat}</td>
                                                     <td>{item.kondisi}</td>
