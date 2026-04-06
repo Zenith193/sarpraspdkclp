@@ -2,7 +2,7 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { Search, Download, Plus, Edit, Trash2, X, Save, Columns, ChevronDown, AlertTriangle, FileText, FileSpreadsheet, FileDown, TrendingUp, Package, Wallet, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatCurrency } from '../../utils/formatters';
 import { exportToExcel, exportToCSV, exportToPDF } from '../../utils/exportUtils';
-import useMatrikStore, { isIndukan } from '../../store/matrikStore';
+import useMatrikStore, { isIndukan, naturalSort } from '../../store/matrikStore';
 import toast from 'react-hot-toast';
 
 // --- CONSTANTS ---
@@ -68,7 +68,8 @@ const Pencairan = () => {
                     cv: m.penyedia || '-',
                     subBidang: m.subBidang || '-',
                 };
-            });
+            })
+            .sort((a, b) => naturalSort(String(a.noMatrik), String(b.noMatrik)));
     }, [matrikData, pencairanMap]);
 
     // ===== COLUMN DEFINITIONS =====
