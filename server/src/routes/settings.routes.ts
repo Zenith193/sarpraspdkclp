@@ -252,7 +252,7 @@ router.get('/ranking/lock', requireAuth, async (_req, res) => {
         res.json(val || { locks: {} });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
-router.put('/ranking/lock', requireAuth, requireRole('admin'), async (req, res) => {
+router.put('/ranking/lock', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
     try {
         // Load existing locks
         const existing = await settingsService.get('ranking_lock') || { locks: {} };

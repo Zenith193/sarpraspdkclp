@@ -49,14 +49,14 @@ router.get('/spl/history', requireAuth, requireRole('admin', 'verifikator'), asy
     try { const jenis = req.query.jenis as string | undefined; res.json(await splHistoryService.list(jenis)); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/spl/history', requireAuth, requireRole('admin'), async (req, res) => {
+router.post('/spl/history', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
     try {
         const data = { ...req.body, createdBy: (req as any).user?.id };
         res.status(201).json(await splHistoryService.create(data));
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-router.delete('/spl/history/:id', requireAuth, requireRole('admin'), async (req, res) => {
+router.delete('/spl/history/:id', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
     try { await splHistoryService.delete(Number(req.params.id)); res.json({ success: true }); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
@@ -68,7 +68,7 @@ router.get('/:id', requireAuth, requireRole('admin', 'verifikator'), async (req,
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/', requireAuth, requireRole('admin'), async (req, res) => {
+router.post('/', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
     try {
         const data = { ...req.body };
         delete data.createdAt; delete data.updatedAt; delete data.id;
@@ -90,7 +90,7 @@ router.post('/', requireAuth, requireRole('admin'), async (req, res) => {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/:id', requireAuth, requireRole('admin'), async (req, res) => {
+router.put('/:id', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
     try {
         const data = { ...req.body };
         // Remove timestamp fields — these are managed server-side
@@ -163,11 +163,11 @@ router.put('/:id', requireAuth, requireRole('admin'), async (req, res) => {
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
+router.delete('/:id', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
     try { await matrikService.delete(Number(req.params.id)); res.json({ success: true }); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-router.post('/import', requireAuth, requireRole('admin'), async (req, res) => {
+router.post('/import', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
     try {
         const dateFields = ['tanggalMulai', 'tanggalSelesai', 'tglMc0', 'tglMc100', 'tglPcm'];
         const items = (req.body.items || []).map((item: any) => {

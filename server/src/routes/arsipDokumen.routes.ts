@@ -14,7 +14,7 @@ router.post('/rekomendasi', requireAuth, requireRole('admin', 'verifikator'), as
         res.status(201).json(await arsipDokumenService.createRekomendasi(data));
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
-router.delete('/rekomendasi/:id', requireAuth, requireRole('admin'), async (req, res) => {
+router.delete('/rekomendasi/:id', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
     try { await arsipDokumenService.deleteRekomendasi(Number(req.params.id)); res.json({ success: true }); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.put('/rekomendasi/:id', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
@@ -34,7 +34,7 @@ router.post('/checklist', requireAuth, requireRole('admin', 'verifikator'), asyn
         res.status(201).json(await arsipDokumenService.createChecklist(data));
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
-router.delete('/checklist/:id', requireAuth, requireRole('admin'), async (req, res) => {
+router.delete('/checklist/:id', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
     try { await arsipDokumenService.deleteChecklist(Number(req.params.id)); res.json({ success: true }); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.put('/checklist/:id', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
