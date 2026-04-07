@@ -685,10 +685,22 @@ app.post('/api/auth/sign-in/email', async (req, res, next) => {
     try {
         const email = req.body?.email;
         if (email) {
-            const rows = await db.select({ aktif: user.aktif }).from(user).where(eq(user.email, email));
+            const rows = await db.select({ id: user.id, name: user.name, email: user.email, role: user.role, aktif: user.aktif }).from(user).where(eq(user.email, email));
             if (rows[0] && rows[0].aktif === false) {
                 res.status(403).json({ error: 'Akun Anda telah dinonaktifkan. Hubungi administrator.' });
                 return;
+            }
+            // Log login activity (fire-and-forget) for email-based sign-in
+            if (rows[0]) {
+                const { aktivitasService } = await import('./services/aktivitas.service.js');
+                aktivitasService.log({
+                    userId: rows[0].id,
+                    namaAkun: rows[0].name || rows[0].email,
+                    jenisAkun: rows[0].role || 'unknown',
+                    aktivitas: 'Login',
+                    keterangan: `Login berhasil via email ${email}`,
+                    ipAddress: req.ip || req.headers['x-real-ip'] as string || '',
+                }).catch(() => {});
             }
         }
     } catch (_e) { /* let it through */ }
