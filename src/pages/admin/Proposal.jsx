@@ -499,14 +499,46 @@ const Proposal = ({ readOnly = false }) => {
     const selectedSchoolData = useMemo(() => sekolahList.find(s => s.nama === formSekolah), [formSekolah]);
 
     const handleExport = (format) => {
-        const exportCols = [{ header: 'No', accessor: (_, i) => i + 1 }, { header: 'Nama Sekolah', key: 'namaSekolah' }, { header: 'NPSN', key: 'npsn' }, { header: 'Kecamatan', key: 'kecamatan' }, { header: 'Sub Kegiatan', key: 'subKegiatan' }, { header: 'Nilai Pengajuan', accessor: (row) => row.nilaiPengajuan ? `Rp ${Number(row.nilaiPengajuan).toLocaleString('id-ID')}` : '' }, { header: 'Target', key: 'target' }, { header: 'Status', key: 'status' }, { header: 'Keranjang', key: 'keranjang' }, { header: 'Keterangan', key: 'keterangan' }];
+        // Strip jenjang suffix from sub kegiatan (e.g., "Pembangunan Ruang Guru/Kepala Sekolah/TU SD" → remove trailing " SD"/" SMP")
+        const cleanSubKegiatan = (val) => (val || '').replace(/\s+(SD|SMP|SMA|SMK)$/i, '');
+
+        const baseCols = [
+            { header: 'No', accessor: (_, i) => i + 1 },
+            { header: 'Nama Sekolah', key: 'namaSekolah' },
+            ...(!isSekolahOrKorwil ? [{ header: 'NPSN', key: 'npsn' }, { header: 'Kecamatan', key: 'kecamatan' }] : []),
+            { header: 'Sub Kegiatan', accessor: (row) => cleanSubKegiatan(row.subKegiatan) },
+            { header: 'Nilai Pengajuan', accessor: (row) => row.nilaiPengajuan ? `Rp ${Number(row.nilaiPengajuan).toLocaleString('id-ID')}` : '' },
+            { header: 'Target', key: 'target' },
+            { header: 'Status', key: 'status' },
+            ...(!isSekolahOrKorwil ? [{ header: 'Keranjang', key: 'keranjang' }] : []),
+            { header: 'Keterangan', key: 'keterangan' },
+        ];
+        // For terealisasi, add Nama Bantuan column
+        const realisasiCols = [
+            { header: 'No', accessor: (_, i) => i + 1 },
+            { header: 'Nama Sekolah', key: 'namaSekolah' },
+            ...(!isSekolahOrKorwil ? [{ header: 'NPSN', key: 'npsn' }, { header: 'Kecamatan', key: 'kecamatan' }] : []),
+            { header: 'Sub Kegiatan', accessor: (row) => cleanSubKegiatan(row.subKegiatan) },
+            { header: 'Nilai Pengajuan', accessor: (row) => row.nilaiPengajuan ? `Rp ${Number(row.nilaiPengajuan).toLocaleString('id-ID')}` : '' },
+            { header: 'Target', key: 'target' },
+            { header: 'Nama Bantuan', key: 'statusUsulan' },
+            { header: 'Keterangan', key: 'keterangan' },
+        ];
+        // Combine aktif + realisasi for export
+        const allData = [...filteredAktif, ...filteredRealisasi];
         try {
             if (format === 'excel') {
-                const sheets = [{ sheetName: 'Proposal Aktif', data: filteredAktif, columns: exportCols }];
-                if (filteredRealisasi.length > 0) sheets.push({ sheetName: 'Terealisasi', data: filteredRealisasi, columns: exportCols });
+                const sheets = [{ sheetName: 'Proposal Aktif', data: filteredAktif, columns: baseCols }];
+                if (filteredRealisasi.length > 0) sheets.push({ sheetName: 'Terealisasi', data: filteredRealisasi, columns: realisasiCols });
                 exportToExcelMultiSheet(sheets, 'data_proposal');
-            } else if (format === 'csv') exportToCSV(filteredAktif, exportCols, 'data_proposal');
-            else if (format === 'pdf') exportToPDF(filteredAktif, exportCols, 'data_proposal', 'Data Proposal');
+            } else if (format === 'csv') exportToCSV(allData, baseCols, 'data_proposal');
+            else if (format === 'pdf') {
+                // PDF: export aktif + realisasi as separate sections
+                exportToPDF(filteredAktif, baseCols, 'data_proposal', 'Data Proposal', { noWrapCols: ['Nilai Pengajuan'] });
+                if (filteredRealisasi.length > 0) {
+                    exportToPDF(filteredRealisasi, realisasiCols, 'data_proposal_terealisasi', 'Data Proposal Terealisasi', { noWrapCols: ['Nilai Pengajuan'] });
+                }
+            }
             toast.success(`Berhasil ekspor ${format.toUpperCase()}`);
         } catch (err) { toast.error('Gagal ekspor'); }
     };

@@ -78,17 +78,18 @@ export const exportToCSV = (data, columns, filename = 'laporan') => {
 /**
  * Ekspor data ke PDF
  */
-export const exportToPDF = (data, columns, filename = 'laporan', title = 'Laporan') => {
+export const exportToPDF = (data, columns, filename = 'laporan', title = 'Laporan', options = {}) => {
     const doc = new jsPDF({ orientation: 'landscape' });
+    const pageWidth = doc.internal.pageSize.getWidth();
 
-    // Title
+    // Title - centered
     doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text(title, 14, 18);
+    doc.text(title, pageWidth / 2, 18, { align: 'center' });
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(100);
-    doc.text(`Diekspor: ${new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}`, 14, 26);
+    doc.text(`Diekspor: ${new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}`, pageWidth / 2, 26, { align: 'center' });
 
     // Table
     const head = [columns.map(c => c.header)];
@@ -99,14 +100,24 @@ export const exportToPDF = (data, columns, filename = 'laporan', title = 'Lapora
         })
     );
 
+    // Build noWrap column styles
+    const noWrapCols = options.noWrapCols || [];
+    const columnStyles = {};
+    columns.forEach((col, idx) => {
+        if (noWrapCols.includes(col.header)) {
+            columnStyles[idx] = { cellWidth: 'wrap', overflow: 'visible' };
+        }
+    });
+
     autoTable(doc, {
         startY: 32,
         head,
         body,
         styles: { fontSize: 8, cellPadding: 3 },
-        headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: 'bold' },
+        headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: 'bold', halign: 'center' },
         alternateRowStyles: { fillColor: [248, 250, 252] },
         margin: { left: 14, right: 14 },
+        columnStyles,
     });
 
     doc.save(`${filename}.pdf`);
