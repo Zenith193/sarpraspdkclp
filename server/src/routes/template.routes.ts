@@ -469,24 +469,13 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
                         const imgW = dims.width || 800;
                         const imgH = dims.height || 200;
 
-                        // Read page dimensions from document XML (w:sectPr)
-                        // Default A4: pgSz w=11906 twips (21cm), margins left=1440 right=1440 (2.54cm each)
-                        let pgW = 11906; // twips
-                        let mLeft = 1440;
-                        let mRight = 1440;
-                        const pgSzMatch = docXml.match(/w:pgSz[^/]*w:w="(\d+)"/);
-                        if (pgSzMatch) pgW = parseInt(pgSzMatch[1]);
-                        const mLeftMatch = docXml.match(/w:pgMar[^/]*w:left="(\d+)"/);
-                        if (mLeftMatch) mLeft = parseInt(mLeftMatch[1]);
-                        const mRightMatch = docXml.match(/w:pgMar[^/]*w:right="(\d+)"/);
-                        if (mRightMatch) mRight = parseInt(mRightMatch[1]);
-                        
-                        const availableTwips = pgW - mLeft - mRight;
-                        const pageWidthEmu = availableTwips * 635; // 1 twip = 635 EMU
+                        // Use full page width (21cm A4 / 21.5cm F4) = ~7,560,000 EMU
+                        // wp:inline will auto-constrain to text area (within margins)
+                        // This ensures the kop fills the ENTIRE printable width
+                        const emuW = 7560000; // 21cm in EMU (1cm = 360000 EMU)
                         const ratio = imgH / imgW;
-                        const emuW = pageWidthEmu;
-                        const emuH = Math.round(pageWidthEmu * ratio);
-                        console.log(`[KOP] Page: ${pgW}tw, margins: ${mLeft}+${mRight}, available: ${availableTwips}tw = ${emuW} EMU`);
+                        const emuH = Math.round(emuW * ratio);
+                        console.log(`[KOP] Image ${imgW}x${imgH}px, render ${emuW}x${emuH} EMU (${(emuW/360000).toFixed(1)}cm x ${(emuH/360000).toFixed(1)}cm)`);
 
                         // Determine image type from buffer
                         const detectedType = dims.type || 'png';
