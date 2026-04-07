@@ -537,33 +537,27 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
                         const newRel = `<Relationship Id="${newRId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${imgFilename}"/>`;
                         generatedZip.file('word/_rels/document.xml.rels', relsXml.replace('</Relationships>', newRel + '</Relationships>'));
 
-                        // Build image XML matching real Word document format
-                        // Use negative indent to extend into margins for true full-page-width
+                        // Build image XML using VML (w:pict) - LibreOffice renders this correctly
+                        // VML uses CSS points for sizing which LibreOffice respects (unlike DrawingML EMU)
+                        const ptW = (imgW / (targetDpi || 96) * 72).toFixed(1); // pixels → points
+                        const ptH = (imgH / (targetDpi || 96) * 72).toFixed(1);
+                        console.log(`[KOP] VML size: ${ptW}pt x ${ptH}pt (${(parseFloat(ptW)/72*2.54).toFixed(1)}cm x ${(parseFloat(ptH)/72*2.54).toFixed(1)}cm)`);
+                        
                         const imgXml = [
                             `<w:p>`,
-                            `<w:pPr><w:spacing w:after="0" w:before="0" w:line="240" w:lineRule="auto"/>`,
-                            `<w:ind w:left="0" w:right="0" w:firstLine="0"/></w:pPr>`,
-                            `<w:r><w:drawing>`,
-                            `<wp:inline distT="0" distB="0" distL="0" distR="0">`,
-                            `<wp:extent cx="${emuW}" cy="${emuH}"/>`,
-                            `<wp:effectExtent l="0" t="0" r="0" b="0"/>`,
-                            `<wp:docPr id="${maxRId + 1}" name="KopSekolah"/>`,
-                            `<wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr>`,
-                            `<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">`,
-                            `<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">`,
-                            `<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">`,
-                            `<pic:nvPicPr><pic:cNvPr id="0" name="${imgFilename}"/><pic:cNvPicPr><a:picLocks noChangeAspect="1" noChangeArrowheads="1"/></pic:cNvPicPr></pic:nvPicPr>`,
-                            `<pic:blipFill>`,
-                            `<a:blip r:embed="${newRId}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" cstate="print"/>`,
-                            `<a:srcRect/><a:stretch><a:fillRect/></a:stretch>`,
-                            `</pic:blipFill>`,
-                            `<pic:spPr bwMode="auto">`,
-                            `<a:xfrm><a:off x="0" y="0"/><a:ext cx="${emuW}" cy="${emuH}"/></a:xfrm>`,
-                            `<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>`,
-                            `<a:noFill/><a:ln><a:noFill/></a:ln>`,
-                            `</pic:spPr>`,
-                            `</pic:pic></a:graphicData></a:graphic>`,
-                            `</wp:inline></w:drawing></w:r></w:p>`,
+                            `<w:pPr><w:spacing w:after="0" w:before="0"/></w:pPr>`,
+                            `<w:r>`,
+                            `<w:pict>`,
+                            `<v:shape xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office"`,
+                            ` id="KopSekolah" o:spid="_x0000_i1025"`,
+                            ` type="#_x0000_t75"`,
+                            ` style="width:${ptW}pt;height:${ptH}pt">`,
+                            `<v:imagedata r:id="${newRId}" o:title="KopSekolah"`,
+                            ` xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>`,
+                            `</v:shape>`,
+                            `</w:pict>`,
+                            `</w:r>`,
+                            `</w:p>`,
                         ].join('');
 
                         // Find and replace marker paragraph
