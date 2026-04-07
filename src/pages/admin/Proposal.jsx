@@ -634,7 +634,7 @@ const Proposal = ({ readOnly = false }) => {
             )}
 
             {/* ===== PROPOSAL TABS ===== */}
-            {isAdminOrVerifikator && (
+            {filteredRealisasi.length > 0 && (
                 <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid var(--border-color)', marginBottom: 0 }}>
                     <button
                         onClick={() => setProposalTab('aktif')}
@@ -829,7 +829,7 @@ const Proposal = ({ readOnly = false }) => {
             )}
 
             {/* ===== TAB: TEREALISASI ===== */}
-            {proposalTab === 'realisasi' && isAdminOrVerifikator && (
+            {proposalTab === 'realisasi' && (
                 <div className="table-container" style={{ borderTopLeftRadius: 0, borderTopRightRadius: 0 }}>
                     <div className="table-toolbar">
                         <div className="table-toolbar-left">
