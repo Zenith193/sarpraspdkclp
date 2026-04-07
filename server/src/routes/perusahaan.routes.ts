@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { perusahaanService } from '../services/perusahaan.service.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { logActivity } from '../middleware/logActivity.js';
 
 const router = Router();
 
@@ -59,6 +60,7 @@ router.put('/:id/verify', requireAuth, requireRole('admin', 'verifikator'), asyn
             return res.status(400).json({ error: 'Status harus Diverifikasi, Ditolak, atau Menunggu' });
         }
         const result = await perusahaanService.verify(Number(req.params.id), status, keterangan);
+        logActivity(req, 'Verifikasi Penyedia', `Mengubah status penyedia #${req.params.id} menjadi ${status}`);
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
@@ -80,6 +82,7 @@ router.put('/:id', requireAuth, requireRole('admin', 'verifikator', 'penyedia'),
             delete req.body.keteranganVerifikasi;
         }
         const updated = await perusahaanService.update(id, req.body);
+        logActivity(req, 'Edit Data Penyedia', `Mengubah data perusahaan #${id}`);
         res.json(updated);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
@@ -88,6 +91,7 @@ router.put('/:id', requireAuth, requireRole('admin', 'verifikator', 'penyedia'),
 router.delete('/:id', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
     try {
         await perusahaanService.delete(Number(req.params.id));
+        logActivity(req, 'Hapus Penyedia', `Menghapus data perusahaan #${req.params.id}`);
         res.json({ success: true });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });

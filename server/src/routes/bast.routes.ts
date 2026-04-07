@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { bastService } from '../services/bast.service.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { logActivity } from '../middleware/logActivity.js';
 import { uploadBast, forwardToNas } from '../middleware/upload.js';
 import { db } from '../db/index.js';
 import { matrikKegiatan } from '../db/schema/index.js';
@@ -24,13 +25,25 @@ router.get('/:id', requireAuth, requireRole('admin', 'verifikator'), async (req,
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.post('/', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
-    try { res.status(201).json(await bastService.create(req.body, req.user!.id)); } catch (e: any) { res.status(500).json({ error: e.message }); }
+    try {
+        const result = await bastService.create(req.body, req.user!.id);
+        logActivity(req, 'Buat BAST', `Membuat data BAST baru`);
+        res.status(201).json(result);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.put('/:id', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
-    try { res.json(await bastService.update(Number(req.params.id), req.body)); } catch (e: any) { res.status(500).json({ error: e.message }); }
+    try {
+        const result = await bastService.update(Number(req.params.id), req.body);
+        logActivity(req, 'Edit BAST', `Mengubah data BAST #${req.params.id}`);
+        res.json(result);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.delete('/:id', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
-    try { await bastService.delete(Number(req.params.id)); res.json({ success: true }); } catch (e: any) { res.status(500).json({ error: e.message }); }
+    try {
+        await bastService.delete(Number(req.params.id));
+        logActivity(req, 'Hapus BAST', `Menghapus data BAST #${req.params.id}`);
+        res.json({ success: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.post('/revert/:matrikId', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
     try {
@@ -41,6 +54,7 @@ router.post('/revert/:matrikId', requireAuth, requireRole('admin', 'verifikator'
         console.log('[BAST] Existing record:', existing ? `id=${existing.id}` : 'none');
         await bastService.revertByMatrikId(matrikId);
         console.log('[BAST] Revert completed for matrikId:', matrikId);
+        logActivity(req, 'Revert BAST', `Mengembalikan status BAST matrik #${matrikId}`);
         res.json({ success: true, deleted: !!existing });
     } catch (e: any) {
         console.error('[BAST] Revert error:', e.message);
@@ -89,6 +103,7 @@ router.post('/by-matrik/:matrikId/upload-fisik', requireAuth, requireRole('admin
             const finalPath = file?.finalPath || file?.path || '';
 
             const result = await bastService.updateByMatrikId(matrikId, { bastFisikPath: finalPath });
+            logActivity(req, 'Upload BAST Fisik', `Upload file BAST Fisik untuk matrik #${matrikId}`);
             res.json({ success: true, bastFisikPath: finalPath, data: result });
         } catch (e: any) { res.status(500).json({ error: e.message }); }
     }

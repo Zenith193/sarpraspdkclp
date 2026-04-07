@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { kontrakService } from '../services/kontrak.service.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { logActivity } from '../middleware/logActivity.js';
 import { db } from '../db/index.js';
 import { eq, desc } from 'drizzle-orm';
 import { perusahaan, matrikKegiatan } from '../db/schema/index.js';
@@ -143,6 +144,7 @@ router.post('/permohonan', requireAuth, upload.single('berkasPenawaran'), async 
             }
         }
         const created = await kontrakService.createPermohonan(data, req.user!.id);
+        logActivity(req, 'Ajukan Kontrak', `Mengajukan permohonan kontrak: ${data.namaPaket || data.kodeSirup || ''} (RUP: ${data.kodeSirup || '-'})`);
         res.status(201).json(created);
     } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
@@ -176,6 +178,8 @@ router.get('/permohonan/:id', requireAuth, async (req, res) => {
 router.put('/permohonan/:id', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
     try {
         const updated = await kontrakService.updateByVerifikator(Number(req.params.id), req.body, req.user!.id);
+        const statusInfo = req.body.status ? ` → ${req.body.status}` : '';
+        logActivity(req, 'Update Kontrak', `Mengubah data kontrak #${req.params.id}${statusInfo}`);
         res.json(updated);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
@@ -184,6 +188,7 @@ router.put('/permohonan/:id', requireAuth, requireRole('admin', 'verifikator'), 
 router.delete('/permohonan/:id', requireAuth, async (req, res) => {
     try {
         await kontrakService.deletePermohonan(Number(req.params.id));
+        logActivity(req, 'Hapus Kontrak', `Menghapus permohonan kontrak #${req.params.id}`);
         res.json({ success: true });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
@@ -265,6 +270,7 @@ router.post('/matrik/:matrikId/realisasi', requireAuth, (req: any, res: any, nex
             data.dokumentasiPaths = JSON.stringify(paths);
         }
         const created = await kontrakService.createRealisasi(null, data, req.user!.id);
+        logActivity(req, 'Tambah Realisasi', `Menambahkan realisasi matrik #${req.params.matrikId} bulan ${BULAN_NAMES[(data.bulan || 1) - 1] || data.bulan} ${data.tahun || ''}`);
         res.status(201).json(created);
         // Background: GDrive migration handled by uploadQueue section 9
     } catch (e: any) { res.status(400).json({ error: e.message }); }
@@ -290,6 +296,7 @@ router.post('/permohonan/:id/realisasi', requireAuth, (req: any, res: any, next:
             data.dokumentasiPaths = JSON.stringify(paths);
         }
         const created = await kontrakService.createRealisasi(Number(req.params.id), data, req.user!.id);
+        logActivity(req, 'Tambah Realisasi', `Menambahkan realisasi kontrak #${req.params.id} bulan ${BULAN_NAMES[(data.bulan || 1) - 1] || data.bulan} ${data.tahun || ''}`);
         res.status(201).json(created);
         // Background: GDrive migration handled by uploadQueue section 9
     } catch (e: any) { res.status(400).json({ error: e.message }); }
@@ -298,6 +305,7 @@ router.post('/permohonan/:id/realisasi', requireAuth, (req: any, res: any, next:
 router.put('/realisasi/:id', requireAuth, async (req, res) => {
     try {
         const updated = await kontrakService.updateRealisasi(Number(req.params.id), req.body);
+        logActivity(req, 'Edit Realisasi', `Mengubah data realisasi #${req.params.id}`);
         res.json(updated);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
@@ -305,6 +313,7 @@ router.put('/realisasi/:id', requireAuth, async (req, res) => {
 router.delete('/realisasi/:id', requireAuth, async (req, res) => {
     try {
         await kontrakService.deleteRealisasi(Number(req.params.id));
+        logActivity(req, 'Hapus Realisasi', `Menghapus data realisasi #${req.params.id}`);
         res.json({ success: true });
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
