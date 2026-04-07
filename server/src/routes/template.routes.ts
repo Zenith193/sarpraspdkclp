@@ -4,7 +4,7 @@ import { splHistoryService } from '../services/matrik.service.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { uploadTemplate } from '../middleware/upload.js';
 import { db } from '../db/index.js';
-import { matrikKegiatan } from '../db/schema/index.js';
+import { matrikKegiatan, sekolah } from '../db/schema/index.js';
 import { eq } from 'drizzle-orm';
 import fs from 'fs';
 import path from 'path';
@@ -136,6 +136,20 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
 
         const { item, sekretaris } = req.body;
         if (!item) return res.status(400).json({ error: 'Data matrik diperlukan' });
+
+        // Always refresh kopSekolah from DB (frontend data may be stale)
+        if (item.npsn) {
+            try {
+                const freshSekolah = await db.select({ kopSekolah: sekolah.kopSekolah, kepsek: sekolah.kepsek, nip: sekolah.nip })
+                    .from(sekolah).where(eq(sekolah.npsn, item.npsn)).limit(1);
+                if (freshSekolah[0]) {
+                    item.kopSekolah = freshSekolah[0].kopSekolah || null;
+                    if (!item.kepsek) item.kepsek = freshSekolah[0].kepsek || '';
+                    if (!item.nipKs) item.nipKs = freshSekolah[0].nip || '';
+                    console.log(`[Generate] Refreshed kopSekolah from DB for NPSN ${item.npsn}:`, item.kopSekolah);
+                }
+            } catch (e: any) { console.error('[Generate] kopSekolah refresh error:', e.message); }
+        }
 
         // Build variable map
         const refData = await getRefData();
