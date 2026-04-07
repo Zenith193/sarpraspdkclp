@@ -469,11 +469,24 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
                         const imgW = dims.width || 800;
                         const imgH = dims.height || 200;
 
-                        // Full page width ~16.5cm = 5953125 EMU, maintain aspect ratio
-                        const pageWidthEmu = 5953125;
+                        // Read page dimensions from document XML (w:sectPr)
+                        // Default A4: pgSz w=11906 twips (21cm), margins left=1440 right=1440 (2.54cm each)
+                        let pgW = 11906; // twips
+                        let mLeft = 1440;
+                        let mRight = 1440;
+                        const pgSzMatch = docXml.match(/w:pgSz[^/]*w:w="(\d+)"/);
+                        if (pgSzMatch) pgW = parseInt(pgSzMatch[1]);
+                        const mLeftMatch = docXml.match(/w:pgMar[^/]*w:left="(\d+)"/);
+                        if (mLeftMatch) mLeft = parseInt(mLeftMatch[1]);
+                        const mRightMatch = docXml.match(/w:pgMar[^/]*w:right="(\d+)"/);
+                        if (mRightMatch) mRight = parseInt(mRightMatch[1]);
+                        
+                        const availableTwips = pgW - mLeft - mRight;
+                        const pageWidthEmu = availableTwips * 635; // 1 twip = 635 EMU
                         const ratio = imgH / imgW;
                         const emuW = pageWidthEmu;
                         const emuH = Math.round(pageWidthEmu * ratio);
+                        console.log(`[KOP] Page: ${pgW}tw, margins: ${mLeft}+${mRight}, available: ${availableTwips}tw = ${emuW} EMU`);
 
                         // Determine image type from buffer
                         const detectedType = dims.type || 'png';
@@ -498,8 +511,8 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
                         const newRel = `<Relationship Id="${newRId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${imgFilename}"/>`;
                         generatedZip.file('word/_rels/document.xml.rels', relsXml.replace('</Relationships>', newRel + '</Relationships>'));
 
-                        // Build image XML
-                        const imgXml = `<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${emuW}" cy="${emuH}"/><wp:docPr id="${maxRId + 1}" name="KopSekolah"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="0" name="${imgFilename}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${newRId}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${emuW}" cy="${emuH}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`;
+                        // Build image XML - no centering, zero spacing so kop fills full printable width
+                        const imgXml = `<w:p><w:pPr><w:spacing w:after="0" w:before="0" w:line="240" w:lineRule="auto"/><w:ind w:left="0" w:right="0"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${emuW}" cy="${emuH}"/><wp:effectExtent l="0" t="0" r="0" b="0"/><wp:docPr id="${maxRId + 1}" name="KopSekolah"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="0" name="${imgFilename}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${newRId}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${emuW}" cy="${emuH}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`;
 
                         // Find and replace marker paragraph
                         const markerIdx = docXml.indexOf(KOP_MARKER);
