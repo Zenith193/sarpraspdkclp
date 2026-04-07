@@ -76,22 +76,45 @@ export const exportToCSV = (data, columns, filename = 'laporan') => {
 };
 
 /**
- * Ekspor data ke PDF
+ * Ekspor data ke PDF — Premium Design
  */
 export const exportToPDF = (data, columns, filename = 'laporan', title = 'Laporan', options = {}) => {
     const doc = new jsPDF({ orientation: 'landscape' });
     const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const subtitle = options.subtitle || '';
+    const dateStr = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
 
-    // Title - centered
-    doc.setFontSize(16);
+    // === HEADER BANNER ===
+    // Dark blue gradient-like banner
+    doc.setFillColor(30, 58, 138); // deep blue
+    doc.rect(0, 0, pageWidth, 28, 'F');
+    // Accent stripe
+    doc.setFillColor(59, 130, 246); // bright blue
+    doc.rect(0, 28, pageWidth, 3, 'F');
+
+    // Title on banner
+    doc.setFontSize(15);
     doc.setFont('helvetica', 'bold');
-    doc.text(title, pageWidth / 2, 18, { align: 'center' });
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(100);
-    doc.text(`Diekspor: ${new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' })}`, pageWidth / 2, 26, { align: 'center' });
+    doc.setTextColor(255, 255, 255);
+    doc.text(title.toUpperCase(), pageWidth / 2, 13, { align: 'center' });
 
-    // Table
+    // Subtitle / institution
+    doc.setFontSize(8.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(200, 210, 255);
+    doc.text(subtitle || 'Dinas Pendidikan dan Kebudayaan Kabupaten Cilacap', pageWidth / 2, 20, { align: 'center' });
+
+    // Date badge
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(180, 195, 255);
+    doc.text(`Diekspor: ${dateStr}  •  Total: ${data.length} data`, pageWidth / 2, 26, { align: 'center' });
+
+    // Reset text color
+    doc.setTextColor(0, 0, 0);
+
+    // === TABLE ===
     const head = [columns.map(c => c.header)];
     const body = data.map((row, i) =>
         columns.map(col => {
@@ -100,24 +123,119 @@ export const exportToPDF = (data, columns, filename = 'laporan', title = 'Lapora
         })
     );
 
-    // Build noWrap column styles
+    // Find Kondisi column index for conditional coloring
+    const kondisiIdx = columns.findIndex(c => c.key === 'kondisi' || c.header === 'Kondisi');
+    const statusIdx = columns.findIndex(c => c.key === 'status' || c.header === 'Status');
+    const nilaiIdx = columns.findIndex(c => c.header === 'Nilai Pengajuan');
+    const noIdx = columns.findIndex(c => c.header === 'No');
+
+    // Build column styles
     const noWrapCols = options.noWrapCols || [];
     const columnStyles = {};
     columns.forEach((col, idx) => {
         if (noWrapCols.includes(col.header)) {
             columnStyles[idx] = { cellWidth: 'wrap', overflow: 'visible' };
         }
+        // Center "No" column
+        if (idx === noIdx) {
+            columnStyles[idx] = { ...columnStyles[idx], halign: 'center', cellWidth: 16 };
+        }
+        // Right-align currency columns
+        if (col.header === 'Nilai Pengajuan' || col.header === 'Luas (m²)') {
+            columnStyles[idx] = { ...columnStyles[idx], halign: 'right' };
+        }
+        // Center numeric columns
+        if (['Lantai', 'Panjang (m)', 'Lebar (m)', 'Luas (m²)', 'Target'].includes(col.header)) {
+            columnStyles[idx] = { ...columnStyles[idx], halign: 'center' };
+        }
     });
 
     autoTable(doc, {
-        startY: 32,
+        startY: 35,
         head,
         body,
-        styles: { fontSize: 8, cellPadding: 3 },
-        headStyles: { fillColor: [59, 130, 246], textColor: 255, fontStyle: 'bold', halign: 'center' },
-        alternateRowStyles: { fillColor: [248, 250, 252] },
-        margin: { left: 14, right: 14 },
+        theme: 'grid',
+        styles: {
+            fontSize: 7.5,
+            cellPadding: { top: 3, right: 4, bottom: 3, left: 4 },
+            lineColor: [220, 225, 235],
+            lineWidth: 0.3,
+            overflow: 'linebreak',
+            valign: 'middle',
+        },
+        headStyles: {
+            fillColor: [37, 99, 235],
+            textColor: [255, 255, 255],
+            fontStyle: 'bold',
+            halign: 'center',
+            fontSize: 7.5,
+            cellPadding: { top: 4, right: 4, bottom: 4, left: 4 },
+            lineColor: [30, 64, 175],
+            lineWidth: 0.3,
+        },
+        alternateRowStyles: {
+            fillColor: [245, 247, 252],
+        },
+        bodyStyles: {
+            textColor: [30, 41, 59],
+        },
+        margin: { left: 10, right: 10 },
         columnStyles,
+        didParseCell: (hookData) => {
+            if (hookData.section !== 'body') return;
+            // Conditional coloring for Kondisi column
+            if (hookData.column.index === kondisiIdx && kondisiIdx >= 0) {
+                const val = (hookData.cell.raw || '').toUpperCase();
+                if (val === 'BAIK') {
+                    hookData.cell.styles.textColor = [22, 163, 74];
+                    hookData.cell.styles.fontStyle = 'bold';
+                } else if (val === 'RUSAK RINGAN') {
+                    hookData.cell.styles.textColor = [37, 99, 235];
+                    hookData.cell.styles.fontStyle = 'bold';
+                } else if (val === 'RUSAK SEDANG') {
+                    hookData.cell.styles.textColor = [217, 119, 6];
+                    hookData.cell.styles.fontStyle = 'bold';
+                } else if (val === 'RUSAK BERAT') {
+                    hookData.cell.styles.textColor = [220, 38, 38];
+                    hookData.cell.styles.fontStyle = 'bold';
+                }
+            }
+            // Conditional coloring for Status column
+            if (hookData.column.index === statusIdx && statusIdx >= 0) {
+                const val = (hookData.cell.raw || '');
+                if (val === 'Disetujui' || val === 'Diterima') {
+                    hookData.cell.styles.textColor = [22, 163, 74];
+                    hookData.cell.styles.fontStyle = 'bold';
+                } else if (val === 'Ditolak') {
+                    hookData.cell.styles.textColor = [220, 38, 38];
+                    hookData.cell.styles.fontStyle = 'bold';
+                } else if (val === 'Revisi') {
+                    hookData.cell.styles.textColor = [217, 119, 6];
+                    hookData.cell.styles.fontStyle = 'bold';
+                } else if (val.includes('Menunggu')) {
+                    hookData.cell.styles.textColor = [37, 99, 235];
+                }
+            }
+            // Bold currency values
+            if (hookData.column.index === nilaiIdx && nilaiIdx >= 0) {
+                hookData.cell.styles.fontStyle = 'bold';
+            }
+        },
+        // Footer: page number
+        didDrawPage: (hookData) => {
+            const pageNum = doc.internal.getNumberOfPages();
+            doc.setFontSize(7);
+            doc.setFont('helvetica', 'normal');
+            doc.setTextColor(150);
+            doc.text(`Halaman ${hookData.pageNumber}`, pageWidth / 2, pageHeight - 8, { align: 'center' });
+            // Bottom line
+            doc.setDrawColor(200, 210, 225);
+            doc.setLineWidth(0.3);
+            doc.line(10, pageHeight - 12, pageWidth - 10, pageHeight - 12);
+            // Right footer: app name
+            doc.setFontSize(6.5);
+            doc.text('SARDIKA — Portal Data Sarpras Pendidikan Cilacap', pageWidth - 10, pageHeight - 8, { align: 'right' });
+        },
     });
 
     doc.save(`${filename}.pdf`);
