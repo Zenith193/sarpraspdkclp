@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import { templateService } from '../services/bast.service.js';
 import { splHistoryService } from '../services/matrik.service.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
@@ -120,7 +120,7 @@ router.get('/spl-file/:format/:historyId', requireAuth, async (req, res) => {
     }
 });
 
-// ===== GENERATE: fill DOCX → save both DOCX & PDF → auto-save history → return JSON =====
+// ===== GENERATE: fill DOCX â†’ save both DOCX & PDF â†’ auto-save history â†’ return JSON =====
 router.post('/generate/:id', requireAuth, async (req, res) => {
     try {
         const tpl = await templateService.getById(Number(req.params.id));
@@ -403,17 +403,116 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
             console.error('[Template] Table injection error:', tblErr.message);
         }
 
-        // ===== KOP SEKOLAH: clean marker text =====
-        // Remove the __KOP_PLACEHOLDER__ marker text from generated document
+        // ===== KOP SEKOLAH IMAGE INJECTION =====
         try {
             let docXml = generatedZip.file('word/document.xml')?.asText() || '';
-            if (docXml.includes('__KOP_PLACEHOLDER__')) {
-                docXml = docXml.replace(/__KOP_PLACEHOLDER__/g, '');
+            const KOP_MARKER = '__KOP_IMAGE__';
+
+            if (docXml.includes(KOP_MARKER) && item.kopSekolah) {
+                console.log(`[KOP] Found marker, kop path: ${item.kopSekolah}`);
+                let kopBuffer: Buffer | null = null;
+
+                // 1. Download kop image
+                if (item.kopSekolah.startsWith('gdrive://')) {
+                    try {
+                        const { streamFromGDrive: streamKop, isGDriveEnabled: isGDE } = await import('../utils/googleDriveClient.js');
+                        if (isGDE()) {
+                            const fileId = item.kopSekolah.replace('gdrive://', '');
+                            const gResult = await streamKop(fileId);
+                            if (gResult) {
+                                const chunks: Buffer[] = [];
+                                await new Promise<void>((resolve, reject) => {
+                                    gResult.stream.on('data', (c: Buffer) => chunks.push(c));
+                                    gResult.stream.on('end', resolve);
+                                    gResult.stream.on('error', reject);
+                                });
+                                kopBuffer = Buffer.concat(chunks);
+                                console.log(`[KOP] Downloaded from GDrive, size: ${kopBuffer.length}`);
+                            }
+                        }
+                    } catch (gErr: any) { console.error('[KOP] GDrive error:', gErr.message); }
+                } else if (fs.existsSync(item.kopSekolah)) {
+                    kopBuffer = fs.readFileSync(item.kopSekolah);
+                    console.log(`[KOP] Read local: ${item.kopSekolah}`);
+                }
+
+                // 2. Embed image into DOCX
+                if (kopBuffer && kopBuffer.length > 0) {
+                    try {
+                        const sizeOf = (await import('image-size')).default;
+                        const dims = sizeOf(kopBuffer);
+                        const imgW = dims.width || 800;
+                        const imgH = dims.height || 200;
+
+                        // Full page width ~16.5cm = 5953125 EMU, maintain aspect ratio
+                        const pageWidthEmu = 5953125;
+                        const ratio = imgH / imgW;
+                        const emuW = pageWidthEmu;
+                        const emuH = Math.round(pageWidthEmu * ratio);
+
+                        // Determine image type from buffer
+                        const detectedType = dims.type || 'png';
+                        const imgExt = detectedType === 'jpg' ? 'jpeg' : detectedType;
+                        const imgFilename = `kop_sekolah.${imgExt}`;
+
+                        // Add image to ZIP
+                        generatedZip.file(`word/media/${imgFilename}`, kopBuffer);
+
+                        // Add content type if not exists
+                        const ctXml = generatedZip.file('[Content_Types].xml')?.asText() || '';
+                        if (!ctXml.includes(`Extension="${imgExt}"`)) {
+                            const mimeMap: Record<string, string> = { png: 'image/png', jpeg: 'image/jpeg', jpg: 'image/jpeg', webp: 'image/webp' };
+                            const newCt = ctXml.replace('</Types>', `<Default Extension="${imgExt}" ContentType="${mimeMap[imgExt] || 'image/png'}"/></Types>`);
+                            generatedZip.file('[Content_Types].xml', newCt);
+                        }
+
+                        // Add relationship
+                        const relsXml = generatedZip.file('word/_rels/document.xml.rels')?.asText() || '';
+                        const maxRId = Math.max(...[...relsXml.matchAll(/rId(\d+)/g)].map(m => parseInt(m[1])), 50);
+                        const newRId = `rId${maxRId + 1}`;
+                        const newRel = `<Relationship Id="${newRId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${imgFilename}"/>`;
+                        generatedZip.file('word/_rels/document.xml.rels', relsXml.replace('</Relationships>', newRel + '</Relationships>'));
+
+                        // Build image XML
+                        const imgXml = `<w:p><w:pPr><w:jc w:val="center"/></w:pPr><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0"><wp:extent cx="${emuW}" cy="${emuH}"/><wp:docPr id="${maxRId + 1}" name="KopSekolah"/><a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture"><pic:nvPicPr><pic:cNvPr id="0" name="${imgFilename}"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed="${newRId}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${emuW}" cy="${emuH}"/></a:xfrm><a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>`;
+
+                        // Find and replace marker paragraph
+                        const markerIdx = docXml.indexOf(KOP_MARKER);
+                        if (markerIdx > -1) {
+                            const pStart = docXml.lastIndexOf('<w:p', markerIdx);
+                            const pEnd = docXml.indexOf('</w:p>', markerIdx);
+                            if (pStart > -1 && pEnd > -1) {
+                                const fullPara = docXml.substring(pStart, pEnd + 6);
+                                docXml = docXml.replace(fullPara, imgXml);
+                                generatedZip.file('word/document.xml', docXml);
+                                console.log(`[KOP] Embedded image ${imgW}x${imgH} â†’ ${emuW}x${emuH} EMU, rId=${newRId}`);
+                            } else {
+                                docXml = docXml.replace(new RegExp(KOP_MARKER, 'g'), '');
+                                generatedZip.file('word/document.xml', docXml);
+                            }
+                        }
+                    } catch (imgErr: any) {
+                        console.error('[KOP] Image embed error:', imgErr.message);
+                        docXml = docXml.replace(new RegExp(KOP_MARKER, 'g'), '');
+                        generatedZip.file('word/document.xml', docXml);
+                    }
+                } else {
+                    // No image available, clean marker
+                    docXml = docXml.replace(new RegExp(KOP_MARKER, 'g'), '');
+                    generatedZip.file('word/document.xml', docXml);
+                    console.log('[KOP] No image file, cleaned marker');
+                }
+            } else if (docXml.includes(KOP_MARKER)) {
+                docXml = docXml.replace(new RegExp(KOP_MARKER, 'g'), '');
                 generatedZip.file('word/document.xml', docXml);
-                console.log('[KOP] Cleaned placeholder marker from document');
             }
         } catch (kopErr: any) {
-            console.error('[KOP] Cleanup error:', kopErr.message);
+            console.error('[KOP] Error (non-fatal):', kopErr.message);
+            try {
+                let xml = generatedZip.file('word/document.xml')?.asText() || '';
+                xml = xml.replace(/__KOP_IMAGE__/g, '');
+                generatedZip.file('word/document.xml', xml);
+            } catch {}
         }
 
         // Post-process: strip empty Word Header sections that cause extra top spacing
@@ -475,7 +574,7 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
         fs.writeFileSync(docxPath, filledBuf);
         console.log(`[Template] Saved DOCX: ${docxPath}`);
 
-        // Convert DOCX → PDF using LibreOffice
+        // Convert DOCX â†’ PDF using LibreOffice
         let hasPdf = false;
         try {
             execSync(`libreoffice --headless --convert-to pdf --outdir "${SPL_OUTPUT_DIR}" "${docxPath}"`, {
@@ -841,7 +940,7 @@ function buildVariableMap(item: any, sekretaris: any = {}, refData: any = {}) {
         terbilangTanggalSpk: fmtTerbilangTanggal(d.tanggalMulai),
 
         // ===== KOP SEKOLAH =====
-        kopSekolah: '',
+        kopSekolah: d.kopSekolah ? '__KOP_IMAGE__' : '',
         kopSekolahAda: d.kopSekolah ? 'Ada' : 'Belum',
 
         // ===== BAST =====
@@ -926,13 +1025,13 @@ function generateNoBAST(noMatrik: string, jenis: string, sumber: string, tahun: 
     let kode = 'XX';
     if (jenis === 'Pengadaan Barang') { kode = KODE_BARANG_MAP[sumber] || 'X4'; } else { kode = KODE_JENIS_MAP[jenis] || 'XX'; }
     const cleanMatrik = String(noMatrik).replace(/\s/g, '');
-    // Anakan: "65.1" → 400.3.13/065.1.n/kode/tahun
+    // Anakan: "65.1" â†’ 400.3.13/065.1.n/kode/tahun
     const dotMatch = cleanMatrik.match(/^(\d+)[.,](\d+)$/);
     if (dotMatch) {
         const mainPart = dotMatch[1].padStart(3, '0');
         return `400.3.13/${mainPart}.${dotMatch[2]}.n/${kode}/${tahun}`;
     }
-    // Indukan: "63" → 400.3.13/063.n/kode/tahun
+    // Indukan: "63" â†’ 400.3.13/063.n/kode/tahun
     const mainPart = cleanMatrik.padStart(3, '0');
     return `400.3.13/${mainPart}.n/${kode}/${tahun}`;
 }
