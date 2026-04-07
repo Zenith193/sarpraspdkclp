@@ -129,30 +129,28 @@ export const exportToPDF = (data, columns, filename = 'laporan', title = 'Lapora
     const nilaiIdx = columns.findIndex(c => c.header === 'Nilai Pengajuan');
     const noIdx = columns.findIndex(c => c.header === 'No');
 
-    // Build column styles
+    // Build column styles — only alignment, let autoTable handle widths
     const noWrapCols = options.noWrapCols || [];
-    const colWidths = options.colWidths || {}; // { 'Header Name': width_in_mm }
+    const colWidths = options.colWidths || {};
     const columnStyles = {};
     columns.forEach((col, idx) => {
         const s = {};
         if (noWrapCols.includes(col.header)) {
             s.cellWidth = 'wrap'; s.overflow = 'visible';
         }
-        // Apply custom width from options
         if (colWidths[col.header]) {
             s.cellWidth = colWidths[col.header];
         }
-        // Center "No" column, small width
+        // Center No column
         if (idx === noIdx) {
             s.halign = 'center';
-            if (!s.cellWidth) s.cellWidth = 10;
         }
-        // Right-align currency columns
-        if (col.header === 'Nilai Pengajuan' || col.header === 'Luas (m²)' || col.header === 'Luas') {
+        // Right-align currency
+        if (col.header === 'Nilai Pengajuan' || col.header === 'Luas (m²)') {
             s.halign = 'right';
         }
-        // Center numeric/short columns
-        if (['Lantai', 'Lt', 'Panjang (m)', 'P(m)', 'Lebar (m)', 'L(m)', 'Luas (m²)', 'Luas', 'Target', 'NPSN', 'Jenjang', 'Masa Bangunan', 'Masa', 'Prioritas'].includes(col.header)) {
+        // Center numeric columns
+        if (['Lantai', 'Panjang (m)', 'Lebar (m)', 'Luas (m²)', 'Target', 'NPSN', 'Jenjang', 'Masa Bangunan', 'Prioritas'].includes(col.header)) {
             s.halign = 'center';
         }
         if (Object.keys(s).length > 0) columnStyles[idx] = s;

@@ -221,13 +221,13 @@ const DataSarpras = ({ readOnly = false }) => {
         ...(!isSekolah ? [{ header: 'NPSN', key: 'npsn' }] : []),
         ...(!isSekolah ? [{ header: 'Jenjang', key: 'jenjang' }] : []),
         ...(!isSekolah ? [{ header: 'Kecamatan', key: 'kecamatan' }] : []),
-        { header: 'Masa', key: 'masaBangunan' },
+        { header: 'Masa Bangunan', key: 'masaBangunan' },
         { header: 'Jenis Prasarana', key: 'jenisPrasarana' },
         { header: 'Nama Ruang', key: 'namaRuang' },
-        { header: 'Lt', key: 'lantai' },
-        { header: 'P(m)', key: 'panjang' },
-        { header: 'L(m)', key: 'lebar' },
-        { header: 'Luas', key: 'luas' },
+        { header: 'Lantai', key: 'lantai' },
+        { header: 'Panjang (m)', key: 'panjang' },
+        { header: 'Lebar (m)', key: 'lebar' },
+        { header: 'Luas (m²)', key: 'luas' },
         { header: 'Kondisi', key: 'kondisi' },
         { header: 'Keterangan', key: 'keterangan' },
         ...(canAccessPriority ? [{ header: 'Prioritas', key: 'bintang' }] : []),
@@ -630,10 +630,7 @@ const DataSarpras = ({ readOnly = false }) => {
             else if (format === 'pdf') {
                 const schoolName = isSekolah ? (sekolahList[0]?.nama || user?.namaAkun || '') : '';
                 const pdfTitle = isSekolah ? `Data Sarpras ${schoolName}` : 'Data Sarana Prasarana';
-                const pdfColWidths = isSekolah
-                    ? { 'No': 8, 'Masa': 12, 'Lt': 8, 'P(m)': 10, 'L(m)': 10, 'Luas': 12 }
-                    : { 'No': 8, 'Nama Sekolah': 40, 'NPSN': 20, 'Jenjang': 16, 'Kecamatan': 24, 'Masa': 12, 'Lt': 8, 'P(m)': 10, 'L(m)': 10, 'Luas': 12 };
-                exportToPDF(filtered, exportCols, 'data_sarpras', pdfTitle, { colWidths: pdfColWidths });
+                exportToPDF(filtered, exportCols, 'data_sarpras', pdfTitle);
                 toast.success('Berhasil ekspor PDF');
             }
         } catch (err) { toast.error('Gagal ekspor: ' + err.message); }
