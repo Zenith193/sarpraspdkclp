@@ -534,9 +534,11 @@ const Proposal = ({ readOnly = false }) => {
             } else if (format === 'csv') exportToCSV(allData, baseCols, 'data_proposal');
             else if (format === 'pdf') {
                 // PDF: export aktif + realisasi as separate sections
-                exportToPDF(filteredAktif, baseCols, 'data_proposal', 'Data Proposal', { noWrapCols: ['Nilai Pengajuan'] });
+                const schoolName = isSekolahOrKorwil ? (formSekolah || sekolahList[0]?.nama || user?.namaAkun || '') : '';
+                const titleSuffix = schoolName ? ` ${schoolName}` : '';
+                exportToPDF(filteredAktif, baseCols, 'data_proposal', `Proposal${titleSuffix}`, { noWrapCols: ['Nilai Pengajuan'] });
                 if (filteredRealisasi.length > 0) {
-                    exportToPDF(filteredRealisasi, realisasiCols, 'data_proposal_terealisasi', 'Data Proposal Terealisasi', { noWrapCols: ['Nilai Pengajuan'] });
+                    exportToPDF(filteredRealisasi, realisasiCols, 'data_proposal_terealisasi', `Proposal Terealisasi${titleSuffix}`, { noWrapCols: ['Nilai Pengajuan'] });
                 }
             }
             toast.success(`Berhasil ekspor ${format.toUpperCase()}`);

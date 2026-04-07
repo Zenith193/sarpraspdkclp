@@ -148,11 +148,11 @@ export const exportToPDF = (data, columns, filename = 'laporan', title = 'Lapora
             if (!s.cellWidth) s.cellWidth = 10;
         }
         // Right-align currency columns
-        if (col.header === 'Nilai Pengajuan' || col.header === 'Luas (m²)') {
+        if (col.header === 'Nilai Pengajuan' || col.header === 'Luas (m²)' || col.header === 'Luas') {
             s.halign = 'right';
         }
         // Center numeric/short columns
-        if (['Lantai', 'Panjang (m)', 'Lebar (m)', 'Luas (m²)', 'Target', 'NPSN', 'Jenjang', 'Masa Bangunan'].includes(col.header)) {
+        if (['Lantai', 'Lt', 'Panjang (m)', 'P(m)', 'Lebar (m)', 'L(m)', 'Luas (m²)', 'Luas', 'Target', 'NPSN', 'Jenjang', 'Masa Bangunan', 'Masa', 'Prioritas'].includes(col.header)) {
             s.halign = 'center';
         }
         if (Object.keys(s).length > 0) columnStyles[idx] = s;

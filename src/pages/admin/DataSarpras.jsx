@@ -217,20 +217,20 @@ const DataSarpras = ({ readOnly = false }) => {
     // ===== EXPORT COLUMNS =====
     const exportCols = [
         { header: 'No', accessor: (_, i) => i + 1 },
-        { header: 'Nama Sekolah', key: 'namaSekolah' },
-        { header: 'NPSN', key: 'npsn' },
-        { header: 'Jenjang', key: 'jenjang' },
-        { header: 'Kecamatan', key: 'kecamatan' },
-        { header: 'Masa Bangunan', key: 'masaBangunan' },
+        ...(!isSekolah ? [{ header: 'Nama Sekolah', key: 'namaSekolah' }] : []),
+        ...(!isSekolah ? [{ header: 'NPSN', key: 'npsn' }] : []),
+        ...(!isSekolah ? [{ header: 'Jenjang', key: 'jenjang' }] : []),
+        ...(!isSekolah ? [{ header: 'Kecamatan', key: 'kecamatan' }] : []),
+        { header: 'Masa', key: 'masaBangunan' },
         { header: 'Jenis Prasarana', key: 'jenisPrasarana' },
         { header: 'Nama Ruang', key: 'namaRuang' },
-        { header: 'Lantai', key: 'lantai' },
-        { header: 'Panjang (m)', key: 'panjang' },
-        { header: 'Lebar (m)', key: 'lebar' },
-        { header: 'Luas (m²)', key: 'luas' },
+        { header: 'Lt', key: 'lantai' },
+        { header: 'P(m)', key: 'panjang' },
+        { header: 'L(m)', key: 'lebar' },
+        { header: 'Luas', key: 'luas' },
         { header: 'Kondisi', key: 'kondisi' },
         { header: 'Keterangan', key: 'keterangan' },
-        ...(canAccessPriority ? [{ header: 'Prioritas (★)', key: 'bintang' }] : []),
+        ...(canAccessPriority ? [{ header: 'Prioritas', key: 'bintang' }] : []),
     ];
 
     // ===== COLUMN VISIBILITY =====
@@ -627,7 +627,15 @@ const DataSarpras = ({ readOnly = false }) => {
         try {
             if (format === 'excel') { exportToExcel(filtered, exportCols, 'data_sarpras'); toast.success('Berhasil ekspor Excel'); }
             else if (format === 'csv') { exportToCSV(filtered, exportCols, 'data_sarpras'); toast.success('Berhasil ekspor CSV'); }
-            else if (format === 'pdf') { exportToPDF(filtered, exportCols, 'data_sarpras', 'Data Sarana Prasarana', { colWidths: { 'No': 8, 'Nama Sekolah': 38, 'NPSN': 18, 'Jenjang': 14, 'Kecamatan': 22, 'Masa Bangunan': 14, 'Lantai': 12, 'Panjang (m)': 14, 'Lebar (m)': 14, 'Luas (m²)': 14 } }); toast.success('Berhasil ekspor PDF'); }
+            else if (format === 'pdf') {
+                const schoolName = isSekolah ? (sekolahList[0]?.nama || user?.namaAkun || '') : '';
+                const pdfTitle = isSekolah ? `Data Sarpras ${schoolName}` : 'Data Sarana Prasarana';
+                const pdfColWidths = isSekolah
+                    ? { 'No': 8, 'Masa': 12, 'Lt': 8, 'P(m)': 10, 'L(m)': 10, 'Luas': 12 }
+                    : { 'No': 8, 'Nama Sekolah': 40, 'NPSN': 20, 'Jenjang': 16, 'Kecamatan': 24, 'Masa': 12, 'Lt': 8, 'P(m)': 10, 'L(m)': 10, 'Luas': 12 };
+                exportToPDF(filtered, exportCols, 'data_sarpras', pdfTitle, { colWidths: pdfColWidths });
+                toast.success('Berhasil ekspor PDF');
+            }
         } catch (err) { toast.error('Gagal ekspor: ' + err.message); }
         setShowExport(false);
     };
