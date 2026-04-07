@@ -183,10 +183,11 @@ const Proposal = ({ readOnly = false }) => {
     const handleActionClick = (e, id) => {
         if (openActionId === id) { setOpenActionId(null); return; }
         const rect = e.currentTarget.getBoundingClientRect();
-        const dropdownHeight = 140; // smaller estimate for fewer menu items
+        const dropdownHeight = 140;
         const spaceBelow = window.innerHeight - rect.bottom;
         const top = spaceBelow < dropdownHeight ? rect.top - dropdownHeight : rect.bottom + 4;
-        setActionPos({ top, left: Math.min(rect.right - 170, window.innerWidth - 180) });
+        const left = Math.min(rect.right - 140, window.innerWidth - 150);
+        setActionPos({ top, left });
         setOpenActionId(id);
     };
 
@@ -824,7 +825,7 @@ const Proposal = ({ readOnly = false }) => {
                     const item = paged.find(p => p.id === openActionId);
                     if (!item) return null;
                     return (
-                        <div ref={actionDropdownRef} className="dropdown-menu" style={{ position: 'fixed', top: actionPos.top, left: actionPos.left, minWidth: 170, padding: 4, zIndex: 9999, boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}>
+                        <div ref={actionDropdownRef} className="dropdown-menu" style={{ position: 'fixed', top: actionPos.top, left: actionPos.left, minWidth: 140, padding: 4, zIndex: 9999, boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}>
                             <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-primary)', borderRadius: 6 }} className="dropdown-item" onClick={() => { setViewItem(item); setOpenActionId(null); }}>
                                 <Eye size={14} /> Lihat Detail
                             </button>
