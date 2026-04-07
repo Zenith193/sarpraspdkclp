@@ -5,7 +5,7 @@ import { useSarprasData, useProposalData, useRiwayatBantuanData, useSekolahData 
 import { bastApi } from '../../api/index';
 import { formatCurrency } from '../../utils/formatters';
 
-const ITEMS_PER_PAGE = 5;
+const ITEMS_PER_PAGE = 3;
 
 const DashboardSekolah = () => {
     const user = useAuthStore(s => s.user);
@@ -229,9 +229,9 @@ const DashboardSekolah = () => {
             </div>
 
             {/* Proposal & Riwayat side by side */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, alignItems: 'start' }}>
                     {/* Proposals */}
-                    <div className="table-container" style={{ marginBottom: 16 }}>
+                    <div className="table-container" style={{ marginBottom: 16, minHeight: 220 }}>
                         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: 8 }}>
                             <FileText size={16} style={{ color: '#f59e0b' }} />
                             <h3 style={{ fontSize: '0.9rem', fontWeight: 600, margin: 0 }}>Proposal Terbaru</h3>
@@ -281,7 +281,7 @@ const DashboardSekolah = () => {
                     </div>
 
                     {/* Riwayat Bantuan */}
-                    <div className="table-container">
+                    <div className="table-container" style={{ minHeight: 220 }}>
                         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: 8 }}>
                             <History size={16} style={{ color: '#22c55e' }} />
                             <h3 style={{ fontSize: '0.9rem', fontWeight: 600, margin: 0 }}>Riwayat Bantuan</h3>

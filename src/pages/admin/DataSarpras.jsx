@@ -624,13 +624,14 @@ const DataSarpras = ({ readOnly = false }) => {
     };
 
     const handleExport = (format) => {
+        const sorted = [...filtered].sort((a, b) => (a.jenisPrasarana || '').localeCompare(b.jenisPrasarana || ''));
         try {
-            if (format === 'excel') { exportToExcel(filtered, exportCols, 'data_sarpras'); toast.success('Berhasil ekspor Excel'); }
-            else if (format === 'csv') { exportToCSV(filtered, exportCols, 'data_sarpras'); toast.success('Berhasil ekspor CSV'); }
+            if (format === 'excel') { exportToExcel(sorted, exportCols, 'data_sarpras'); toast.success('Berhasil ekspor Excel'); }
+            else if (format === 'csv') { exportToCSV(sorted, exportCols, 'data_sarpras'); toast.success('Berhasil ekspor CSV'); }
             else if (format === 'pdf') {
                 const schoolName = isSekolah ? (sekolahList[0]?.nama || user?.namaAkun || '') : '';
                 const pdfTitle = isSekolah ? `Data Sarpras ${schoolName}` : 'Data Sarana Prasarana';
-                exportToPDF(filtered, exportCols, 'data_sarpras', pdfTitle);
+                exportToPDF(sorted, exportCols, 'data_sarpras', pdfTitle);
                 toast.success('Berhasil ekspor PDF');
             }
         } catch (err) { toast.error('Gagal ekspor: ' + err.message); }
