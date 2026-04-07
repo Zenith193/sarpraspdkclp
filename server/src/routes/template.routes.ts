@@ -530,28 +530,53 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
                         ].join('');
 
                         // Find and replace marker paragraph
+                        // IMPORTANT: if marker is inside a table cell, extract image OUTSIDE the table
                         const markerIdx = docXml.indexOf(KOP_MARKER);
                         if (markerIdx > -1) {
-                            // Search backwards for <w:p> or <w:p  (not <w:pPr etc)
-                            let pStart = -1;
-                            let searchPos = markerIdx;
-                            while (searchPos > 0) {
-                                const found = docXml.lastIndexOf('<w:p', searchPos);
-                                if (found === -1) break;
-                                const nextChar = docXml[found + 4];
-                                if (nextChar === '>' || nextChar === ' ') { pStart = found; break; }
-                                searchPos = found - 1;
-                            }
-                            const pEnd = docXml.indexOf('</w:p>', markerIdx);
-                            if (pStart > -1 && pEnd > -1) {
-                                const fullPara = docXml.substring(pStart, pEnd + 6);
-                                docXml = docXml.replace(fullPara, imgXml);
-                                generatedZip.file('word/document.xml', docXml);
-                                console.log(`[KOP] Embedded image ${imgW}x${imgH} â†’ ${emuW}x${emuH} EMU, rId=${newRId}`);
+                            // Check if marker is inside a table cell (<w:tc>)
+                            const beforeMarker = docXml.substring(0, markerIdx);
+                            const lastTcOpen = beforeMarker.lastIndexOf('<w:tc');
+                            const lastTcClose = beforeMarker.lastIndexOf('</w:tc>');
+                            const isInsideTable = lastTcOpen > lastTcClose;
+
+                            if (isInsideTable) {
+                                // Find the outermost <w:tbl> that contains this marker
+                                let tblStart = -1;
+                                for (let i = markerIdx; i >= 0; i--) {
+                                    if (docXml.substring(i, i + 6) === '<w:tbl' && (docXml[i + 6] === '>' || docXml[i + 6] === ' ')) {
+                                        tblStart = i; break;
+                                    }
+                                }
+                                if (tblStart > -1) {
+                                    // Insert image paragraph BEFORE the table
+                                    docXml = docXml.substring(0, tblStart) + imgXml + docXml.substring(tblStart);
+                                    // Clean the marker text from inside the table
+                                    docXml = docXml.replace(new RegExp(KOP_MARKER, 'g'), '');
+                                    generatedZip.file('word/document.xml', docXml);
+                                    console.log(`[KOP] Marker was inside table — moved image BEFORE table at pos ${tblStart}`);
+                                }
                             } else {
-                                docXml = docXml.replace(new RegExp(KOP_MARKER, 'g'), '');
+                                // Not inside table - replace paragraph normally
+                                let pStart = -1;
+                                let searchPos = markerIdx;
+                                while (searchPos > 0) {
+                                    const found = docXml.lastIndexOf('<w:p', searchPos);
+                                    if (found === -1) break;
+                                    const nextChar = docXml[found + 4];
+                                    if (nextChar === '>' || nextChar === ' ') { pStart = found; break; }
+                                    searchPos = found - 1;
+                                }
+                                const pEnd = docXml.indexOf('</w:p>', markerIdx);
+                                if (pStart > -1 && pEnd > -1) {
+                                    const fullPara = docXml.substring(pStart, pEnd + 6);
+                                    docXml = docXml.replace(fullPara, imgXml);
+                                } else {
+                                    docXml = docXml.replace(new RegExp(KOP_MARKER, 'g'), '');
+                                }
                                 generatedZip.file('word/document.xml', docXml);
+                                console.log(`[KOP] Replaced paragraph directly`);
                             }
+                            console.log(`[KOP] Embedded ${imgW}x${imgH}px, ${emuW}x${emuH} EMU, rId=${newRId}, inTable=${isInsideTable}`);
                         }
                     } catch (imgErr: any) {
                         console.error('[KOP] Image embed error:', imgErr.message);
