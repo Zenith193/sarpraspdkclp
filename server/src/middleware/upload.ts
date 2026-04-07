@@ -212,7 +212,8 @@ export const uploadBast = multer({
 
 export const uploadKopSekolah = multer({
     storage: tempStorage,
-    limits: { fileSize: 1 * 1024 * 1024 },
+    fileFilter: imageFilter,
+    limits: { fileSize: 2 * 1024 * 1024 },
 });
 
 export const uploadDenahSekolah = multer({

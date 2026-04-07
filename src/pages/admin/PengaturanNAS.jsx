@@ -469,7 +469,7 @@ const PengaturanNAS = () => {
 │       ├── 📂 prestasi/
 │       │   └── 📄 sertifikat.pdf
 │       └── 📂 kop-sekolah/
-│           └── 📄 kop.docx
+│           └── 📄 kop.png
 └── 📁 _sistem/
     ├── 📂 template/
     └── 📂 backup/`}

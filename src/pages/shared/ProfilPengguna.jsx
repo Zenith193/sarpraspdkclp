@@ -4,7 +4,6 @@ import useAuthStore from '../../store/authStore';
 import { penggunaApi, sekolahApi, perusahaanApi } from '../../api/index';
 import toast from 'react-hot-toast';
 import ConfirmModal from '../../components/ui/ConfirmModal';
-import mammoth from 'mammoth';
 
 const ProfilPengguna = () => {
     const user = useAuthStore(s => s.user);
@@ -19,7 +18,7 @@ const ProfilPengguna = () => {
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [deleteConfirm, setDeleteConfirm] = useState(null); // 'kop' | 'denah' | 'photo' | null
-    const [wordPreviewHtml, setWordPreviewHtml] = useState(null);
+    const [kopPreviewUrl, setKopPreviewUrl] = useState(null);
     const [loadingPreview, setLoadingPreview] = useState(false);
     const [showNewPw, setShowNewPw] = useState(false);
     const [showConfirmPw, setShowConfirmPw] = useState(false);
@@ -228,8 +227,8 @@ const ProfilPengguna = () => {
         if (!file) return;
         e.target.value = null;
         const ext = file.name.split('.').pop().toLowerCase();
-        if (!['doc', 'docx'].includes(ext)) { toast.error('Format file harus Word (.doc atau .docx)'); return; }
-        if (file.size > 1 * 1024 * 1024) { toast.error('Ukuran file maksimal 1MB'); return; }
+        if (!['png', 'jpg', 'jpeg', 'webp'].includes(ext)) { toast.error('Format file harus gambar (PNG, JPG, JPEG, WEBP)'); return; }
+        if (file.size > 2 * 1024 * 1024) { toast.error('Ukuran file maksimal 2MB'); return; }
         setUploadingKop(true);
         setUploadProgress(p => ({ ...p, kop: 0 }));
         try {
@@ -275,23 +274,13 @@ const ProfilPengguna = () => {
             window.open(`/api/sekolah/${sekolahId}/download-denah`, '_blank');
             return;
         }
-        // Word (.docx) → convert to HTML with mammoth
+        // Kop is now an image → show in a modal
         setLoadingPreview(true);
         try {
             const blob = await sekolahApi.downloadKop(sekolahId);
             if (!blob || blob.size === 0) { toast.error('File tidak ditemukan'); setLoadingPreview(false); return; }
-            try {
-                const arrayBuffer = await blob.arrayBuffer();
-                const result = await mammoth.convertToHtml({ arrayBuffer });
-                if (!result.value || result.value.trim() === '') {
-                    toast.error('File Word kosong atau format tidak didukung (.doc lama). Gunakan format .docx');
-                } else {
-                    setWordPreviewHtml(result.value);
-                }
-            } catch (convErr) {
-                console.error('Mammoth conversion error:', convErr);
-                toast.error('Format file .doc (lama) tidak didukung untuk preview. Silakan upload ulang dalam format .docx, atau gunakan tombol Download.');
-            }
+            const url = URL.createObjectURL(blob);
+            setKopPreviewUrl(url);
         } catch (err) {
             toast.error('Gagal memuat file: ' + (err.message || 'File tidak ditemukan'));
         }
@@ -387,7 +376,7 @@ const ProfilPengguna = () => {
                 </div>
             </div>
             <small style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: 4, display: 'block' }}>
-                {type === 'kop' ? '* Format Word (.doc, .docx), Maks 1MB' : '* Format PDF, Maks 5MB'}
+                {type === 'kop' ? '* Format Gambar (PNG, JPG, JPEG, WEBP), Maks 2MB' : '* Format PDF, Maks 5MB'}
             </small>
         </div>
     );
@@ -506,7 +495,7 @@ const ProfilPengguna = () => {
                 {isSekolah && sekolahId && (
                     <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid var(--border-color)' }}>
                         <h3 style={{ fontSize: '1rem', marginBottom: 16, fontWeight: 600 }}>Dokumen Sekolah</h3>
-                        {renderFileSection('kop', 'Kop Sekolah', '.doc,.docx', '1MB', uploadingKop, !!sekolahData?.kopSekolah)}
+                        {renderFileSection('kop', 'Kop Sekolah', '.png,.jpg,.jpeg,.webp', '2MB', uploadingKop, !!sekolahData?.kopSekolah)}
                         {renderFileSection('denah', 'Denah Sekolah', '.pdf', '5MB', uploadingDenah, !!sekolahData?.denahSekolah)}
                     </div>
                 )}
@@ -613,10 +602,10 @@ const ProfilPengguna = () => {
                 </div>
             )}
 
-            {/* Word Preview Modal */}
-            {wordPreviewHtml && (
-                <div className="modal-overlay" onClick={() => setWordPreviewHtml(null)} style={{ zIndex: 1000 }}>
-                    <div className="modal" style={{ width: '95vw', maxWidth: 1100, maxHeight: '95vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+            {/* Kop Image Preview Modal */}
+            {kopPreviewUrl && (
+                <div className="modal-overlay" onClick={() => { URL.revokeObjectURL(kopPreviewUrl); setKopPreviewUrl(null); }} style={{ zIndex: 1000 }}>
+                    <div className="modal" style={{ width: '95vw', maxWidth: 900, maxHeight: '95vh', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
                         <div className="modal-header">
                             <div className="modal-title" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                                 <FileText size={18} /> Preview Kop Sekolah
@@ -625,32 +614,11 @@ const ProfilPengguna = () => {
                                 <button className="btn btn-secondary btn-sm" onClick={() => handleDownload('kop')}>
                                     <Download size={14} /> Download
                                 </button>
-                                <button className="modal-close" onClick={() => setWordPreviewHtml(null)}><X size={18} /></button>
+                                <button className="modal-close" onClick={() => { URL.revokeObjectURL(kopPreviewUrl); setKopPreviewUrl(null); }}><X size={18} /></button>
                             </div>
                         </div>
-                        <div className="modal-body" style={{ overflow: 'auto', flex: 1, padding: 0 }}>
-                            <style>{`
-                                .word-preview-content img { max-width: 100% !important; height: auto !important; }
-                                .word-preview-content table { max-width: 100% !important; border-collapse: collapse; width: 100%; }
-                                .word-preview-content td, .word-preview-content th { border: 1px solid #ccc; padding: 6px 10px; }
-                                .word-preview-content p { margin: 4px 0; }
-                                .word-preview-content * { max-width: 100% !important; box-sizing: border-box; }
-                            `}</style>
-                            <div
-                                className="word-preview-content"
-                                style={{
-                                    background: '#fff',
-                                    color: '#222',
-                                    padding: '40px 48px',
-                                    minHeight: 400,
-                                    fontFamily: 'serif',
-                                    fontSize: 14,
-                                    lineHeight: 1.7,
-                                    overflowWrap: 'break-word',
-                                    wordBreak: 'break-word',
-                                }}
-                                dangerouslySetInnerHTML={{ __html: wordPreviewHtml }}
-                            />
+                        <div className="modal-body" style={{ overflow: 'auto', flex: 1, padding: 24, display: 'flex', justifyContent: 'center', background: '#f5f5f5' }}>
+                            <img src={kopPreviewUrl} alt="Kop Sekolah" style={{ maxWidth: '100%', height: 'auto', borderRadius: 8, boxShadow: '0 2px 12px rgba(0,0,0,0.1)' }} />
                         </div>
                     </div>
                 </div>

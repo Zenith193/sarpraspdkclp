@@ -257,21 +257,22 @@ const ManajemenPengguna = () => {
         const file = e.target.files[0];
         if (!file) return;
 
-        // Validasi Ukuran (Max 1MB)
-        const maxSize = 1024 * 1024; // 1MB in bytes
+        // Validasi Ukuran (Max 2MB)
+        const maxSize = 2 * 1024 * 1024; // 2MB in bytes
         if (file.size > maxSize) {
-            toast.error("Ukuran file maksimal 1MB!");
+            toast.error("Ukuran file maksimal 2MB!");
             e.target.value = null; // Reset input
             return;
         }
 
-        // Validasi Tipe (Word)
+        // Validasi Tipe (Image)
         const allowedTypes = [
-            'application/msword',
-            'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            'image/jpeg',
+            'image/png',
+            'image/webp'
         ];
         if (!allowedTypes.includes(file.type)) {
-            toast.error("Format file harus Word (.doc atau .docx)!");
+            toast.error("Format file harus gambar (PNG, JPG, JPEG, WEBP)!");
             e.target.value = null; // Reset input
             return;
         }
@@ -728,7 +729,7 @@ const ManajemenPengguna = () => {
 
                                         {/* FILE KOP SEKOLAH - VIEW */}
                                         <div className="form-group">
-                                            <label className="form-label">Kop Sekolah (Word)</label>
+                                            <label className="form-label">Kop Sekolah (Gambar)</label>
                                             {formData.kopSekolahPath ? (
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.5rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
                                                     <FileText size={18} style={{ color: 'var(--accent-green)' }} />
@@ -854,12 +855,12 @@ const ManajemenPengguna = () => {
 
                                         {/* FILE UPLOAD KOP SEKOLAH - FORM */}
                                         <div className="form-group">
-                                            <label className="form-label">Kop Sekolah (Format Word, Max 1MB)</label>
+                                            <label className="form-label">Kop Sekolah (Format Gambar, Max 2MB)</label>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
                                                 <input
                                                     type="file"
                                                     id="kop-upload"
-                                                    accept=".doc,.docx"
+                                                    accept=".png,.jpg,.jpeg,.webp"
                                                     onChange={handleFileUpload}
                                                     style={{ display: 'none' }}
                                                 />

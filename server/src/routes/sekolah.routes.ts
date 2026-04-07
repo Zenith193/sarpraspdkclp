@@ -98,11 +98,11 @@ router.post('/:id/upload-kop', requireAuth, uploadKopSekolah.single('file'), inj
         const file = req.file as Express.Multer.File & { finalPath?: string };
         if (!file) { res.status(400).json({ error: 'File tidak ditemukan' }); return; }
 
-        // Validate file type (Word only)
+        // Validate file type (Image only)
         const ext = path.extname(file.originalname).toLowerCase();
-        if (!['.doc', '.docx'].includes(ext)) {
+        if (!['.png', '.jpg', '.jpeg', '.webp'].includes(ext)) {
             try { fs.unlinkSync(file.path); } catch {}
-            res.status(400).json({ error: 'Format file harus Word (.doc atau .docx)' }); return;
+            res.status(400).json({ error: 'Format file harus gambar (PNG, JPG, JPEG, WEBP)' }); return;
         }
 
         // Delete old file if exists

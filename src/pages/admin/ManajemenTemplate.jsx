@@ -158,7 +158,7 @@ const GUIDE_DATA = {
         { variable: "{{terbilangBAST}}", description: "Terbilang nilai BAST" },
     ],
     "Sekolah & Kop": [
-        { variable: "{{kopSekolah}}", description: "Path kop sekolah" },
+        { variable: "{{kopSekolah}}", description: "Kosong (kop dimasukkan langsung ke template)" },
         { variable: "{{kopSekolahAda}}", description: "Status kop: Ada / Belum" },
     ],
     "Anakan (1-15)": [
