@@ -482,7 +482,44 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
                         const imgExt = detectedType === 'jpg' ? 'jpeg' : detectedType;
                         const imgFilename = `kop_sekolah.${imgExt}`;
 
-                        // Add image to ZIP
+                        // FIX: LibreOffice ignores wp:extent EMU and uses native DPI
+                        // Set DPI so image renders at ~16.5cm (6.5 inches) width
+                        const targetWidthInches = 6.5; // ~16.5cm printable area
+                        const targetDpi = Math.round(imgW / targetWidthInches);
+                        console.log(`[KOP] Setting DPI to ${targetDpi} (${imgW}px / ${targetWidthInches}in = ${(imgW/targetDpi*2.54).toFixed(1)}cm)`);
+                        
+                        // Modify DPI in JPEG buffer
+                        if (isJpeg) {
+                            // JFIF: find APP0 marker (0xFF 0xE0), set density
+                            for (let i = 2; i < kopBuffer.length - 14; i++) {
+                                if (kopBuffer[i] === 0xFF && kopBuffer[i + 1] === 0xE0) {
+                                    const jfifStart = i + 4; // skip marker + length
+                                    if (kopBuffer[jfifStart] === 0x4A && kopBuffer[jfifStart + 1] === 0x46) { // "JF"
+                                        kopBuffer[jfifStart + 7] = 1; // density units = DPI
+                                        kopBuffer.writeUInt16BE(targetDpi, jfifStart + 8); // X density
+                                        kopBuffer.writeUInt16BE(targetDpi, jfifStart + 10); // Y density
+                                        console.log(`[KOP] Set JPEG DPI to ${targetDpi}`);
+                                    }
+                                    break;
+                                }
+                            }
+                        }
+                        // Modify DPI in PNG buffer (pHYs chunk)
+                        if (isPng) {
+                            const ppm = Math.round(targetDpi / 0.0254); // dots per meter
+                            // Find or create pHYs chunk after IHDR
+                            const physMarker = Buffer.from('pHYs');
+                            let physIdx = kopBuffer.indexOf(physMarker);
+                            if (physIdx > 0) {
+                                // Overwrite existing pHYs
+                                kopBuffer.writeUInt32BE(ppm, physIdx + 4); // X pixels per unit
+                                kopBuffer.writeUInt32BE(ppm, physIdx + 8); // Y pixels per unit
+                                kopBuffer[physIdx + 12] = 1; // unit = meter
+                                console.log(`[KOP] Set PNG pHYs to ${ppm} ppm (${targetDpi} DPI)`);
+                            }
+                        }
+
+                        // Add image to ZIP (with modified DPI)
                         generatedZip.file(`word/media/${imgFilename}`, kopBuffer);
 
                         // Add content type if not exists
