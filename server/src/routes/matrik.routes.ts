@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { matrikService, splHistoryService } from '../services/matrik.service.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { logActivity } from '../middleware/logActivity.js';
 import { db } from '../db/index.js';
 import { user } from '../db/schema/index.js';
 import { eq } from 'drizzle-orm';
@@ -52,12 +53,18 @@ router.get('/spl/history', requireAuth, requireRole('admin', 'verifikator'), asy
 router.post('/spl/history', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
     try {
         const data = { ...req.body, createdBy: (req as any).user?.id };
-        res.status(201).json(await splHistoryService.create(data));
+        const result = await splHistoryService.create(data);
+        logActivity(req, 'Buat SPL History', `Membuat riwayat SPL: ${req.body.jenis || ''} - ${req.body.noSpl || ''}`);
+        res.status(201).json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 router.delete('/spl/history/:id', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
-    try { await splHistoryService.delete(Number(req.params.id)); res.json({ success: true }); } catch (e: any) { res.status(500).json({ error: e.message }); }
+    try {
+        await splHistoryService.delete(Number(req.params.id));
+        logActivity(req, 'Hapus SPL History', `Menghapus riwayat SPL #${req.params.id}`);
+        res.json({ success: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 router.get('/:id', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
@@ -86,7 +93,9 @@ router.post('/', requireAuth, requireRole('admin', 'verifikator'), async (req, r
         if (data.noMatrik != null) {
             data.noMatrik = String(data.noMatrik).replace(/(\.\d+?)0{5,}\d*$/, '$1');
         }
-        res.status(201).json(await matrikService.create(data));
+        const result = await matrikService.create(data);
+        logActivity(req, 'Tambah Matrik', `Menambahkan matrik kegiatan: ${data.namaPaket || ''} (No: ${data.noMatrik || ''})`);
+        res.status(201).json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
@@ -159,12 +168,17 @@ router.put('/:id', requireAuth, requireRole('admin', 'verifikator'), async (req,
             }
         }
 
+        logActivity(req, 'Edit Matrik', `Mengubah matrik kegiatan #${req.params.id}`);
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 router.delete('/:id', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
-    try { await matrikService.delete(Number(req.params.id)); res.json({ success: true }); } catch (e: any) { res.status(500).json({ error: e.message }); }
+    try {
+        await matrikService.delete(Number(req.params.id));
+        logActivity(req, 'Hapus Matrik', `Menghapus matrik kegiatan #${req.params.id}`);
+        res.json({ success: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
 router.post('/import', requireAuth, requireRole('admin', 'verifikator'), async (req, res) => {
@@ -183,6 +197,7 @@ router.post('/import', requireAuth, requireRole('admin', 'verifikator'), async (
             return data;
         });
         const result = await matrikService.bulkCreate(items);
+        logActivity(req, 'Import Matrik', `Mengimport ${items.length} data matrik kegiatan`);
         res.status(201).json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
