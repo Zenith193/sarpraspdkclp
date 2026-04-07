@@ -5,7 +5,7 @@ import { useSarprasData, useProposalData, useRiwayatBantuanData, useSekolahData 
 import { bastApi } from '../../api/index';
 import { formatCurrency } from '../../utils/formatters';
 
-const ITEMS_PER_PAGE = 3;
+const ITEMS_PER_PAGE = 5;
 
 const DashboardSekolah = () => {
     const user = useAuthStore(s => s.user);
