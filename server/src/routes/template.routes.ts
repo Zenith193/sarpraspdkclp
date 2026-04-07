@@ -1,4 +1,4 @@
-﻿import { Router } from 'express';
+import { Router } from 'express';
 import { templateService } from '../services/bast.service.js';
 import { splHistoryService } from '../services/matrik.service.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
@@ -437,7 +437,18 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
                 }
 
                 // 2. Embed image into DOCX
-                if (kopBuffer && kopBuffer.length > 0) {
+                if (kopBuffer && kopBuffer.length > 100) {
+                    // Validate: is this actually an image? (check magic bytes)
+                    const isPng = kopBuffer[0] === 0x89 && kopBuffer[1] === 0x50 && kopBuffer[2] === 0x4E && kopBuffer[3] === 0x47;
+                    const isJpeg = kopBuffer[0] === 0xFF && kopBuffer[1] === 0xD8 && kopBuffer[2] === 0xFF;
+                    const isWebp = kopBuffer[8] === 0x57 && kopBuffer[9] === 0x45 && kopBuffer[10] === 0x42 && kopBuffer[11] === 0x50;
+                    const isImage = isPng || isJpeg || isWebp;
+
+                    if (!isImage) {
+                        console.log('[KOP] File is NOT an image (magic bytes mismatch) - skipping embed. Upload ulang kop sebagai PNG/JPG.');
+                        docXml = docXml.replace(new RegExp(KOP_MARKER, 'g'), '');
+                        generatedZip.file('word/document.xml', docXml);
+                    } else {
                     try {
                         const sizeOf = (await import('image-size')).default;
                         const dims = sizeOf(kopBuffer);
@@ -496,6 +507,7 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
                         docXml = docXml.replace(new RegExp(KOP_MARKER, 'g'), '');
                         generatedZip.file('word/document.xml', docXml);
                     }
+                    } // end isImage else
                 } else {
                     // No image available, clean marker
                     docXml = docXml.replace(new RegExp(KOP_MARKER, 'g'), '');
