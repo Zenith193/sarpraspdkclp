@@ -233,7 +233,7 @@ const ManajemenPengguna = () => {
         } else {
             setFormData({ ...user });
             // Fetch sekolah data for document paths (kop, denah)
-            if (type === 'view' && user?.sekolahId) {
+            if ((type === 'view' || type === 'edit') && user?.sekolahId) {
                 sekolahApi.getById(user.sekolahId).then(sch => {
                     setFormData(prev => ({
                         ...prev,
