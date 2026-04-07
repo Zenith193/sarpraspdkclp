@@ -464,8 +464,8 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
                         generatedZip.file('word/document.xml', docXml);
                     } else {
                     try {
-                        const sizeOf = (await import('image-size')).default;
-                        const dims = sizeOf(kopBuffer);
+                        const { imageSize } = await import('image-size');
+                        const dims = imageSize(kopBuffer);
                         const imgW = dims.width || 800;
                         const imgH = dims.height || 200;
 
@@ -504,7 +504,16 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
                         // Find and replace marker paragraph
                         const markerIdx = docXml.indexOf(KOP_MARKER);
                         if (markerIdx > -1) {
-                            const pStart = docXml.lastIndexOf('<w:p', markerIdx);
+                            // Search backwards for <w:p> or <w:p  (not <w:pPr etc)
+                            let pStart = -1;
+                            let searchPos = markerIdx;
+                            while (searchPos > 0) {
+                                const found = docXml.lastIndexOf('<w:p', searchPos);
+                                if (found === -1) break;
+                                const nextChar = docXml[found + 4];
+                                if (nextChar === '>' || nextChar === ' ') { pStart = found; break; }
+                                searchPos = found - 1;
+                            }
                             const pEnd = docXml.indexOf('</w:p>', markerIdx);
                             if (pStart > -1 && pEnd > -1) {
                                 const fullPara = docXml.substring(pStart, pEnd + 6);

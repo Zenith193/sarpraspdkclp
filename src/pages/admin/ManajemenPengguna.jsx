@@ -882,6 +882,10 @@ const ManajemenPengguna = () => {
                                                             <X size={12} style={{ color: 'var(--accent-red)' }} />
                                                         </button>
                                                     </div>
+                                                ) : formData.kopSekolahPath ? (
+                                                    <span style={{ fontSize: '0.8rem', color: 'var(--accent-green)', fontWeight: 600 }}>
+                                                        ✅ Sudah ada (upload baru untuk mengganti)
+                                                    </span>
                                                 ) : (
                                                     <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontStyle: 'italic' }}>
                                                         Tidak ada file dipilih
