@@ -685,7 +685,7 @@ const DataSarpras = ({ readOnly = false }) => {
                     </div>
                 );
             }
-            case 'namaSekolah': return <div style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{item.namaSekolah}</div>;
+            case 'namaSekolah': return <div style={{ maxWidth: 180, whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.3 }}>{item.namaSekolah}</div>;
             case 'kondisi': return getConditionBadge(item.kondisi);
             case 'keterangan': return <div style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'left' }}>{item.keterangan}</div>;
             case 'lastFotoAt': return item.lastFotoAt ? <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{new Date(item.lastFotoAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</span> : <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>-</span>;
@@ -874,7 +874,7 @@ const DataSarpras = ({ readOnly = false }) => {
                                         {pendingData.map((d, i) => (
                                             <tr key={d.id}>
                                                 <td>{i + 1}</td>
-                                                <td><div style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.namaSekolah}</div></td>
+                                                <td><div style={{ maxWidth: 180, whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.3 }}>{d.namaSekolah}</div></td>
                                                 <td>{d.jenisPrasarana}</td>
                                                 <td>{d.namaRuang}</td>
                                                 <td>{d.kondisi}</td>

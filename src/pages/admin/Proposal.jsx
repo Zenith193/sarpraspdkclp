@@ -183,10 +183,10 @@ const Proposal = ({ readOnly = false }) => {
     const handleActionClick = (e, id) => {
         if (openActionId === id) { setOpenActionId(null); return; }
         const rect = e.currentTarget.getBoundingClientRect();
-        const dropdownHeight = 220; // estimated max height
+        const dropdownHeight = 140; // smaller estimate for fewer menu items
         const spaceBelow = window.innerHeight - rect.bottom;
         const top = spaceBelow < dropdownHeight ? rect.top - dropdownHeight : rect.bottom + 4;
-        setActionPos({ top, left: rect.right - 170 });
+        setActionPos({ top, left: Math.min(rect.right - 170, window.innerWidth - 180) });
         setOpenActionId(id);
     };
 
