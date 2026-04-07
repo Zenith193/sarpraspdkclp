@@ -499,7 +499,7 @@ const Proposal = ({ readOnly = false }) => {
     const selectedSchoolData = useMemo(() => sekolahList.find(s => s.nama === formSekolah), [formSekolah]);
 
     const handleExport = (format) => {
-        const exportCols = [{ header: 'No', accessor: (_, i) => i + 1 }, { header: 'Nama Sekolah', key: 'namaSekolah' }, { header: 'NPSN', key: 'npsn' }, { header: 'Kecamatan', key: 'kecamatan' }, { header: 'Sub Kegiatan', key: 'subKegiatan' }, { header: 'Nilai Pengajuan', key: 'nilaiPengajuan' }, { header: 'Target', key: 'target' }, { header: 'Status', key: 'status' }, { header: 'Keranjang', key: 'keranjang' }, { header: 'Keterangan', key: 'keterangan' }];
+        const exportCols = [{ header: 'No', accessor: (_, i) => i + 1 }, { header: 'Nama Sekolah', key: 'namaSekolah' }, { header: 'NPSN', key: 'npsn' }, { header: 'Kecamatan', key: 'kecamatan' }, { header: 'Sub Kegiatan', key: 'subKegiatan' }, { header: 'Nilai Pengajuan', accessor: (row) => row.nilaiPengajuan ? `Rp ${Number(row.nilaiPengajuan).toLocaleString('id-ID')}` : '' }, { header: 'Target', key: 'target' }, { header: 'Status', key: 'status' }, { header: 'Keranjang', key: 'keranjang' }, { header: 'Keterangan', key: 'keterangan' }];
         try {
             if (format === 'excel') {
                 const sheets = [{ sheetName: 'Proposal Aktif', data: filteredAktif, columns: exportCols }];
