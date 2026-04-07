@@ -403,6 +403,147 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
             console.error('[Template] Table injection error:', tblErr.message);
         }
 
+        // ===== KOP SEKOLAH DOCX INJECTION =====
+        // If kopSekolah is a file path (local or gdrive), read actual DOCX content and inject
+        try {
+            let docXml = generatedZip.file('word/document.xml')?.asText() || '';
+            const kopPath = item.kopSekolah || '';
+            
+            if (kopPath && docXml.includes(kopPath)) {
+                console.log(`[KOP] Found kop placeholder in XML, path: ${kopPath}`);
+                let kopBuffer: Buffer | null = null;
+
+                // Download from GDrive or read local
+                if (kopPath.startsWith('gdrive://')) {
+                    try {
+                        const { streamFromGDrive: streamKop, isGDriveEnabled: isGDE } = await import('../utils/googleDriveClient.js');
+                        if (isGDE()) {
+                            const fileId = kopPath.replace('gdrive://', '');
+                            const result = await streamKop(fileId);
+                            if (result) {
+                                const chunks: Buffer[] = [];
+                                await new Promise<void>((resolve, reject) => {
+                                    result.stream.on('data', (chunk: Buffer) => chunks.push(chunk));
+                                    result.stream.on('end', resolve);
+                                    result.stream.on('error', reject);
+                                });
+                                kopBuffer = Buffer.concat(chunks);
+                                console.log(`[KOP] Downloaded from GDrive: ${fileId}, size: ${kopBuffer.length}`);
+                            }
+                        }
+                    } catch (gErr: any) {
+                        console.error('[KOP] GDrive download error:', gErr.message);
+                    }
+                } else if (fs.existsSync(kopPath)) {
+                    kopBuffer = fs.readFileSync(kopPath);
+                    console.log(`[KOP] Read local file: ${kopPath}`);
+                }
+
+                if (kopBuffer) {
+                    try {
+                        const kopZip = new PizZip(kopBuffer);
+                        const kopDocXml = kopZip.file('word/document.xml')?.asText() || '';
+                        
+                        // Extract body content (paragraphs) from kop DOCX
+                        const bodyMatch = kopDocXml.match(/<w:body>([\s\S]*)<\/w:body>/);
+                        if (bodyMatch) {
+                            let kopBody = bodyMatch[1];
+                            // Remove final sectPr (section properties) from kop body
+                            kopBody = kopBody.replace(/<w:sectPr[\s\S]*?<\/w:sectPr>/g, '');
+                            
+                            // Copy images from kop to generated doc
+                            const kopImageFiles = Object.keys(kopZip.files).filter(f => 
+                                f.startsWith('word/media/') && !generatedZip.files[f]
+                            );
+                            
+                            // Copy relationships
+                            const kopRels = kopZip.file('word/_rels/document.xml.rels')?.asText() || '';
+                            const genRels = generatedZip.file('word/_rels/document.xml.rels')?.asText() || '';
+                            
+                            // Find image relationships in kop
+                            const kopRelMatches = [...kopRels.matchAll(/Id="(rId\d+)"[^>]*Target="(media\/[^"]+)"/g)];
+                            
+                            if (kopImageFiles.length > 0) {
+                                // Remap rIds to avoid conflicts
+                                const maxRId = Math.max(
+                                    ...[...genRels.matchAll(/rId(\d+)/g)].map(m => parseInt(m[1])),
+                                    50
+                                );
+                                let nextRId = maxRId + 1;
+                                const rIdMap: Record<string, string> = {};
+                                let newRels = '';
+                                
+                                for (const img of kopImageFiles) {
+                                    // Copy image file
+                                    const imgData = kopZip.file(img);
+                                    if (imgData) {
+                                        generatedZip.file(img, imgData.asUint8Array());
+                                    }
+                                    
+                                    // Find matching rel and remap
+                                    const relTarget = img.replace('word/', '');
+                                    const matchingRel = kopRelMatches.find(m => m[2] === relTarget);
+                                    if (matchingRel) {
+                                        const oldRId = matchingRel[1];
+                                        const newRId = `rId${nextRId++}`;
+                                        rIdMap[oldRId] = newRId;
+                                        newRels += `<Relationship Id="${newRId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="${relTarget}"/>`;
+                                    }
+                                }
+                                
+                                // Add new relationships
+                                if (newRels) {
+                                    const updatedRels = genRels.replace('</Relationships>', newRels + '</Relationships>');
+                                    generatedZip.file('word/_rels/document.xml.rels', updatedRels);
+                                }
+                                
+                                // Remap rIds in kop body XML
+                                for (const [oldId, newId] of Object.entries(rIdMap)) {
+                                    kopBody = kopBody.replace(new RegExp(`r:embed="${oldId}"`, 'g'), `r:embed="${newId}"`);
+                                    kopBody = kopBody.replace(new RegExp(`r:link="${oldId}"`, 'g'), `r:link="${newId}"`);
+                                }
+                                
+                                console.log(`[KOP] Copied ${kopImageFiles.length} images, remapped ${Object.keys(rIdMap).length} rIds`);
+                            }
+                            
+                            // Find and replace the paragraph containing the kop path text
+                            // The path appears as text in a <w:t> element, wrapped in a <w:p>
+                            const escapedPath = kopPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                            // Find the <w:p> that contains this path text
+                            const pRegex = new RegExp(`<w:p[> ][\\s\\S]*?${escapedPath}[\\s\\S]*?</w:p>`, 'g');
+                            const pMatch = docXml.match(pRegex);
+                            
+                            if (pMatch) {
+                                docXml = docXml.replace(pMatch[0], kopBody);
+                                generatedZip.file('word/document.xml', docXml);
+                                console.log(`[KOP] Successfully injected kop content (${kopBody.length} chars)`);
+                            } else {
+                                // Fallback: replace just the text node
+                                const textEscaped = kopPath.replace(/[<>&"']/g, '');
+                                if (docXml.includes(textEscaped)) {
+                                    docXml = docXml.replace(textEscaped, '');
+                                    generatedZip.file('word/document.xml', docXml);
+                                    console.log('[KOP] Removed path text (paragraph replacement failed)');
+                                }
+                            }
+                        }
+                    } catch (kopErr: any) {
+                        console.error('[KOP] DOCX parsing error:', kopErr.message);
+                        // At minimum, remove the raw path text
+                        docXml = docXml.replace(new RegExp(kopPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '');
+                        generatedZip.file('word/document.xml', docXml);
+                    }
+                } else {
+                    // No file available - just clear the path text
+                    console.log('[KOP] File not available, clearing placeholder text');
+                    docXml = docXml.replace(new RegExp(kopPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g'), '');
+                    generatedZip.file('word/document.xml', docXml);
+                }
+            }
+        } catch (kopErr: any) {
+            console.error('[KOP] Injection error:', kopErr.message);
+        }
+
         // Post-process: strip empty Word Header sections that cause extra top spacing
         try {
             // Check each header file; remove if it only has empty paragraphs
