@@ -403,129 +403,17 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
             console.error('[Template] Table injection error:', tblErr.message);
         }
 
-        // ===== KOP SEKOLAH DOCX INJECTION =====
+        // ===== KOP SEKOLAH: clean marker text =====
+        // Remove the __KOP_PLACEHOLDER__ marker text from generated document
         try {
             let docXml = generatedZip.file('word/document.xml')?.asText() || '';
-            const kopPath = item.kopSekolah || '';
-            const KOP_MARKER = '__KOP_PLACEHOLDER__';
-
-            if (kopPath && docXml.includes(KOP_MARKER)) {
-                console.log(`[KOP] Found marker, kop path: ${kopPath}`);
-                let kopBuffer: Buffer | null = null;
-
-                // 1. Get kop file content
-                if (kopPath.startsWith('gdrive://')) {
-                    try {
-                        const { streamFromGDrive: streamKop, isGDriveEnabled: isGDE } = await import('../utils/googleDriveClient.js');
-                        if (isGDE()) {
-                            const fileId = kopPath.replace('gdrive://', '');
-                            const gResult = await streamKop(fileId);
-                            if (gResult) {
-                                const chunks: Buffer[] = [];
-                                await new Promise<void>((resolve, reject) => {
-                                    gResult.stream.on('data', (c: Buffer) => chunks.push(c));
-                                    gResult.stream.on('end', resolve);
-                                    gResult.stream.on('error', reject);
-                                });
-                                kopBuffer = Buffer.concat(chunks);
-                                console.log(`[KOP] Downloaded from GDrive, size: ${kopBuffer.length}`);
-                            }
-                        }
-                    } catch (gErr: any) { console.error('[KOP] GDrive error:', gErr.message); }
-                } else if (fs.existsSync(kopPath)) {
-                    kopBuffer = fs.readFileSync(kopPath);
-                    console.log(`[KOP] Read local: ${kopPath}`);
-                }
-
-                // 2. Parse kop DOCX and inject content
-                let injected = false;
-                if (kopBuffer) {
-                    try {
-                        const kopZip = new PizZip(kopBuffer);
-                        const kopDocXml = kopZip.file('word/document.xml')?.asText() || '';
-                        const bodyMatch = kopDocXml.match(/<w:body>([\s\S]*)<\/w:body>/);
-                        if (bodyMatch) {
-                            let kopBody = bodyMatch[1];
-                            kopBody = kopBody.replace(/<w:sectPr[\s\S]*?<\/w:sectPr>/g, '');
-
-                            // Copy images from kop
-                            const kopImgs = Object.keys(kopZip.files).filter(f => f.startsWith('word/media/'));
-                            if (kopImgs.length > 0) {
-                                const kopRels = kopZip.file('word/_rels/document.xml.rels')?.asText() || '';
-                                const genRels = generatedZip.file('word/_rels/document.xml.rels')?.asText() || '';
-                                const kopRelMatches = [...kopRels.matchAll(/Id="(rId\d+)"[^>]*Target="(media\/[^"]+)"/g)];
-                                const maxRId = Math.max(...[...genRels.matchAll(/rId(\d+)/g)].map(m => parseInt(m[1])), 50);
-                                let nextRId = maxRId + 1;
-                                let newRelsXml = '';
-
-                                for (const img of kopImgs) {
-                                    const imgData = kopZip.file(img);
-                                    if (!imgData) continue;
-                                    // Rename to avoid conflicts
-                                    const newName = img.replace('word/media/', 'word/media/kop_');
-                                    generatedZip.file(newName, imgData.asUint8Array());
-                                    const relTarget = img.replace('word/', '');
-                                    const newRelTarget = newName.replace('word/', '');
-                                    const matchingRel = kopRelMatches.find(m => m[2] === relTarget);
-                                    if (matchingRel) {
-                                        const oldRId = matchingRel[1];
-                                        const newRId = `rId${nextRId++}`;
-                                        kopBody = kopBody.replace(new RegExp(`r:embed="${oldRId}"`, 'g'), `r:embed="${newRId}"`);
-                                        kopBody = kopBody.replace(new RegExp(`r:link="${oldRId}"`, 'g'), `r:link="${newRId}"`);
-                                        newRelsXml += `<Relationship Id="${newRId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="${newRelTarget}"/>`;
-                                    }
-                                }
-                                if (newRelsXml) {
-                                    const updRels = genRels.replace('</Relationships>', newRelsXml + '</Relationships>');
-                                    generatedZip.file('word/_rels/document.xml.rels', updRels);
-                                }
-                                console.log(`[KOP] Copied ${kopImgs.length} images`);
-                            }
-
-                            // Replace marker paragraph with kop body
-                            const markerIdx = docXml.indexOf(KOP_MARKER);
-                            if (markerIdx > -1) {
-                                // Find enclosing <w:p> ... </w:p>
-                                let pStart = markerIdx;
-                                while (pStart > 0 && docXml.substring(pStart - 5, pStart + 4) !== '<w:p>' && docXml.substring(pStart - 4, pStart + 2) !== '<w:p ') {
-                                    pStart--;
-                                    if (markerIdx - pStart > 5000) break;
-                                }
-                                // Find proper <w:p start
-                                const searchBack = docXml.lastIndexOf('<w:p', markerIdx);
-                                const pEndTag = docXml.indexOf('</w:p>', markerIdx);
-                                if (searchBack > -1 && pEndTag > -1) {
-                                    const fullParagraph = docXml.substring(searchBack, pEndTag + 6);
-                                    docXml = docXml.replace(fullParagraph, kopBody);
-                                    injected = true;
-                                    console.log(`[KOP] Injected kop body (${kopBody.length} chars)`);
-                                }
-                            }
-                        }
-                    } catch (parseErr: any) {
-                        console.error(`[KOP] Parse error (non-fatal): ${parseErr.message}`);
-                    }
-                }
-
-                // 3. Fallback: just remove the marker text
-                if (!injected) {
-                    docXml = docXml.replace(new RegExp(KOP_MARKER, 'g'), '');
-                    console.log('[KOP] Removed marker (injection failed or no kop file)');
-                }
+            if (docXml.includes('__KOP_PLACEHOLDER__')) {
+                docXml = docXml.replace(/__KOP_PLACEHOLDER__/g, '');
                 generatedZip.file('word/document.xml', docXml);
-            } else if (docXml.includes(KOP_MARKER)) {
-                // No kop path, just clean marker
-                docXml = docXml.replace(new RegExp(KOP_MARKER, 'g'), '');
-                generatedZip.file('word/document.xml', docXml);
+                console.log('[KOP] Cleaned placeholder marker from document');
             }
         } catch (kopErr: any) {
-            console.error('[KOP] Error (non-fatal):', kopErr.message);
-            // Emergency: try to clean marker so document still works
-            try {
-                let xml = generatedZip.file('word/document.xml')?.asText() || '';
-                xml = xml.replace(/__KOP_PLACEHOLDER__/g, '');
-                generatedZip.file('word/document.xml', xml);
-            } catch {}
+            console.error('[KOP] Cleanup error:', kopErr.message);
         }
 
         // Post-process: strip empty Word Header sections that cause extra top spacing
@@ -953,7 +841,7 @@ function buildVariableMap(item: any, sekretaris: any = {}, refData: any = {}) {
         terbilangTanggalSpk: fmtTerbilangTanggal(d.tanggalMulai),
 
         // ===== KOP SEKOLAH =====
-        kopSekolah: d.kopSekolah ? '__KOP_PLACEHOLDER__' : '',
+        kopSekolah: '',
         kopSekolahAda: d.kopSekolah ? 'Ada' : 'Belum',
 
         // ===== BAST =====
