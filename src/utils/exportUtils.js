@@ -131,23 +131,31 @@ export const exportToPDF = (data, columns, filename = 'laporan', title = 'Lapora
 
     // Build column styles
     const noWrapCols = options.noWrapCols || [];
+    const colWidths = options.colWidths || {}; // { 'Header Name': width_in_mm }
     const columnStyles = {};
     columns.forEach((col, idx) => {
+        const s = {};
         if (noWrapCols.includes(col.header)) {
-            columnStyles[idx] = { cellWidth: 'wrap', overflow: 'visible' };
+            s.cellWidth = 'wrap'; s.overflow = 'visible';
         }
-        // Center "No" column
+        // Apply custom width from options
+        if (colWidths[col.header]) {
+            s.cellWidth = colWidths[col.header];
+        }
+        // Center "No" column, small width
         if (idx === noIdx) {
-            columnStyles[idx] = { ...columnStyles[idx], halign: 'center', cellWidth: 16 };
+            s.halign = 'center';
+            if (!s.cellWidth) s.cellWidth = 10;
         }
         // Right-align currency columns
         if (col.header === 'Nilai Pengajuan' || col.header === 'Luas (m²)') {
-            columnStyles[idx] = { ...columnStyles[idx], halign: 'right' };
+            s.halign = 'right';
         }
-        // Center numeric columns
-        if (['Lantai', 'Panjang (m)', 'Lebar (m)', 'Luas (m²)', 'Target'].includes(col.header)) {
-            columnStyles[idx] = { ...columnStyles[idx], halign: 'center' };
+        // Center numeric/short columns
+        if (['Lantai', 'Panjang (m)', 'Lebar (m)', 'Luas (m²)', 'Target', 'NPSN', 'Jenjang', 'Masa Bangunan'].includes(col.header)) {
+            s.halign = 'center';
         }
+        if (Object.keys(s).length > 0) columnStyles[idx] = s;
     });
 
     autoTable(doc, {

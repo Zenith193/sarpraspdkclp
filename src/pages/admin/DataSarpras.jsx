@@ -627,7 +627,7 @@ const DataSarpras = ({ readOnly = false }) => {
         try {
             if (format === 'excel') { exportToExcel(filtered, exportCols, 'data_sarpras'); toast.success('Berhasil ekspor Excel'); }
             else if (format === 'csv') { exportToCSV(filtered, exportCols, 'data_sarpras'); toast.success('Berhasil ekspor CSV'); }
-            else if (format === 'pdf') { exportToPDF(filtered, exportCols, 'data_sarpras', 'Data Sarana Prasarana'); toast.success('Berhasil ekspor PDF'); }
+            else if (format === 'pdf') { exportToPDF(filtered, exportCols, 'data_sarpras', 'Data Sarana Prasarana', { colWidths: { 'No': 8, 'Nama Sekolah': 38, 'NPSN': 18, 'Jenjang': 14, 'Kecamatan': 22, 'Masa Bangunan': 14, 'Lantai': 12, 'Panjang (m)': 14, 'Lebar (m)': 14, 'Luas (m²)': 14 } }); toast.success('Berhasil ekspor PDF'); }
         } catch (err) { toast.error('Gagal ekspor: ' + err.message); }
         setShowExport(false);
     };
