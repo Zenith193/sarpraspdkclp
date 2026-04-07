@@ -215,6 +215,24 @@ const DataSarpras = ({ readOnly = false }) => {
     }, [filtered]);
 
     // ===== EXPORT COLUMNS =====
+    // Full columns for Excel (always all data)
+    const exportColsFull = [
+        { header: 'No', accessor: (_, i) => i + 1 },
+        { header: 'Nama Sekolah', key: 'namaSekolah' },
+        { header: 'NPSN', key: 'npsn' },
+        { header: 'Jenjang', key: 'jenjang' },
+        { header: 'Kecamatan', key: 'kecamatan' },
+        { header: 'Masa Bangunan', key: 'masaBangunan' },
+        { header: 'Jenis Prasarana', key: 'jenisPrasarana' },
+        { header: 'Nama Ruang', key: 'namaRuang' },
+        { header: 'Lantai', key: 'lantai' },
+        { header: 'Panjang (m)', key: 'panjang' },
+        { header: 'Lebar (m)', key: 'lebar' },
+        { header: 'Luas (m²)', key: 'luas' },
+        { header: 'Kondisi', key: 'kondisi' },
+        { header: 'Keterangan', key: 'keterangan' },
+    ];
+    // Role-filtered columns for PDF
     const exportCols = [
         { header: 'No', accessor: (_, i) => i + 1 },
         ...(!isSekolah ? [{ header: 'Nama Sekolah', key: 'namaSekolah' }] : []),
@@ -626,7 +644,7 @@ const DataSarpras = ({ readOnly = false }) => {
     const handleExport = (format) => {
         const sorted = [...filtered].sort((a, b) => (a.jenisPrasarana || '').localeCompare(b.jenisPrasarana || ''));
         try {
-            if (format === 'excel') { exportToExcel(sorted, exportCols, 'data_sarpras'); toast.success('Berhasil ekspor Excel'); }
+            if (format === 'excel') { exportToExcel(sorted, exportColsFull, 'data_sarpras'); toast.success('Berhasil ekspor Excel'); }
             else if (format === 'csv') { exportToCSV(sorted, exportCols, 'data_sarpras'); toast.success('Berhasil ekspor CSV'); }
             else if (format === 'pdf') {
                 const schoolName = isSekolah ? (sekolahList[0]?.nama || user?.namaAkun || '') : '';
