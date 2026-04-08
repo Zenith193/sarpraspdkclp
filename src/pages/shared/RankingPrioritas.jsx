@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { GripVertical, Save, Search, Lock, Unlock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { GripVertical, Save, Search, Lock, Unlock, ChevronLeft, ChevronRight, Download, ChevronDown, FileSpreadsheet, FileDown, FileText } from 'lucide-react';
 import { sekolahApi, korwilApi, rankingApi } from '../../api/index';
+import { exportToExcel, exportToCSV, exportToPDF } from '../../utils/exportUtils';
 import { KECAMATAN, JENJANG } from '../../utils/constants';
 import useAuthStore from '../../store/authStore';
 import toast from 'react-hot-toast';
@@ -31,6 +32,8 @@ const RankingPrioritas = () => {
     const [myJenjang, setMyJenjang] = useState('');
     const dragItem = useRef(null);
     const dragOverItem = useRef(null);
+    const [showExport, setShowExport] = useState(false);
+    const exportRef = useRef(null);
 
     // Pagination
     const [pageSize, setPageSize] = useState(20);
@@ -204,6 +207,47 @@ const RankingPrioritas = () => {
 
     const canEdit = isAdmin || !currentlyLocked;
 
+    // Export handler
+    const handleExport = (format) => {
+        setShowExport(false);
+        if (!schools.length) { toast.error('Tidak ada data untuk diekspor'); return; }
+
+        // Dynamic filename
+        const kecLabel = activeKec || 'Semua';
+        const jenLabel = activeJen || 'Semua';
+        let fileName = `Ranking_Prioritas_${jenLabel}_${kecLabel}`.replace(/\s+/g, '_');
+        const pdfTitle = `Ranking Prioritas ${jenLabel} ${kecLabel}`;
+
+        const exportCols = [
+            { header: 'No', accessor: (_, i) => i + 1 },
+            { header: 'Nama Sekolah', key: 'nama' },
+            { header: 'NPSN', key: 'npsn' },
+            { header: 'Kecamatan', key: 'kecamatan' },
+            { header: 'Jenjang', key: 'jenjang' },
+            { header: 'Alasan / Keterangan', key: 'alasan' },
+            { header: 'Urutan Prioritas', key: 'rank' },
+        ];
+
+        try {
+            if (format === 'excel') exportToExcel(schools, exportCols, fileName);
+            else if (format === 'csv') exportToCSV(schools, exportCols, fileName);
+            else if (format === 'pdf') exportToPDF(schools, exportCols, fileName, pdfTitle);
+            toast.success(`Berhasil ekspor ${format.toUpperCase()}`);
+        } catch (err) {
+            console.error('Export error:', err);
+            toast.error('Gagal mengekspor data');
+        }
+    };
+
+    // Close export dropdown on outside click
+    useEffect(() => {
+        const handler = (e) => {
+            if (exportRef.current && !exportRef.current.contains(e.target)) setShowExport(false);
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, []);
+
     return (
         <div>
             <div className="page-header">
@@ -269,21 +313,37 @@ const RankingPrioritas = () => {
                             </>
                         )}
                     </div>
-                    {isAdmin && (
-                        <div className="table-toolbar-right" style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                            {lockOptions.map(opt => (
-                                <button
-                                    key={opt.key}
-                                    className={`btn btn-sm ${locks[opt.key] ? 'btn-danger' : 'btn-secondary'}`}
-                                    onClick={() => handleLock(opt.key, opt.label)}
-                                    style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}
-                                >
-                                    {locks[opt.key] ? <Lock size={12} /> : <Unlock size={12} />}
-                                    {locks[opt.key] ? `🔒 ${opt.label}` : `Kunci ${opt.label}`}
-                                </button>
-                            ))}
+                    <div className="table-toolbar-right" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
+                        {isAdmin && lockOptions.map(opt => (
+                            <button
+                                key={opt.key}
+                                className={`btn btn-sm ${locks[opt.key] ? 'btn-danger' : 'btn-secondary'}`}
+                                onClick={() => handleLock(opt.key, opt.label)}
+                                style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}
+                            >
+                                {locks[opt.key] ? <Lock size={12} /> : <Unlock size={12} />}
+                                {locks[opt.key] ? `🔒 ${opt.label}` : `Kunci ${opt.label}`}
+                            </button>
+                        ))}
+                        <div className="export-dropdown" ref={exportRef}>
+                            <button className="btn btn-secondary btn-sm" onClick={() => setShowExport(!showExport)}>
+                                <Download size={14} /> Ekspor <ChevronDown size={12} />
+                            </button>
+                            {showExport && (
+                                <div className="dropdown-menu">
+                                    <button className="dropdown-item" onClick={() => handleExport('excel')}>
+                                        <span className="export-icon"><FileSpreadsheet size={14} /></span> Excel
+                                    </button>
+                                    <button className="dropdown-item" onClick={() => handleExport('csv')}>
+                                        <span className="export-icon"><FileDown size={14} /></span> CSV
+                                    </button>
+                                    <button className="dropdown-item" onClick={() => handleExport('pdf')}>
+                                        <span className="export-icon"><FileText size={14} /></span> PDF
+                                    </button>
+                                </div>
+                            )}
                         </div>
-                    )}
+                    </div>
                 </div>
 
                 <div style={{ overflowX: 'auto' }}>
