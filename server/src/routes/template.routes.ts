@@ -481,16 +481,122 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
                         const imgW = dims.width || 800;
                         const imgH = dims.height || 200;
 
-                        // Target: full printable width = 5940000 EMU (16.5cm)
-                        const emuW = 5940000;
+                        // Target: full printable width = 16.5cm = 6.5 inches
+                        const TARGET_WIDTH_INCHES = 6.5;
+                        const targetDPI = Math.round(imgW / TARGET_WIDTH_INCHES);
                         const ratio = imgH / imgW;
+                        
+                        // EMU (1 inch = 914400 EMU)
+                        const emuW = Math.round(TARGET_WIDTH_INCHES * 914400); // = 5943600
                         const emuH = Math.round(emuW * ratio);
+
+                        console.log(`[KOP] Image ${imgW}x${imgH}px, target DPI=${targetDPI} for ${TARGET_WIDTH_INCHES}in width`);
+
+                        // ===== MODIFY DPI IN IMAGE BUFFER =====
+                        // LibreOffice uses intrinsic DPI, not wp:extent. We MUST set DPI.
+                        let finalBuffer = kopImageBuffer;
+                        
+                        if (isJpeg) {
+                            // JPEG: Find or inject JFIF APP0 marker to set DPI
+                            // JFIF format: FF E0 [length] "JFIF\0" [version] [units] [Xdensity] [Ydensity]
+                            finalBuffer = Buffer.from(kopImageBuffer);
+                            let jfifPos = -1;
+                            for (let i = 0; i < finalBuffer.length - 10; i++) {
+                                if (finalBuffer[i] === 0xFF && finalBuffer[i+1] === 0xE0) {
+                                    // Check for "JFIF" string
+                                    if (finalBuffer[i+4] === 0x4A && finalBuffer[i+5] === 0x46 && 
+                                        finalBuffer[i+6] === 0x49 && finalBuffer[i+7] === 0x46) {
+                                        jfifPos = i;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (jfifPos >= 0) {
+                                // Modify existing JFIF: set units=1 (DPI), X/Y density
+                                finalBuffer[jfifPos + 9] = 1; // units = DPI
+                                finalBuffer[jfifPos + 10] = (targetDPI >> 8) & 0xFF; // X density high
+                                finalBuffer[jfifPos + 11] = targetDPI & 0xFF; // X density low
+                                finalBuffer[jfifPos + 12] = (targetDPI >> 8) & 0xFF; // Y density high
+                                finalBuffer[jfifPos + 13] = targetDPI & 0xFF; // Y density low
+                                console.log(`[KOP] JPEG: Modified JFIF DPI to ${targetDPI}`);
+                            } else {
+                                // No JFIF found - inject one after SOI marker (FF D8)
+                                const jfifSegment = Buffer.alloc(20);
+                                jfifSegment[0] = 0xFF; jfifSegment[1] = 0xE0; // APP0 marker
+                                jfifSegment[2] = 0x00; jfifSegment[3] = 0x10; // Length = 16
+                                jfifSegment[4] = 0x4A; jfifSegment[5] = 0x46; // "JF"
+                                jfifSegment[6] = 0x49; jfifSegment[7] = 0x46; // "IF"
+                                jfifSegment[8] = 0x00; // Null terminator
+                                jfifSegment[9] = 0x01; jfifSegment[10] = 0x01; // Version 1.1
+                                jfifSegment[11] = 0x01; // Units = DPI
+                                jfifSegment[12] = (targetDPI >> 8) & 0xFF; // X density high
+                                jfifSegment[13] = targetDPI & 0xFF; // X density low
+                                jfifSegment[14] = (targetDPI >> 8) & 0xFF; // Y density high
+                                jfifSegment[15] = targetDPI & 0xFF; // Y density low
+                                jfifSegment[16] = 0x00; jfifSegment[17] = 0x00; // No thumbnail
+                                // SOI (2 bytes) + JFIF segment + rest of file
+                                finalBuffer = Buffer.concat([
+                                    kopImageBuffer.subarray(0, 2), // FF D8
+                                    jfifSegment,
+                                    kopImageBuffer.subarray(2),
+                                ]);
+                                console.log(`[KOP] JPEG: Injected JFIF APP0 with DPI=${targetDPI}`);
+                            }
+                        } else if (isPng) {
+                            // PNG: Inject pHYs chunk before first IDAT
+                            // pHYs: 4 bytes type + 4 bytes X ppu + 4 bytes Y ppu + 1 byte unit (1=meter)
+                            const ppuX = Math.round(targetDPI / 0.0254); // DPI to pixels-per-meter
+                            const ppuY = ppuX;
+                            
+                            // Build pHYs chunk
+                            const chunkData = Buffer.alloc(13); // 4+4+4+1
+                            chunkData.write('pHYs', 0);
+                            chunkData.writeUInt32BE(ppuX, 4);
+                            chunkData.writeUInt32BE(ppuY, 8);
+                            chunkData[12] = 1; // unit = meter
+                            
+                            // CRC32 for pHYs chunk
+                            const { crc32 } = await import('crc-32').catch(() => ({ crc32: null })) as any;
+                            let crcVal = 0;
+                            if (crc32) {
+                                crcVal = crc32.buf(chunkData) >>> 0;
+                            }
+                            
+                            const pHYsChunk = Buffer.alloc(4 + 13 + 4); // length + data + crc
+                            pHYsChunk.writeUInt32BE(9, 0); // Data length (without type)
+                            chunkData.copy(pHYsChunk, 4, 0, 13);
+                            pHYsChunk.writeUInt32BE(crcVal, 17);
+                            
+                            // Find IDAT position
+                            let idatPos = -1;
+                            for (let i = 8; i < kopImageBuffer.length - 4; i++) {
+                                if (kopImageBuffer[i] === 0x49 && kopImageBuffer[i+1] === 0x44 &&
+                                    kopImageBuffer[i+2] === 0x41 && kopImageBuffer[i+3] === 0x54) {
+                                    idatPos = i - 4; // 4 bytes before IDAT type is the length
+                                    break;
+                                }
+                            }
+                            
+                            if (idatPos > 0) {
+                                // Also remove any existing pHYs chunk
+                                let cleanBuffer = kopImageBuffer;
+                                // Simple: just inject, don't remove old pHYs (multiple pHYs won't break anything)
+                                finalBuffer = Buffer.concat([
+                                    cleanBuffer.subarray(0, idatPos),
+                                    pHYsChunk,
+                                    cleanBuffer.subarray(idatPos),
+                                ]);
+                                console.log(`[KOP] PNG: Injected pHYs chunk, ${ppuX} px/m (${targetDPI} DPI)`);
+                            } else {
+                                console.log('[KOP] PNG: Could not find IDAT, using original buffer');
+                            }
+                        }
 
                         const imgExt = isJpeg ? 'jpeg' : 'png';
                         const imgFilename = `kop_sekolah.${imgExt}`;
                         
-                        // Add image to ZIP
-                        generatedZip.file(`word/media/${imgFilename}`, kopImageBuffer);
+                        // Add DPI-modified image to ZIP
+                        generatedZip.file(`word/media/${imgFilename}`, finalBuffer);
                         
                         // Content type
                         const ctXml = generatedZip.file('[Content_Types].xml')?.asText() || '';
