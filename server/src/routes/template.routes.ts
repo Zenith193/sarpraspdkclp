@@ -726,6 +726,7 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
         const filledBuf = generatedZip.generate({
             type: 'nodebuffer',
             compression: 'DEFLATE',
+            mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         });
 
         // Create history record first to get the ID
