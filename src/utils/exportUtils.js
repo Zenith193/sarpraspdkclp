@@ -76,45 +76,44 @@ export const exportToCSV = (data, columns, filename = 'laporan') => {
 };
 
 /**
- * Ekspor data ke PDF — Premium Design
+ * Ekspor data ke PDF — Premium Design with smart column sizing
  */
 export const exportToPDF = (data, columns, filename = 'laporan', title = 'Laporan', options = {}) => {
-    const doc = new jsPDF({ orientation: 'landscape' });
+    const colCount = columns.length;
+    const orientation = colCount > 6 ? 'landscape' : 'portrait';
+    const doc = new jsPDF({ orientation });
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
     const subtitle = options.subtitle || '';
     const dateStr = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
 
-    // === HEADER BANNER ===
-    // Dark blue gradient-like banner
-    doc.setFillColor(30, 58, 138); // deep blue
-    doc.rect(0, 0, pageWidth, 28, 'F');
-    // Accent stripe
-    doc.setFillColor(59, 130, 246); // bright blue
-    doc.rect(0, 28, pageWidth, 3, 'F');
+    // Dynamic font sizing based on column count
+    let fontSize = 8;
+    let headerFontSize = 8;
+    let cellPadding = { top: 3, right: 4, bottom: 3, left: 4 };
+    if (colCount > 12) { fontSize = 6; headerFontSize = 6; cellPadding = { top: 2, right: 2, bottom: 2, left: 2 }; }
+    else if (colCount > 9) { fontSize = 6.5; headerFontSize = 6.5; cellPadding = { top: 2, right: 3, bottom: 2, left: 3 }; }
+    else if (colCount > 6) { fontSize = 7; headerFontSize = 7; cellPadding = { top: 3, right: 3, bottom: 3, left: 3 }; }
 
-    // Title on banner
+    // === HEADER BANNER ===
+    doc.setFillColor(30, 58, 138);
+    doc.rect(0, 0, pageWidth, 28, 'F');
+    doc.setFillColor(59, 130, 246);
+    doc.rect(0, 28, pageWidth, 3, 'F');
     doc.setFontSize(15);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(255, 255, 255);
     doc.text(title.toUpperCase(), pageWidth / 2, 13, { align: 'center' });
-
-    // Subtitle / institution
     doc.setFontSize(8.5);
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(200, 210, 255);
     doc.text(subtitle || 'Dinas Pendidikan dan Kebudayaan Kabupaten Cilacap', pageWidth / 2, 20, { align: 'center' });
-
-    // Date badge
     doc.setFontSize(8);
-    doc.setFont('helvetica', 'normal');
     doc.setTextColor(180, 195, 255);
     doc.text(`Diekspor: ${dateStr}  •  Total: ${data.length} data`, pageWidth / 2, 26, { align: 'center' });
-
-    // Reset text color
     doc.setTextColor(0, 0, 0);
 
-    // === TABLE ===
+    // === TABLE DATA ===
     const head = [columns.map(c => c.header)];
     const body = data.map((row, i) =>
         columns.map(col => {
@@ -123,36 +122,47 @@ export const exportToPDF = (data, columns, filename = 'laporan', title = 'Lapora
         })
     );
 
-    // Find Kondisi column index for conditional coloring
+    // Find special column indices
     const kondisiIdx = columns.findIndex(c => c.key === 'kondisi' || c.header === 'Kondisi');
     const statusIdx = columns.findIndex(c => c.key === 'status' || c.header === 'Status');
     const nilaiIdx = columns.findIndex(c => c.header === 'Nilai Pengajuan');
     const noIdx = columns.findIndex(c => c.header === 'No');
 
-    // Build column styles — only alignment, let autoTable handle widths
+    // === SMART COLUMN WIDTHS ===
+    const tableWidth = pageWidth - 20;
+    const userWidths = options.colWidths || {};
     const noWrapCols = options.noWrapCols || [];
-    const colWidths = options.colWidths || {};
+
+    const narrowHeaders = ['No', 'Lt', 'Lantai', 'Masa', 'Masa Bangunan', 'Jenjang', 'NPSN', 'Prioritas'];
+    const medHeaders = ['Panjang (m)', 'Lebar (m)', 'Luas (m²)', 'Kondisi', 'Tipe', 'Status', 'Target', 'Urutan Prioritas'];
+    const wideHeaders = ['Nama Sekolah', 'Sekolah', 'Kecamatan', 'Jenis Prasarana', 'Nama Ruang', 'Keterangan', 'Alasan', 'Alasan / Keterangan', 'Nama Paket'];
+
+    let totalWeight = 0;
+    const weights = columns.map(col => {
+        if (userWidths[col.header]) return 0;
+        let w;
+        if (narrowHeaders.includes(col.header)) w = 1;
+        else if (medHeaders.includes(col.header)) w = 1.5;
+        else if (wideHeaders.includes(col.header)) w = 3;
+        else w = 2;
+        totalWeight += w;
+        return w;
+    });
+
+    let fixedWidth = 0;
+    columns.forEach((col) => { if (userWidths[col.header]) fixedWidth += userWidths[col.header]; });
+    const flexWidth = tableWidth - fixedWidth;
+
     const columnStyles = {};
     columns.forEach((col, idx) => {
         const s = {};
-        if (noWrapCols.includes(col.header)) {
-            s.cellWidth = 'wrap'; s.overflow = 'visible';
-        }
-        if (colWidths[col.header]) {
-            s.cellWidth = colWidths[col.header];
-        }
-        // Center No column
-        if (idx === noIdx) {
-            s.halign = 'center';
-        }
-        // Right-align currency
-        if (col.header === 'Nilai Pengajuan' || col.header === 'Luas (m²)') {
-            s.halign = 'right';
-        }
-        // Center numeric columns
-        if (['Lantai', 'Panjang (m)', 'Lebar (m)', 'Luas (m²)', 'Target', 'NPSN', 'Jenjang', 'Masa Bangunan', 'Prioritas'].includes(col.header)) {
-            s.halign = 'center';
-        }
+        if (userWidths[col.header]) { s.cellWidth = userWidths[col.header]; }
+        else if (totalWeight > 0) { s.cellWidth = (weights[idx] / totalWeight) * flexWidth; }
+        if (noWrapCols.includes(col.header)) { s.cellWidth = 'wrap'; s.overflow = 'visible'; }
+        if (idx === noIdx) s.halign = 'center';
+        if (narrowHeaders.includes(col.header) || medHeaders.includes(col.header)) s.halign = 'center';
+        if (col.header === 'Nilai Pengajuan' || col.header === 'Luas (m²)') s.halign = 'right';
+        if (wideHeaders.includes(col.header)) s.halign = 'left';
         if (Object.keys(s).length > 0) columnStyles[idx] = s;
     });
 
@@ -162,8 +172,8 @@ export const exportToPDF = (data, columns, filename = 'laporan', title = 'Lapora
         body,
         theme: 'grid',
         styles: {
-            fontSize: 7.5,
-            cellPadding: { top: 3, right: 4, bottom: 3, left: 4 },
+            fontSize,
+            cellPadding,
             lineColor: [220, 225, 235],
             lineWidth: 0.3,
             overflow: 'linebreak',
@@ -174,71 +184,42 @@ export const exportToPDF = (data, columns, filename = 'laporan', title = 'Lapora
             textColor: [255, 255, 255],
             fontStyle: 'bold',
             halign: 'center',
-            fontSize: 7.5,
-            cellPadding: { top: 4, right: 4, bottom: 4, left: 4 },
+            fontSize: headerFontSize,
+            cellPadding,
             lineColor: [30, 64, 175],
             lineWidth: 0.3,
         },
-        alternateRowStyles: {
-            fillColor: [245, 247, 252],
-        },
-        bodyStyles: {
-            textColor: [30, 41, 59],
-        },
+        alternateRowStyles: { fillColor: [245, 247, 252] },
+        bodyStyles: { textColor: [30, 41, 59] },
         margin: { left: 10, right: 10 },
+        tableWidth: 'auto',
         columnStyles,
         didParseCell: (hookData) => {
             if (hookData.section !== 'body') return;
-            // Conditional coloring for Kondisi column
             if (hookData.column.index === kondisiIdx && kondisiIdx >= 0) {
                 const val = (hookData.cell.raw || '').toUpperCase();
-                if (val === 'BAIK') {
-                    hookData.cell.styles.textColor = [22, 163, 74];
-                    hookData.cell.styles.fontStyle = 'bold';
-                } else if (val === 'RUSAK RINGAN') {
-                    hookData.cell.styles.textColor = [37, 99, 235];
-                    hookData.cell.styles.fontStyle = 'bold';
-                } else if (val === 'RUSAK SEDANG') {
-                    hookData.cell.styles.textColor = [217, 119, 6];
-                    hookData.cell.styles.fontStyle = 'bold';
-                } else if (val === 'RUSAK BERAT') {
-                    hookData.cell.styles.textColor = [220, 38, 38];
-                    hookData.cell.styles.fontStyle = 'bold';
-                }
+                if (val === 'BAIK') { hookData.cell.styles.textColor = [22, 163, 74]; hookData.cell.styles.fontStyle = 'bold'; }
+                else if (val === 'RUSAK RINGAN') { hookData.cell.styles.textColor = [37, 99, 235]; hookData.cell.styles.fontStyle = 'bold'; }
+                else if (val === 'RUSAK SEDANG') { hookData.cell.styles.textColor = [217, 119, 6]; hookData.cell.styles.fontStyle = 'bold'; }
+                else if (val === 'RUSAK BERAT') { hookData.cell.styles.textColor = [220, 38, 38]; hookData.cell.styles.fontStyle = 'bold'; }
             }
-            // Conditional coloring for Status column
             if (hookData.column.index === statusIdx && statusIdx >= 0) {
                 const val = (hookData.cell.raw || '');
-                if (val === 'Disetujui' || val === 'Diterima') {
-                    hookData.cell.styles.textColor = [22, 163, 74];
-                    hookData.cell.styles.fontStyle = 'bold';
-                } else if (val === 'Ditolak') {
-                    hookData.cell.styles.textColor = [220, 38, 38];
-                    hookData.cell.styles.fontStyle = 'bold';
-                } else if (val === 'Revisi') {
-                    hookData.cell.styles.textColor = [217, 119, 6];
-                    hookData.cell.styles.fontStyle = 'bold';
-                } else if (val.includes('Menunggu')) {
-                    hookData.cell.styles.textColor = [37, 99, 235];
-                }
+                if (val === 'Disetujui' || val === 'Diterima') { hookData.cell.styles.textColor = [22, 163, 74]; hookData.cell.styles.fontStyle = 'bold'; }
+                else if (val === 'Ditolak') { hookData.cell.styles.textColor = [220, 38, 38]; hookData.cell.styles.fontStyle = 'bold'; }
+                else if (val === 'Revisi') { hookData.cell.styles.textColor = [217, 119, 6]; hookData.cell.styles.fontStyle = 'bold'; }
+                else if (val.includes('Menunggu')) { hookData.cell.styles.textColor = [37, 99, 235]; }
             }
-            // Bold currency values
-            if (hookData.column.index === nilaiIdx && nilaiIdx >= 0) {
-                hookData.cell.styles.fontStyle = 'bold';
-            }
+            if (hookData.column.index === nilaiIdx && nilaiIdx >= 0) { hookData.cell.styles.fontStyle = 'bold'; }
         },
-        // Footer: page number
         didDrawPage: (hookData) => {
-            const pageNum = doc.internal.getNumberOfPages();
             doc.setFontSize(7);
             doc.setFont('helvetica', 'normal');
             doc.setTextColor(150);
             doc.text(`Halaman ${hookData.pageNumber}`, pageWidth / 2, pageHeight - 8, { align: 'center' });
-            // Bottom line
             doc.setDrawColor(200, 210, 225);
             doc.setLineWidth(0.3);
             doc.line(10, pageHeight - 12, pageWidth - 10, pageHeight - 12);
-            // Right footer: app name
             doc.setFontSize(6.5);
             doc.text('SARDIKA — Portal Data Sarpras Pendidikan Cilacap', pageWidth - 10, pageHeight - 8, { align: 'right' });
         },
