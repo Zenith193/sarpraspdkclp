@@ -856,6 +856,9 @@ const ManajemenPengguna = () => {
                                         {/* FILE UPLOAD KOP SEKOLAH - FORM */}
                                         <div className="form-group">
                                             <label className="form-label">Kop Sekolah (Format Gambar, Max 2MB)</label>
+                                            <small style={{ display: 'block', color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: 2, marginBottom: 8, lineHeight: 1.4 }}>
+                                                📐 Ukuran ideal: <strong>1950 × 500 px</strong> (atau minimal 1200px lebar). Format: JPG/PNG. Pastikan lebar gambar proporsional agar kop tampil penuh di dokumen SPL.
+                                            </small>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
                                                 <input
                                                     type="file"

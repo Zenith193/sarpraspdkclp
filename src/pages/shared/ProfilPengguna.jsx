@@ -376,7 +376,9 @@ const ProfilPengguna = () => {
                 </div>
             </div>
             <small style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: 4, display: 'block' }}>
-                {type === 'kop' ? '* Format Gambar (PNG, JPG, JPEG, WEBP), Maks 2MB' : '* Format PDF, Maks 5MB'}
+                {type === 'kop' ? (
+                    <>* Format Gambar (PNG, JPG, JPEG, WEBP), Maks 2MB<br/>📐 Ukuran ideal: <strong>1950 × 500 px</strong> (minimal 1200px lebar) agar kop tampil proporsional di dokumen SPL</>
+                ) : '* Format PDF, Maks 5MB'}
             </small>
         </div>
     );
