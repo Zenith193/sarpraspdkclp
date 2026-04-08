@@ -395,10 +395,10 @@ const ManajemenPengguna = () => {
 
         try {
             if (format === 'excel') {
-                exportToExcel(filtered, exportColumns, 'data_pengguna_lengkap');
+                exportToExcel(filtered, exportColumns, 'Data_Pengguna');
                 toast.success('Ekspor Excel berhasil');
             } else if (format === 'pdf') {
-                exportToPDF(filtered, exportColumns, 'data_pengguna_lengkap', 'Laporan Data Pengguna');
+                exportToPDF(filtered, exportColumns, 'Data_Pengguna', 'Laporan Data Pengguna');
                 toast.success('Ekspor PDF berhasil');
             }
         } catch (err) {

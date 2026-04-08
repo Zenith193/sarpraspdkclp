@@ -168,7 +168,7 @@ const MatriksKegiatan = () => {
         });
         tableHTML += '</tbody></table></body></html>';
         const blob = new Blob([tableHTML], { type: 'application/vnd.ms-excel;charset=utf-8' });
-        const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `Data_Matrik.xls`; link.click();
+        const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = `Data_Matriks_Kegiatan.xls`; link.click();
         toast.success("Ekspor berhasil!");
     };
 

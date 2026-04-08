@@ -178,7 +178,7 @@ const Dashboard = () => {
     const handleExportLaporan = (format) => {
         const filterLabel = filterKec ? `_${filterKec}` : '';
         const jenjangLabel = filterJenjang ? `_${filterJenjang}` : '';
-        const filename = `laporan_sarpras${filterLabel}${jenjangLabel}`;
+        const filename = `Laporan_Sarpras${filterLabel}${jenjangLabel}`.replace(/\s+/g, '_');
         const title = `Laporan Rekapitulasi Sarpras${filterKec ? ' - ' + filterKec : ''}${filterJenjang ? ' - ' + filterJenjang : ''}`;
 
         // Numbered accessor
@@ -217,7 +217,7 @@ const Dashboard = () => {
     ];
 
     const handleExportAktivitas = (format) => {
-        const filename = 'aktivitas_pengguna';
+        const filename = 'Aktivitas_Pengguna';
         const title = 'Laporan Aktivitas Pengguna';
 
         const numberedCols = aktivitasExportCols.map(col => {

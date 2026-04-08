@@ -244,10 +244,11 @@ const Pencairan = () => {
             status: getEffectiveStatus(item)
         }));
         const exportCols = ALL_COLUMNS.filter(c => c.key !== 'aksi').map(c => ({ header: c.label, key: c.key }));
+        const fileName = 'Data_Pencairan';
         try {
-            if (format === 'excel') exportToExcel(exportData, exportCols, 'pencairan');
-            else if (format === 'csv') exportToCSV(exportData, exportCols, 'pencairan');
-            else if (format === 'pdf') exportToPDF(exportData, exportCols, 'pencairan', 'Data Pencairan');
+            if (format === 'excel') exportToExcel(exportData, exportCols, fileName);
+            else if (format === 'csv') exportToCSV(exportData, exportCols, fileName);
+            else if (format === 'pdf') exportToPDF(exportData, exportCols, fileName, 'Data Pencairan');
             toast.success(`Berhasil ekspor ${format.toUpperCase()}`);
         } catch (err) { toast.error('Gagal ekspor'); }
         setShowExport(false);

@@ -505,6 +505,21 @@ const Proposal = ({ readOnly = false }) => {
         // Strip jenjang suffix from sub kegiatan (e.g., "Pembangunan Ruang Guru/Kepala Sekolah/TU SD" → remove trailing " SD"/" SMP")
         const cleanSubKegiatan = (val) => (val || '').replace(/\s+(SD|SMP|SMA|SMK)$/i, '');
 
+        // Dynamic filename
+        const isSekolah = user?.role === 'Sekolah';
+        const schoolName = isSekolah ? (formSekolah || sekolahList[0]?.nama || user?.namaAkun || '') : '';
+        let fileName = 'Proposal';
+        let titleSuffix = '';
+        if (isSekolah && schoolName) {
+            fileName = `Proposal_${schoolName}`.replace(/\s+/g, '_');
+            titleSuffix = ` ${schoolName}`;
+        } else if (isKorwil) {
+            fileName = `Proposal_Korwil`;
+            titleSuffix = ' Korwil';
+        } else {
+            fileName = 'Proposal_Semua';
+        }
+
         const baseCols = [
             { header: 'No', accessor: (_, i) => i + 1 },
             { header: 'Nama Sekolah', key: 'namaSekolah' },
@@ -533,15 +548,12 @@ const Proposal = ({ readOnly = false }) => {
             if (format === 'excel') {
                 const sheets = [{ sheetName: 'Proposal Aktif', data: filteredAktif, columns: baseCols }];
                 if (filteredRealisasi.length > 0) sheets.push({ sheetName: 'Terealisasi', data: filteredRealisasi, columns: realisasiCols });
-                exportToExcelMultiSheet(sheets, 'data_proposal');
-            } else if (format === 'csv') exportToCSV(allData, baseCols, 'data_proposal');
+                exportToExcelMultiSheet(sheets, fileName);
+            } else if (format === 'csv') exportToCSV(allData, baseCols, fileName);
             else if (format === 'pdf') {
-                // PDF: export aktif + realisasi as separate sections
-                const schoolName = isSekolahOrKorwil ? (formSekolah || sekolahList[0]?.nama || user?.namaAkun || '') : '';
-                const titleSuffix = schoolName ? ` ${schoolName}` : '';
-                exportToPDF(filteredAktif, baseCols, 'data_proposal', `Proposal${titleSuffix}`, { noWrapCols: ['Nilai Pengajuan'] });
+                exportToPDF(filteredAktif, baseCols, fileName, `Proposal${titleSuffix}`, { noWrapCols: ['Nilai Pengajuan'] });
                 if (filteredRealisasi.length > 0) {
-                    exportToPDF(filteredRealisasi, realisasiCols, 'data_proposal_terealisasi', `Proposal Terealisasi${titleSuffix}`, { noWrapCols: ['Nilai Pengajuan'] });
+                    exportToPDF(filteredRealisasi, realisasiCols, `${fileName}_Terealisasi`, `Proposal Terealisasi${titleSuffix}`, { noWrapCols: ['Nilai Pengajuan'] });
                 }
             }
             toast.success(`Berhasil ekspor ${format.toUpperCase()}`);

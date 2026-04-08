@@ -28,6 +28,7 @@ const UploadFormKerusakan = () => {
     useEffect(() => {
         const handler = (e) => {
             if (actionDropdownRef.current && !actionDropdownRef.current.contains(e.target)) setOpenActionId(null);
+            if (exportRef.current && !exportRef.current.contains(e.target)) setShowExport(false);
         };
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
@@ -223,9 +224,51 @@ const UploadFormKerusakan = () => {
     };
 
     const handleExport = (format) => {
-        const dataToExport = isAdmin ? filtered : filtered.filter(d => d.npsn === user.npsn);
-        toast.success(`Ekspor ${format} berhasil`);
         setShowExport(false);
+        const exportData = filtered;
+        if (!exportData || exportData.length === 0) {
+            toast.error('Tidak ada data untuk diekspor');
+            return;
+        }
+
+        // Dynamic filename
+        const schoolName = isSekolah ? (user?.namaAkun || '') : '';
+        let fileName = 'Form_Kerusakan';
+        let titleSuffix = '';
+        if (isSekolah && schoolName) {
+            fileName = `Form_Kerusakan_${schoolName}`.replace(/\s+/g, '_');
+            titleSuffix = ` ${schoolName}`;
+        } else if (isKorwil) {
+            fileName = 'Form_Kerusakan_Korwil';
+            titleSuffix = ' Korwil';
+        } else {
+            fileName = activeTab === 'missing' ? 'Sekolah_Belum_Upload' : 'Form_Kerusakan_Semua';
+        }
+
+        const exportCols = activeTab === 'missing' ? [
+            { header: 'No', accessor: (_, i) => i + 1 },
+            { header: 'NPSN', key: 'npsn' },
+            { header: 'Nama Sekolah', key: 'nama' },
+            { header: 'Kecamatan', key: 'kecamatan' },
+            { header: 'Status', accessor: () => 'Belum Ada Form' },
+        ] : [
+            { header: 'No', accessor: (_, i) => i + 1 },
+            { header: 'NPSN', key: 'npsn' },
+            { header: 'Nama Sekolah', key: 'namaSekolah' },
+            { header: 'Masa Bangunan', accessor: (r) => `Bangunan ${r.masaBangunan || ''}` },
+            { header: 'File', key: 'fileName' },
+            { header: 'Status', key: 'status' },
+        ];
+
+        try {
+            if (format === 'excel') exportToExcel(exportData, exportCols, fileName);
+            else if (format === 'csv') exportToCSV(exportData, exportCols, fileName);
+            else if (format === 'pdf') exportToPDF(exportData, exportCols, fileName, `Form Kerusakan${titleSuffix}`);
+            toast.success(`Berhasil ekspor ${format.toUpperCase()}`);
+        } catch (err) {
+            console.error('Export error:', err);
+            toast.error('Gagal mengekspor data');
+        }
     };
 
     const handleOpenModal = (preSelectedSchool = null) => {
@@ -365,6 +408,12 @@ const UploadFormKerusakan = () => {
                                 <div className="dropdown-menu">
                                     <button className="dropdown-item" onClick={() => handleExport('excel')}>
                                         <span className="export-icon"><FileSpreadsheet size={14} /></span> Excel
+                                    </button>
+                                    <button className="dropdown-item" onClick={() => handleExport('csv')}>
+                                        <span className="export-icon"><FileDown size={14} /></span> CSV
+                                    </button>
+                                    <button className="dropdown-item" onClick={() => handleExport('pdf')}>
+                                        <span className="export-icon"><FileText size={14} /></span> PDF
                                     </button>
                                 </div>
                             )}

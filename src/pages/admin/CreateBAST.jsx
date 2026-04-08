@@ -514,9 +514,9 @@ const CreateBAST = () => {
 
     const handleExport = (format) => {
         try {
-            if (format === 'excel') exportToExcel(filtered, EXPORT_COLS, 'bast');
-            else if (format === 'csv') exportToCSV(filtered, EXPORT_COLS, 'bast');
-            else if (format === 'pdf') exportToPDF(filtered, EXPORT_COLS, 'bast', 'Data BAST');
+            if (format === 'excel') exportToExcel(filtered, EXPORT_COLS, 'Data_BAST');
+            else if (format === 'csv') exportToCSV(filtered, EXPORT_COLS, 'Data_BAST');
+            else if (format === 'pdf') exportToPDF(filtered, EXPORT_COLS, 'Data_BAST', 'Data BAST');
             toast.success(`Berhasil ekspor ${format.toUpperCase()}`);
         } catch (err) { toast.error('Gagal ekspor'); }
         setShowExport(false);

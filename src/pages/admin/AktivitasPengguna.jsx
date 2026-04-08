@@ -162,9 +162,9 @@ const AktivitasPengguna = () => {
             { header: 'Waktu', accessor: (r) => formatDateTime(r.createdAt) },
         ];
         try {
-            if (format === 'excel') exportToExcel(filtered, exportCols, 'log_aktivitas');
-            else if (format === 'csv') exportToCSV(filtered, exportCols, 'log_aktivitas');
-            else if (format === 'pdf') exportToPDF(filtered, exportCols, 'log_aktivitas', 'Log Aktivitas Pengguna');
+            if (format === 'excel') exportToExcel(filtered, exportCols, 'Log_Aktivitas');
+            else if (format === 'csv') exportToCSV(filtered, exportCols, 'Log_Aktivitas');
+            else if (format === 'pdf') exportToPDF(filtered, exportCols, 'Log_Aktivitas', 'Log Aktivitas Pengguna');
             toast.success(`Berhasil ekspor ${format.toUpperCase()}`);
         } catch (err) {
             toast.error('Gagal mengekspor data');

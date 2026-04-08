@@ -643,13 +643,26 @@ const DataSarpras = ({ readOnly = false }) => {
 
     const handleExport = (format) => {
         const sorted = [...filtered].sort((a, b) => (a.jenisPrasarana || '').localeCompare(b.jenisPrasarana || ''));
+        // Dynamic filename based on role
+        let fileName = 'Data_Sarpras';
+        let pdfTitle = 'Data Sarana Prasarana';
+        if (isSekolah) {
+            const schoolName = sekolahList[0]?.nama || user?.namaAkun || '';
+            fileName = `Data_Sarpras_${schoolName}`.replace(/\s+/g, '_');
+            pdfTitle = `Data Sarpras ${schoolName}`;
+        } else if (isKorwil && myKorwilAssignment?.kecamatan?.length) {
+            const kecLabel = myKorwilAssignment.kecamatan.join('_');
+            fileName = `Data_Sarpras_${kecLabel}`.replace(/\s+/g, '_');
+            pdfTitle = `Data Sarpras Kec. ${myKorwilAssignment.kecamatan.join(', ')}`;
+        } else {
+            fileName = 'Data_Sarpras_Semua';
+            pdfTitle = 'Data Sarana Prasarana';
+        }
         try {
-            if (format === 'excel') { exportToExcel(sorted, exportColsFull, 'data_sarpras'); toast.success('Berhasil ekspor Excel'); }
-            else if (format === 'csv') { exportToCSV(sorted, exportCols, 'data_sarpras'); toast.success('Berhasil ekspor CSV'); }
+            if (format === 'excel') { exportToExcel(sorted, exportColsFull, fileName); toast.success('Berhasil ekspor Excel'); }
+            else if (format === 'csv') { exportToCSV(sorted, exportCols, fileName); toast.success('Berhasil ekspor CSV'); }
             else if (format === 'pdf') {
-                const schoolName = isSekolah ? (sekolahList[0]?.nama || user?.namaAkun || '') : '';
-                const pdfTitle = isSekolah ? `Data Sarpras ${schoolName}` : 'Data Sarana Prasarana';
-                exportToPDF(sorted, exportCols, 'data_sarpras', pdfTitle);
+                exportToPDF(sorted, exportCols, fileName, pdfTitle);
                 toast.success('Berhasil ekspor PDF');
             }
         } catch (err) { toast.error('Gagal ekspor: ' + err.message); }
