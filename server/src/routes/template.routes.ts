@@ -697,9 +697,15 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
                                 console.log('[KOP] Replaced marker paragraph (pStart=' + pStart + ')');
                             }
                         }
-                        // Adjust top margin to 0.2 inches (288 twips) for kop
-                        docXml = docXml.replace(/w:top="\d+"/g, 'w:top="288"');
-                        console.log('[KOP] Set top margin to 0.2in (288tw)');
+                        // Adjust page margins: top=0.15" left=0.75" right=0.75" (only in w:pgMar)
+                        docXml = docXml.replace(
+                            /<w:pgMar[^/]*\/>/g,
+                            (match: string) => match
+                                .replace(/w:top="\d+"/g, 'w:top="216"')
+                                .replace(/w:left="\d+"/g, 'w:left="1080"')
+                                .replace(/w:right="\d+"/g, 'w:right="1080"')
+                        );
+                        console.log('[KOP] Set margins: top=0.15in left=0.75in right=0.75in');
 
                         // Ensure root document element has required namespaces for DrawingML
                         const nsMap: Record<string, string> = {
