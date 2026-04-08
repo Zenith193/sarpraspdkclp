@@ -513,8 +513,21 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
                             console.log(`[KOP] Dimension parse failed, using fallback: ${imgW}x${imgH}px`);
                         }
 
-                        // Target: full printable width = 16.5cm = 6.5 inches
-                        const TARGET_WIDTH_INCHES = 6.5;
+                        // Calculate actual content width from page margins
+                        let TARGET_WIDTH_INCHES = 6.5; // default A4
+                        try {
+                            const pgSzMatch = docXml.match(/w:pgSz\s[^>]*w:w="(\d+)"/);
+                            const pgMarLeftMatch = docXml.match(/w:pgMar\s[^>]*w:left="(\d+)"/);
+                            const pgMarRightMatch = docXml.match(/w:pgMar\s[^>]*w:right="(\d+)"/);
+                            if (pgSzMatch) {
+                                const pgW = parseInt(pgSzMatch[1]); // twips
+                                const marginL = pgMarLeftMatch ? parseInt(pgMarLeftMatch[1]) : 1134;
+                                const marginR = pgMarRightMatch ? parseInt(pgMarRightMatch[1]) : 1134;
+                                TARGET_WIDTH_INCHES = (pgW - marginL - marginR) / 1440;
+                                console.log(`[KOP] Page: ${pgW}tw, margins L=${marginL} R=${marginR}, content=${TARGET_WIDTH_INCHES.toFixed(2)}in`);
+                            }
+                        } catch {}
+                        
                         const targetDPI = Math.round(imgW / TARGET_WIDTH_INCHES);
                         const ratio = imgH / imgW;
                         
@@ -626,13 +639,13 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
 
                         // Build DrawingML XML
                         const imgXml = [
-                            `<w:p><w:pPr><w:spacing w:after="0" w:before="0"/></w:pPr>`,
+                            `<w:p><w:pPr><w:spacing w:after="0" w:before="0"/><w:ind w:left="0" w:right="0"/></w:pPr>`,
                             `<w:r><w:drawing>`,
                             `<wp:inline distT="0" distB="0" distL="0" distR="0">`,
                             `<wp:extent cx="${emuW}" cy="${emuH}"/>`,
                             `<wp:effectExtent l="0" t="0" r="0" b="0"/>`,
                             `<wp:docPr id="${maxRId + 1}" name="KopSekolah"/>`,
-                            `<wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr>`,
+                            `<wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"/></wp:cNvGraphicFramePr>`,
                             `<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">`,
                             `<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">`,
                             `<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">`,
