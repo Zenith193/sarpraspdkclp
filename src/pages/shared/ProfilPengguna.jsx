@@ -380,6 +380,31 @@ const ProfilPengguna = () => {
                     <>* Format Gambar (PNG, JPG, JPEG, WEBP), Maks 2MB<br/>📐 Ukuran ideal: <strong>1950 × 500 px</strong> (minimal 1200px lebar) agar kop tampil proporsional di dokumen SPL</>
                 ) : '* Format PDF, Maks 5MB'}
             </small>
+            {type === 'kop' && (
+                <details style={{ marginTop: 12, background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
+                    <summary style={{ padding: '10px 16px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', gap: 6, userSelect: 'none' }}>
+                        📋 Lihat Contoh Format KOP dari Dinas
+                    </summary>
+                    <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border-color)' }}>
+                        <img 
+                            src="/contoh-kop-sekolah.png" 
+                            alt="Contoh Format KOP Sekolah" 
+                            style={{ width: '100%', borderRadius: 6, border: '1px solid var(--border-color)', marginBottom: 10, background: '#fff' }} 
+                        />
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
+                            <p style={{ margin: '0 0 6px', fontWeight: 600, color: 'var(--text-primary)' }}>📌 Panduan membuat KOP:</p>
+                            <ul style={{ margin: 0, paddingLeft: 18 }}>
+                                <li><strong>Logo</strong> kabupaten/kota di sebelah kiri</li>
+                                <li><strong>Teks header:</strong> Pemerintah Kabupaten, Dinas, Nama Sekolah</li>
+                                <li><strong>Alamat & kontak</strong> sekolah (jalan, telepon, email)</li>
+                                <li><strong>Garis tebal + tipis</strong> di bagian bawah</li>
+                                <li>Ukuran: <strong>1800 × 350 px</strong> atau <strong>1950 × 500 px</strong></li>
+                                <li>Pastikan gambar <strong>tanpa padding/ruang kosong</strong> di sisi kiri-kanan</li>
+                            </ul>
+                        </div>
+                    </div>
+                </details>
+            )}
         </div>
     );
 
