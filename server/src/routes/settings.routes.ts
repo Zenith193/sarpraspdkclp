@@ -294,4 +294,113 @@ router.put('/ranking/data', requireAuth, async (req, res) => {
 applyNasConfigFromDb().catch(() => { });
 applyGDriveConfigFromDb().catch(() => { });
 
+// ===== CONTOH KOP DINAS (admin uploads example kop for schools to reference) =====
+import multer from 'multer';
+import fs from 'fs';
+import path from 'path';
+
+const CONTOH_KOP_DIR = path.resolve(process.env.UPLOAD_DIR || './uploads', '_sistem', 'contoh-kop');
+const contohKopUpload = multer({
+    storage: multer.diskStorage({
+        destination: (_req, _file, cb) => {
+            fs.mkdirSync(CONTOH_KOP_DIR, { recursive: true });
+            cb(null, CONTOH_KOP_DIR);
+        },
+        filename: (_req, file, cb) => {
+            const ext = path.extname(file.originalname).toLowerCase();
+            cb(null, `contoh-kop-dinas${ext}`);
+        },
+    }),
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (_req, file, cb) => {
+        const allowed = ['.png', '.jpg', '.jpeg', '.webp'];
+        const ext = path.extname(file.originalname).toLowerCase();
+        cb(null, allowed.includes(ext));
+    },
+});
+
+// Admin upload contoh kop
+router.post('/contoh-kop', requireAuth, requireRole('admin'), contohKopUpload.single('file'), async (req, res) => {
+    try {
+        const file = req.file;
+        if (!file) { res.status(400).json({ error: 'File tidak ditemukan' }); return; }
+
+        // Delete old files (different extension)
+        try {
+            const files = fs.readdirSync(CONTOH_KOP_DIR);
+            for (const f of files) {
+                if (f !== file.filename) {
+                    fs.unlinkSync(path.join(CONTOH_KOP_DIR, f));
+                }
+            }
+        } catch {}
+
+        // Save path in settings
+        await settingsService.set('contoh_kop_dinas', { path: file.path, updatedAt: new Date().toISOString() });
+        res.json({ success: true, path: file.path });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// Get contoh kop (any authenticated user)
+router.get('/contoh-kop', requireAuth, async (_req, res) => {
+    try {
+        const setting = await settingsService.get('contoh_kop_dinas');
+        if (!setting?.path) {
+            // Fallback: check if files exist in the dir
+            if (fs.existsSync(CONTOH_KOP_DIR)) {
+                const files = fs.readdirSync(CONTOH_KOP_DIR).filter(f => /\.(png|jpg|jpeg|webp)$/i.test(f));
+                if (files.length > 0) {
+                    const filePath = path.join(CONTOH_KOP_DIR, files[0]);
+                    const ext = path.extname(files[0]).toLowerCase();
+                    const mime = ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : 'image/jpeg';
+                    res.setHeader('Content-Type', mime);
+                    res.setHeader('Cache-Control', 'public, max-age=3600');
+                    res.sendFile(path.resolve(filePath));
+                    return;
+                }
+            }
+            res.status(404).json({ error: 'Contoh kop belum diupload' });
+            return;
+        }
+
+        const filePath = setting.path;
+        if (!fs.existsSync(filePath)) {
+            res.status(404).json({ error: 'File tidak ditemukan' });
+            return;
+        }
+
+        const ext = path.extname(filePath).toLowerCase();
+        const mime = ext === '.png' ? 'image/png' : ext === '.webp' ? 'image/webp' : 'image/jpeg';
+        res.setHeader('Content-Type', mime);
+        res.setHeader('Cache-Control', 'public, max-age=3600');
+        res.sendFile(path.resolve(filePath));
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// Check if contoh kop exists
+router.get('/contoh-kop/status', requireAuth, async (_req, res) => {
+    try {
+        const setting = await settingsService.get('contoh_kop_dinas');
+        let exists = false;
+        if (setting?.path && fs.existsSync(setting.path)) exists = true;
+        if (!exists && fs.existsSync(CONTOH_KOP_DIR)) {
+            const files = fs.readdirSync(CONTOH_KOP_DIR).filter(f => /\.(png|jpg|jpeg|webp)$/i.test(f));
+            exists = files.length > 0;
+        }
+        res.json({ exists, updatedAt: setting?.updatedAt });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// Delete contoh kop (admin only)
+router.delete('/contoh-kop', requireAuth, requireRole('admin'), async (_req, res) => {
+    try {
+        if (fs.existsSync(CONTOH_KOP_DIR)) {
+            const files = fs.readdirSync(CONTOH_KOP_DIR);
+            for (const f of files) fs.unlinkSync(path.join(CONTOH_KOP_DIR, f));
+        }
+        await settingsService.set('contoh_kop_dinas', null);
+        res.json({ success: true });
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 export default router;

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Edit, Save, X, Upload, FileText, CheckCircle, Eye, EyeOff, Lock, Download, Trash2, Loader2 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
-import { penggunaApi, sekolahApi, perusahaanApi } from '../../api/index';
+import { penggunaApi, sekolahApi, perusahaanApi, settingsApi } from '../../api/index';
 import toast from 'react-hot-toast';
 import ConfirmModal from '../../components/ui/ConfirmModal';
 
@@ -34,6 +34,7 @@ const ProfilPengguna = () => {
     const isSekolah = user?.role === 'Sekolah';
     const isPenyedia = user?.role === 'Penyedia';
     const sekolahId = user?.sekolahId;
+    const [hasContohKop, setHasContohKop] = useState(false);
 
     // State perusahaan (penyedia)
     const [perusahaanData, setPerusahaanData] = useState(null);
@@ -74,6 +75,15 @@ const ProfilPengguna = () => {
             sekolahApi.getById(sekolahId).then(setSekolahData).catch(() => {});
         }
     }, [sekolahId]);
+
+    // Check if admin has uploaded contoh kop
+    useEffect(() => {
+        if (isSekolah || user?.role === 'Admin') {
+            settingsApi.getContohKopStatus().then(res => {
+                setHasContohKop(res?.exists || false);
+            }).catch(() => {});
+        }
+    }, [isSekolah, user?.role]);
 
     // Fetch perusahaan data for penyedia
     useEffect(() => {
@@ -380,14 +390,14 @@ const ProfilPengguna = () => {
                     <>* Format Gambar (PNG, JPG, JPEG, WEBP), Maks 2MB<br/>📐 Ukuran ideal: <strong>1950 × 500 px</strong> (minimal 1200px lebar) agar kop tampil proporsional di dokumen SPL</>
                 ) : '* Format PDF, Maks 5MB'}
             </small>
-            {type === 'kop' && (
+            {type === 'kop' && hasContohKop && (
                 <details style={{ marginTop: 12, background: 'var(--bg-tertiary)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', overflow: 'hidden' }}>
                     <summary style={{ padding: '10px 16px', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 600, color: 'var(--accent-blue)', display: 'flex', alignItems: 'center', gap: 6, userSelect: 'none' }}>
                         📋 Lihat Contoh Format KOP dari Dinas
                     </summary>
                     <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border-color)' }}>
                         <img 
-                            src="/contoh-kop-sekolah.png" 
+                            src="/api/settings/contoh-kop" 
                             alt="Contoh Format KOP Sekolah" 
                             style={{ width: '100%', borderRadius: 6, border: '1px solid var(--border-color)', marginBottom: 10, background: '#fff' }} 
                         />
@@ -524,6 +534,65 @@ const ProfilPengguna = () => {
                         <h3 style={{ fontSize: '1rem', marginBottom: 16, fontWeight: 600 }}>Dokumen Sekolah</h3>
                         {renderFileSection('kop', 'Kop Sekolah', '.png,.jpg,.jpeg,.webp', '2MB', uploadingKop, !!sekolahData?.kopSekolah)}
                         {renderFileSection('denah', 'Denah Sekolah', '.pdf', '5MB', uploadingDenah, !!sekolahData?.denahSekolah)}
+                    </div>
+                )}
+
+                {/* Upload Contoh KOP Dinas (Hanya untuk Admin) */}
+                {user?.role === 'Admin' && (
+                    <div style={{ marginTop: 32, paddingTop: 24, borderTop: '1px solid var(--border-color)' }}>
+                        <h3 style={{ fontSize: '1rem', marginBottom: 8, fontWeight: 600 }}>📋 Contoh KOP Dinas</h3>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: 16 }}>
+                            Upload contoh format KOP yang akan ditampilkan ke sekolah sebagai referensi saat upload KOP mereka.
+                        </p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-md)', border: '1px dashed var(--border-color)' }}>
+                            <FileText size={20} style={{ color: hasContohKop ? 'var(--accent-green)' : 'var(--text-secondary)' }} />
+                            <div style={{ flex: 1 }}>
+                                {hasContohKop ? (
+                                    <span style={{ fontWeight: 500, color: 'var(--accent-green)', fontSize: '0.875rem' }}>
+                                        <CheckCircle size={14} style={{ marginRight: 4, verticalAlign: 'middle' }} /> Contoh KOP sudah diupload
+                                    </span>
+                                ) : (
+                                    <span style={{ color: 'var(--text-secondary)', fontStyle: 'italic', fontSize: '0.875rem' }}>Belum ada contoh KOP</span>
+                                )}
+                            </div>
+                            <div style={{ display: 'flex', gap: 6 }}>
+                                {hasContohKop && (
+                                    <>
+                                        <button className="btn-icon" onClick={() => window.open('/api/settings/contoh-kop', '_blank')} title="Preview" style={{ color: 'var(--accent-purple)' }}><Eye size={16} /></button>
+                                        <button className="btn-icon" onClick={async () => {
+                                            if (!confirm('Hapus contoh KOP Dinas?')) return;
+                                            try {
+                                                await settingsApi.deleteContohKop();
+                                                setHasContohKop(false);
+                                                toast.success('Contoh KOP dihapus');
+                                            } catch { toast.error('Gagal menghapus'); }
+                                        }} title="Hapus" style={{ color: 'var(--accent-red)' }}><Trash2 size={16} /></button>
+                                    </>
+                                )}
+                                <label className="btn btn-secondary btn-sm" style={{ cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                                    <Upload size={14} />
+                                    <span>{hasContohKop ? 'Ganti' : 'Upload'}</span>
+                                    <input type="file" accept=".png,.jpg,.jpeg,.webp" onChange={async (e) => {
+                                        const file = e.target.files?.[0];
+                                        if (!file) return;
+                                        try {
+                                            await settingsApi.uploadContohKop(file);
+                                            setHasContohKop(true);
+                                            toast.success('Contoh KOP berhasil diupload');
+                                        } catch (err) { toast.error(err.message || 'Gagal upload'); }
+                                        e.target.value = '';
+                                    }} style={{ display: 'none' }} />
+                                </label>
+                            </div>
+                        </div>
+                        {hasContohKop && (
+                            <div style={{ marginTop: 12, borderRadius: 'var(--radius-md)', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+                                <img src={`/api/settings/contoh-kop?t=${Date.now()}`} alt="Preview Contoh KOP" style={{ width: '100%', display: 'block', background: '#fff' }} />
+                            </div>
+                        )}
+                        <small style={{ color: 'var(--text-secondary)', fontSize: '0.75rem', marginTop: 4, display: 'block' }}>
+                            * Format Gambar (PNG, JPG, JPEG, WEBP), Maks 5MB
+                        </small>
                     </div>
                 )}
 

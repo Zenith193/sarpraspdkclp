@@ -226,6 +226,11 @@ export const settingsApi = {
     testGdrive: () => api.post('/settings/gdrive/test'),
     resetGdrive: () => api.post('/settings/gdrive/reset'),
     listGdriveFolders: (parentId = '') => api.get(`/settings/gdrive/folders?parentId=${encodeURIComponent(parentId)}`),
+    // Contoh KOP Dinas
+    uploadContohKop: (file) => { const fd = new FormData(); fd.append('file', file); return api.upload('/settings/contoh-kop', fd); },
+    getContohKopStatus: () => api.get('/settings/contoh-kop/status'),
+    deleteContohKop: () => api.delete('/settings/contoh-kop'),
+    contohKopUrl: () => '/api/settings/contoh-kop',
 };
 
 export const dashboardApi = {
