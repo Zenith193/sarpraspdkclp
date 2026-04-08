@@ -642,7 +642,7 @@ const DataSarpras = ({ readOnly = false }) => {
     };
 
     const handleExport = (format) => {
-        const sorted = [...filtered].sort((a, b) => (a.jenisPrasarana || '').localeCompare(b.jenisPrasarana || ''));
+        const sorted = [...filtered].sort((a, b) => (a.namaSekolah || '').localeCompare(b.namaSekolah || '') || (a.jenisPrasarana || '').localeCompare(b.jenisPrasarana || ''));
         // Dynamic filename based on role
         let fileName = 'Data_Sarpras';
         let pdfTitle = 'Data Sarana Prasarana';
@@ -722,7 +722,7 @@ const DataSarpras = ({ readOnly = false }) => {
                     </div>
                 );
             }
-            case 'namaSekolah': return <div style={{ maxWidth: 180, whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.3 }}>{item.namaSekolah}</div>;
+            case 'namaSekolah': return <div style={{ maxWidth: 180, whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.3, textAlign: 'left' }}>{item.namaSekolah}</div>;
             case 'kondisi': return getConditionBadge(item.kondisi);
             case 'keterangan': return <div style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', textAlign: 'left' }}>{item.keterangan}</div>;
             case 'lastFotoAt': return item.lastFotoAt ? <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{new Date(item.lastFotoAt).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })}</span> : <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>-</span>;
@@ -1104,7 +1104,7 @@ const DataSarpras = ({ readOnly = false }) => {
                         <thead>
                             <tr>
                                 {activeColumns.map(col => (
-                                    <th key={col.key} style={{ textAlign: 'center', verticalAlign: 'middle', width: col.width, padding: '8px 6px', whiteSpace: 'nowrap' }}>{col.label}</th>
+                                    <th key={col.key} style={{ textAlign: ['namaSekolah', 'jenisPrasarana', 'namaRuang', 'keterangan'].includes(col.key) ? 'left' : 'center', verticalAlign: 'middle', width: col.width, padding: '8px 6px', whiteSpace: 'nowrap' }}>{col.label}</th>
                                 ))}
                             </tr>
                         </thead>
@@ -1112,7 +1112,7 @@ const DataSarpras = ({ readOnly = false }) => {
                             {paged.map((item, i) => (
                                 <tr key={item.id}>
                                     {activeColumns.map(col => (
-                                        <td key={col.key} style={{ textAlign: 'center', verticalAlign: 'middle', padding: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                        <td key={col.key} style={{ textAlign: ['namaSekolah', 'jenisPrasarana', 'namaRuang', 'keterangan'].includes(col.key) ? 'left' : 'center', verticalAlign: 'middle', padding: '6px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                                             {renderCell(col, item, i)}
                                         </td>
                                     ))}
