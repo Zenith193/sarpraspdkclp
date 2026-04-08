@@ -100,14 +100,40 @@ const RankingPrioritas = () => {
             }));
 
             // Load saved ranking from server
+            // If both kecamatan+jenjang are set, load exact match
+            // Otherwise, try all jenjang/kecamatan combos to merge alasan data
             try {
-                const savedRanking = await rankingApi.getData(kecamatan, jenjang);
-                if (savedRanking?.items?.length > 0) {
-                    savedRanking.items.forEach(saved => {
-                        const found = list.find(s => s.id === saved.id);
-                        if (found) {
-                            found.rank = saved.rank;
-                            found.alasan = saved.alasan || '';
+                if (kecamatan && jenjang) {
+                    // Exact match
+                    const savedRanking = await rankingApi.getData(kecamatan, jenjang);
+                    if (savedRanking?.items?.length > 0) {
+                        savedRanking.items.forEach(saved => {
+                            const found = list.find(s => s.id === saved.id);
+                            if (found) {
+                                found.rank = saved.rank;
+                                found.alasan = saved.alasan || '';
+                            }
+                        });
+                    }
+                } else {
+                    // Partial filter: try all possible kecamatan+jenjang combos
+                    const kecList = kecamatan ? [kecamatan] : [...new Set(list.map(s => s.kecamatan).filter(Boolean))];
+                    const jenList = jenjang ? [jenjang] : ['SD', 'SMP', 'SMA', 'SMK'];
+                    const promises = [];
+                    for (const k of kecList) {
+                        for (const j of jenList) {
+                            promises.push(rankingApi.getData(k, j).catch(() => null));
+                        }
+                    }
+                    const results = await Promise.all(promises);
+                    results.forEach(savedRanking => {
+                        if (savedRanking?.items?.length > 0) {
+                            savedRanking.items.forEach(saved => {
+                                const found = list.find(s => s.id === saved.id);
+                                if (found && !found.alasan) {
+                                    found.alasan = saved.alasan || '';
+                                }
+                            });
                         }
                     });
                 }
