@@ -237,7 +237,72 @@ const Prestasi = () => {
         } catch (err) { toast.error(err.message || 'Gagal menyimpan aturan'); }
     };
     const executeDeletePoint = async () => { if (deletePointTarget) { try { await prestasiApi.deletePointRule(deletePointTarget.id); toast.success(`Aturan dihapus 🗑️`); setDeletePointTarget(null); refetchPoints(); } catch (err) { toast.error(err.message || 'Gagal hapus'); } } };
-    const handleExport = (format) => { toast.success(`Ekspor ${format} berhasil`); setShowExport(false); };
+    const handleExport = (format) => {
+        setShowExport(false);
+        try {
+            // Determine data & columns based on active tab
+            let exportData, exportColumns, fileName, title;
+
+            if (activeTab === 'rekap') {
+                exportData = rekapData;
+                exportColumns = [
+                    { header: 'Peringkat', accessor: (_, i) => i + 1 },
+                    { header: 'Sekolah', key: 'namaSekolah' },
+                    { header: 'NPSN', key: 'npsn' },
+                    { header: 'Jumlah Prestasi', key: 'jumlahPrestasi' },
+                    { header: 'Total Poin', key: 'totalPoin' },
+                ];
+                fileName = 'Rekapitulasi_Poin_Prestasi';
+                title = 'Rekapitulasi Poin Prestasi Sekolah';
+            } else if (activeTab === 'poin') {
+                exportData = pointSettings;
+                exportColumns = [
+                    { header: 'No', accessor: (_, i) => i + 1 },
+                    { header: 'Tingkat', key: 'tingkat' },
+                    { header: 'Kategori', key: 'kategori' },
+                    { header: 'Capaian', key: 'capaian' },
+                    { header: 'Poin', key: 'poin' },
+                ];
+                fileName = 'Aturan_Bobot_Poin';
+                title = 'Aturan Bobot Poin Prestasi';
+            } else {
+                exportData = roleFilteredData;
+                exportColumns = [
+                    { header: 'No', accessor: (_, i) => i + 1 },
+                    { header: 'Sekolah', key: 'namaSekolah' },
+                    { header: 'NPSN', key: 'npsn' },
+                    { header: 'Jenis Prestasi', key: 'jenisPrestasi' },
+                    { header: 'Siswa/Tim', key: 'siswa' },
+                    { header: 'Kategori', key: 'kategori' },
+                    { header: 'Tingkat', key: 'tingkat' },
+                    { header: 'Tahun', key: 'tahun' },
+                    { header: 'Capaian', key: 'keterangan' },
+                    { header: 'Status', key: 'status' },
+                ];
+                fileName = 'Data_Prestasi';
+                title = 'Data Prestasi Sekolah';
+            }
+
+            if (!exportData || exportData.length === 0) {
+                toast.error('Tidak ada data untuk diekspor');
+                return;
+            }
+
+            if (format === 'excel') {
+                exportToExcel(exportData, exportColumns, fileName);
+            } else if (format === 'csv') {
+                exportToCSV(exportData, exportColumns, fileName);
+            } else if (format === 'pdf') {
+                exportToPDF(exportData, exportColumns, fileName, title, {
+                    subtitle: 'Dinas Pendidikan dan Kebudayaan Kabupaten Cilacap',
+                });
+            }
+            toast.success(`Ekspor ${format.toUpperCase()} berhasil ✅`);
+        } catch (err) {
+            console.error('Export error:', err);
+            toast.error('Gagal mengekspor: ' + (err.message || 'Unknown error'));
+        }
+    };
 
     // ===== HELPERS =====
     const schoolNames = sekolahList.map(s => s.nama);
@@ -291,7 +356,11 @@ const Prestasi = () => {
                             {canManage && (<button className="btn btn-primary btn-sm" onClick={() => handleOpenModal()}><Plus size={14} /> Ajukan</button>)}
                             <div className="export-dropdown" ref={exportRef}>
                                 <button className="btn btn-secondary btn-sm" onClick={() => setShowExport(!showExport)}><Download size={14} /> Ekspor <ChevronDown size={12} /></button>
-                                {showExport && (<div className="dropdown-menu"><button className="dropdown-item" onClick={() => handleExport('excel')}>Excel</button></div>)}
+                                {showExport && (<div className="dropdown-menu">
+                                    <button className="dropdown-item" onClick={() => handleExport('excel')}><FileSpreadsheet size={14} style={{ marginRight: 8, color: 'var(--accent-green)' }} /> Excel (.xlsx)</button>
+                                    <button className="dropdown-item" onClick={() => handleExport('csv')}><FileDown size={14} style={{ marginRight: 8, color: 'var(--accent-blue)' }} /> CSV (.csv)</button>
+                                    <button className="dropdown-item" onClick={() => handleExport('pdf')}><FileText size={14} style={{ marginRight: 8, color: 'var(--accent-red)' }} /> PDF (.pdf)</button>
+                                </div>)}
                             </div>
                         </div>
                     </div>
