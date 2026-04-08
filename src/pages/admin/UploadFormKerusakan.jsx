@@ -504,7 +504,7 @@ const UploadFormKerusakan = () => {
                                                             </label>
                                                         )}
                                                         {/* Admin/Verifikator: upload/update file */}
-                                                        {canVerify && (
+                                                        {(isAdmin || isVerifikator) && (
                                                             <label className="dropdown-item" style={{ cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
                                                                 <Upload size={14} style={{ marginRight: 8, color: 'var(--accent-blue)' }} /> {d.fileName ? 'Update File' : 'Upload File'}
                                                                 <input type="file" accept="application/pdf" style={{ display: 'none' }} onChange={(e) => { handleDirectUpload(e, d); setOpenActionId(null); }} />
