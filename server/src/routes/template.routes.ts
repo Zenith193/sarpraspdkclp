@@ -476,11 +476,12 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
                     generatedZip.file('word/document.xml', docXml);
                 } else {
                     try {
-                        // Use require() - more reliable than dynamic import in tsx
+                        // Get image dimensions
                         let imgW = 800, imgH = 200;
                         try {
-                            const sizeOf = require('image-size');
-                            const dims = typeof sizeOf === 'function' ? sizeOf(kopImageBuffer) : sizeOf.imageSize(kopImageBuffer);
+                            const imgSizeMod = await import('image-size');
+                            const sizeOf = imgSizeMod.default || imgSizeMod;
+                            const dims = typeof sizeOf === 'function' ? sizeOf(kopImageBuffer) : (sizeOf as any).imageSize(kopImageBuffer);
                             imgW = dims.width || 800;
                             imgH = dims.height || 200;
                         } catch (szErr: any) {
@@ -747,21 +748,31 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
         fs.writeFileSync(docxPath, filledBuf);
         console.log(`[Template] Saved DOCX: ${docxPath}`);
 
-        // Convert DOCX â†’ PDF using LibreOffice
+        // Convert DOCX to PDF using LibreOffice
         let hasPdf = false;
         try {
-            const loResult = execSync(`libreoffice --headless --convert-to pdf --outdir "${SPL_OUTPUT_DIR}" "${docxPath}"`, {
+            const loProfile = `/tmp/lo_profile_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+            const loCmd = `libreoffice --headless -env:UserInstallation=file://${loProfile} --convert-to pdf --outdir "${SPL_OUTPUT_DIR}" "${docxPath}"`;
+            console.log('[Template] LO cmd:', loCmd);
+            const loResult = execSync(loCmd, {
                 timeout: 60000,
                 stdio: 'pipe',
             });
-            console.log('[Template] LO stdout:', loResult?.toString()?.substring(0, 200));
+            console.log('[Template] LO stdout:', loResult?.toString()?.substring(0, 300));
             const pdfPath = path.join(SPL_OUTPUT_DIR, `${safeBasename}.pdf`);
             hasPdf = fs.existsSync(pdfPath);
             if (hasPdf) console.log(`[Template] Saved PDF: ${pdfPath}`);
-            else console.error('[Template] PDF not found after conversion, expected:', pdfPath);
+            else {
+                console.error('[Template] PDF not found, expected:', pdfPath);
+                try {
+                    const files = fs.readdirSync(SPL_OUTPUT_DIR).filter((f: string) => f.endsWith('.pdf'));
+                    console.log('[Template] PDF files:', files.slice(-5));
+                } catch {}
+            }
+            try { execSync(`rm -rf "${loProfile}"`, { timeout: 5000 }); } catch {}
         } catch (loErr: any) {
-            console.error('[Template] LibreOffice conversion failed:', loErr.stderr?.toString()?.substring(0, 500) || loErr.message);
-            console.error('[Template] LO stdout:', loErr.stdout?.toString()?.substring(0, 200));
+            console.error('[Template] LO failed:', loErr.stderr?.toString()?.substring(0, 500) || loErr.message);
+            console.error('[Template] LO stdout:', loErr.stdout?.toString()?.substring(0, 300));
         }
 
         // Update history with file path
