@@ -399,19 +399,8 @@ const ProfilPengguna = () => {
                         <img 
                             src="/api/settings/contoh-kop" 
                             alt="Contoh Format KOP Sekolah" 
-                            style={{ width: '100%', borderRadius: 6, border: '1px solid var(--border-color)', marginBottom: 10, background: '#fff' }} 
+                            style={{ width: '100%', borderRadius: 6, border: '1px solid var(--border-color)', background: '#fff' }} 
                         />
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', lineHeight: 1.6 }}>
-                            <p style={{ margin: '0 0 6px', fontWeight: 600, color: 'var(--text-primary)' }}>📌 Panduan membuat KOP:</p>
-                            <ul style={{ margin: 0, paddingLeft: 18 }}>
-                                <li><strong>Logo</strong> kabupaten/kota di sebelah kiri</li>
-                                <li><strong>Teks header:</strong> Pemerintah Kabupaten, Dinas, Nama Sekolah</li>
-                                <li><strong>Alamat & kontak</strong> sekolah (jalan, telepon, email)</li>
-                                <li><strong>Garis tebal + tipis</strong> di bagian bawah</li>
-                                <li>Ukuran: <strong>1800 × 350 px</strong> atau <strong>1950 × 500 px</strong></li>
-                                <li>Pastikan gambar <strong>tanpa padding/ruang kosong</strong> di sisi kiri-kanan</li>
-                            </ul>
-                        </div>
                     </div>
                 </details>
             )}
