@@ -87,10 +87,10 @@ const Sidebar = ({ collapsed, onToggle, className = '' }) => {
 
     const verifikatorMenu = filterByAccess([
         { label: 'Dashboard', icon: <LayoutDashboard size={18} />, path: '/verifikator/dashboard' },
-        { label: 'Data Sarpras', icon: <Database size={18} />, path: '/verifikator/data-sarpras' },
-        { label: 'Proposal', icon: <FileText size={18} />, path: '/verifikator/proposal' },
         { label: 'Verifikasi Sarpras', icon: <CheckCircle size={18} />, path: '/verifikator/verifikasi-sarpras' },
         { label: 'Verifikasi Proposal', icon: <ClipboardList size={18} />, path: '/verifikator/verifikasi-proposal' },
+        { label: 'Data Sarpras', icon: <Database size={18} />, path: '/verifikator/data-sarpras' },
+        { label: 'Proposal', icon: <FileText size={18} />, path: '/verifikator/proposal' },
         { label: 'Ranking & Prioritas', icon: <Star size={18} />, path: '/verifikator/ranking' },
         { label: 'Riwayat Bantuan', icon: <History size={18} />, path: '/verifikator/riwayat-bantuan' },
         { label: 'Manajemen Template', icon: <FileSpreadsheet size={18} />, path: '/verifikator/manajemen-template' },
