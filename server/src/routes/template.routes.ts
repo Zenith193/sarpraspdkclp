@@ -249,10 +249,83 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
         if (peralatanItems.length > 0) vars.tabelPeralatan = '__PERALATAN_TABLE__';
         if (uraianItems.length > 0) vars.tabelUraianSingkat = '__URAIAN_TABLE__';
 
+        // ===== KOP SEKOLAH: Pre-download image for image module =====
+        let kopImageBuffer: Buffer | null = null;
+        if (item.kopSekolah) {
+            try {
+                if (item.kopSekolah.startsWith('gdrive://')) {
+                    const { streamFromGDrive: streamKop, isGDriveEnabled: isGDE } = await import('../utils/googleDriveClient.js');
+                    if (isGDE()) {
+                        const fileId = item.kopSekolah.replace('gdrive://', '');
+                        const gResult = await streamKop(fileId);
+                        if (gResult) {
+                            const chunks: Buffer[] = [];
+                            await new Promise<void>((resolve, reject) => {
+                                gResult.stream.on('data', (c: Buffer) => chunks.push(c));
+                                gResult.stream.on('end', resolve);
+                                gResult.stream.on('error', reject);
+                            });
+                            kopImageBuffer = Buffer.concat(chunks);
+                        }
+                    }
+                } else if (fs.existsSync(item.kopSekolah)) {
+                    kopImageBuffer = fs.readFileSync(item.kopSekolah);
+                }
+                if (kopImageBuffer) console.log(`[KOP] Pre-downloaded image: ${kopImageBuffer.length} bytes`);
+            } catch (e: any) { console.error('[KOP] Pre-download error:', e.message); }
+        }
+
+        // Setup image module for {%kopSekolah} tags
+        const imageModuleOptions = {
+            centered: false,
+            getImage(tagValue: any) {
+                if (tagValue && Buffer.isBuffer(tagValue)) return tagValue;
+                return Buffer.alloc(0);
+            },
+            getSize(img: Buffer) {
+                if (!img || img.length < 100) return [0, 0];
+                try {
+                    // Use image-size synchronously
+                    const sizeOf = require('image-size');
+                    const dims = sizeOf.imageSize ? sizeOf.imageSize(img) : sizeOf(img);
+                    const w = dims.width || 800;
+                    const h = dims.height || 200;
+                    // Target: 16.5cm = 623.6pt (1cm = 37.8pt)
+                    // Maintain aspect ratio
+                    const targetWidthPx = 623; // ~16.5cm at 96dpi
+                    const scale = targetWidthPx / w;
+                    const finalW = Math.round(w * scale);
+                    const finalH = Math.round(h * scale);
+                    console.log(`[KOP] Image module size: ${w}x${h} → ${finalW}x${finalH} (${(finalW/37.8).toFixed(1)}cm)`);
+                    return [finalW, finalH];
+                } catch { return [623, 156]; }
+            },
+        };
+        let imageModule: any = null;
+        try {
+            const ImageModule = (await import('docxtemplater-image-module-free')).default;
+            imageModule = new ImageModule(imageModuleOptions);
+            // Set kopSekolah var as buffer for image module
+            if (kopImageBuffer && kopImageBuffer.length > 100) {
+                vars.kopSekolah = kopImageBuffer;
+                console.log('[KOP] Passing image buffer to docxtemplater image module');
+            } else {
+                vars.kopSekolah = '';
+            }
+        } catch (imgModErr: any) {
+            console.error('[KOP] Image module not available:', imgModErr.message);
+            // Fallback: use text marker for old approach
+            vars.kopSekolah = kopImageBuffer ? '__KOP_IMAGE__' : '';
+        }
+
+        const docxModules: any[] = [];
+        if (imageModule) docxModules.push(imageModule);
+
         const docxOptions: any = {
             paragraphLoop: true,
             linebreaks: true,
             delimiters: { start: '{{', end: '}}' },
+            modules: docxModules,
             nullGetter(part: any) {
                 if (!part.module) {
                     console.log('[DOCX] Missing var:', part.value);
@@ -417,213 +490,14 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
             console.error('[Template] Table injection error:', tblErr.message);
         }
 
-        // ===== KOP SEKOLAH IMAGE INJECTION =====
+        // ===== KOP SEKOLAH: Clean any leftover markers =====
         try {
             let docXml = generatedZip.file('word/document.xml')?.asText() || '';
             const KOP_MARKER = '__KOP_IMAGE__';
-
-            if (docXml.includes(KOP_MARKER) && item.kopSekolah) {
-                console.log(`[KOP] Found marker, kop path: ${item.kopSekolah}`);
-                let kopBuffer: Buffer | null = null;
-
-                // 1. Download kop image
-                if (item.kopSekolah.startsWith('gdrive://')) {
-                    try {
-                        const { streamFromGDrive: streamKop, isGDriveEnabled: isGDE } = await import('../utils/googleDriveClient.js');
-                        if (isGDE()) {
-                            const fileId = item.kopSekolah.replace('gdrive://', '');
-                            const gResult = await streamKop(fileId);
-                            if (gResult) {
-                                const chunks: Buffer[] = [];
-                                await new Promise<void>((resolve, reject) => {
-                                    gResult.stream.on('data', (c: Buffer) => chunks.push(c));
-                                    gResult.stream.on('end', resolve);
-                                    gResult.stream.on('error', reject);
-                                });
-                                kopBuffer = Buffer.concat(chunks);
-                                console.log(`[KOP] Downloaded from GDrive, size: ${kopBuffer.length}`);
-                            }
-                        }
-                    } catch (gErr: any) { console.error('[KOP] GDrive error:', gErr.message); }
-                } else if (fs.existsSync(item.kopSekolah)) {
-                    kopBuffer = fs.readFileSync(item.kopSekolah);
-                    console.log(`[KOP] Read local: ${item.kopSekolah}`);
-                }
-
-                // 2. Embed image into DOCX
-                if (kopBuffer && kopBuffer.length > 100) {
-                    // Validate: is this actually an image? (check magic bytes)
-                    const isPng = kopBuffer[0] === 0x89 && kopBuffer[1] === 0x50 && kopBuffer[2] === 0x4E && kopBuffer[3] === 0x47;
-                    const isJpeg = kopBuffer[0] === 0xFF && kopBuffer[1] === 0xD8 && kopBuffer[2] === 0xFF;
-                    const isWebp = kopBuffer[8] === 0x57 && kopBuffer[9] === 0x45 && kopBuffer[10] === 0x42 && kopBuffer[11] === 0x50;
-                    const isImage = isPng || isJpeg || isWebp;
-
-                    if (!isImage) {
-                        console.log('[KOP] File is NOT an image (magic bytes mismatch) - skipping embed. Upload ulang kop sebagai PNG/JPG.');
-                        docXml = docXml.replace(new RegExp(KOP_MARKER, 'g'), '');
-                        generatedZip.file('word/document.xml', docXml);
-                    } else {
-                    try {
-                        const { imageSize } = await import('image-size');
-                        const dims = imageSize(kopBuffer);
-                        const imgW = dims.width || 800;
-                        const imgH = dims.height || 200;
-
-                        // Use full page width (21cm A4 / 21.5cm F4) = ~7,560,000 EMU
-                        // wp:inline will auto-constrain to text area (within margins)
-                        // This ensures the kop fills the ENTIRE printable width
-                        const emuW = 7560000; // 21cm in EMU (1cm = 360000 EMU)
-                        const ratio = imgH / imgW;
-                        const emuH = Math.round(emuW * ratio);
-                        console.log(`[KOP] Image ${imgW}x${imgH}px, render ${emuW}x${emuH} EMU (${(emuW/360000).toFixed(1)}cm x ${(emuH/360000).toFixed(1)}cm)`);
-
-                        // Determine image type from buffer
-                        const detectedType = dims.type || 'png';
-                        const imgExt = detectedType === 'jpg' ? 'jpeg' : detectedType;
-                        const imgFilename = `kop_sekolah.${imgExt}`;
-
-                        // FIX: LibreOffice ignores wp:extent EMU and uses native DPI
-                        // Set DPI so image renders at ~16.5cm (6.5 inches) width
-                        const targetWidthInches = 6.5; // ~16.5cm printable area
-                        const targetDpi = Math.round(imgW / targetWidthInches);
-                        console.log(`[KOP] Setting DPI to ${targetDpi} (${imgW}px / ${targetWidthInches}in = ${(imgW/targetDpi*2.54).toFixed(1)}cm)`);
-                        
-                        // Modify DPI in JPEG buffer
-                        if (isJpeg) {
-                            // JFIF: find APP0 marker (0xFF 0xE0), set density
-                            for (let i = 2; i < kopBuffer.length - 14; i++) {
-                                if (kopBuffer[i] === 0xFF && kopBuffer[i + 1] === 0xE0) {
-                                    const jfifStart = i + 4; // skip marker + length
-                                    if (kopBuffer[jfifStart] === 0x4A && kopBuffer[jfifStart + 1] === 0x46) { // "JF"
-                                        kopBuffer[jfifStart + 7] = 1; // density units = DPI
-                                        kopBuffer.writeUInt16BE(targetDpi, jfifStart + 8); // X density
-                                        kopBuffer.writeUInt16BE(targetDpi, jfifStart + 10); // Y density
-                                        console.log(`[KOP] Set JPEG DPI to ${targetDpi}`);
-                                    }
-                                    break;
-                                }
-                            }
-                        }
-                        // Modify DPI in PNG buffer (pHYs chunk)
-                        if (isPng) {
-                            const ppm = Math.round(targetDpi / 0.0254); // dots per meter
-                            // Find or create pHYs chunk after IHDR
-                            const physMarker = Buffer.from('pHYs');
-                            let physIdx = kopBuffer.indexOf(physMarker);
-                            if (physIdx > 0) {
-                                // Overwrite existing pHYs
-                                kopBuffer.writeUInt32BE(ppm, physIdx + 4); // X pixels per unit
-                                kopBuffer.writeUInt32BE(ppm, physIdx + 8); // Y pixels per unit
-                                kopBuffer[physIdx + 12] = 1; // unit = meter
-                                console.log(`[KOP] Set PNG pHYs to ${ppm} ppm (${targetDpi} DPI)`);
-                            }
-                        }
-
-                        // Add image to ZIP (with modified DPI)
-                        generatedZip.file(`word/media/${imgFilename}`, kopBuffer);
-
-                        // Add content type if not exists
-                        const ctXml = generatedZip.file('[Content_Types].xml')?.asText() || '';
-                        if (!ctXml.includes(`Extension="${imgExt}"`)) {
-                            const mimeMap: Record<string, string> = { png: 'image/png', jpeg: 'image/jpeg', jpg: 'image/jpeg', webp: 'image/webp' };
-                            const newCt = ctXml.replace('</Types>', `<Default Extension="${imgExt}" ContentType="${mimeMap[imgExt] || 'image/png'}"/></Types>`);
-                            generatedZip.file('[Content_Types].xml', newCt);
-                        }
-
-                        // Add relationship
-                        const relsXml = generatedZip.file('word/_rels/document.xml.rels')?.asText() || '';
-                        const maxRId = Math.max(...[...relsXml.matchAll(/rId(\d+)/g)].map(m => parseInt(m[1])), 50);
-                        const newRId = `rId${maxRId + 1}`;
-                        const newRel = `<Relationship Id="${newRId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${imgFilename}"/>`;
-                        generatedZip.file('word/_rels/document.xml.rels', relsXml.replace('</Relationships>', newRel + '</Relationships>'));
-
-                        // Build image XML using VML (w:pict) - LibreOffice renders this correctly
-                        // VML uses CSS points for sizing which LibreOffice respects (unlike DrawingML EMU)
-                        const ptW = (imgW / (targetDpi || 96) * 72).toFixed(1); // pixels → points
-                        const ptH = (imgH / (targetDpi || 96) * 72).toFixed(1);
-                        console.log(`[KOP] VML size: ${ptW}pt x ${ptH}pt (${(parseFloat(ptW)/72*2.54).toFixed(1)}cm x ${(parseFloat(ptH)/72*2.54).toFixed(1)}cm)`);
-                        
-                        const imgXml = [
-                            `<w:p>`,
-                            `<w:pPr><w:spacing w:after="0" w:before="0"/></w:pPr>`,
-                            `<w:r>`,
-                            `<w:pict>`,
-                            `<v:shape xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office"`,
-                            ` id="KopSekolah" o:spid="_x0000_i1025"`,
-                            ` type="#_x0000_t75"`,
-                            ` style="width:${ptW}pt;height:${ptH}pt">`,
-                            `<v:imagedata r:id="${newRId}" o:title="KopSekolah"`,
-                            ` xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>`,
-                            `</v:shape>`,
-                            `</w:pict>`,
-                            `</w:r>`,
-                            `</w:p>`,
-                        ].join('');
-
-                        // Find and replace marker paragraph
-                        // IMPORTANT: if marker is inside a table cell, extract image OUTSIDE the table
-                        const markerIdx = docXml.indexOf(KOP_MARKER);
-                        if (markerIdx > -1) {
-                            // Check if marker is inside a table cell (<w:tc>)
-                            const beforeMarker = docXml.substring(0, markerIdx);
-                            const lastTcOpen = beforeMarker.lastIndexOf('<w:tc');
-                            const lastTcClose = beforeMarker.lastIndexOf('</w:tc>');
-                            const isInsideTable = lastTcOpen > lastTcClose;
-
-                            if (isInsideTable) {
-                                // Find the outermost <w:tbl> that contains this marker
-                                let tblStart = -1;
-                                for (let i = markerIdx; i >= 0; i--) {
-                                    if (docXml.substring(i, i + 6) === '<w:tbl' && (docXml[i + 6] === '>' || docXml[i + 6] === ' ')) {
-                                        tblStart = i; break;
-                                    }
-                                }
-                                if (tblStart > -1) {
-                                    // Insert image paragraph BEFORE the table
-                                    docXml = docXml.substring(0, tblStart) + imgXml + docXml.substring(tblStart);
-                                    // Clean the marker text from inside the table
-                                    docXml = docXml.replace(new RegExp(KOP_MARKER, 'g'), '');
-                                    generatedZip.file('word/document.xml', docXml);
-                                    console.log(`[KOP] Marker was inside table — moved image BEFORE table at pos ${tblStart}`);
-                                }
-                            } else {
-                                // Not inside table - replace paragraph normally
-                                let pStart = -1;
-                                let searchPos = markerIdx;
-                                while (searchPos > 0) {
-                                    const found = docXml.lastIndexOf('<w:p', searchPos);
-                                    if (found === -1) break;
-                                    const nextChar = docXml[found + 4];
-                                    if (nextChar === '>' || nextChar === ' ') { pStart = found; break; }
-                                    searchPos = found - 1;
-                                }
-                                const pEnd = docXml.indexOf('</w:p>', markerIdx);
-                                if (pStart > -1 && pEnd > -1) {
-                                    const fullPara = docXml.substring(pStart, pEnd + 6);
-                                    docXml = docXml.replace(fullPara, imgXml);
-                                } else {
-                                    docXml = docXml.replace(new RegExp(KOP_MARKER, 'g'), '');
-                                }
-                                generatedZip.file('word/document.xml', docXml);
-                                console.log(`[KOP] Replaced paragraph directly`);
-                            }
-                            console.log(`[KOP] Embedded ${imgW}x${imgH}px, ${emuW}x${emuH} EMU, rId=${newRId}, inTable=${isInsideTable}`);
-                        }
-                    } catch (imgErr: any) {
-                        console.error('[KOP] Image embed error:', imgErr.message);
-                        docXml = docXml.replace(new RegExp(KOP_MARKER, 'g'), '');
-                        generatedZip.file('word/document.xml', docXml);
-                    }
-                    } // end isImage else
-                } else {
-                    // No image available, clean marker
-                    docXml = docXml.replace(new RegExp(KOP_MARKER, 'g'), '');
-                    generatedZip.file('word/document.xml', docXml);
-                    console.log('[KOP] No image file, cleaned marker');
-                }
-            } else if (docXml.includes(KOP_MARKER)) {
+            if (docXml.includes(KOP_MARKER)) {
                 docXml = docXml.replace(new RegExp(KOP_MARKER, 'g'), '');
                 generatedZip.file('word/document.xml', docXml);
+                console.log('[KOP] Cleaned leftover markers');
             }
         } catch (kopErr: any) {
             console.error('[KOP] Error (non-fatal):', kopErr.message);

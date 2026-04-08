@@ -17,6 +17,7 @@
         "better-auth": "^1.2.0",
         "cors": "^2.8.5",
         "docxtemplater": "^3.68.3",
+        "docxtemplater-image-module-free": "^1.1.1",
         "dotenv": "^16.4.7",
         "drizzle-orm": "^0.41.0",
         "express": "^5.0.1",
