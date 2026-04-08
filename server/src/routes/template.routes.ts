@@ -243,65 +243,18 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
         const content = fs.readFileSync(tpl.filePath, 'binary');
         const zip = new PizZip(content);
 
-        // ===== AUTO-CONVERT KOP TAG TO IMAGE MODULE FORMAT =====
-        // Convert any kopSekolah tag variant → {{%kopSekolah}} for image module
-        // Handles: {{kopSekolah}}, {%kopSekolah}, {{%kopSekolah}}, and Word-split variants
+        // ===== KOP: Normalize tag in template XML =====
+        // Ensure kopSekolah tag is clean (not split across runs by Word)
         try {
             let docXmlRaw = zip.file('word/document.xml')?.asText() || '';
-            let modified = false;
-            
             if (docXmlRaw.includes('kopSekolah')) {
-                // Strategy: find the paragraph containing kopSekolah, 
-                // then replace the ENTIRE content of that paragraph's text with {{%kopSekolah}}
-                // This handles Word splitting the tag across multiple <w:r> nodes
-                
-                // First try direct replacement of intact tags
-                const before = docXmlRaw;
-                docXmlRaw = docXmlRaw
-                    .replace(/\{\{kopSekolah\}\}/g, '{{%kopSekolah}}')
-                    .replace(/\{%kopSekolah\}/g, '{{%kopSekolah}}')
-                    .replace(/\{\{%kopSekolah\}\}/g, '{{%kopSekolah}}'); // normalize double conversion
-                
-                if (docXmlRaw !== before) {
-                    modified = true;
-                    console.log('[KOP] Direct tag replacement successful');
-                }
-                
-                // If kopSekolah still exists WITHOUT % prefix, it's split across runs
-                // Find the <w:p> containing kopSekolah and rebuild it
-                if (docXmlRaw.includes('kopSekolah') && !docXmlRaw.includes('{{%kopSekolah}}')) {
-                    console.log('[KOP] Tag split across runs, rebuilding paragraph...');
-                    // Find paragraph containing kopSekolah
-                    const pRegex = /<w:p\b[^>]*>[\s\S]*?kopSekolah[\s\S]*?<\/w:p>/g;
-                    let match;
-                    while ((match = pRegex.exec(docXmlRaw)) !== null) {
-                        const origPara = match[0];
-                        // Extract all text content from this paragraph
-                        const textContent = origPara.replace(/<[^>]+>/g, '').trim();
-                        console.log(`[KOP] Found split paragraph text: "${textContent}"`);
-                        
-                        // Rebuild: keep paragraph properties but replace runs with single clean run
-                        const pPrMatch = origPara.match(/<w:pPr>[\s\S]*?<\/w:pPr>/);
-                        const pPr = pPrMatch ? pPrMatch[0] : '';
-                        // Get run properties from first run if available
-                        const rPrMatch = origPara.match(/<w:rPr>[\s\S]*?<\/w:rPr>/);
-                        const rPr = rPrMatch ? rPrMatch[0] : '';
-                        
-                        const newPara = `<w:p>${pPr}<w:r>${rPr}<w:t>{{%kopSekolah}}</w:t></w:r></w:p>`;
-                        docXmlRaw = docXmlRaw.replace(origPara, newPara);
-                        modified = true;
-                        console.log('[KOP] Rebuilt split paragraph into clean {{%kopSekolah}} tag');
-                    }
-                }
-            }
-            
-            if (modified) {
+                // Remove any % prefix that was accidentally added
+                docXmlRaw = docXmlRaw.replace(/\{\{%kopSekolah\}\}/g, '{{kopSekolah}}');
+                docXmlRaw = docXmlRaw.replace(/\{%kopSekolah\}/g, '{{kopSekolah}}');
                 zip.file('word/document.xml', docXmlRaw);
-                console.log('[KOP] Template XML updated with proper image tag');
+                console.log('[KOP] Normalized tag to {{kopSekolah}}');
             }
-        } catch (e: any) {
-            console.error('[KOP] Tag conversion error (non-fatal):', e.message);
-        }
+        } catch (e: any) { console.error('[KOP] Tag normalize error:', e.message); }
 
         // Add table markers as regular variables (post-processed after render)
         if (rincianItems.length > 0) vars.tabelRincian = '__RINCIAN_TABLE__';
@@ -309,7 +262,7 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
         if (peralatanItems.length > 0) vars.tabelPeralatan = '__PERALATAN_TABLE__';
         if (uraianItems.length > 0) vars.tabelUraianSingkat = '__URAIAN_TABLE__';
 
-        // ===== KOP SEKOLAH: Pre-download image for image module =====
+        // ===== KOP SEKOLAH: Pre-download image =====
         let kopImageBuffer: Buffer | null = null;
         if (item.kopSekolah) {
             try {
@@ -335,57 +288,13 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
             } catch (e: any) { console.error('[KOP] Pre-download error:', e.message); }
         }
 
-        // Setup image module for {%kopSekolah} tags
-        const imageModuleOptions = {
-            centered: false,
-            getImage(tagValue: any) {
-                if (tagValue && Buffer.isBuffer(tagValue)) return tagValue;
-                return Buffer.alloc(0);
-            },
-            getSize(img: Buffer) {
-                if (!img || img.length < 100) return [0, 0];
-                try {
-                    // Use image-size synchronously
-                    const sizeOf = require('image-size');
-                    const dims = sizeOf.imageSize ? sizeOf.imageSize(img) : sizeOf(img);
-                    const w = dims.width || 800;
-                    const h = dims.height || 200;
-                    // Target: 16.5cm = 623.6pt (1cm = 37.8pt)
-                    // Maintain aspect ratio
-                    const targetWidthPx = 623; // ~16.5cm at 96dpi
-                    const scale = targetWidthPx / w;
-                    const finalW = Math.round(w * scale);
-                    const finalH = Math.round(h * scale);
-                    console.log(`[KOP] Image module size: ${w}x${h} → ${finalW}x${finalH} (${(finalW/37.8).toFixed(1)}cm)`);
-                    return [finalW, finalH];
-                } catch { return [623, 156]; }
-            },
-        };
-        let imageModule: any = null;
-        try {
-            const ImageModule = (await import('docxtemplater-image-module-free')).default;
-            imageModule = new ImageModule(imageModuleOptions);
-            // Set kopSekolah var as buffer for image module
-            if (kopImageBuffer && kopImageBuffer.length > 100) {
-                vars.kopSekolah = kopImageBuffer;
-                console.log('[KOP] Passing image buffer to docxtemplater image module');
-            } else {
-                vars.kopSekolah = '';
-            }
-        } catch (imgModErr: any) {
-            console.error('[KOP] Image module not available:', imgModErr.message);
-            // Fallback: use text marker for old approach
-            vars.kopSekolah = kopImageBuffer ? '__KOP_IMAGE__' : '';
-        }
-
-        const docxModules: any[] = [];
-        if (imageModule) docxModules.push(imageModule);
+        // Set kopSekolah as text marker for post-render injection
+        vars.kopSekolah = (kopImageBuffer && kopImageBuffer.length > 100) ? '__KOP_IMAGE__' : '';
 
         const docxOptions: any = {
             paragraphLoop: true,
             linebreaks: true,
             delimiters: { start: '{{', end: '}}' },
-            modules: docxModules,
             nullGetter(part: any) {
                 if (!part.module) {
                     console.log('[DOCX] Missing var:', part.value);
@@ -550,14 +459,121 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
             console.error('[Template] Table injection error:', tblErr.message);
         }
 
-        // ===== KOP SEKOLAH: Clean any leftover markers =====
+        // ===== KOP SEKOLAH IMAGE INJECTION =====
         try {
             let docXml = generatedZip.file('word/document.xml')?.asText() || '';
             const KOP_MARKER = '__KOP_IMAGE__';
-            if (docXml.includes(KOP_MARKER)) {
+
+            if (docXml.includes(KOP_MARKER) && kopImageBuffer && kopImageBuffer.length > 100) {
+                console.log(`[KOP] Found marker, injecting image (${kopImageBuffer.length} bytes)`);
+                
+                // Validate image magic bytes
+                const isPng = kopImageBuffer[0] === 0x89 && kopImageBuffer[1] === 0x50;
+                const isJpeg = kopImageBuffer[0] === 0xFF && kopImageBuffer[1] === 0xD8;
+                if (!isPng && !isJpeg) {
+                    console.log('[KOP] Not a valid PNG/JPEG, skipping');
+                    docXml = docXml.replace(new RegExp(KOP_MARKER, 'g'), '');
+                    generatedZip.file('word/document.xml', docXml);
+                } else {
+                    try {
+                        const { imageSize } = await import('image-size');
+                        const dims = imageSize(kopImageBuffer);
+                        const imgW = dims.width || 800;
+                        const imgH = dims.height || 200;
+
+                        // Target: full printable width = 5940000 EMU (16.5cm)
+                        const emuW = 5940000;
+                        const ratio = imgH / imgW;
+                        const emuH = Math.round(emuW * ratio);
+
+                        const imgExt = isJpeg ? 'jpeg' : 'png';
+                        const imgFilename = `kop_sekolah.${imgExt}`;
+                        
+                        // Add image to ZIP
+                        generatedZip.file(`word/media/${imgFilename}`, kopImageBuffer);
+                        
+                        // Content type
+                        const ctXml = generatedZip.file('[Content_Types].xml')?.asText() || '';
+                        if (!ctXml.includes(`Extension="${imgExt}"`)) {
+                            const mime = isJpeg ? 'image/jpeg' : 'image/png';
+                            generatedZip.file('[Content_Types].xml', ctXml.replace('</Types>', `<Default Extension="${imgExt}" ContentType="${mime}"/></Types>`));
+                        }
+                        
+                        // Relationship
+                        const relsXml = generatedZip.file('word/_rels/document.xml.rels')?.asText() || '';
+                        const maxRId = Math.max(...[...relsXml.matchAll(/rId(\d+)/g)].map(m => parseInt(m[1])), 50);
+                        const newRId = `rId${maxRId + 1}`;
+                        generatedZip.file('word/_rels/document.xml.rels', 
+                            relsXml.replace('</Relationships>', `<Relationship Id="${newRId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${imgFilename}"/></Relationships>`));
+
+                        console.log(`[KOP] Image ${imgW}x${imgH}px → ${emuW}x${emuH} EMU (${(emuW/360000).toFixed(1)}x${(emuH/360000).toFixed(1)}cm), rId=${newRId}`);
+
+                        // Build DrawingML XML
+                        const imgXml = [
+                            `<w:p><w:pPr><w:spacing w:after="0" w:before="0"/></w:pPr>`,
+                            `<w:r><w:drawing>`,
+                            `<wp:inline distT="0" distB="0" distL="0" distR="0">`,
+                            `<wp:extent cx="${emuW}" cy="${emuH}"/>`,
+                            `<wp:effectExtent l="0" t="0" r="0" b="0"/>`,
+                            `<wp:docPr id="${maxRId + 1}" name="KopSekolah"/>`,
+                            `<wp:cNvGraphicFramePr><a:graphicFrameLocks xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" noChangeAspect="1"/></wp:cNvGraphicFramePr>`,
+                            `<a:graphic xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">`,
+                            `<a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">`,
+                            `<pic:pic xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">`,
+                            `<pic:nvPicPr><pic:cNvPr id="0" name="${imgFilename}"/><pic:cNvPicPr/></pic:nvPicPr>`,
+                            `<pic:blipFill>`,
+                            `<a:blip r:embed="${newRId}" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"/>`,
+                            `<a:stretch><a:fillRect/></a:stretch>`,
+                            `</pic:blipFill>`,
+                            `<pic:spPr>`,
+                            `<a:xfrm><a:off x="0" y="0"/><a:ext cx="${emuW}" cy="${emuH}"/></a:xfrm>`,
+                            `<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>`,
+                            `</pic:spPr>`,
+                            `</pic:pic></a:graphicData></a:graphic>`,
+                            `</wp:inline></w:drawing></w:r></w:p>`,
+                        ].join('');
+
+                        // Replace marker
+                        const markerIdx = docXml.indexOf(KOP_MARKER);
+                        if (markerIdx > -1) {
+                            // Check if inside table
+                            const before = docXml.substring(0, markerIdx);
+                            const inTable = before.lastIndexOf('<w:tc') > before.lastIndexOf('</w:tc>');
+                            
+                            if (inTable) {
+                                // Find table start and inject before it
+                                let tblStart = -1;
+                                for (let i = markerIdx; i >= 0; i--) {
+                                    if (docXml.substring(i, i + 6) === '<w:tbl') { tblStart = i; break; }
+                                }
+                                if (tblStart > -1) {
+                                    docXml = docXml.substring(0, tblStart) + imgXml + docXml.substring(tblStart);
+                                    docXml = docXml.replace(new RegExp(KOP_MARKER, 'g'), '');
+                                    console.log('[KOP] Injected before table');
+                                }
+                            } else {
+                                // Replace the paragraph containing the marker
+                                let pStart = docXml.lastIndexOf('<w:p', markerIdx);
+                                const pEnd = docXml.indexOf('</w:p>', markerIdx);
+                                if (pStart > -1 && pEnd > -1) {
+                                    docXml = docXml.substring(0, pStart) + imgXml + docXml.substring(pEnd + 6);
+                                } else {
+                                    docXml = docXml.replace(KOP_MARKER, '');
+                                }
+                                console.log('[KOP] Replaced marker paragraph');
+                            }
+                        }
+                        generatedZip.file('word/document.xml', docXml);
+                    } catch (imgErr: any) {
+                        console.error('[KOP] Image inject error:', imgErr.message);
+                        docXml = docXml.replace(new RegExp(KOP_MARKER, 'g'), '');
+                        generatedZip.file('word/document.xml', docXml);
+                    }
+                }
+            } else if (docXml.includes(KOP_MARKER)) {
                 docXml = docXml.replace(new RegExp(KOP_MARKER, 'g'), '');
                 generatedZip.file('word/document.xml', docXml);
-                console.log('[KOP] Cleaned leftover markers');
+                console.log('[KOP] No image, cleaned markers');
             }
         } catch (kopErr: any) {
             console.error('[KOP] Error (non-fatal):', kopErr.message);
