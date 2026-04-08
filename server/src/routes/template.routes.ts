@@ -513,15 +513,15 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
                             console.log(`[KOP] Dimension parse failed, using fallback: ${imgW}x${imgH}px`);
                         }
 
-                        // Calculate target width - use FULL page width (Word auto-constrains inline images to content area)
-                        let TARGET_WIDTH_INCHES = 7.5; // default: slightly wider than A4 content
+                        // Calculate target width using the same margins we apply (0.75" = 1080tw each side)
+                        const SPL_MARGIN_LR = 1080; // 0.75 inches in twips
+                        let TARGET_WIDTH_INCHES = 6.77; // default A4 with 0.75" margins
                         try {
                             const pgSzMatch = docXml.match(/w:pgSz\s[^>]*w:w="(\d+)"/);
                             if (pgSzMatch) {
                                 const pgW = parseInt(pgSzMatch[1]); // twips
-                                // Use page width minus only small gutter (Word constrains inline images)
-                                TARGET_WIDTH_INCHES = (pgW - 500) / 1440;
-                                console.log(`[KOP] Page: ${pgW}tw, target=${TARGET_WIDTH_INCHES.toFixed(2)}in (will be auto-constrained by Word)`);
+                                TARGET_WIDTH_INCHES = (pgW - SPL_MARGIN_LR * 2) / 1440;
+                                console.log(`[KOP] Page: ${pgW}tw, margins=${SPL_MARGIN_LR}tw, content=${TARGET_WIDTH_INCHES.toFixed(2)}in`);
                             }
                         } catch {}
                         
