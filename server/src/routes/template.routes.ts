@@ -513,15 +513,24 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
                             console.log(`[KOP] Dimension parse failed, using fallback: ${imgW}x${imgH}px`);
                         }
 
-                        // Calculate target width using the same margins we apply (0.75" = 1080tw each side)
-                        const SPL_MARGIN_LR = 1080; // 0.75 inches in twips
-                        let TARGET_WIDTH_INCHES = 6.77; // default A4 with 0.75" margins
+                        // Read original template margins and calculate kop width
+                        const KOP_MARGIN_TW = 1080; // desired kop margin: 0.75in in twips
+                        let TARGET_WIDTH_INCHES = 6.77; // default
+                        let origMarginL = 1134, origMarginR = 1134; // template defaults
                         try {
                             const pgSzMatch = docXml.match(/w:pgSz\s[^>]*w:w="(\d+)"/);
+                            const pgMarMatch = docXml.match(/<w:pgMar[^/]*\/>/); 
+                            if (pgMarMatch) {
+                                const ml = pgMarMatch[0].match(/w:left="(\d+)"/);
+                                const mr = pgMarMatch[0].match(/w:right="(\d+)"/);
+                                if (ml) origMarginL = parseInt(ml[1]);
+                                if (mr) origMarginR = parseInt(mr[1]);
+                            }
                             if (pgSzMatch) {
-                                const pgW = parseInt(pgSzMatch[1]); // twips
-                                TARGET_WIDTH_INCHES = (pgW - SPL_MARGIN_LR * 2) / 1440;
-                                console.log(`[KOP] Page: ${pgW}tw, margins=${SPL_MARGIN_LR}tw, content=${TARGET_WIDTH_INCHES.toFixed(2)}in`);
+                                const pgW = parseInt(pgSzMatch[1]);
+                                // Kop uses 0.75in margin; extend via negative indent
+                                TARGET_WIDTH_INCHES = (pgW - KOP_MARGIN_TW * 2) / 1440;
+                                console.log(`[KOP] Page: ${pgW}tw, origMargins L=${origMarginL} R=${origMarginR}, kopWidth=${TARGET_WIDTH_INCHES.toFixed(2)}in`);
                             }
                         } catch {}
                         
@@ -636,7 +645,7 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
 
                         // Build DrawingML XML
                         const imgXml = [
-                            `<w:p><w:pPr><w:spacing w:after="0" w:before="0"/><w:ind w:left="0" w:right="0"/><w:jc w:val="center"/></w:pPr>`,
+                            `<w:p><w:pPr><w:spacing w:after="0" w:before="0"/><w:ind w:left="-${origMarginL - KOP_MARGIN_TW}" w:right="-${origMarginR - KOP_MARGIN_TW}"/><w:jc w:val="center"/></w:pPr>`,
                             `<w:r><w:drawing>`,
                             `<wp:inline distT="0" distB="0" distL="0" distR="0">`,
                             `<wp:extent cx="${emuW}" cy="${emuH}"/>`,
@@ -697,15 +706,19 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
                                 console.log('[KOP] Replaced marker paragraph (pStart=' + pStart + ')');
                             }
                         }
-                        // Adjust page margins: top=0.15" left=0.75" right=0.75" (only in w:pgMar)
+                        // Only reduce top margin on FIRST pgMar (kop page), keep left/right as template
+                        let pgMarReplaced = false;
                         docXml = docXml.replace(
-                            /<w:pgMar[^/]*\/>/g,
-                            (match: string) => match
-                                .replace(/w:top="\d+"/g, 'w:top="216"')
-                                .replace(/w:left="\d+"/g, 'w:left="1080"')
-                                .replace(/w:right="\d+"/g, 'w:right="1080"')
+                            /<w:pgMar[^/]*\/>/,
+                            (match: string) => {
+                                if (!pgMarReplaced) {
+                                    pgMarReplaced = true;
+                                    return match.replace(/w:top="\d+"/, 'w:top="216"');
+                                }
+                                return match;
+                            }
                         );
-                        console.log('[KOP] Set margins: top=0.15in left=0.75in right=0.75in');
+                        console.log('[KOP] Set top margin to 0.15in on first section only');
 
                         // Ensure root document element has required namespaces for DrawingML
                         const nsMap: Record<string, string> = {
