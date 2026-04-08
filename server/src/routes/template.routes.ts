@@ -243,6 +243,66 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
         const content = fs.readFileSync(tpl.filePath, 'binary');
         const zip = new PizZip(content);
 
+        // ===== AUTO-CONVERT KOP TAG TO IMAGE MODULE FORMAT =====
+        // Convert any kopSekolah tag variant → {{%kopSekolah}} for image module
+        // Handles: {{kopSekolah}}, {%kopSekolah}, {{%kopSekolah}}, and Word-split variants
+        try {
+            let docXmlRaw = zip.file('word/document.xml')?.asText() || '';
+            let modified = false;
+            
+            if (docXmlRaw.includes('kopSekolah')) {
+                // Strategy: find the paragraph containing kopSekolah, 
+                // then replace the ENTIRE content of that paragraph's text with {{%kopSekolah}}
+                // This handles Word splitting the tag across multiple <w:r> nodes
+                
+                // First try direct replacement of intact tags
+                const before = docXmlRaw;
+                docXmlRaw = docXmlRaw
+                    .replace(/\{\{kopSekolah\}\}/g, '{{%kopSekolah}}')
+                    .replace(/\{%kopSekolah\}/g, '{{%kopSekolah}}')
+                    .replace(/\{\{%kopSekolah\}\}/g, '{{%kopSekolah}}'); // normalize double conversion
+                
+                if (docXmlRaw !== before) {
+                    modified = true;
+                    console.log('[KOP] Direct tag replacement successful');
+                }
+                
+                // If kopSekolah still exists WITHOUT % prefix, it's split across runs
+                // Find the <w:p> containing kopSekolah and rebuild it
+                if (docXmlRaw.includes('kopSekolah') && !docXmlRaw.includes('{{%kopSekolah}}')) {
+                    console.log('[KOP] Tag split across runs, rebuilding paragraph...');
+                    // Find paragraph containing kopSekolah
+                    const pRegex = /<w:p\b[^>]*>[\s\S]*?kopSekolah[\s\S]*?<\/w:p>/g;
+                    let match;
+                    while ((match = pRegex.exec(docXmlRaw)) !== null) {
+                        const origPara = match[0];
+                        // Extract all text content from this paragraph
+                        const textContent = origPara.replace(/<[^>]+>/g, '').trim();
+                        console.log(`[KOP] Found split paragraph text: "${textContent}"`);
+                        
+                        // Rebuild: keep paragraph properties but replace runs with single clean run
+                        const pPrMatch = origPara.match(/<w:pPr>[\s\S]*?<\/w:pPr>/);
+                        const pPr = pPrMatch ? pPrMatch[0] : '';
+                        // Get run properties from first run if available
+                        const rPrMatch = origPara.match(/<w:rPr>[\s\S]*?<\/w:rPr>/);
+                        const rPr = rPrMatch ? rPrMatch[0] : '';
+                        
+                        const newPara = `<w:p>${pPr}<w:r>${rPr}<w:t>{{%kopSekolah}}</w:t></w:r></w:p>`;
+                        docXmlRaw = docXmlRaw.replace(origPara, newPara);
+                        modified = true;
+                        console.log('[KOP] Rebuilt split paragraph into clean {{%kopSekolah}} tag');
+                    }
+                }
+            }
+            
+            if (modified) {
+                zip.file('word/document.xml', docXmlRaw);
+                console.log('[KOP] Template XML updated with proper image tag');
+            }
+        } catch (e: any) {
+            console.error('[KOP] Tag conversion error (non-fatal):', e.message);
+        }
+
         // Add table markers as regular variables (post-processed after render)
         if (rincianItems.length > 0) vars.tabelRincian = '__RINCIAN_TABLE__';
         if (personilItems.length > 0) vars.tabelPersonil = '__PERSONIL_TABLE__';
