@@ -636,7 +636,7 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
 
                         // Build DrawingML XML
                         const imgXml = [
-                            `<w:p><w:pPr><w:spacing w:after="0" w:before="0"/><w:ind w:left="0" w:right="0"/></w:pPr>`,
+                            `<w:p><w:pPr><w:spacing w:after="0" w:before="0"/><w:ind w:left="0" w:right="0"/><w:jc w:val="center"/></w:pPr>`,
                             `<w:r><w:drawing>`,
                             `<wp:inline distT="0" distB="0" distL="0" distR="0">`,
                             `<wp:extent cx="${emuW}" cy="${emuH}"/>`,
@@ -697,6 +697,10 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
                                 console.log('[KOP] Replaced marker paragraph (pStart=' + pStart + ')');
                             }
                         }
+                        // Adjust top margin to 0.2 inches (288 twips) for kop
+                        docXml = docXml.replace(/w:top="\d+"/g, 'w:top="288"');
+                        console.log('[KOP] Set top margin to 0.2in (288tw)');
+
                         // Ensure root document element has required namespaces for DrawingML
                         const nsMap: Record<string, string> = {
                             'xmlns:wp': 'http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing',
