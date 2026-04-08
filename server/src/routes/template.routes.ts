@@ -644,14 +644,22 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
                                 }
                             } else {
                                 // Replace the paragraph containing the marker
-                                let pStart = docXml.lastIndexOf('<w:p', markerIdx);
+                                // MUST match <w:p> or <w:p ... NOT <w:pPr, <w:pBdr, etc
+                                let pStart = -1;
+                                for (let i = markerIdx; i >= 0; i--) {
+                                    if (docXml[i] === '<' && docXml.substring(i, i + 4) === '<w:p' &&
+                                        (docXml[i + 4] === '>' || docXml[i + 4] === ' ')) {
+                                        pStart = i;
+                                        break;
+                                    }
+                                }
                                 const pEnd = docXml.indexOf('</w:p>', markerIdx);
                                 if (pStart > -1 && pEnd > -1) {
                                     docXml = docXml.substring(0, pStart) + imgXml + docXml.substring(pEnd + 6);
                                 } else {
                                     docXml = docXml.replace(KOP_MARKER, '');
                                 }
-                                console.log('[KOP] Replaced marker paragraph');
+                                console.log('[KOP] Replaced marker paragraph (pStart=' + pStart + ')');
                             }
                         }
                         // Ensure root document element has required namespaces for DrawingML
