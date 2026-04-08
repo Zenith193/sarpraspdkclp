@@ -106,9 +106,10 @@ const RankingPrioritas = () => {
                 if (kecamatan && jenjang) {
                     // Exact match
                     const savedRanking = await rankingApi.getData(kecamatan, jenjang);
+                    console.log('[Ranking] Exact match loaded:', kecamatan, jenjang, 'items:', savedRanking?.items?.length);
                     if (savedRanking?.items?.length > 0) {
                         savedRanking.items.forEach(saved => {
-                            const found = list.find(s => s.id === saved.id);
+                            const found = list.find(s => String(s.id) === String(saved.id));
                             if (found) {
                                 found.rank = saved.rank;
                                 found.alasan = saved.alasan || '';
@@ -119,25 +120,37 @@ const RankingPrioritas = () => {
                     // Partial filter: try all possible kecamatan+jenjang combos
                     const kecList = kecamatan ? [kecamatan] : [...new Set(list.map(s => s.kecamatan).filter(Boolean))];
                     const jenList = jenjang ? [jenjang] : ['SD', 'SMP', 'SMA', 'SMK'];
+                    console.log('[Ranking] Partial filter: kecList=', kecList, 'jenList=', jenList);
                     const promises = [];
                     for (const k of kecList) {
                         for (const j of jenList) {
-                            promises.push(rankingApi.getData(k, j).catch(() => null));
+                            promises.push(
+                                rankingApi.getData(k, j)
+                                    .then(r => ({ kec: k, jen: j, data: r }))
+                                    .catch(() => ({ kec: k, jen: j, data: null }))
+                            );
                         }
                     }
                     const results = await Promise.all(promises);
-                    results.forEach(savedRanking => {
+                    results.forEach(({ kec: rk, jen: rj, data: savedRanking }) => {
+                        console.log('[Ranking] Combo', rk, rj, '→ items:', savedRanking?.items?.length || 0);
                         if (savedRanking?.items?.length > 0) {
                             savedRanking.items.forEach(saved => {
-                                const found = list.find(s => s.id === saved.id);
-                                if (found && !found.alasan) {
-                                    found.alasan = saved.alasan || '';
+                                const found = list.find(s => String(s.id) === String(saved.id));
+                                if (found) {
+                                    if (!found.alasan && saved.alasan) {
+                                        found.alasan = saved.alasan;
+                                    }
+                                    // Apply saved rank if from same jenjang
+                                    if (found.jenjang === rj && saved.rank) {
+                                        found.rank = saved.rank;
+                                    }
                                 }
                             });
                         }
                     });
                 }
-            } catch { /* no saved ranking */ }
+            } catch (e) { console.error('[Ranking] Load error:', e); }
 
             list.sort((a, b) => a.rank - b.rank);
             list.forEach((s, i) => { s.rank = i + 1; });
