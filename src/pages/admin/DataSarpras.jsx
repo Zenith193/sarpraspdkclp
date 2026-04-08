@@ -882,8 +882,61 @@ const DataSarpras = ({ readOnly = false }) => {
                 };
                 return (
                     <div className="table-container">
-                        <div style={{ padding: '12px 16px', fontSize: '0.8rem', color: 'var(--text-secondary)', background: 'rgba(249,115,22,0.05)', borderBottom: '1px solid var(--border-color)' }}>
-                            Data yang ditambah, diedit, atau diajukan hapus oleh sekolah akan muncul di sini. Setelah diverifikasi, data masuk ke tabel Data Sarpras.
+                        <div style={{ padding: '12px 16px', fontSize: '0.8rem', color: 'var(--text-secondary)', background: 'rgba(249,115,22,0.05)', borderBottom: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span>Data yang ditambah, diedit, atau diajukan hapus oleh sekolah akan muncul di sini. Setelah diverifikasi, data masuk ke tabel Data Sarpras.</span>
+                            {pendingData.length > 0 && (() => {
+                                const exportUpdateCols = [
+                                    { header: 'No', accessor: (_, i) => i + 1 },
+                                    { header: 'Sekolah', key: 'namaSekolah' },
+                                    { header: 'NPSN', key: 'npsn' },
+                                    { header: 'Jenis Prasarana', key: 'jenisPrasarana' },
+                                    { header: 'Nama Ruang', key: 'namaRuang' },
+                                    { header: 'Kondisi', key: 'kondisi' },
+                                    { header: 'Tipe', key: 'actionType' },
+                                    { header: 'Status', key: 'status' },
+                                    { header: 'Alasan', key: 'alasanPenolakan' },
+                                ];
+                                let updFileName = 'Update_Data_Sarpras';
+                                let updTitle = 'Update Data Sarpras';
+                                if (isSekolah) {
+                                    const sn = sekolahList[0]?.nama || user?.namaAkun || '';
+                                    updFileName = `Update_Data_Sarpras_${sn}`.replace(/\s+/g, '_');
+                                    updTitle = `Update Data Sarpras ${sn}`;
+                                } else if (isKorwil && myKorwilAssignment?.kecamatan?.length) {
+                                    const kl = myKorwilAssignment.kecamatan.join('_');
+                                    updFileName = `Update_Data_Sarpras_${kl}`.replace(/\s+/g, '_');
+                                    updTitle = `Update Data Sarpras Kec. ${myKorwilAssignment.kecamatan.join(', ')}`;
+                                } else {
+                                    updFileName = 'Update_Data_Sarpras_Semua';
+                                }
+                                const doExport = (fmt) => {
+                                    const sorted = [...pendingData].sort((a, b) => (a.namaSekolah || '').localeCompare(b.namaSekolah || '') || (a.jenisPrasarana || '').localeCompare(b.jenisPrasarana || ''));
+                                    try {
+                                        if (fmt === 'excel') exportToExcel(sorted, exportUpdateCols, updFileName);
+                                        else if (fmt === 'csv') exportToCSV(sorted, exportUpdateCols, updFileName);
+                                        else if (fmt === 'pdf') exportToPDF(sorted, exportUpdateCols, updFileName, updTitle);
+                                        toast.success(`Berhasil ekspor ${fmt.toUpperCase()}`);
+                                    } catch (err) { toast.error('Gagal ekspor: ' + err.message); }
+                                };
+                                return (
+                                    <div style={{ position: 'relative', flexShrink: 0 }}>
+                                        <button className="btn btn-secondary btn-sm" onClick={(e) => { e.currentTarget.nextSibling.style.display = e.currentTarget.nextSibling.style.display === 'block' ? 'none' : 'block'; }}>
+                                            <Download size={14} /> Ekspor <ChevronDown size={12} />
+                                        </button>
+                                        <div className="dropdown-menu" style={{ display: 'none', position: 'absolute', right: 0, top: '100%', marginTop: 4, zIndex: 50 }}>
+                                            <button className="dropdown-item" onClick={(e) => { doExport('excel'); e.currentTarget.parentElement.style.display = 'none'; }}>
+                                                <span className="export-icon" style={{ background: 'rgba(34,197,94,0.1)', color: '#22c55e' }}><FileSpreadsheet size={14} /></span> Excel
+                                            </button>
+                                            <button className="dropdown-item" onClick={(e) => { doExport('csv'); e.currentTarget.parentElement.style.display = 'none'; }}>
+                                                <span className="export-icon" style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6' }}><FileDown size={14} /></span> CSV
+                                            </button>
+                                            <button className="dropdown-item" onClick={(e) => { doExport('pdf'); e.currentTarget.parentElement.style.display = 'none'; }}>
+                                                <span className="export-icon" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}><FileText size={14} /></span> PDF
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                         </div>
                         {pendingData.length === 0 ? (
                             <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-secondary)' }}>
