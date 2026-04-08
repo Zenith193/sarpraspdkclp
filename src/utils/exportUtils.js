@@ -133,8 +133,8 @@ export const exportToPDF = (data, columns, filename = 'laporan', title = 'Lapora
     const userWidths = options.colWidths || {};
     const noWrapCols = options.noWrapCols || [];
 
-    const narrowHeaders = ['No', 'Lt', 'Lantai', 'Masa', 'Masa Bangunan', 'Jenjang', 'NPSN', 'Prioritas'];
-    const medHeaders = ['Panjang (m)', 'Lebar (m)', 'Luas (m²)', 'Kondisi', 'Tipe', 'Status', 'Target', 'Urutan Prioritas'];
+    const narrowHeaders = ['No', 'Lt', 'Lantai', 'Masa', 'Masa Bangunan', 'Jenjang', 'Prioritas'];
+    const medHeaders = ['NPSN', 'Panjang (m)', 'Lebar (m)', 'Luas (m²)', 'Kondisi', 'Tipe', 'Status', 'Target', 'Urutan Prioritas'];
     const wideHeaders = ['Nama Sekolah', 'Sekolah', 'Kecamatan', 'Jenis Prasarana', 'Nama Ruang', 'Keterangan', 'Alasan', 'Alasan / Keterangan', 'Nama Paket'];
 
     let totalWeight = 0;
