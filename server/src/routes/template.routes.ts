@@ -706,19 +706,8 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
                                 console.log('[KOP] Replaced marker paragraph (pStart=' + pStart + ')');
                             }
                         }
-                        // Only reduce top margin on FIRST pgMar (kop page), keep left/right as template
-                        let pgMarReplaced = false;
-                        docXml = docXml.replace(
-                            /<w:pgMar[^/]*\/>/,
-                            (match: string) => {
-                                if (!pgMarReplaced) {
-                                    pgMarReplaced = true;
-                                    return match.replace(/w:top="\d+"/, 'w:top="216"');
-                                }
-                                return match;
-                            }
-                        );
-                        console.log('[KOP] Set top margin to 0.15in on first section only');
+                        // Page margins are NOT modified - kept as template original
+                        console.log('[KOP] Page margins kept as template (no modification)');
 
                         // Ensure root document element has required namespaces for DrawingML
                         const nsMap: Record<string, string> = {
