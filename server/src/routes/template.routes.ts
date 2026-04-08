@@ -476,16 +476,41 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
                     generatedZip.file('word/document.xml', docXml);
                 } else {
                     try {
-                        // Get image dimensions
-                        let imgW = 800, imgH = 200;
-                        try {
-                            const imgSizeMod = await import('image-size');
-                            const sizeOf = imgSizeMod.default || imgSizeMod;
-                            const dims = typeof sizeOf === 'function' ? sizeOf(kopImageBuffer) : (sizeOf as any).imageSize(kopImageBuffer);
-                            imgW = dims.width || 800;
-                            imgH = dims.height || 200;
-                        } catch (szErr: any) {
-                            console.log('[KOP] image-size unavailable, using defaults:', szErr.message);
+                        // Read image dimensions directly from binary header (no external deps)
+                        let imgW = 0, imgH = 0;
+                        const buf = kopImageBuffer;
+                        
+                        if (buf[0] === 0xFF && buf[1] === 0xD8) {
+                            // JPEG: find SOF0 (0xFFC0) or SOF2 (0xFFC2) marker
+                            let pos = 2;
+                            while (pos < buf.length - 8) {
+                                if (buf[pos] === 0xFF) {
+                                    const marker = buf[pos + 1];
+                                    if (marker === 0xC0 || marker === 0xC2) {
+                                        // SOF: skip marker(2) + length(2) + precision(1), then height(2) + width(2)
+                                        imgH = (buf[pos + 5] << 8) | buf[pos + 6];
+                                        imgW = (buf[pos + 7] << 8) | buf[pos + 8];
+                                        break;
+                                    }
+                                    // Skip this segment
+                                    const segLen = (buf[pos + 2] << 8) | buf[pos + 3];
+                                    pos += 2 + segLen;
+                                } else {
+                                    pos++;
+                                }
+                            }
+                            console.log(`[KOP] JPEG SOF dimensions: ${imgW}x${imgH}px`);
+                        } else if (buf[0] === 0x89 && buf[1] === 0x50) {
+                            // PNG: IHDR is at offset 8 (after 8-byte signature), skip length(4)+type(4)
+                            imgW = (buf[16] << 24) | (buf[17] << 16) | (buf[18] << 8) | buf[19];
+                            imgH = (buf[20] << 24) | (buf[21] << 16) | (buf[22] << 8) | buf[23];
+                            console.log(`[KOP] PNG IHDR dimensions: ${imgW}x${imgH}px`);
+                        }
+                        
+                        // Fallback if parsing failed
+                        if (!imgW || !imgH || imgW < 10 || imgH < 10) {
+                            imgW = 1950; imgH = 500;
+                            console.log(`[KOP] Dimension parse failed, using fallback: ${imgW}x${imgH}px`);
                         }
 
                         // Target: full printable width = 16.5cm = 6.5 inches
