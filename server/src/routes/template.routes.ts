@@ -653,7 +653,21 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
                                 console.log('[KOP] Replaced marker paragraph');
                             }
                         }
+                        // Ensure root document element has required namespaces for DrawingML
+                        const nsMap: Record<string, string> = {
+                            'xmlns:wp': 'http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing',
+                            'xmlns:a': 'http://schemas.openxmlformats.org/drawingml/2006/main',
+                            'xmlns:pic': 'http://schemas.openxmlformats.org/drawingml/2006/picture',
+                            'xmlns:r': 'http://schemas.openxmlformats.org/officeDocument/2006/relationships',
+                        };
+                        for (const [attr, val] of Object.entries(nsMap)) {
+                            if (!docXml.includes(attr + '=')) {
+                                docXml = docXml.replace('<w:document ', `<w:document ${attr}="${val}" `);
+                            }
+                        }
+                        
                         generatedZip.file('word/document.xml', docXml);
+                        console.log('[KOP] Image injected + namespaces verified');
                     } catch (imgErr: any) {
                         console.error('[KOP] Image inject error:', imgErr.message);
                         docXml = docXml.replace(new RegExp(KOP_MARKER, 'g'), '');
@@ -736,15 +750,18 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
         // Convert DOCX â†’ PDF using LibreOffice
         let hasPdf = false;
         try {
-            execSync(`libreoffice --headless --convert-to pdf --outdir "${SPL_OUTPUT_DIR}" "${docxPath}"`, {
-                timeout: 30000,
+            const loResult = execSync(`libreoffice --headless --convert-to pdf --outdir "${SPL_OUTPUT_DIR}" "${docxPath}"`, {
+                timeout: 60000,
                 stdio: 'pipe',
             });
+            console.log('[Template] LO stdout:', loResult?.toString()?.substring(0, 200));
             const pdfPath = path.join(SPL_OUTPUT_DIR, `${safeBasename}.pdf`);
             hasPdf = fs.existsSync(pdfPath);
             if (hasPdf) console.log(`[Template] Saved PDF: ${pdfPath}`);
+            else console.error('[Template] PDF not found after conversion, expected:', pdfPath);
         } catch (loErr: any) {
-            console.error('[Template] LibreOffice conversion failed:', loErr.stderr?.toString()?.substring(0, 200) || loErr.message);
+            console.error('[Template] LibreOffice conversion failed:', loErr.stderr?.toString()?.substring(0, 500) || loErr.message);
+            console.error('[Template] LO stdout:', loErr.stdout?.toString()?.substring(0, 200));
         }
 
         // Update history with file path
