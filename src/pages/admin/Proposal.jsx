@@ -193,10 +193,8 @@ const Proposal = ({ readOnly = false }) => {
         setOpenActionId(id);
     };
 
-    // ===== FILTERING =====
     const filtered = useMemo(() => {
         return data.filter(p => {
-            if (isKorwil && p.jenjang !== 'SD') return false;
             if (search) {
                 const q = search.toLowerCase();
                 if (!p.namaSekolah.toLowerCase().includes(q) && !p.npsn.includes(q)) return false;
@@ -736,7 +734,7 @@ const Proposal = ({ readOnly = false }) => {
                             data
                         </div>
 
-                        {!isSekolah && (
+                        {!isSekolahOrKorwil && (
                         <div style={{ position: 'relative' }} ref={filterPanelRef}>
                             <button className={`btn ${activeFilterCount > 0 ? 'btn-primary' : 'btn-ghost'} btn-sm`} onClick={() => setShowFilterPanel(!showFilterPanel)}><Filter size={14} /> Filter {activeFilterCount > 0 && <span style={{ background: '#fff', color: 'var(--accent-blue)', borderRadius: 'var(--radius-full)', width: 18, height: 18, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 700, marginLeft: 2 }}>{activeFilterCount}</span>}</button>
                             {showFilterPanel && (<div className="dropdown-menu" style={{ right: 0, top: '100%', marginTop: 4, minWidth: 400, padding: 16, zIndex: 50 }}><div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12 }}><div><label style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Kecamatan</label><SearchableSelect options={KECAMATAN} value={headerFilters.kecamatan} onChange={v => { setHeaderFilters(prev => ({ ...prev, kecamatan: v })); setPage(1); }} placeholder="Semua" /></div><div><label style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Jenjang</label><select className="form-select" value={headerFilters.jenjang} onChange={e => { setHeaderFilters(prev => ({ ...prev, jenjang: e.target.value })); setPage(1); }}><option value="">Semua</option>{JENJANG.map(j => <option key={j} value={j}>{j}</option>)}</select></div>{isAdmin && (<div><label style={{ fontSize: 11, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>Prioritas</label><select className="form-select" value={headerFilters.bintang} onChange={e => { setHeaderFilters(prev => ({ ...prev, bintang: e.target.value })); setPage(1); }}><option value="">Semua</option><option value="Ya">Berbintang</option></select></div>)}</div></div>)}
