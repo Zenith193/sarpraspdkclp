@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { ClipboardCheck, Eye, Search, X, CheckCircle, XCircle, Clock, Save, ChevronRight, Plus, Minus, Edit2, ArrowLeft, Download, FileText, History, Trash2 } from 'lucide-react';
 import { kontrakApi, matrikApi } from '../../api';
 import { templateApi } from '../../api';
@@ -55,6 +55,8 @@ const ManajemenKontrak = () => {
     const [tab, setTab] = useState('data_dasar');
     const [saving, setSaving] = useState(false);
     const [toast, setToast] = useState('');
+    const currentYear = new Date().getFullYear();
+    const [filterTahun, setFilterTahun] = useState(String(currentYear));
 
     // Verifikator edit fields
     const [spkData, setSpkData] = useState({});
@@ -266,7 +268,21 @@ const ManajemenKontrak = () => {
         setTimeout(() => setToast(''), 3000);
     };
 
+    // ===== AVAILABLE YEARS =====
+    const availableYears = useMemo(() => {
+        const years = [...new Set(data.map(d => {
+            return d.matrik?.tahunAnggaran || new Date(d.createdAt).getFullYear();
+        }).filter(Boolean))];
+        if (!years.includes(currentYear)) years.push(currentYear);
+        return years.sort((a, b) => b - a);
+    }, [data]);
+
     const filtered = data.filter(d => {
+        // Year filter
+        if (filterTahun !== 'semua') {
+            const yr = d.matrik?.tahunAnggaran || new Date(d.createdAt).getFullYear();
+            if (String(yr) !== filterTahun) return false;
+        }
         const q = search.toLowerCase();
         const matchSearch = (d.namaPaket || '').toLowerCase().includes(q) || (d.namaPerusahaan || '').toLowerCase().includes(q) || (d.kodeSirup || '').includes(q);
         if (filter === 'Semua') return matchSearch;
@@ -541,6 +557,14 @@ const ManajemenKontrak = () => {
                 <div style={{ position: 'relative', flex: 1, maxWidth: 400 }}>
                     <Search size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
                     <input style={{ ...fieldStyle, paddingLeft: 36 }} placeholder="Cari..." value={search} onChange={e => setSearch(e.target.value)} />
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>Tahun:</span>
+                    <select value={filterTahun} onChange={e => setFilterTahun(e.target.value)}
+                        style={{ padding: '6px 10px', background: 'var(--bg-input)', border: '1px solid var(--border-input)', borderRadius: 'var(--radius-sm)', fontSize: '0.85rem', color: 'var(--text-primary)' }}>
+                        <option value="semua">Semua Tahun</option>
+                        {availableYears.map(y => <option key={y} value={String(y)}>{y}</option>)}
+                    </select>
                 </div>
                 <button onClick={async () => { try { const h = await matrikApi.splHistory('kontrak'); setKontrakHistory(h); } catch {} setShowKontrakHistory(true); }} className="btn btn-outline" style={{ padding: '10px 16px', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
                     <History size={16} /> Riwayat Generate

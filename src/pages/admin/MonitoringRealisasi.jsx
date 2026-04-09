@@ -26,6 +26,8 @@ const MonitoringRealisasi = () => {
     const [search, setSearch] = useState('');
     const [filterJenis, setFilterJenis] = useState('');
     const [pageSize, setPageSize] = useState(15);
+    const currentYear = new Date().getFullYear();
+    const [filterTahun, setFilterTahun] = useState(String(currentYear));
 
     // Lightbox state
     const [lightbox, setLightbox] = useState({ open: false, photos: [], index: 0 });
@@ -108,6 +110,19 @@ const MonitoringRealisasi = () => {
         );
     }, [matrikList, search, filterJenis]);
 
+    // ===== AVAILABLE YEARS =====
+    const availableYears = useMemo(() => {
+        const years = [...new Set(matrikList.map(d => d.tahunAnggaran).filter(Boolean))];
+        if (!years.includes(currentYear)) years.push(currentYear);
+        return years.sort((a, b) => b - a);
+    }, [matrikList]);
+
+    // ===== YEAR FILTER =====
+    const yearFilteredList = useMemo(() => {
+        if (filterTahun === 'semua') return filtered;
+        return filtered.filter(d => String(d.tahunAnggaran || '') === filterTahun);
+    }, [filtered, filterTahun]);
+
     // Unique jenis list from data
     const jenisList = useMemo(() => {
         const set = new Set();
@@ -115,11 +130,11 @@ const MonitoringRealisasi = () => {
         return [...set].sort();
     }, [matrikList]);
 
-    const totalPages = Math.ceil(filtered.length / pageSize) || 1;
+    const totalPages = Math.ceil(yearFilteredList.length / pageSize) || 1;
     const paged = useMemo(() => {
         const s = (currentPage - 1) * pageSize;
-        return filtered.slice(s, s + pageSize);
-    }, [filtered, currentPage, pageSize]);
+        return yearFilteredList.slice(s, s + pageSize);
+    }, [yearFilteredList, currentPage, pageSize]);
 
     // Get latest realisasi for a matrik (or its anakan)
     const getLatestRealisasi = (matrik) => {
@@ -459,6 +474,14 @@ const MonitoringRealisasi = () => {
                             </select>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Tahun:</span>
+                            <select value={filterTahun} onChange={e => { setFilterTahun(e.target.value); setCurrentPage(1); }}
+                                style={{ padding: '4px 8px', background: 'var(--bg-input)', border: '1px solid var(--border-input)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.8rem' }}>
+                                <option value="semua">Semua Tahun</option>
+                                {availableYears.map(y => <option key={y} value={String(y)}>{y}</option>)}
+                            </select>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Tampil:</span>
                             <select value={pageSize} onChange={e => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
                                 style={{ padding: '4px 8px', background: 'var(--bg-input)', border: '1px solid var(--border-input)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.8rem' }}>
@@ -583,7 +606,7 @@ const MonitoringRealisasi = () => {
 
                 <div className="table-pagination">
                     <div className="table-pagination-info">
-                        Menampilkan {filtered.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}-{Math.min(currentPage * pageSize, filtered.length)} dari {filtered.length} paket
+                        Menampilkan {yearFilteredList.length > 0 ? (currentPage - 1) * pageSize + 1 : 0}-{Math.min(currentPage * pageSize, yearFilteredList.length)} dari {yearFilteredList.length} paket
                     </div>
                     <div className="table-pagination-controls">
                         <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1}><ChevronLeft size={16} /></button>

@@ -105,17 +105,28 @@ const MatriksKegiatan = () => {
     const fileInputRef = useRef(null);
     const [selectedMatrikIds, setSelectedMatrikIds] = useState(new Set());
     const [bulkDeleting, setBulkDeleting] = useState(false);
+    const [filterTahun, setFilterTahun] = useState(String(currentYear));
+
+    // ===== AVAILABLE YEARS =====
+    const availableYears = useMemo(() => {
+        const years = [...new Set(matrikData.map(d => d.tahunAnggaran).filter(Boolean))];
+        if (!years.includes(currentYear)) years.push(currentYear);
+        return years.sort((a, b) => b - a);
+    }, [matrikData]);
 
     // ===== LOGIC =====
     const filtered = useMemo(() => {
         const q = search.toLowerCase();
-        return matrikData.filter(d =>
-            d.namaPaket.toLowerCase().includes(q) ||
-            String(d.noMatrik).toLowerCase().includes(q) ||
-            String(d.npsn).includes(q) ||
-            d.namaSekolah.toLowerCase().includes(q)
-        );
-    }, [matrikData, search]);
+        return matrikData.filter(d => {
+            // Year filter
+            if (filterTahun !== 'semua' && String(d.tahunAnggaran) !== filterTahun) return false;
+            // Search filter
+            return d.namaPaket.toLowerCase().includes(q) ||
+                String(d.noMatrik).toLowerCase().includes(q) ||
+                String(d.npsn).includes(q) ||
+                d.namaSekolah.toLowerCase().includes(q);
+        });
+    }, [matrikData, search, filterTahun]);
 
     const sortedData = useMemo(() => [...filtered].sort((a, b) => naturalSort(a.noMatrik, b.noMatrik)), [filtered]);
     const totalPages = Math.ceil(sortedData.length / pageSize) || 1;
@@ -664,6 +675,13 @@ const MatriksKegiatan = () => {
                 <div className="table-toolbar">
                     <div className="table-toolbar-left">
                         <div className="table-search"><Search size={16} className="search-icon" /><input placeholder="Cari matrik/paket/sekolah..." value={search} onChange={e => setSearch(e.target.value)} /></div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Tahun:</span>
+                            <select value={filterTahun} onChange={e => { setFilterTahun(e.target.value); setCurrentPage(1); }} style={{ padding: '4px 8px', background: 'var(--bg-input)', border: '1px solid var(--border-input)', borderRadius: 'var(--radius-sm)', fontSize: '0.8rem', color: 'var(--text-primary)' }}>
+                                <option value="semua">Semua Tahun</option>
+                                {availableYears.map(y => <option key={y} value={String(y)}>{y}</option>)}
+                            </select>
+                        </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Tampil:</span>
                             <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} style={{ padding: '4px 8px', background: 'var(--bg-input)', border: '1px solid var(--border-input)', borderRadius: 'var(--radius-sm)', fontSize: '0.8rem', color: 'var(--text-primary)' }}>

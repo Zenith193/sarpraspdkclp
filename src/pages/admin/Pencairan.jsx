@@ -26,6 +26,8 @@ const Pencairan = () => {
     const [search, setSearch] = useState('');
     const [pageSize, setPageSize] = useState(10);
     const [currentPage, setCurrentPage] = useState(1);
+    const currentYear = new Date().getFullYear();
+    const [filterTahun, setFilterTahun] = useState(String(currentYear));
 
     // Modal State
     const [showModal, setShowModal] = useState(false);
@@ -72,6 +74,19 @@ const Pencairan = () => {
             .sort((a, b) => naturalSort(String(a.noMatrik), String(b.noMatrik)));
     }, [matrikData, pencairanMap]);
 
+    // ===== AVAILABLE YEARS =====
+    const availableYears = useMemo(() => {
+        const years = [...new Set(combinedData.map(d => d.tahunAnggaran).filter(Boolean))];
+        if (!years.includes(currentYear)) years.push(currentYear);
+        return years.sort((a, b) => b - a);
+    }, [combinedData]);
+
+    // ===== YEAR FILTER =====
+    const yearFiltered = useMemo(() => {
+        if (filterTahun === 'semua') return combinedData;
+        return combinedData.filter(d => String(d.tahunAnggaran) === filterTahun);
+    }, [combinedData, filterTahun]);
+
     // ===== COLUMN DEFINITIONS =====
     const ALL_COLUMNS = [
         { key: 'no', label: 'No', alwaysVisible: true },
@@ -106,12 +121,12 @@ const Pencairan = () => {
 
     // ===== FILTERING (with jenis + sumber) =====
     const filteredCombined = useMemo(() => {
-        return combinedData.filter(d => {
+        return yearFiltered.filter(d => {
             if (filterJenis !== 'all' && d.jenisPengadaan !== filterJenis) return false;
             if (filterSumber !== 'all' && d.sumberDana !== filterSumber) return false;
             return true;
         });
-    }, [combinedData, filterJenis, filterSumber]);
+    }, [yearFiltered, filterJenis, filterSumber]);
 
     // Recalculate global stats based on filtered data
     const globalStats = useMemo(() => {
@@ -142,8 +157,8 @@ const Pencairan = () => {
     }, [filteredCombined]);
 
     // Unique sumber dana & jenis from data
-    const sumberDanaList = useMemo(() => [...new Set(combinedData.map(d => d.sumberDana).filter(Boolean))], [combinedData]);
-    const jenisPengadaanList = useMemo(() => [...new Set(combinedData.map(d => d.jenisPengadaan).filter(Boolean))], [combinedData]);
+    const sumberDanaList = useMemo(() => [...new Set(yearFiltered.map(d => d.sumberDana).filter(Boolean))], [yearFiltered]);
+    const jenisPengadaanList = useMemo(() => [...new Set(yearFiltered.map(d => d.jenisPengadaan).filter(Boolean))], [yearFiltered]);
 
     // Penyerapan circle SVG helper
     const PenyerapanCircle = ({ pct }) => {
@@ -184,7 +199,7 @@ const Pencairan = () => {
         return filtered.slice(start, start + pageSize);
     }, [filtered, currentPage, pageSize]);
 
-    useEffect(() => { setCurrentPage(1); }, [search, pageSize, filterJenis, filterSumber]);
+    useEffect(() => { setCurrentPage(1); }, [search, pageSize, filterJenis, filterSumber, filterTahun]);
 
     // ===== HANDLERS =====
     const toggleCol = (key) => {
@@ -399,6 +414,14 @@ const Pencairan = () => {
                         <div className="table-search">
                             <Search size={16} className="search-icon" />
                             <input placeholder="Cari paket, sekolah, CV..." value={search} onChange={e => setSearch(e.target.value)} />
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Tahun:</span>
+                            <select value={filterTahun} onChange={e => { setFilterTahun(e.target.value); setCurrentPage(1); }}
+                                style={{ padding: '4px 8px', background: 'var(--bg-input)', border: '1px solid var(--border-input)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)', fontSize: '0.8rem' }}>
+                                <option value="semua">Semua Tahun</option>
+                                {availableYears.map(y => <option key={y} value={String(y)}>{y}</option>)}
+                            </select>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Tampil:</span>

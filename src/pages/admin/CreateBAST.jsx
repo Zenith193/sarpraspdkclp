@@ -162,6 +162,7 @@ const CreateBAST = () => {
     const [showExport, setShowExport] = useState(false);
     const exportRef = useRef(null);
     const [jenisFilter, setJenisFilter] = useState('Pekerjaan Konstruksi');
+    const [filterTahun, setFilterTahun] = useState(String(currentYear));
 
     // Generate dialog state
     const [generateTarget, setGenerateTarget] = useState(null);
@@ -263,10 +264,23 @@ const CreateBAST = () => {
         return { totalMatrik, totalNilaiBAST, generated };
     }, [enrichedData]);
 
+    // ===== AVAILABLE YEARS =====
+    const availableYears = useMemo(() => {
+        const years = [...new Set(enrichedData.map(d => d.tahunAnggaran).filter(Boolean))];
+        if (!years.includes(currentYear)) years.push(currentYear);
+        return years.sort((a, b) => b - a);
+    }, [enrichedData]);
+
+    // ===== YEAR FILTER =====
+    const yearFiltered = useMemo(() => {
+        if (filterTahun === 'semua') return enrichedData;
+        return enrichedData.filter(d => String(d.tahunAnggaran || currentYear) === filterTahun);
+    }, [enrichedData, filterTahun]);
+
     // ===== FILTER =====
     const filtered = useMemo(() => {
         const q = search.toLowerCase();
-        return enrichedData.filter(d => {
+        return yearFiltered.filter(d => {
             // Jenis filter
             if (jenisFilter && d.jenisPengadaan !== jenisFilter) return false;
             // Search
@@ -278,7 +292,7 @@ const CreateBAST = () => {
                 d.kepsek?.toLowerCase().includes(q) ||
                 d.noBAST?.toLowerCase().includes(q);
         });
-    }, [enrichedData, search, jenisFilter]);
+    }, [yearFiltered, search, jenisFilter]);
 
     // ===== PAGINATION =====
     const totalPages = Math.ceil(filtered.length / pageSize) || 1;
@@ -567,6 +581,14 @@ const CreateBAST = () => {
                             <option value="">Semua Jenis</option>
                             {JENIS_OPTIONS.map(j => <option key={j} value={j}>{j}</option>)}
                         </select>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Tahun:</span>
+                            <select value={filterTahun} onChange={e => { setFilterTahun(e.target.value); setCurrentPage(1); }}
+                                style={{ padding: '4px 8px', background: 'var(--bg-input)', border: '1px solid var(--border-input)', borderRadius: 'var(--radius-sm)', fontSize: '0.82rem', color: 'var(--text-primary)' }}>
+                                <option value="semua">Semua Tahun</option>
+                                {availableYears.map(y => <option key={y} value={String(y)}>{y}</option>)}
+                            </select>
+                        </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                             <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Tampil:</span>
                             <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))}
