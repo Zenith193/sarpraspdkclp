@@ -853,7 +853,7 @@ const Proposal = ({ readOnly = false }) => {
                                     <Star size={14} fill={item.bintang === 1 ? 'currentColor' : 'none'} /> {item.bintang === 1 ? 'Hapus Prioritas' : 'Tandai Prioritas'}
                                 </button>
                             )}
-                            {isAdmin && item.status === 'Disetujui' && (
+                            {isAdminOrVerifikator && item.status === 'Disetujui' && (
                                 <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--accent-green)', borderRadius: 6 }} className="dropdown-item" onClick={() => { handleRealisasi(item); setOpenActionId(null); }}>
                                     <CheckCircle size={14} /> Terealisasi
                                 </button>
@@ -930,7 +930,7 @@ const Proposal = ({ readOnly = false }) => {
                                         <td>
                                             <div style={{ display: 'flex', gap: 4 }}>
                                                 <button className="btn-icon" onClick={() => setViewItem(item)} title="Detail"><Eye size={16} /></button>
-                                                {isAdmin && (
+                                                {isAdminOrVerifikator && (
                                                     <button className="btn-icon" onClick={() => handleUnrealisasi(item)} title="Kembalikan ke Aktif" style={{ color: 'var(--accent-blue)' }}><RotateCcw size={16} /></button>
                                                 )}
                                             </div>
