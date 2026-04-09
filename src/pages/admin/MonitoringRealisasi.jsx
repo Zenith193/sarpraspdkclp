@@ -71,26 +71,7 @@ const MonitoringRealisasi = () => {
         return map;
     }, [realisasiData]);
 
-    // Stats
-    const stats = useMemo(() => {
-        const totalPaket = matrikList.length;
-        const totalAnakan = matrikList.reduce((s, m) => s + (m.anakan?.length || 0), 0);
-        const totalRealisasi = realisasiData.length;
-        // Average realisasi persen
-        let avg = 0;
-        if (realisasiData.length > 0) {
-            const sum = realisasiData.reduce((s, r) => s + Number(r.realisasi?.realisasiPersen || r.realisasiPersen || 0), 0);
-            avg = sum / realisasiData.length;
-        }
-        // Count matrik with realisasi < 80% target
-        let belowTarget = 0;
-        realisasiData.forEach(r => {
-            const real = Number(r.realisasi?.realisasiPersen || r.realisasiPersen || 0);
-            const target = Number(r.realisasi?.targetPersen || r.targetPersen || 0);
-            if (target > 0 && real < target * 0.8) belowTarget++;
-        });
-        return { totalPaket, totalAnakan, totalRealisasi, avg, belowTarget };
-    }, [matrikList, realisasiData]);
+
 
     const filtered = useMemo(() => {
         let list = matrikList;
@@ -122,6 +103,36 @@ const MonitoringRealisasi = () => {
         if (filterTahun === 'semua') return filtered;
         return filtered.filter(d => String(d.tahunAnggaran || '') === filterTahun);
     }, [filtered, filterTahun]);
+
+    // ===== STATS (based on year-filtered data) =====
+    const stats = useMemo(() => {
+        const totalPaket = yearFilteredList.length;
+        const totalAnakan = yearFilteredList.reduce((s, m) => s + (m.anakan?.length || 0), 0);
+        // Build set of matrik IDs in year-filtered list (including anakan IDs)
+        const matrikIds = new Set();
+        yearFilteredList.forEach(m => {
+            matrikIds.add(m.id);
+            (m.anakan || []).forEach(a => matrikIds.add(a.id));
+        });
+        // Filter realisasi to only those belonging to year-filtered matriks
+        const filteredRealisasi = realisasiData.filter(r => {
+            const mid = r.realisasi?.matrikId || r.matrikId;
+            return matrikIds.has(mid);
+        });
+        const totalRealisasi = filteredRealisasi.length;
+        let avg = 0;
+        if (filteredRealisasi.length > 0) {
+            const sum = filteredRealisasi.reduce((s, r) => s + Number(r.realisasi?.realisasiPersen || r.realisasiPersen || 0), 0);
+            avg = sum / filteredRealisasi.length;
+        }
+        let belowTarget = 0;
+        filteredRealisasi.forEach(r => {
+            const real = Number(r.realisasi?.realisasiPersen || r.realisasiPersen || 0);
+            const target = Number(r.realisasi?.targetPersen || r.targetPersen || 0);
+            if (target > 0 && real < target * 0.8) belowTarget++;
+        });
+        return { totalPaket, totalAnakan, totalRealisasi, avg, belowTarget };
+    }, [yearFilteredList, realisasiData]);
 
     // Unique jenis list from data
     const jenisList = useMemo(() => {
