@@ -20,6 +20,7 @@ export const feedbackService = {
             role: data.role,
             isiGagasan: data.isiGagasan,
             fotoPath: data.fotoPath || null,
+            uploadStatus: data.uploadStatus || 'done',
         }).returning();
         return rows[0];
     },

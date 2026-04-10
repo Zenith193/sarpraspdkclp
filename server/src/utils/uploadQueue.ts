@@ -7,7 +7,7 @@
  * 3. Both run in background so user gets instant responses
  */
 import { db } from '../db/index.js';
-import { sarprasFoto, formKerusakan, prestasi, proposal, proposalFoto, bastTemplate, riwayatBantuan } from '../db/schema/index.js';
+import { sarprasFoto, formKerusakan, prestasi, proposal, proposalFoto, bastTemplate, riwayatBantuan, feedback } from '../db/schema/index.js';
 import { sarpras } from '../db/schema/sarpras.js';
 import { sekolah } from '../db/schema/sekolah.js';
 import { eq, or, and, not, like, type AnyColumn } from 'drizzle-orm';
@@ -288,6 +288,26 @@ async function processUploadQueue() {
         } catch (e: any) {
             console.error(`[Queue] Upload denah sekolah #${item.id} failed:`, e.message);
             await db.update(sekolah).set({ denahUploadStatus: 'failed' }).where(eq(sekolah.id, item.id));
+        }
+    }
+
+    // 8b. feedback foto
+    const pendingFeedback = await db.select().from(feedback).where(needsGDriveSync(feedback.uploadStatus, feedback.fotoPath)).limit(5);
+    for (const item of pendingFeedback) {
+        if (!item.fotoPath || !fs.existsSync(item.fotoPath)) {
+            await db.update(feedback).set({ uploadStatus: 'failed' }).where(eq(feedback.id, item.id));
+            continue;
+        }
+        try {
+            const subPath = `feedback/${item.role || 'unknown'}`;
+            const result = await uploadFileToGDrive(item.fotoPath, 'feedback', subPath);
+            const oldPath = item.fotoPath;
+            await db.update(feedback).set({ fotoPath: result.path, uploadStatus: 'done' }).where(eq(feedback.id, item.id));
+            try { fs.unlinkSync(oldPath); } catch { }
+            console.log(`[Queue] Upload feedback foto #${item.id} → ${subPath} ✅`);
+        } catch (e: any) {
+            console.error(`[Queue] Upload feedback foto #${item.id} failed:`, e.message);
+            await db.update(feedback).set({ uploadStatus: 'failed' }).where(eq(feedback.id, item.id));
         }
     }
 

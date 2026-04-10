@@ -1005,11 +1005,13 @@ async function autoMigrate() {
             role TEXT NOT NULL,
             isi_gagasan TEXT NOT NULL,
             foto_path TEXT,
+            upload_status TEXT DEFAULT 'done',
             status TEXT DEFAULT 'Baru',
             catatan_admin TEXT,
             created_at TIMESTAMP DEFAULT NOW(),
             updated_at TIMESTAMP DEFAULT NOW()
         )`,
+        `ALTER TABLE feedback ADD COLUMN IF NOT EXISTS upload_status TEXT DEFAULT 'done'`,
     ];
     for (const m of migrations) {
         try { await db.execute(sql.raw(m)); } catch (e: any) {

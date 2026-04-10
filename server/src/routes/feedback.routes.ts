@@ -47,6 +47,7 @@ router.post('/', requireAuth, upload.single('foto'), async (req: any, res) => {
             role: user.role || '',
             isiGagasan: req.body.isiGagasan.trim(),
             fotoPath,
+            uploadStatus: fotoPath ? 'uploading' : 'done',
         });
         logActivity(req, 'Kirim Feedback', `Mengirim gagasan/feedback`);
         res.status(201).json(item);
@@ -82,7 +83,8 @@ router.delete('/:id', requireAuth, requireRole('admin'), async (req, res) => {
     try {
         const item = await feedbackService.getById(Number(req.params.id));
         if (item?.fotoPath) {
-            try { fs.unlinkSync(item.fotoPath); } catch {}
+            const { queueGDriveDelete } = await import('../utils/uploadQueue.js');
+            queueGDriveDelete(item.fotoPath);
         }
         await feedbackService.delete(Number(req.params.id));
         logActivity(req, 'Hapus Feedback', `Menghapus feedback #${req.params.id}`);

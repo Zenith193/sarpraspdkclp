@@ -8,6 +8,7 @@ export const feedback = pgTable('feedback', {
     role: text('role').notNull(),
     isiGagasan: text('isi_gagasan').notNull(),
     fotoPath: text('foto_path'),
+    uploadStatus: text('upload_status').default('done'), // 'uploading' | 'done' | 'failed'
     status: text('status').default('Baru'),        // Baru | Selesai
     catatanAdmin: text('catatan_admin'),
     createdAt: timestamp('created_at').defaultNow(),
