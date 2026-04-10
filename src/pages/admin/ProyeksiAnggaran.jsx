@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Plus, Search, Download, Edit, Trash2, Save, X, ChevronDown, ChevronUp, Building2, Hammer, HardHat, Wallet, ChevronLeft, ChevronRight, Maximize2, Minimize2, MessageSquareText, Filter, AlertCircle } from 'lucide-react';
+import { Plus, Search, Download, Edit, Trash2, Save, X, ChevronDown, ChevronUp, Building2, Hammer, HardHat, Wallet, ChevronLeft, ChevronRight, Maximize2, Minimize2, MessageSquareText, Filter, AlertCircle, FileSpreadsheet, FileText, List } from 'lucide-react';
 import { useProyeksiData, useSarprasData, useSekolahData } from '../../data/dataProvider';
 import { JENIS_PRASARANA, JENJANG } from '../../utils/constants';
 import { formatCurrency } from '../../utils/formatters';
@@ -7,6 +7,9 @@ import toast from 'react-hot-toast';
 import { proyeksiApi } from '../../api/index';
 import { useApi } from '../../api/hooks';
 import ConfirmModal from '../../components/ui/ConfirmModal';
+import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import 'jspdf-autotable';
 
 // Opsi untuk Keterangan (Combo Box)
 const KETERANGAN_OPTIONS = [
@@ -45,13 +48,33 @@ const ProyeksiAnggaran = () => {
     useEffect(() => { if (proyeksiList?.length) setAnggaranData(proyeksiList); }, [proyeksiList]);
     useEffect(() => { if (snpApiData?.data) setSnpData(snpApiData.data); else if (Array.isArray(snpApiData)) setSnpData(snpApiData); }, [snpApiData]);
 
-    // ===== STATE UNTUK KETERANGAN MANUAL =====
+    // ===== STATE UNTUK KETERANGAN/USULAN (MULTI-ARRAY) =====
     const [sekolahKeterangan, setSekolahKeterangan] = useState({});
+    const [showExportMenu, setShowExportMenu] = useState(false);
+    const exportRef = useRef(null);
 
-    // Load keterangan from backend on mount
+    // Close export menu on outside click
+    useEffect(() => {
+        const handleClick = (e) => { if (exportRef.current && !exportRef.current.contains(e.target)) setShowExportMenu(false); };
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, []);
+
+    // Load keterangan from backend on mount — backward compat: string → array
     useEffect(() => {
         proyeksiApi.getKeterangan().then(data => {
-            if (data && typeof data === 'object') setSekolahKeterangan(data);
+            if (data && typeof data === 'object') {
+                const normalized = {};
+                Object.entries(data).forEach(([k, v]) => {
+                    if (Array.isArray(v)) normalized[k] = v;
+                    else if (typeof v === 'string' && v.trim()) {
+                        // Try JSON parse first
+                        try { const parsed = JSON.parse(v); normalized[k] = Array.isArray(parsed) ? parsed : [v]; }
+                        catch { normalized[k] = [v]; }
+                    } else normalized[k] = [];
+                });
+                setSekolahKeterangan(normalized);
+            }
         }).catch(() => {});
     }, []);
 
@@ -219,17 +242,36 @@ const ProyeksiAnggaran = () => {
     }, [rekapData, filterJenjang, searchQuery, sekolahKeterangan]);
 
     // Filter untuk Tab Baru: Belum Masuk Usulan
-    // Kriteria: Total Anggaran > 0 DAN (Keterangan kosong ATAU Keterangan == 'Belum diusulkan')
+    // Kriteria: Total Anggaran > 0 DAN (Usulan kosong / array kosong)
     const filteredBelumUsulan = useMemo(() => {
         return rekapData.filter(item => {
             const totalAnggaran = item.biayaRS + item.biayaRB + item.biayaBuild;
-            const keterangan = sekolahKeterangan[item.id];
-            const isBelumUsul = !keterangan || keterangan === 'Belum diusulkan';
+            const usulan = sekolahKeterangan[item.id];
+            const isBelumUsul = !usulan || !Array.isArray(usulan) || usulan.length === 0;
 
             const matchJenjang = filterJenjang === 'all' || item.jenjang === filterJenjang;
             const matchSearch = searchQuery === '' || item.nama.toLowerCase().includes(searchQuery.toLowerCase());
 
             return totalAnggaran > 0 && isBelumUsul && matchJenjang && matchSearch;
+        });
+    }, [rekapData, sekolahKeterangan, filterJenjang, searchQuery]);
+
+    // Filter untuk Tab Baru: Rekapitulasi Usulan
+    // Kriteria: Total Anggaran > 0 DAN punya >= 1 usulan, sorted by jumlah terbanyak
+    const filteredRekapUsulan = useMemo(() => {
+        return rekapData.filter(item => {
+            const totalAnggaran = item.biayaRS + item.biayaRB + item.biayaBuild;
+            const usulan = sekolahKeterangan[item.id];
+            const hasUsulan = Array.isArray(usulan) && usulan.length > 0;
+
+            const matchJenjang = filterJenjang === 'all' || item.jenjang === filterJenjang;
+            const matchSearch = searchQuery === '' || item.nama.toLowerCase().includes(searchQuery.toLowerCase());
+
+            return totalAnggaran > 0 && hasUsulan && matchJenjang && matchSearch;
+        }).sort((a, b) => {
+            const cntA = (sekolahKeterangan[a.id] || []).length;
+            const cntB = (sekolahKeterangan[b.id] || []).length;
+            return cntB - cntA;
         });
     }, [rekapData, sekolahKeterangan, filterJenjang, searchQuery]);
 
@@ -315,6 +357,14 @@ const ProyeksiAnggaran = () => {
         return filteredSnpRekap.slice(start, start + pageSize);
     }, [filteredSnpRekap, currentPage, pageSize]);
 
+    // 6. Rekap Usulan
+    const totalRekapUsulan = filteredRekapUsulan.length;
+    const totalPagesRekapUsulan = Math.ceil(totalRekapUsulan / pageSize) || 1;
+    const pagedRekapUsulan = useMemo(() => {
+        const start = (currentPage - 1) * pageSize;
+        return filteredRekapUsulan.slice(start, start + pageSize);
+    }, [filteredRekapUsulan, currentPage, pageSize]);
+
 
     // =========================================================================
     // HANDLERS
@@ -330,18 +380,27 @@ const ProyeksiAnggaran = () => {
     };
 
     const keteranganTimerRef = useRef(null);
-    const handleKeteranganChange = (sekolahId, value) => {
-        setSekolahKeterangan(prev => ({
-            ...prev,
-            [sekolahId]: value
-        }));
-        // Auto-save to API with debounce
+    const saveUsulan = (sekolahId, arr) => {
+        setSekolahKeterangan(prev => ({ ...prev, [sekolahId]: arr }));
         if (keteranganTimerRef.current) clearTimeout(keteranganTimerRef.current);
         keteranganTimerRef.current = setTimeout(() => {
-            proyeksiApi.saveKeterangan({ [sekolahId]: value }).catch(() => {
-                toast.error('Gagal menyimpan keterangan');
+            proyeksiApi.saveKeterangan({ [sekolahId]: JSON.stringify(arr) }).catch(() => {
+                toast.error('Gagal menyimpan usulan');
             });
-        }, 600);
+        }, 400);
+    };
+    const addUsulan = (sekolahId, value) => {
+        if (!value.trim()) return;
+        const current = Array.isArray(sekolahKeterangan[sekolahId]) ? [...sekolahKeterangan[sekolahId]] : [];
+        if (!current.includes(value.trim())) {
+            current.push(value.trim());
+            saveUsulan(sekolahId, current);
+        }
+    };
+    const removeUsulan = (sekolahId, idx) => {
+        const current = Array.isArray(sekolahKeterangan[sekolahId]) ? [...sekolahKeterangan[sekolahId]] : [];
+        current.splice(idx, 1);
+        saveUsulan(sekolahId, current);
     };
 
     const openModal = (type, item = null) => {
@@ -393,7 +452,45 @@ const ProyeksiAnggaran = () => {
         setDeleteConfirm(null);
     };
 
-    const handleExport = (type) => toast.success('Ekspor berhasil');
+    // ===== EXPORT FUNCTIONS =====
+    const handleExportExcel = (dataset, title = 'Rekapitulasi') => {
+        const rows = dataset.map((s, i) => ({
+            'No': i + 1,
+            'Nama Sekolah': s.nama,
+            'Jenjang': s.jenjang,
+            'Total Rehab': s.biayaRS + s.biayaRB,
+            'Total Pembangunan': s.biayaBuild,
+            'Total Anggaran': s.biayaRS + s.biayaRB + s.biayaBuild,
+        }));
+        const ws = XLSX.utils.json_to_sheet(rows);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, title);
+        XLSX.writeFile(wb, `${title.replace(/\s/g, '_')}_${new Date().toISOString().slice(0,10)}.xlsx`);
+        toast.success('Excel berhasil diunduh');
+    };
+
+    const handleExportPDF = (dataset, title = 'Rekapitulasi') => {
+        const doc = new jsPDF({ orientation: 'landscape' });
+        doc.setFontSize(14);
+        doc.text(title, 14, 15);
+        doc.setFontSize(9);
+        doc.text(`Diekspor: ${new Date().toLocaleDateString('id-ID')}`, 14, 22);
+        const rows = dataset.map((s, i) => [
+            i + 1, s.nama, s.jenjang,
+            formatCurrency(s.biayaRS + s.biayaRB),
+            formatCurrency(s.biayaBuild),
+            formatCurrency(s.biayaRS + s.biayaRB + s.biayaBuild),
+        ]);
+        doc.autoTable({
+            startY: 26,
+            head: [['No', 'Nama Sekolah', 'Jenjang', 'Total Rehab', 'Total Pembangunan', 'Total Anggaran']],
+            body: rows,
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [59, 130, 246] },
+        });
+        doc.save(`${title.replace(/\s/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`);
+        toast.success('PDF berhasil diunduh');
+    };
 
     // Helper for Pagination Text
     const getPaginationText = (total, page, size) => {
@@ -416,12 +513,12 @@ const ProyeksiAnggaran = () => {
         </div>
     );
 
-    // Reusable Table Body Renderer to avoid code duplication
-    const renderTableBody = (dataset) => {
+    // Reusable Table Body Renderer (Rekapitulasi — no keterangan column)
+    const renderRekapTableBody = (dataset) => {
         if (dataset.length === 0) {
             return (
                 <tr>
-                    <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
                             <AlertCircle size={24} />
                             <span>Tidak ada data yang memenuhi kriteria filter.</span>
@@ -430,18 +527,15 @@ const ProyeksiAnggaran = () => {
                 </tr>
             );
         }
-
         return dataset.map((s, i) => {
             const rowNumber = ((currentPage - 1) * pageSize) + i + 1;
             const isExpanded = expandedRows.includes(s.id);
-
             const totalRehab = s.biayaRS + s.biayaRB;
             const totalBuild = s.biayaBuild;
             const totalAnggaran = totalRehab + totalBuild;
-
             return (
-                <>
-                    <tr key={s.id} onClick={() => toggleRow(s.id)} style={{ cursor: 'pointer' }}>
+                <React.Fragment key={s.id}>
+                    <tr onClick={() => toggleRow(s.id)} style={{ cursor: 'pointer' }}>
                         <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
                             {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
                         </td>
@@ -449,27 +543,6 @@ const ProyeksiAnggaran = () => {
                         <td>
                             <div style={{ fontWeight: 500 }}>{s.nama}</div>
                             <div style={{ color: 'var(--text-secondary)' }}>{s.jenjang}</div>
-                        </td>
-                        {/* Input Keterangan Combo Box */}
-                        <td style={{ background: 'rgba(139, 92, 246, 0.05)' }} onClick={(e) => e.stopPropagation()}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <MessageSquareText size={16} style={{ color: 'var(--accent-purple)', flexShrink: 0 }} />
-                                <input
-                                    list="keterangan-options"
-                                    placeholder="Pilih atau ketik..."
-                                    value={sekolahKeterangan[s.id] || ''}
-                                    onChange={(e) => handleKeteranganChange(s.id, e.target.value)}
-                                    style={{
-                                        width: '100%',
-                                        background: 'transparent',
-                                        border: '1px solid transparent',
-                                        borderBottom: '1px dashed var(--border-color)',
-                                        padding: '4px',
-                                        color: 'var(--text-primary)',
-                                        fontSize: '0.85rem'
-                                    }}
-                                />
-                            </div>
                         </td>
                         <td style={{ color: totalRehab > 0 ? 'var(--accent-orange)' : 'var(--text-secondary)', textAlign: 'right', fontWeight: 500 }}>
                             {totalRehab > 0 ? formatCurrency(totalRehab) : '-'}
@@ -481,10 +554,9 @@ const ProyeksiAnggaran = () => {
                             {formatCurrency(totalAnggaran)}
                         </td>
                     </tr>
-
                     {isExpanded && (
-                        <tr key={s.id + '-details'}>
-                            <td colSpan={7} style={{ padding: 0, background: 'var(--bg-secondary)', borderBottom: '2px solid var(--border-color)' }}>
+                        <tr>
+                            <td colSpan={6} style={{ padding: 0, background: 'var(--bg-secondary)', borderBottom: '2px solid var(--border-color)' }}>
                                 <div style={{ padding: '1rem 1.5rem' }}>
                                     <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Rincian Kebutuhan</div>
                                     {s.details.length === 0 ? (
@@ -516,7 +588,208 @@ const ProyeksiAnggaran = () => {
                             </td>
                         </tr>
                     )}
-                </>
+                </React.Fragment>
+            );
+        });
+    };
+
+    // Chip-style multi-input for Belum Usul tab
+    const UsulanChipInput = ({ sekolahId }) => {
+        const [inputVal, setInputVal] = useState('');
+        const chips = Array.isArray(sekolahKeterangan[sekolahId]) ? sekolahKeterangan[sekolahId] : [];
+        const handleKeyDown = (e) => {
+            if (e.key === 'Enter' && inputVal.trim()) { e.preventDefault(); addUsulan(sekolahId, inputVal); setInputVal(''); }
+        };
+        return (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center', minHeight: 32 }} onClick={e => e.stopPropagation()}>
+                {chips.map((c, idx) => (
+                    <span key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 8px', borderRadius: 12, background: 'rgba(139,92,246,0.15)', color: '#a78bfa', fontSize: '0.78rem', fontWeight: 500 }}>
+                        {c}
+                        <button onClick={() => removeUsulan(sekolahId, idx)} style={{ background: 'none', border: 'none', color: '#a78bfa', cursor: 'pointer', padding: 0, lineHeight: 1, fontSize: '0.9rem' }}>×</button>
+                    </span>
+                ))}
+                <input
+                    list="keterangan-options"
+                    placeholder={chips.length === 0 ? 'Ketik usulan + Enter...' : '+'}
+                    value={inputVal}
+                    onChange={e => setInputVal(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    onBlur={() => { if (inputVal.trim()) { addUsulan(sekolahId, inputVal); setInputVal(''); } }}
+                    style={{ flex: 1, minWidth: 80, background: 'transparent', border: 'none', outline: 'none', padding: '4px', color: 'var(--text-primary)', fontSize: '0.82rem' }}
+                />
+            </div>
+        );
+    };
+
+    // Belum Usul table body with chip input
+    const renderBelumUsulTableBody = (dataset) => {
+        if (dataset.length === 0) {
+            return (
+                <tr>
+                    <td colSpan={6} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                            <AlertCircle size={24} />
+                            <span>Semua sekolah sudah memiliki usulan. 🎉</span>
+                        </div>
+                    </td>
+                </tr>
+            );
+        }
+        return dataset.map((s, i) => {
+            const rowNumber = ((currentPage - 1) * pageSize) + i + 1;
+            const isExpanded = expandedRows.includes(s.id);
+            const totalRehab = s.biayaRS + s.biayaRB;
+            const totalBuild = s.biayaBuild;
+            const totalAnggaran = totalRehab + totalBuild;
+            return (
+                <React.Fragment key={s.id}>
+                    <tr onClick={() => toggleRow(s.id)} style={{ cursor: 'pointer' }}>
+                        <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
+                            {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </td>
+                        <td>{rowNumber}</td>
+                        <td>
+                            <div style={{ fontWeight: 500 }}>{s.nama}</div>
+                            <div style={{ color: 'var(--text-secondary)' }}>{s.jenjang}</div>
+                        </td>
+                        <td style={{ background: 'rgba(249, 115, 22, 0.05)', borderLeft: '3px solid var(--accent-orange)' }}>
+                            <UsulanChipInput sekolahId={s.id} />
+                        </td>
+                        <td style={{ color: totalRehab > 0 ? 'var(--accent-orange)' : 'var(--text-secondary)', textAlign: 'right', fontWeight: 500 }}>
+                            {totalRehab > 0 ? formatCurrency(totalRehab) : '-'}
+                        </td>
+                        <td style={{ fontWeight: 700, background: 'var(--bg-secondary)', textAlign: 'right', color: 'var(--text-primary)' }}>
+                            {formatCurrency(totalAnggaran)}
+                        </td>
+                    </tr>
+                    {isExpanded && (
+                        <tr>
+                            <td colSpan={6} style={{ padding: 0, background: 'var(--bg-secondary)', borderBottom: '2px solid var(--border-color)' }}>
+                                <div style={{ padding: '1rem 1.5rem' }}>
+                                    <div style={{ fontWeight: 600, marginBottom: '0.5rem' }}>Rincian Kebutuhan</div>
+                                    {s.details.length === 0 ? (
+                                        <div style={{ color: 'var(--text-secondary)' }}>Tidak ada kebutuhan.</div>
+                                    ) : (
+                                        <div style={{ display: 'grid', gap: '0.5rem' }}>
+                                            {s.details.map((d, idx) => {
+                                                let itemColor = 'var(--accent-blue)', labelBg = 'rgba(59,130,246,0.1)', labelText = 'BANGUN';
+                                                if (d.type === 'rehab') {
+                                                    if (d.kondisi === 'berat') { itemColor = 'var(--accent-red)'; labelBg = 'rgba(239,68,68,0.1)'; }
+                                                    else { itemColor = 'var(--accent-orange)'; labelBg = 'rgba(249,115,22,0.1)'; }
+                                                    labelText = 'REHAB';
+                                                }
+                                                return (
+                                                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-primary)', padding: '0.5rem 0.75rem', borderRadius: 'var(--radius-sm)' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                            <span style={{ padding: '2px 6px', borderRadius: 4, fontWeight: 600, background: labelBg, color: itemColor }}>{labelText}</span>
+                                                            <span>{d.name}</span>
+                                                            <span style={{ color: 'var(--text-secondary)' }}>({d.count} Unit)</span>
+                                                        </div>
+                                                        <span style={{ fontWeight: 600, color: itemColor }}>{formatCurrency(d.totalCost)}</span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            </td>
+                        </tr>
+                    )}
+                </React.Fragment>
+            );
+        });
+    };
+
+    // Rekap Usulan table body with expandable usulan list
+    const renderRekapUsulanTableBody = (dataset) => {
+        if (dataset.length === 0) {
+            return (
+                <tr>
+                    <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
+                            <AlertCircle size={24} />
+                            <span>Belum ada sekolah yang memiliki usulan.</span>
+                        </div>
+                    </td>
+                </tr>
+            );
+        }
+        return dataset.map((s, i) => {
+            const rowNumber = ((currentPage - 1) * pageSize) + i + 1;
+            const isExpanded = expandedRows.includes(s.id);
+            const totalRehab = s.biayaRS + s.biayaRB;
+            const totalBuild = s.biayaBuild;
+            const totalAnggaran = totalRehab + totalBuild;
+            const chips = Array.isArray(sekolahKeterangan[s.id]) ? sekolahKeterangan[s.id] : [];
+            return (
+                <React.Fragment key={s.id}>
+                    <tr onClick={() => toggleRow(s.id)} style={{ cursor: 'pointer' }}>
+                        <td style={{ textAlign: 'center', color: 'var(--text-secondary)' }}>
+                            {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                        </td>
+                        <td>{rowNumber}</td>
+                        <td>
+                            <div style={{ fontWeight: 500 }}>{s.nama}</div>
+                            <div style={{ color: 'var(--text-secondary)' }}>{s.jenjang}</div>
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 28, height: 28, borderRadius: '50%', background: chips.length >= 3 ? 'rgba(34,197,94,0.15)' : chips.length >= 2 ? 'rgba(59,130,246,0.15)' : 'rgba(249,115,22,0.15)', color: chips.length >= 3 ? '#22c55e' : chips.length >= 2 ? '#3b82f6' : '#f59e0b', fontWeight: 700, fontSize: '0.85rem' }}>
+                                {chips.length}
+                            </span>
+                        </td>
+                        <td style={{ color: totalRehab > 0 ? 'var(--accent-orange)' : 'var(--text-secondary)', textAlign: 'right', fontWeight: 500 }}>
+                            {totalRehab > 0 ? formatCurrency(totalRehab) : '-'}
+                        </td>
+                        <td style={{ color: totalBuild > 0 ? 'var(--accent-blue)' : 'var(--text-secondary)', textAlign: 'right', fontWeight: 500 }}>
+                            {totalBuild > 0 ? formatCurrency(totalBuild) : '-'}
+                        </td>
+                        <td style={{ fontWeight: 700, background: 'var(--bg-secondary)', textAlign: 'right', color: 'var(--text-primary)' }}>
+                            {formatCurrency(totalAnggaran)}
+                        </td>
+                    </tr>
+                    {isExpanded && (
+                        <tr>
+                            <td colSpan={7} style={{ padding: 0, background: 'var(--bg-secondary)', borderBottom: '2px solid var(--border-color)' }}>
+                                <div style={{ padding: '1rem 1.5rem' }}>
+                                    <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: 'var(--accent-purple)' }}>📋 Daftar Usulan ({chips.length})</div>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                                        {chips.map((c, idx) => (
+                                            <span key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 12px', borderRadius: 16, background: 'rgba(139,92,246,0.12)', color: '#a78bfa', fontSize: '0.82rem', fontWeight: 500 }}>
+                                                {idx + 1}. {c}
+                                                <button onClick={(e) => { e.stopPropagation(); removeUsulan(s.id, idx); }} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, fontSize: '1rem', lineHeight: 1 }}>×</button>
+                                            </span>
+                                        ))}
+                                    </div>
+                                    <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>🏗 Rincian Kebutuhan</div>
+                                    {s.details.length === 0 ? (
+                                        <div style={{ color: 'var(--text-secondary)' }}>Tidak ada kebutuhan.</div>
+                                    ) : (
+                                        <div style={{ display: 'grid', gap: '0.5rem' }}>
+                                            {s.details.map((d, idx) => {
+                                                let itemColor = 'var(--accent-blue)', labelBg = 'rgba(59,130,246,0.1)', labelText = 'BANGUN';
+                                                if (d.type === 'rehab') {
+                                                    if (d.kondisi === 'berat') { itemColor = 'var(--accent-red)'; labelBg = 'rgba(239,68,68,0.1)'; }
+                                                    else { itemColor = 'var(--accent-orange)'; labelBg = 'rgba(249,115,22,0.1)'; }
+                                                    labelText = 'REHAB';
+                                                }
+                                                return (
+                                                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-primary)', padding: '0.5rem 0.75rem', borderRadius: 'var(--radius-sm)' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                                                            <span style={{ padding: '2px 6px', borderRadius: 4, fontWeight: 600, background: labelBg, color: itemColor }}>{labelText}</span>
+                                                            <span>{d.name}</span>
+                                                            <span style={{ color: 'var(--text-secondary)' }}>({d.count} Unit)</span>
+                                                        </div>
+                                                        <span style={{ fontWeight: 600, color: itemColor }}>{formatCurrency(d.totalCost)}</span>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            </td>
+                        </tr>
+                    )}
+                </React.Fragment>
             );
         });
     };
@@ -609,7 +882,19 @@ const ProyeksiAnggaran = () => {
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
-                <button className="btn btn-secondary btn-sm" onClick={() => handleExport('rekap')}><Download size={14} /> Ekspor</button>
+                <div ref={exportRef} style={{ position: 'relative' }}>
+                    <button className="btn btn-secondary btn-sm" onClick={() => setShowExportMenu(!showExportMenu)}><Download size={14} /> Ekspor</button>
+                    {showExportMenu && (
+                        <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, background: 'var(--bg-card)', border: '1px solid var(--border-color)', borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.3)', zIndex: 50, minWidth: 160, overflow: 'hidden' }}>
+                            <button onClick={() => { handleExportExcel(filteredRekapData, 'Rekapitulasi_Anggaran'); setShowExportMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 14px', background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '0.85rem', textAlign: 'left' }} onMouseOver={e => e.target.style.background='var(--bg-secondary)'} onMouseOut={e => e.target.style.background='none'}>
+                                <FileSpreadsheet size={16} style={{ color: '#22c55e' }} /> Excel (.xlsx)
+                            </button>
+                            <button onClick={() => { handleExportPDF(filteredRekapData, 'Rekapitulasi_Anggaran'); setShowExportMenu(false); }} style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '10px 14px', background: 'none', border: 'none', color: 'var(--text-primary)', cursor: 'pointer', fontSize: '0.85rem', textAlign: 'left' }} onMouseOver={e => e.target.style.background='var(--bg-secondary)'} onMouseOut={e => e.target.style.background='none'}>
+                                <FileText size={16} style={{ color: '#ef4444' }} /> PDF (.pdf)
+                            </button>
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
@@ -620,7 +905,7 @@ const ProyeksiAnggaran = () => {
                 <div className="page-header-left"><h1>Proyeksi Anggaran</h1><p>Kalkulasi otomatis kebutuhan anggaran berdasarkan kondisi & SNP</p></div>
             </div>
 
-            <div className="keranjang-tabs" style={{ maxWidth: '45rem', marginBottom: '1.5rem' }}>
+            <div className="keranjang-tabs" style={{ maxWidth: '56rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
                 <button className={`keranjang-tab ${tab === 'anggaran' ? 'active' : ''}`} onClick={() => setTab('anggaran')}>Atur Anggaran</button>
                 <button className={`keranjang-tab ${tab === 'rekap' ? 'active' : ''}`} onClick={() => setTab('rekap')}>Rekapitulasi</button>
                 <button className={`keranjang-tab ${tab === 'belum-usul' ? 'active' : ''}`} onClick={() => setTab('belum-usul')}>
@@ -628,6 +913,14 @@ const ProyeksiAnggaran = () => {
                     {filteredBelumUsulan.length > 0 && (
                         <span style={{ marginLeft: '6px', background: 'var(--accent-red)', color: 'white', borderRadius: '10px', padding: '0 6px', fontSize: '0.7rem', fontWeight: 600 }}>
                             {filteredBelumUsulan.length > 999 ? '999+' : filteredBelumUsulan.length}
+                        </span>
+                    )}
+                </button>
+                <button className={`keranjang-tab ${tab === 'rekap-usulan' ? 'active' : ''}`} onClick={() => setTab('rekap-usulan')}>
+                    Rekap Usulan
+                    {filteredRekapUsulan.length > 0 && (
+                        <span style={{ marginLeft: '6px', background: 'rgba(139,92,246,0.8)', color: 'white', borderRadius: '10px', padding: '0 6px', fontSize: '0.7rem', fontWeight: 600 }}>
+                            {filteredRekapUsulan.length}
                         </span>
                     )}
                 </button>
@@ -713,19 +1006,15 @@ const ProyeksiAnggaran = () => {
                                         <th style={{ width: 40 }}></th>
                                         <th style={{ width: 50 }}>No</th>
                                         <th style={{ minWidth: 200 }}>Nama Sekolah</th>
-                                        <th style={{ minWidth: 220, background: 'var(--bg-secondary)', borderLeft: '3px solid var(--accent-purple)' }}>Keterangan / Usulan</th>
                                         <th style={{ width: 150, textAlign: 'right' }}>Total Rehab</th>
                                         <th style={{ width: 150, textAlign: 'right' }}>Total Pembangunan</th>
                                         <th style={{ width: 170, textAlign: 'right', background: 'var(--bg-secondary)' }}>Total Anggaran</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {renderTableBody(pagedRekap)}
+                                    {renderRekapTableBody(pagedRekap)}
                                 </tbody>
                             </table>
-                            <datalist id="keterangan-options">
-                                {KETERANGAN_OPTIONS.map(opt => <option key={opt} value={opt} />)}
-                            </datalist>
                         </div>
                         <PaginationControls totalPages={totalPagesRekap} totalItems={totalRekap} tableName="rekap" />
                     </div>
@@ -751,15 +1040,13 @@ const ProyeksiAnggaran = () => {
                                         <th style={{ width: 40 }}></th>
                                         <th style={{ width: 50 }}>No</th>
                                         <th style={{ minWidth: 200 }}>Nama Sekolah</th>
-                                        {/* Highlighted Column for Action */}
-                                        <th style={{ minWidth: 220, background: 'rgba(249, 115, 22, 0.1)', borderLeft: '3px solid var(--accent-orange)' }}>Ubah Status</th>
+                                        <th style={{ minWidth: 250, background: 'rgba(249, 115, 22, 0.1)', borderLeft: '3px solid var(--accent-orange)' }}>Tambah Usulan (Enter)</th>
                                         <th style={{ width: 150, textAlign: 'right' }}>Total Rehab</th>
-                                        <th style={{ width: 150, textAlign: 'right' }}>Total Pembangunan</th>
                                         <th style={{ width: 170, textAlign: 'right', background: 'var(--bg-secondary)' }}>Total Anggaran</th>
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {renderTableBody(pagedBelumUsulan)}
+                                    {renderBelumUsulTableBody(pagedBelumUsulan)}
                                 </tbody>
                             </table>
                             <datalist id="keterangan-options">
@@ -931,6 +1218,49 @@ const ProyeksiAnggaran = () => {
                         <PaginationControls totalPages={totalPagesSnpRekap} totalItems={totalSnpRekap} tableName="rekap-snp" />
                     </div>
                 </div>
+            )}
+
+            {/* TAB 6: REKAPITULASI USULAN */}
+            {tab === 'rekap-usulan' && (
+                <>
+                    <div className="stats-grid" style={{ marginBottom: '1.5rem' }}>
+                        <div className="stat-card" style={{ borderLeft: '4px solid var(--accent-purple)' }}>
+                            <div className="stat-label" style={{ display: 'flex', alignItems: 'center' }}><List size={16} style={{ marginRight: 6, color: 'var(--accent-purple)' }} /> Total Sekolah Berusulan</div>
+                            <div className="stat-value" style={{ color: 'var(--accent-purple)', fontSize: '1.3rem' }}>{filteredRekapUsulan.length}</div>
+                        </div>
+                        <div className="stat-card" style={{ borderLeft: '4px solid var(--accent-blue)' }}>
+                            <div className="stat-label" style={{ display: 'flex', alignItems: 'center' }}><MessageSquareText size={16} style={{ marginRight: 6, color: 'var(--accent-blue)' }} /> Total Usulan</div>
+                            <div className="stat-value" style={{ color: 'var(--accent-blue)', fontSize: '1.3rem' }}>{filteredRekapUsulan.reduce((s, d) => s + ((sekolahKeterangan[d.id] || []).length), 0)}</div>
+                        </div>
+                        <div className="stat-card" style={{ borderLeft: '4px solid var(--accent-green)' }}>
+                            <div className="stat-label" style={{ display: 'flex', alignItems: 'center' }}><Wallet size={16} style={{ marginRight: 6, color: 'var(--accent-green)' }} /> Total Anggaran Berusulan</div>
+                            <div className="stat-value" style={{ color: 'var(--accent-green)', fontSize: '1rem' }}>{formatCurrency(filteredRekapUsulan.reduce((s, d) => s + d.biayaRS + d.biayaRB + d.biayaBuild, 0))}</div>
+                        </div>
+                    </div>
+
+                    <div className="table-container">
+                        {renderTableToolbar(totalRekapUsulan, pagedRekapUsulan)}
+                        <div style={{ overflowX: 'auto' }}>
+                            <table className="data-table">
+                                <thead>
+                                    <tr>
+                                        <th style={{ width: 40 }}></th>
+                                        <th style={{ width: 50 }}>No</th>
+                                        <th style={{ minWidth: 200 }}>Nama Sekolah</th>
+                                        <th style={{ width: 90, textAlign: 'center' }}>Jml Usulan</th>
+                                        <th style={{ width: 150, textAlign: 'right' }}>Total Rehab</th>
+                                        <th style={{ width: 150, textAlign: 'right' }}>Total Pembangunan</th>
+                                        <th style={{ width: 170, textAlign: 'right', background: 'var(--bg-secondary)' }}>Total Anggaran</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {renderRekapUsulanTableBody(pagedRekapUsulan)}
+                                </tbody>
+                            </table>
+                        </div>
+                        <PaginationControls totalPages={totalPagesRekapUsulan} totalItems={totalRekapUsulan} tableName="rekap-usulan" />
+                    </div>
+                </>
             )}
 
             {renderModal()}
