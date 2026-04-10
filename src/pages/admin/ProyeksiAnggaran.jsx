@@ -19,21 +19,21 @@ const UsulanChipInput = React.memo(({ chips, onAdd, onRemove }) => {
         }
     };
     return (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center', minHeight: 32 }} onClick={e => e.stopPropagation()}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minHeight: 32 }} onClick={e => e.stopPropagation()}>
             {chips.map((c, idx) => (
                 <span key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 8px', borderRadius: 12, background: 'rgba(139,92,246,0.15)', color: '#a78bfa', fontSize: '0.78rem', fontWeight: 500 }}>
-                    {c}
-                    <button onClick={() => onRemove(idx)} style={{ background: 'none', border: 'none', color: '#a78bfa', cursor: 'pointer', padding: 0, lineHeight: 1, fontSize: '0.9rem' }}>×</button>
+                    {idx + 1}. {c}
+                    <button onClick={() => onRemove(idx)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, lineHeight: 1, fontSize: '0.9rem', marginLeft: 'auto' }}>×</button>
                 </span>
             ))}
             <input
                 list="keterangan-options"
-                placeholder={chips.length === 0 ? 'Ketik usulan + Enter...' : '+'}
+                placeholder={chips.length === 0 ? 'Ketik usulan + Enter...' : '+ Tambah usulan...'}
                 value={inputVal}
                 onChange={e => setInputVal(e.target.value)}
                 onKeyDown={handleKeyDown}
                 onBlur={() => { if (inputVal.trim()) { onAdd(inputVal.trim()); setInputVal(''); } }}
-                style={{ flex: 1, minWidth: 80, background: 'transparent', border: 'none', outline: 'none', padding: '4px', color: 'var(--text-primary)', fontSize: '0.82rem' }}
+                style={{ width: '100%', background: 'transparent', border: 'none', outline: 'none', padding: '4px', color: 'var(--text-primary)', fontSize: '0.82rem' }}
             />
         </div>
     );
@@ -772,7 +772,7 @@ const ProyeksiAnggaran = () => {
         if (dataset.length === 0) {
             return (
                 <tr>
-                    <td colSpan={7} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                    <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
                             <AlertCircle size={24} />
                             <span>Belum ada sekolah yang memiliki usulan.</span>
@@ -799,6 +799,11 @@ const ProyeksiAnggaran = () => {
                             <div style={{ fontWeight: 500 }}>{s.nama}</div>
                             <div style={{ color: 'var(--text-secondary)' }}>{s.jenjang}</div>
                         </td>
+                        <td style={{ textAlign: 'center' }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 28, height: 28, borderRadius: '50%', background: chips.length >= 3 ? 'rgba(34,197,94,0.15)' : chips.length >= 2 ? 'rgba(59,130,246,0.15)' : 'rgba(249,115,22,0.15)', color: chips.length >= 3 ? '#22c55e' : chips.length >= 2 ? '#3b82f6' : '#f59e0b', fontWeight: 700, fontSize: '0.85rem' }}>
+                                {chips.length}
+                            </span>
+                        </td>
                         <td style={{ background: 'rgba(139,92,246,0.05)', borderLeft: '3px solid var(--accent-purple)', minWidth: 220 }}>
                             {renderChipInput(s.id)}
                         </td>
@@ -814,15 +819,16 @@ const ProyeksiAnggaran = () => {
                     </tr>
                     {isExpanded && (
                         <tr>
-                            <td colSpan={7} style={{ padding: 0, background: 'var(--bg-secondary)', borderBottom: '2px solid var(--border-color)' }}>
+                            <td colSpan={8} style={{ padding: 0, background: 'var(--bg-secondary)', borderBottom: '2px solid var(--border-color)' }}>
                                 <div style={{ padding: '1rem 1.5rem' }}>
                                     <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: 'var(--accent-purple)' }}>📋 Daftar Usulan ({chips.length})</div>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 8 }}>
                                         {chips.map((c, idx) => (
-                                            <span key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 12px', borderRadius: 16, background: 'rgba(139,92,246,0.12)', color: '#a78bfa', fontSize: '0.82rem', fontWeight: 500 }}>
-                                                {idx + 1}. {c}
+                                            <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 8, background: 'rgba(139,92,246,0.08)', borderLeft: '3px solid rgba(139,92,246,0.4)' }}>
+                                                <span style={{ color: '#a78bfa', fontWeight: 600, fontSize: '0.82rem', minWidth: 20 }}>{idx + 1}.</span>
+                                                <span style={{ color: '#a78bfa', fontSize: '0.82rem', fontWeight: 500, flex: 1 }}>{c}</span>
                                                 <button onClick={(e) => { e.stopPropagation(); removeUsulan(s.id, idx); }} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, fontSize: '1rem', lineHeight: 1 }}>×</button>
-                                            </span>
+                                            </div>
                                         ))}
                                     </div>
                                     {/* Inline add more usulan */}
@@ -1316,6 +1322,7 @@ const ProyeksiAnggaran = () => {
                                         <th style={{ width: 40 }}></th>
                                         <th style={{ width: 50 }}>No</th>
                                         <th style={{ minWidth: 200 }}>Nama Sekolah</th>
+                                        <th style={{ width: 80, textAlign: 'center' }}>Jml Usulan</th>
                                         <th style={{ minWidth: 220, background: 'rgba(139,92,246,0.05)', borderLeft: '3px solid var(--accent-purple)' }}>Usulan</th>
                                         <th style={{ width: 150, textAlign: 'right' }}>Total Rehab</th>
                                         <th style={{ width: 150, textAlign: 'right' }}>Total Pembangunan</th>
