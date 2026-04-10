@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
-import { Plus, Search, Download, Edit, Trash2, Save, X, ChevronDown, ChevronUp, Building2, Hammer, HardHat, Wallet, ChevronLeft, ChevronRight, Maximize2, Minimize2, MessageSquareText, Filter, AlertCircle, FileSpreadsheet, FileText, List } from 'lucide-react';
+import { Plus, Search, Download, Edit, Trash2, Save, X, ChevronDown, ChevronUp, Building2, Hammer, HardHat, Wallet, ChevronLeft, ChevronRight, Maximize2, Minimize2, MessageSquareText, Filter, AlertCircle, FileSpreadsheet, FileText, List, Eye, EyeOff, Columns } from 'lucide-react';
 import { useProyeksiData, useSarprasData, useSekolahData } from '../../data/dataProvider';
 import { JENIS_PRASARANA, JENJANG } from '../../utils/constants';
 import { formatCurrency } from '../../utils/formatters';
@@ -109,6 +109,16 @@ const ProyeksiAnggaran = () => {
     // ===== STATE FILTER =====
     const [filterJenjang, setFilterJenjang] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
+
+    // ===== COLUMN VISIBILITY (Rekap Usulan) =====
+    const [rekapUsulanCols, setRekapUsulanCols] = useState({
+        totalRehab: false,
+        totalPembangunan: false,
+        totalAnggaran: false,
+    });
+    const [showColFilter, setShowColFilter] = useState(false);
+    const toggleCol = (key) => setRekapUsulanCols(prev => ({ ...prev, [key]: !prev[key] }));
+    const visibleColCount = 5 + (rekapUsulanCols.totalRehab ? 1 : 0) + (rekapUsulanCols.totalPembangunan ? 1 : 0) + (rekapUsulanCols.totalAnggaran ? 1 : 0);
 
     // ===== PAGINATION STATE (SHARED) =====
     const [pageSize, setPageSize] = useState(10);
@@ -772,7 +782,7 @@ const ProyeksiAnggaran = () => {
         if (dataset.length === 0) {
             return (
                 <tr>
-                    <td colSpan={8} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
+                    <td colSpan={visibleColCount} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)' }}>
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
                             <AlertCircle size={24} />
                             <span>Belum ada sekolah yang memiliki usulan.</span>
@@ -807,19 +817,25 @@ const ProyeksiAnggaran = () => {
                         <td style={{ background: 'rgba(139,92,246,0.05)', borderLeft: '3px solid var(--accent-purple)', minWidth: 220 }}>
                             {renderChipInput(s.id)}
                         </td>
+                        {rekapUsulanCols.totalRehab && (
                         <td style={{ color: totalRehab > 0 ? 'var(--accent-orange)' : 'var(--text-secondary)', textAlign: 'right', fontWeight: 500 }}>
                             {totalRehab > 0 ? formatCurrency(totalRehab) : '-'}
                         </td>
+                        )}
+                        {rekapUsulanCols.totalPembangunan && (
                         <td style={{ color: totalBuild > 0 ? 'var(--accent-blue)' : 'var(--text-secondary)', textAlign: 'right', fontWeight: 500 }}>
                             {totalBuild > 0 ? formatCurrency(totalBuild) : '-'}
                         </td>
+                        )}
+                        {rekapUsulanCols.totalAnggaran && (
                         <td style={{ fontWeight: 700, background: 'var(--bg-secondary)', textAlign: 'right', color: 'var(--text-primary)' }}>
                             {formatCurrency(totalAnggaran)}
                         </td>
+                        )}
                     </tr>
                     {isExpanded && (
                         <tr>
-                            <td colSpan={8} style={{ padding: 0, background: 'var(--bg-secondary)', borderBottom: '2px solid var(--border-color)' }}>
+                            <td colSpan={visibleColCount} style={{ padding: 0, background: 'var(--bg-secondary)', borderBottom: '2px solid var(--border-color)' }}>
                                 <div style={{ padding: '1rem 1.5rem' }}>
                                     <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: 'var(--accent-purple)' }}>📋 Daftar Usulan ({chips.length})</div>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 8 }}>
@@ -1072,6 +1088,24 @@ const ProyeksiAnggaran = () => {
                         </div>
                     </div>
 
+                    {/* Column filter toggle */}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem', position: 'relative' }}>
+                        <button className="btn btn-secondary btn-sm" onClick={() => setShowColFilter(!showColFilter)} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Columns size={14} /> Kolom
+                        </button>
+                        {showColFilter && (
+                            <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '0.5rem', zIndex: 20, minWidth: 200, boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
+                                {[{ key: 'totalRehab', label: 'Total Rehab' }, { key: 'totalPembangunan', label: 'Total Pembangunan' }, { key: 'totalAnggaran', label: 'Total Anggaran' }].map(col => (
+                                    <label key={col.key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', cursor: 'pointer', borderRadius: 6, fontSize: '0.82rem', color: 'var(--text-primary)' }}>
+                                        {rekapUsulanCols[col.key] ? <Eye size={14} style={{ color: 'var(--accent-green)' }} /> : <EyeOff size={14} style={{ color: 'var(--text-secondary)' }} />}
+                                        <span>{col.label}</span>
+                                        <input type="checkbox" checked={rekapUsulanCols[col.key]} onChange={() => toggleCol(col.key)} style={{ marginLeft: 'auto', accentColor: 'var(--accent-purple)' }} />
+                                    </label>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
                     <div className="table-container">
                         {renderTableToolbar(totalRekap, pagedRekap)}
                         <div style={{ overflowX: 'auto' }}>
@@ -1104,6 +1138,24 @@ const ProyeksiAnggaran = () => {
                         <div>
                             <strong>Perhatian:</strong> Tabel ini menampilkan sekolah yang memiliki kebutuhan anggaran tetapi belum memiliki usulan. Ketik usulan lalu tekan Enter untuk menambahkan.
                         </div>
+                    </div>
+
+                    {/* Column filter toggle */}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem', position: 'relative' }}>
+                        <button className="btn btn-secondary btn-sm" onClick={() => setShowColFilter(!showColFilter)} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Columns size={14} /> Kolom
+                        </button>
+                        {showColFilter && (
+                            <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '0.5rem', zIndex: 20, minWidth: 200, boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
+                                {[{ key: 'totalRehab', label: 'Total Rehab' }, { key: 'totalPembangunan', label: 'Total Pembangunan' }, { key: 'totalAnggaran', label: 'Total Anggaran' }].map(col => (
+                                    <label key={col.key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', cursor: 'pointer', borderRadius: 6, fontSize: '0.82rem', color: 'var(--text-primary)' }}>
+                                        {rekapUsulanCols[col.key] ? <Eye size={14} style={{ color: 'var(--accent-green)' }} /> : <EyeOff size={14} style={{ color: 'var(--text-secondary)' }} />}
+                                        <span>{col.label}</span>
+                                        <input type="checkbox" checked={rekapUsulanCols[col.key]} onChange={() => toggleCol(col.key)} style={{ marginLeft: 'auto', accentColor: 'var(--accent-purple)' }} />
+                                    </label>
+                                ))}
+                            </div>
+                        )}
                     </div>
 
                     <div className="table-container">
@@ -1216,6 +1268,24 @@ const ProyeksiAnggaran = () => {
                         </div>
                     </div>
 
+                    {/* Column filter toggle */}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem', position: 'relative' }}>
+                        <button className="btn btn-secondary btn-sm" onClick={() => setShowColFilter(!showColFilter)} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Columns size={14} /> Kolom
+                        </button>
+                        {showColFilter && (
+                            <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '0.5rem', zIndex: 20, minWidth: 200, boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
+                                {[{ key: 'totalRehab', label: 'Total Rehab' }, { key: 'totalPembangunan', label: 'Total Pembangunan' }, { key: 'totalAnggaran', label: 'Total Anggaran' }].map(col => (
+                                    <label key={col.key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', cursor: 'pointer', borderRadius: 6, fontSize: '0.82rem', color: 'var(--text-primary)' }}>
+                                        {rekapUsulanCols[col.key] ? <Eye size={14} style={{ color: 'var(--accent-green)' }} /> : <EyeOff size={14} style={{ color: 'var(--text-secondary)' }} />}
+                                        <span>{col.label}</span>
+                                        <input type="checkbox" checked={rekapUsulanCols[col.key]} onChange={() => toggleCol(col.key)} style={{ marginLeft: 'auto', accentColor: 'var(--accent-purple)' }} />
+                                    </label>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
                     <div className="table-container">
                         <div className="table-toolbar">
                             <div className="table-toolbar-left">
@@ -1313,6 +1383,24 @@ const ProyeksiAnggaran = () => {
                         </div>
                     </div>
 
+                    {/* Column filter toggle */}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '0.5rem', position: 'relative' }}>
+                        <button className="btn btn-secondary btn-sm" onClick={() => setShowColFilter(!showColFilter)} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                            <Columns size={14} /> Kolom
+                        </button>
+                        {showColFilter && (
+                            <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 4, background: 'var(--bg-primary)', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', padding: '0.5rem', zIndex: 20, minWidth: 200, boxShadow: '0 4px 12px rgba(0,0,0,0.3)' }}>
+                                {[{ key: 'totalRehab', label: 'Total Rehab' }, { key: 'totalPembangunan', label: 'Total Pembangunan' }, { key: 'totalAnggaran', label: 'Total Anggaran' }].map(col => (
+                                    <label key={col.key} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', cursor: 'pointer', borderRadius: 6, fontSize: '0.82rem', color: 'var(--text-primary)' }}>
+                                        {rekapUsulanCols[col.key] ? <Eye size={14} style={{ color: 'var(--accent-green)' }} /> : <EyeOff size={14} style={{ color: 'var(--text-secondary)' }} />}
+                                        <span>{col.label}</span>
+                                        <input type="checkbox" checked={rekapUsulanCols[col.key]} onChange={() => toggleCol(col.key)} style={{ marginLeft: 'auto', accentColor: 'var(--accent-purple)' }} />
+                                    </label>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
                     <div className="table-container">
                         {renderTableToolbar(totalRekapUsulan, pagedRekapUsulan)}
                         <div style={{ overflowX: 'auto' }}>
@@ -1324,9 +1412,9 @@ const ProyeksiAnggaran = () => {
                                         <th style={{ minWidth: 200 }}>Nama Sekolah</th>
                                         <th style={{ width: 80, textAlign: 'center' }}>Jml Usulan</th>
                                         <th style={{ minWidth: 220, background: 'rgba(139,92,246,0.05)', borderLeft: '3px solid var(--accent-purple)' }}>Usulan</th>
-                                        <th style={{ width: 150, textAlign: 'right' }}>Total Rehab</th>
-                                        <th style={{ width: 150, textAlign: 'right' }}>Total Pembangunan</th>
-                                        <th style={{ width: 170, textAlign: 'right', background: 'var(--bg-secondary)' }}>Total Anggaran</th>
+                                        {rekapUsulanCols.totalRehab && <th style={{ width: 150, textAlign: 'right' }}>Total Rehab</th>}
+                                        {rekapUsulanCols.totalPembangunan && <th style={{ width: 150, textAlign: 'right' }}>Total Pembangunan</th>}
+                                        {rekapUsulanCols.totalAnggaran && <th style={{ width: 170, textAlign: 'right', background: 'var(--bg-secondary)' }}>Total Anggaran</th>}
                                     </tr>
                                 </thead>
                                 <tbody>
