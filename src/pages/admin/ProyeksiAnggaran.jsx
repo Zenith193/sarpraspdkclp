@@ -7,9 +7,6 @@ import toast from 'react-hot-toast';
 import { proyeksiApi } from '../../api/index';
 import { useApi } from '../../api/hooks';
 import ConfirmModal from '../../components/ui/ConfirmModal';
-import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import 'jspdf-autotable';
 
 // Opsi untuk Keterangan (Combo Box)
 const KETERANGAN_OPTIONS = [
@@ -453,45 +450,51 @@ const ProyeksiAnggaran = () => {
     };
 
     // ===== EXPORT FUNCTIONS =====
-    const handleExportExcel = (dataset, title = 'Rekapitulasi') => {
-        const rows = [];
-        dataset.forEach((s, i) => {
-            rows.push({
-                'No': i + 1,
-                'Nama Sekolah': s.nama,
-                'Jenjang': s.jenjang,
-                'Rincian': '',
-                'Total Rehab': s.biayaRS + s.biayaRB,
-                'Total Pembangunan': s.biayaBuild,
-                'Total Anggaran': s.biayaRS + s.biayaRB + s.biayaBuild,
-            });
-            // Add detail rows
-            if (s.details?.length) {
-                s.details.forEach(d => {
-                    const label = d.type === 'rehab' ? `[REHAB] ${d.name}` : `[BANGUN] ${d.name}`;
-                    rows.push({
-                        'No': '',
-                        'Nama Sekolah': '',
-                        'Jenjang': '',
-                        'Rincian': `${label} (${d.count} Unit)`,
-                        'Total Rehab': d.type === 'rehab' ? d.totalCost : '',
-                        'Total Pembangunan': d.type === 'build' ? d.totalCost : '',
-                        'Total Anggaran': d.totalCost,
-                    });
+    const handleExportExcel = async (dataset, title = 'Rekapitulasi') => {
+        try {
+            const XLSX = await import('xlsx');
+            const rows = [];
+            dataset.forEach((s, i) => {
+                rows.push({
+                    'No': i + 1,
+                    'Nama Sekolah': s.nama,
+                    'Jenjang': s.jenjang,
+                    'Rincian': '',
+                    'Total Rehab': s.biayaRS + s.biayaRB,
+                    'Total Pembangunan': s.biayaBuild,
+                    'Total Anggaran': s.biayaRS + s.biayaRB + s.biayaBuild,
                 });
-            }
-        });
-        const ws = XLSX.utils.json_to_sheet(rows);
-        // Set column widths
-        ws['!cols'] = [{ wch: 5 }, { wch: 35 }, { wch: 8 }, { wch: 45 }, { wch: 18 }, { wch: 18 }, { wch: 20 }];
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, title.substring(0, 31));
-        XLSX.writeFile(wb, `${title.replace(/\s/g, '_')}_${new Date().toISOString().slice(0,10)}.xlsx`);
-        toast.success('Excel berhasil diunduh');
+                if (s.details?.length) {
+                    s.details.forEach(d => {
+                        const label = d.type === 'rehab' ? `[REHAB] ${d.name}` : `[BANGUN] ${d.name}`;
+                        rows.push({
+                            'No': '',
+                            'Nama Sekolah': '',
+                            'Jenjang': '',
+                            'Rincian': `${label} (${d.count} Unit)`,
+                            'Total Rehab': d.type === 'rehab' ? d.totalCost : '',
+                            'Total Pembangunan': d.type === 'build' ? d.totalCost : '',
+                            'Total Anggaran': d.totalCost,
+                        });
+                    });
+                }
+            });
+            const ws = XLSX.utils.json_to_sheet(rows);
+            ws['!cols'] = [{ wch: 5 }, { wch: 35 }, { wch: 8 }, { wch: 45 }, { wch: 18 }, { wch: 18 }, { wch: 20 }];
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, title.substring(0, 31));
+            XLSX.writeFile(wb, `${title.replace(/\s/g, '_')}_${new Date().toISOString().slice(0,10)}.xlsx`);
+            toast.success('Excel berhasil diunduh');
+        } catch (err) {
+            console.error('Excel export error:', err);
+            toast.error('Gagal membuat Excel: ' + (err.message || ''));
+        }
     };
 
-    const handleExportPDF = (dataset, title = 'Rekapitulasi') => {
+    const handleExportPDF = async (dataset, title = 'Rekapitulasi') => {
         try {
+            const { default: jsPDF } = await import('jspdf');
+            await import('jspdf-autotable');
             const doc = new jsPDF({ orientation: 'landscape' });
             doc.setFontSize(14);
             doc.text(title.replace(/_/g, ' '), 14, 15);
