@@ -84,18 +84,10 @@ const Feedback = () => {
             <div style={{ maxWidth: 640, margin: '0 auto' }}>
                 <div style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)', padding: 28 }}>
                     {/* Auto-filled fields */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
-                        <div>
-                            <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Nama Akun</label>
-                            <div style={{ padding: '10px 14px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 8, fontSize: '0.9rem', color: 'var(--text-primary)', opacity: 0.7 }}>
-                                {user?.namaAkun || user?.name || '-'}
-                            </div>
-                        </div>
-                        <div>
-                            <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Email</label>
-                            <div style={{ padding: '10px 14px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 8, fontSize: '0.9rem', color: 'var(--text-primary)', opacity: 0.7 }}>
-                                {user?.email || '-'}
-                            </div>
+                    <div style={{ marginBottom: 20 }}>
+                        <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Nama Akun</label>
+                        <div style={{ padding: '10px 14px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', borderRadius: 8, fontSize: '0.9rem', color: 'var(--text-primary)', opacity: 0.7 }}>
+                            {user?.namaAkun || user?.name || '-'}
                         </div>
                     </div>
 
