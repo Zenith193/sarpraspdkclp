@@ -454,42 +454,95 @@ const ProyeksiAnggaran = () => {
 
     // ===== EXPORT FUNCTIONS =====
     const handleExportExcel = (dataset, title = 'Rekapitulasi') => {
-        const rows = dataset.map((s, i) => ({
-            'No': i + 1,
-            'Nama Sekolah': s.nama,
-            'Jenjang': s.jenjang,
-            'Total Rehab': s.biayaRS + s.biayaRB,
-            'Total Pembangunan': s.biayaBuild,
-            'Total Anggaran': s.biayaRS + s.biayaRB + s.biayaBuild,
-        }));
+        const rows = [];
+        dataset.forEach((s, i) => {
+            rows.push({
+                'No': i + 1,
+                'Nama Sekolah': s.nama,
+                'Jenjang': s.jenjang,
+                'Rincian': '',
+                'Total Rehab': s.biayaRS + s.biayaRB,
+                'Total Pembangunan': s.biayaBuild,
+                'Total Anggaran': s.biayaRS + s.biayaRB + s.biayaBuild,
+            });
+            // Add detail rows
+            if (s.details?.length) {
+                s.details.forEach(d => {
+                    const label = d.type === 'rehab' ? `[REHAB] ${d.name}` : `[BANGUN] ${d.name}`;
+                    rows.push({
+                        'No': '',
+                        'Nama Sekolah': '',
+                        'Jenjang': '',
+                        'Rincian': `${label} (${d.count} Unit)`,
+                        'Total Rehab': d.type === 'rehab' ? d.totalCost : '',
+                        'Total Pembangunan': d.type === 'build' ? d.totalCost : '',
+                        'Total Anggaran': d.totalCost,
+                    });
+                });
+            }
+        });
         const ws = XLSX.utils.json_to_sheet(rows);
+        // Set column widths
+        ws['!cols'] = [{ wch: 5 }, { wch: 35 }, { wch: 8 }, { wch: 45 }, { wch: 18 }, { wch: 18 }, { wch: 20 }];
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, title);
+        XLSX.utils.book_append_sheet(wb, ws, title.substring(0, 31));
         XLSX.writeFile(wb, `${title.replace(/\s/g, '_')}_${new Date().toISOString().slice(0,10)}.xlsx`);
         toast.success('Excel berhasil diunduh');
     };
 
     const handleExportPDF = (dataset, title = 'Rekapitulasi') => {
-        const doc = new jsPDF({ orientation: 'landscape' });
-        doc.setFontSize(14);
-        doc.text(title, 14, 15);
-        doc.setFontSize(9);
-        doc.text(`Diekspor: ${new Date().toLocaleDateString('id-ID')}`, 14, 22);
-        const rows = dataset.map((s, i) => [
-            i + 1, s.nama, s.jenjang,
-            formatCurrency(s.biayaRS + s.biayaRB),
-            formatCurrency(s.biayaBuild),
-            formatCurrency(s.biayaRS + s.biayaRB + s.biayaBuild),
-        ]);
-        doc.autoTable({
-            startY: 26,
-            head: [['No', 'Nama Sekolah', 'Jenjang', 'Total Rehab', 'Total Pembangunan', 'Total Anggaran']],
-            body: rows,
-            styles: { fontSize: 8 },
-            headStyles: { fillColor: [59, 130, 246] },
-        });
-        doc.save(`${title.replace(/\s/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`);
-        toast.success('PDF berhasil diunduh');
+        try {
+            const doc = new jsPDF({ orientation: 'landscape' });
+            doc.setFontSize(14);
+            doc.text(title.replace(/_/g, ' '), 14, 15);
+            doc.setFontSize(9);
+            doc.text(`Diekspor: ${new Date().toLocaleDateString('id-ID')}`, 14, 22);
+            const rows = [];
+            dataset.forEach((s, i) => {
+                rows.push([
+                    { content: i + 1, styles: { fontStyle: 'bold' } },
+                    s.nama,
+                    s.jenjang,
+                    '',
+                    formatCurrency(s.biayaRS + s.biayaRB),
+                    formatCurrency(s.biayaBuild),
+                    formatCurrency(s.biayaRS + s.biayaRB + s.biayaBuild),
+                ]);
+                if (s.details?.length) {
+                    s.details.forEach(d => {
+                        const label = d.type === 'rehab' ? `[REHAB] ${d.name}` : `[BANGUN] ${d.name}`;
+                        rows.push([
+                            '', '', '',
+                            `${label} (${d.count} Unit)`,
+                            d.type === 'rehab' ? formatCurrency(d.totalCost) : '',
+                            d.type === 'build' ? formatCurrency(d.totalCost) : '',
+                            formatCurrency(d.totalCost),
+                        ]);
+                    });
+                }
+            });
+            doc.autoTable({
+                startY: 26,
+                head: [['No', 'Nama Sekolah', 'Jenjang', 'Rincian Kebutuhan', 'Total Rehab', 'Total Pembangunan', 'Total Anggaran']],
+                body: rows,
+                styles: { fontSize: 7, cellPadding: 2 },
+                headStyles: { fillColor: [59, 130, 246], fontSize: 8 },
+                columnStyles: {
+                    0: { cellWidth: 10 },
+                    1: { cellWidth: 45 },
+                    2: { cellWidth: 15 },
+                    3: { cellWidth: 70 },
+                    4: { cellWidth: 30, halign: 'right' },
+                    5: { cellWidth: 30, halign: 'right' },
+                    6: { cellWidth: 35, halign: 'right' },
+                },
+            });
+            doc.save(`${title.replace(/\s/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`);
+            toast.success('PDF berhasil diunduh');
+        } catch (err) {
+            console.error('PDF export error:', err);
+            toast.error('Gagal membuat PDF: ' + (err.message || ''));
+        }
     };
 
     // Helper for Pagination Text
@@ -732,10 +785,8 @@ const ProyeksiAnggaran = () => {
                             <div style={{ fontWeight: 500 }}>{s.nama}</div>
                             <div style={{ color: 'var(--text-secondary)' }}>{s.jenjang}</div>
                         </td>
-                        <td style={{ textAlign: 'center' }}>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', minWidth: 28, height: 28, borderRadius: '50%', background: chips.length >= 3 ? 'rgba(34,197,94,0.15)' : chips.length >= 2 ? 'rgba(59,130,246,0.15)' : 'rgba(249,115,22,0.15)', color: chips.length >= 3 ? '#22c55e' : chips.length >= 2 ? '#3b82f6' : '#f59e0b', fontWeight: 700, fontSize: '0.85rem' }}>
-                                {chips.length}
-                            </span>
+                        <td style={{ background: 'rgba(139,92,246,0.05)', borderLeft: '3px solid var(--accent-purple)', minWidth: 220 }}>
+                            <UsulanChipInput sekolahId={s.id} />
                         </td>
                         <td style={{ color: totalRehab > 0 ? 'var(--accent-orange)' : 'var(--text-secondary)', textAlign: 'right', fontWeight: 500 }}>
                             {totalRehab > 0 ? formatCurrency(totalRehab) : '-'}
@@ -752,13 +803,17 @@ const ProyeksiAnggaran = () => {
                             <td colSpan={7} style={{ padding: 0, background: 'var(--bg-secondary)', borderBottom: '2px solid var(--border-color)' }}>
                                 <div style={{ padding: '1rem 1.5rem' }}>
                                     <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: 'var(--accent-purple)' }}>📋 Daftar Usulan ({chips.length})</div>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
                                         {chips.map((c, idx) => (
                                             <span key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '4px 12px', borderRadius: 16, background: 'rgba(139,92,246,0.12)', color: '#a78bfa', fontSize: '0.82rem', fontWeight: 500 }}>
                                                 {idx + 1}. {c}
                                                 <button onClick={(e) => { e.stopPropagation(); removeUsulan(s.id, idx); }} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, fontSize: '1rem', lineHeight: 1 }}>×</button>
                                             </span>
                                         ))}
+                                    </div>
+                                    {/* Inline add more usulan */}
+                                    <div onClick={e => e.stopPropagation()} style={{ marginBottom: 12, display: 'flex', gap: 6, alignItems: 'center' }}>
+                                        <UsulanChipInput sekolahId={s.id} />
                                     </div>
                                     <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>🏗 Rincian Kebutuhan</div>
                                     {s.details.length === 0 ? (
@@ -1247,7 +1302,7 @@ const ProyeksiAnggaran = () => {
                                         <th style={{ width: 40 }}></th>
                                         <th style={{ width: 50 }}>No</th>
                                         <th style={{ minWidth: 200 }}>Nama Sekolah</th>
-                                        <th style={{ width: 90, textAlign: 'center' }}>Jml Usulan</th>
+                                        <th style={{ minWidth: 220, background: 'rgba(139,92,246,0.05)', borderLeft: '3px solid var(--accent-purple)' }}>Usulan (Ketik + Enter)</th>
                                         <th style={{ width: 150, textAlign: 'right' }}>Total Rehab</th>
                                         <th style={{ width: 150, textAlign: 'right' }}>Total Pembangunan</th>
                                         <th style={{ width: 170, textAlign: 'right', background: 'var(--bg-secondary)' }}>Total Anggaran</th>
