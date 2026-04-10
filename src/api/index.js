@@ -307,3 +307,10 @@ export const referensiApi = {
     updatePpkom: (id, data) => api.put(`/referensi/ppkom/${id}`, data),
     deletePpkom: (id) => api.delete(`/referensi/ppkom/${id}`),
 };
+
+export const feedbackApi = {
+    submit: (formData) => api.upload('/feedback', formData),
+    list: () => api.get('/feedback'),
+    update: (id, data) => api.put(`/feedback/${id}`, data),
+    delete: (id) => api.delete(`/feedback/${id}`),
+};

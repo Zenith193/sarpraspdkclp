@@ -4,7 +4,7 @@ import {
     LayoutDashboard, Database, FileText, DollarSign, Activity, Users, FileSpreadsheet,
     History, Grid3X3, FilePlus, Wallet, Map, Upload, Trophy, LogOut, School,
     ChevronLeft, ChevronRight, CheckCircle, Star, ClipboardList, Eye,
-    Shield, HardDrive, Timer, Megaphone, Briefcase, ClipboardCheck, Target, BarChart3
+    Shield, HardDrive, Timer, Megaphone, Briefcase, ClipboardCheck, Target, BarChart3, MessageSquarePlus, MessageSquare
 } from 'lucide-react';
 import useAuthStore from '../../store/authStore';
 import useSettingsStore, { ALL_MENUS } from '../../store/settingsStore';
@@ -77,6 +77,7 @@ const Sidebar = ({ collapsed, onToggle, className = '' }) => {
         { label: 'Manajemen Penyedia', icon: <Briefcase size={18} />, path: '/admin/manajemen-penyedia' },
         { label: 'Manajemen Kontrak', icon: <ClipboardCheck size={18} />, path: '/admin/manajemen-kontrak' },
         { label: 'Monitoring Realisasi', icon: <BarChart3 size={18} />, path: '/admin/monitoring-realisasi' },
+        { label: 'Feedback', icon: <MessageSquare size={18} />, path: '/admin/feedback' },
     ]);
 
     const adminSettingsMenu = filterByAccess([
@@ -115,6 +116,7 @@ const Sidebar = ({ collapsed, onToggle, className = '' }) => {
         { label: 'Riwayat Bantuan', icon: <History size={18} />, path: '/korwil/riwayat-bantuan' },
         { label: 'Form Kerusakan', icon: <Eye size={18} />, path: '/korwil/form-kerusakan' },
         { label: 'Iklan', icon: <Megaphone size={18} />, path: '/korwil/iklan' },
+        { label: 'Feedback', icon: <MessageSquarePlus size={18} />, path: '/korwil/feedback' },
     ]);
 
     const sekolahMenu = filterByAccess([
@@ -125,12 +127,14 @@ const Sidebar = ({ collapsed, onToggle, className = '' }) => {
         { label: 'Prestasi', icon: <Trophy size={18} />, path: '/sekolah/prestasi' },
         { label: 'Form Kerusakan', icon: <Eye size={18} />, path: '/sekolah/form-kerusakan' },
         { label: 'Iklan', icon: <Megaphone size={18} />, path: '/sekolah/iklan' },
+        { label: 'Feedback', icon: <MessageSquarePlus size={18} />, path: '/sekolah/feedback' },
     ]);
 
     const penyediaMenu = [
         { label: 'Dashboard', icon: <LayoutDashboard size={18} />, path: '/penyedia/dashboard' },
         { label: 'Realisasi', icon: <Target size={18} />, path: '/penyedia/realisasi' },
         { label: 'Riwayat Kontrak', icon: <History size={18} />, path: '/penyedia/riwayat-kontrak' },
+        { label: 'Feedback', icon: <MessageSquarePlus size={18} />, path: '/penyedia/feedback' },
     ];
 
     const bottomMenu = [

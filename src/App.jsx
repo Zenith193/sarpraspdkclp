@@ -56,6 +56,8 @@ import VerifikasiSarpras from './pages/shared/VerifikasiSarpras';
 import VerifikasiProposal from './pages/shared/VerifikasiProposal';
 import FormKerusakan from './pages/shared/FormKerusakan';
 import Iklan from './pages/shared/Iklan';
+import Feedback from './pages/shared/Feedback';
+import ManajemenFeedback from './pages/admin/ManajemenFeedback';
 
 import AdScriptInjector from './components/AdScriptInjector';
 
@@ -134,6 +136,7 @@ function App() {
           <Route path="manajemen-penyedia" element={<ManajemenPenyedia />} />
           <Route path="manajemen-kontrak" element={<ManajemenKontrak />} />
           <Route path="monitoring-realisasi" element={<MonitoringRealisasi />} />
+          <Route path="feedback" element={<ManajemenFeedback />} />
           <Route path="profil" element={<ProfilPengguna />} />
         </Route>
 
@@ -171,6 +174,7 @@ function App() {
           <Route path="riwayat-bantuan" element={<RiwayatBantuan readOnly />} />
           <Route path="form-kerusakan" element={<UploadFormKerusakan />} />
           <Route path="iklan" element={<Iklan />} />
+          <Route path="feedback" element={<Feedback />} />
           <Route path="profil" element={<ProfilPengguna />} />
           <Route path="aktivitas" element={<AktivitasPengguna />} />
         </Route>
@@ -184,6 +188,7 @@ function App() {
           <Route path="prestasi" element={<Prestasi />} />
           <Route path="form-kerusakan" element={<UploadFormKerusakan />} />
           <Route path="iklan" element={<Iklan />} />
+          <Route path="feedback" element={<Feedback />} />
           <Route path="profil" element={<ProfilPengguna />} />
           <Route path="aktivitas" element={<AktivitasPengguna />} />
         </Route>
@@ -194,6 +199,7 @@ function App() {
           <Route path="permohonan-kontrak" element={<PermohonanKontrak />} />
           <Route path="riwayat-kontrak" element={<RiwayatKontrakPenyedia />} />
           <Route path="realisasi" element={<RealisasiPenyedia />} />
+          <Route path="feedback" element={<Feedback />} />
           <Route path="profil" element={<ProfilPengguna />} />
         </Route>
 

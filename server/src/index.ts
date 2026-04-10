@@ -36,6 +36,7 @@ import arsipDokumenRoutes from './routes/arsipDokumen.routes.js';
 import perusahaanRoutes from './routes/perusahaan.routes.js';
 import kontrakRoutes from './routes/kontrak.routes.js';
 import referensiRoutes from './routes/referensi.routes.js';
+import feedbackRoutes from './routes/feedback.routes.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -296,6 +297,16 @@ app.get('/api/file/proposal/:fotoId', async (req, res) => {
         const result = await db.select().from(proposalFoto).where(eq(proposalFoto.id, Number(req.params.fotoId)));
         if (!result[0] || !result[0].filePath) { res.status(404).json({ error: 'File not found' }); return; }
         await serveFileFromPath(result[0].filePath, res);
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// ===== FEEDBACK FOTO PROXY =====
+app.get('/api/file/feedback/:id', async (req, res) => {
+    try {
+        const { feedback } = await import('./db/schema/index.js');
+        const result = await db.select().from(feedback).where(eq(feedback.id, Number(req.params.id)));
+        if (!result[0] || !result[0].fotoPath) { res.status(404).json({ error: 'File not found' }); return; }
+        await serveFileFromPath(result[0].fotoPath, res);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
@@ -731,6 +742,7 @@ app.use('/api/arsip-dokumen', arsipDokumenRoutes);
 app.use('/api/perusahaan', perusahaanRoutes);
 app.use('/api/kontrak', kontrakRoutes);
 app.use('/api/referensi', referensiRoutes);
+app.use('/api/feedback', feedbackRoutes);
 
 // ===== PUBLIC STATS (no auth required for login page) =====
 
@@ -983,6 +995,20 @@ async function autoMigrate() {
             keterangan TEXT,
             created_by TEXT REFERENCES "user"(id),
             created_at TIMESTAMP DEFAULT NOW()
+        )`,
+        // Feedback table
+        `CREATE TABLE IF NOT EXISTS feedback (
+            id SERIAL PRIMARY KEY,
+            user_id TEXT NOT NULL,
+            nama_akun TEXT NOT NULL,
+            email TEXT NOT NULL,
+            role TEXT NOT NULL,
+            isi_gagasan TEXT NOT NULL,
+            foto_path TEXT,
+            status TEXT DEFAULT 'Baru',
+            catatan_admin TEXT,
+            created_at TIMESTAMP DEFAULT NOW(),
+            updated_at TIMESTAMP DEFAULT NOW()
         )`,
     ];
     for (const m of migrations) {
