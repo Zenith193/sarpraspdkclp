@@ -27,7 +27,17 @@ const Sidebar = ({ collapsed, onToggle, className = '' }) => {
                 serverConfig = typeof res.value === 'string' ? JSON.parse(res.value) : res.value;
             }
             if (serverConfig && typeof serverConfig === 'object' && (serverConfig.admin || serverConfig.verifikator)) {
-                setAccessConfig(serverConfig);
+                // Auto-add new menu keys from ALL_MENUS that don't exist in stored config
+                const merged = { ...serverConfig };
+                Object.keys(ALL_MENUS).forEach(role => {
+                    if (merged[role]) {
+                        const allKeys = ALL_MENUS[role].map(m => m.path);
+                        allKeys.forEach(key => {
+                            if (!merged[role].includes(key)) merged[role].push(key);
+                        });
+                    }
+                });
+                setAccessConfig(merged);
             }
         }).catch(() => {});
     }, []);

@@ -10,7 +10,8 @@ const DEFAULT_ACCESS = {
         'pencairan', 'manajemen-korwil', 'form-kerusakan', 'prestasi',
         'verifikasi-sarpras', 'verifikasi-proposal', 'ranking',
         'hak-akses', 'pengaturan-nas', 'countdown-settings', 'iklan',
-        'manajemen-penyedia', 'manajemen-kontrak', 'monitoring-realisasi'
+        'manajemen-penyedia', 'manajemen-kontrak', 'monitoring-realisasi',
+        'feedback'
     ],
     verifikator: [
         'dashboard', 'data-sarpras', 'proposal',
@@ -18,16 +19,17 @@ const DEFAULT_ACCESS = {
         'ranking', 'riwayat-bantuan',
         'manajemen-template', 'matriks-kegiatan', 'create-bast',
         'pencairan', 'form-kerusakan', 'prestasi', 'iklan',
-        'manajemen-penyedia', 'manajemen-kontrak', 'monitoring-realisasi'
+        'manajemen-penyedia', 'manajemen-kontrak', 'monitoring-realisasi',
+        'feedback'
     ],
     korwil: [
         'dashboard', 'verifikasi-sarpras', 'verifikasi-proposal',
         'ranking', 'data-sarpras', 'proposal',
-        'riwayat-bantuan', 'form-kerusakan', 'iklan'
+        'riwayat-bantuan', 'form-kerusakan', 'iklan', 'feedback'
     ],
     sekolah: [
         'dashboard', 'data-sarpras', 'proposal', 'riwayat-bantuan',
-        'prestasi', 'form-kerusakan', 'iklan'
+        'prestasi', 'form-kerusakan', 'iklan', 'feedback'
     ]
 };
 
@@ -58,6 +60,7 @@ export const ALL_MENUS = {
         { path: 'manajemen-penyedia', label: 'Manajemen Penyedia' },
         { path: 'manajemen-kontrak', label: 'Manajemen Kontrak' },
         { path: 'monitoring-realisasi', label: 'Monitoring Realisasi' },
+        { path: 'feedback', label: 'Feedback' },
     ],
     verifikator: [
         { path: 'dashboard', label: 'Dashboard' },
@@ -77,6 +80,7 @@ export const ALL_MENUS = {
         { path: 'manajemen-penyedia', label: 'Manajemen Penyedia' },
         { path: 'manajemen-kontrak', label: 'Manajemen Kontrak' },
         { path: 'monitoring-realisasi', label: 'Monitoring Realisasi' },
+        { path: 'feedback', label: 'Feedback' },
     ],
     korwil: [
         { path: 'dashboard', label: 'Dashboard Korwil' },
@@ -88,6 +92,7 @@ export const ALL_MENUS = {
         { path: 'riwayat-bantuan', label: 'Riwayat Bantuan' },
         { path: 'form-kerusakan', label: 'Form Kerusakan' },
         { path: 'iklan', label: 'Iklan' },
+        { path: 'feedback', label: 'Feedback' },
     ],
     sekolah: [
         { path: 'dashboard', label: 'Dashboard' },
@@ -97,6 +102,7 @@ export const ALL_MENUS = {
         { path: 'prestasi', label: 'Prestasi' },
         { path: 'form-kerusakan', label: 'Form Kerusakan' },
         { path: 'iklan', label: 'Iklan' },
+        { path: 'feedback', label: 'Feedback' },
     ]
 };
 
