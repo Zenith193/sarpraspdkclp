@@ -8,6 +8,37 @@ import { proyeksiApi } from '../../api/index';
 import { useApi } from '../../api/hooks';
 import ConfirmModal from '../../components/ui/ConfirmModal';
 
+// Standalone UsulanChipInput component (extracted outside to prevent re-creation on parent render)
+const UsulanChipInput = React.memo(({ chips, onAdd, onRemove }) => {
+    const [inputVal, setInputVal] = useState('');
+    const handleKeyDown = (e) => {
+        if (e.key === 'Enter' && inputVal.trim()) {
+            e.preventDefault();
+            onAdd(inputVal.trim());
+            setInputVal('');
+        }
+    };
+    return (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center', minHeight: 32 }} onClick={e => e.stopPropagation()}>
+            {chips.map((c, idx) => (
+                <span key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 8px', borderRadius: 12, background: 'rgba(139,92,246,0.15)', color: '#a78bfa', fontSize: '0.78rem', fontWeight: 500 }}>
+                    {c}
+                    <button onClick={() => onRemove(idx)} style={{ background: 'none', border: 'none', color: '#a78bfa', cursor: 'pointer', padding: 0, lineHeight: 1, fontSize: '0.9rem' }}>×</button>
+                </span>
+            ))}
+            <input
+                list="keterangan-options"
+                placeholder={chips.length === 0 ? 'Ketik usulan + Enter...' : '+'}
+                value={inputVal}
+                onChange={e => setInputVal(e.target.value)}
+                onKeyDown={handleKeyDown}
+                onBlur={() => { if (inputVal.trim()) { onAdd(inputVal.trim()); setInputVal(''); } }}
+                style={{ flex: 1, minWidth: 80, background: 'transparent', border: 'none', outline: 'none', padding: '4px', color: 'var(--text-primary)', fontSize: '0.82rem' }}
+            />
+        </div>
+    );
+});
+
 // Opsi untuk Keterangan (Combo Box)
 const KETERANGAN_OPTIONS = [
     'Sudah masuk DAU',
@@ -233,7 +264,7 @@ const ProyeksiAnggaran = () => {
         return rekapData.filter(item => {
             const matchJenjang = filterJenjang === 'all' || item.jenjang === filterJenjang;
             const q = searchQuery.toLowerCase();
-            const matchSearch = searchQuery === '' || item.nama.toLowerCase().includes(q) || (sekolahKeterangan[item.id] || '').toLowerCase().includes(q);
+            const matchSearch = searchQuery === '' || item.nama.toLowerCase().includes(q) || (Array.isArray(sekolahKeterangan[item.id]) ? sekolahKeterangan[item.id].join(' ').toLowerCase().includes(q) : '');
             return matchJenjang && matchSearch;
         });
     }, [rekapData, filterJenjang, searchQuery, sekolahKeterangan]);
@@ -493,9 +524,11 @@ const ProyeksiAnggaran = () => {
 
     const handleExportPDF = async (dataset, title = 'Rekapitulasi') => {
         try {
-            const { default: jsPDF } = await import('jspdf');
-            await import('jspdf-autotable');
-            const doc = new jsPDF({ orientation: 'landscape' });
+            const jsPDFModule = await import('jspdf');
+            const autoTableModule = await import('jspdf-autotable');
+            const jsPDFClass = jsPDFModule.default;
+            const autoTable = autoTableModule.default;
+            const doc = new jsPDFClass({ orientation: 'landscape' });
             doc.setFontSize(14);
             doc.text(title.replace(/_/g, ' '), 14, 15);
             doc.setFontSize(9);
@@ -524,7 +557,7 @@ const ProyeksiAnggaran = () => {
                     });
                 }
             });
-            doc.autoTable({
+            autoTable(doc, {
                 startY: 26,
                 head: [['No', 'Nama Sekolah', 'Jenjang', 'Rincian Kebutuhan', 'Total Rehab', 'Total Pembangunan', 'Total Anggaran']],
                 body: rows,
@@ -649,32 +682,10 @@ const ProyeksiAnggaran = () => {
         });
     };
 
-    // Chip-style multi-input for Belum Usul tab
-    const UsulanChipInput = ({ sekolahId }) => {
-        const [inputVal, setInputVal] = useState('');
+    // Helper to render chip input with correct props
+    const renderChipInput = (sekolahId) => {
         const chips = Array.isArray(sekolahKeterangan[sekolahId]) ? sekolahKeterangan[sekolahId] : [];
-        const handleKeyDown = (e) => {
-            if (e.key === 'Enter' && inputVal.trim()) { e.preventDefault(); addUsulan(sekolahId, inputVal); setInputVal(''); }
-        };
-        return (
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center', minHeight: 32 }} onClick={e => e.stopPropagation()}>
-                {chips.map((c, idx) => (
-                    <span key={idx} style={{ display: 'inline-flex', alignItems: 'center', gap: 3, padding: '2px 8px', borderRadius: 12, background: 'rgba(139,92,246,0.15)', color: '#a78bfa', fontSize: '0.78rem', fontWeight: 500 }}>
-                        {c}
-                        <button onClick={() => removeUsulan(sekolahId, idx)} style={{ background: 'none', border: 'none', color: '#a78bfa', cursor: 'pointer', padding: 0, lineHeight: 1, fontSize: '0.9rem' }}>×</button>
-                    </span>
-                ))}
-                <input
-                    list="keterangan-options"
-                    placeholder={chips.length === 0 ? 'Ketik usulan + Enter...' : '+'}
-                    value={inputVal}
-                    onChange={e => setInputVal(e.target.value)}
-                    onKeyDown={handleKeyDown}
-                    onBlur={() => { if (inputVal.trim()) { addUsulan(sekolahId, inputVal); setInputVal(''); } }}
-                    style={{ flex: 1, minWidth: 80, background: 'transparent', border: 'none', outline: 'none', padding: '4px', color: 'var(--text-primary)', fontSize: '0.82rem' }}
-                />
-            </div>
-        );
+        return <UsulanChipInput chips={chips} onAdd={(val) => addUsulan(sekolahId, val)} onRemove={(idx) => removeUsulan(sekolahId, idx)} />;
     };
 
     // Belum Usul table body with chip input
@@ -709,7 +720,7 @@ const ProyeksiAnggaran = () => {
                             <div style={{ color: 'var(--text-secondary)' }}>{s.jenjang}</div>
                         </td>
                         <td style={{ background: 'rgba(249, 115, 22, 0.05)', borderLeft: '3px solid var(--accent-orange)' }}>
-                            <UsulanChipInput sekolahId={s.id} />
+                            {renderChipInput(s.id)}
                         </td>
                         <td style={{ color: totalRehab > 0 ? 'var(--accent-orange)' : 'var(--text-secondary)', textAlign: 'right', fontWeight: 500 }}>
                             {totalRehab > 0 ? formatCurrency(totalRehab) : '-'}
@@ -789,7 +800,7 @@ const ProyeksiAnggaran = () => {
                             <div style={{ color: 'var(--text-secondary)' }}>{s.jenjang}</div>
                         </td>
                         <td style={{ background: 'rgba(139,92,246,0.05)', borderLeft: '3px solid var(--accent-purple)', minWidth: 220 }}>
-                            <UsulanChipInput sekolahId={s.id} />
+                            {renderChipInput(s.id)}
                         </td>
                         <td style={{ color: totalRehab > 0 ? 'var(--accent-orange)' : 'var(--text-secondary)', textAlign: 'right', fontWeight: 500 }}>
                             {totalRehab > 0 ? formatCurrency(totalRehab) : '-'}
@@ -816,7 +827,7 @@ const ProyeksiAnggaran = () => {
                                     </div>
                                     {/* Inline add more usulan */}
                                     <div onClick={e => e.stopPropagation()} style={{ marginBottom: 12, display: 'flex', gap: 6, alignItems: 'center' }}>
-                                        <UsulanChipInput sekolahId={s.id} />
+                                        {renderChipInput(s.id)}
                                     </div>
                                     <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>🏗 Rincian Kebutuhan</div>
                                     {s.details.length === 0 ? (
@@ -1085,7 +1096,7 @@ const ProyeksiAnggaran = () => {
                     <div className="alert alert-warning" style={{ marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'rgba(249, 115, 22, 0.1)', border: '1px solid rgba(249, 115, 22, 0.3)', padding: '1rem', borderRadius: 'var(--radius-md)', color: 'var(--accent-orange)' }}>
                         <AlertCircle size={20} />
                         <div>
-                            <strong>Perhatian:</strong> Tabel ini menampilkan sekolah yang memiliki kebutuhan anggaran tetapi belum memiliki status usulan (kosong atau "Belum diusulkan"). Ubah status pada kolom "Keterangan" untuk mengeluarkannya dari daftar ini.
+                            <strong>Perhatian:</strong> Tabel ini menampilkan sekolah yang memiliki kebutuhan anggaran tetapi belum memiliki usulan. Ketik usulan lalu tekan Enter untuk menambahkan.
                         </div>
                     </div>
 
@@ -1098,7 +1109,7 @@ const ProyeksiAnggaran = () => {
                                         <th style={{ width: 40 }}></th>
                                         <th style={{ width: 50 }}>No</th>
                                         <th style={{ minWidth: 200 }}>Nama Sekolah</th>
-                                        <th style={{ minWidth: 250, background: 'rgba(249, 115, 22, 0.1)', borderLeft: '3px solid var(--accent-orange)' }}>Tambah Usulan (Enter)</th>
+                                        <th style={{ minWidth: 250, background: 'rgba(249, 115, 22, 0.1)', borderLeft: '3px solid var(--accent-orange)' }}>Tambah Usulan</th>
                                         <th style={{ width: 150, textAlign: 'right' }}>Total Rehab</th>
                                         <th style={{ width: 170, textAlign: 'right', background: 'var(--bg-secondary)' }}>Total Anggaran</th>
                                     </tr>
@@ -1305,7 +1316,7 @@ const ProyeksiAnggaran = () => {
                                         <th style={{ width: 40 }}></th>
                                         <th style={{ width: 50 }}>No</th>
                                         <th style={{ minWidth: 200 }}>Nama Sekolah</th>
-                                        <th style={{ minWidth: 220, background: 'rgba(139,92,246,0.05)', borderLeft: '3px solid var(--accent-purple)' }}>Usulan (Ketik + Enter)</th>
+                                        <th style={{ minWidth: 220, background: 'rgba(139,92,246,0.05)', borderLeft: '3px solid var(--accent-purple)' }}>Usulan</th>
                                         <th style={{ width: 150, textAlign: 'right' }}>Total Rehab</th>
                                         <th style={{ width: 150, textAlign: 'right' }}>Total Pembangunan</th>
                                         <th style={{ width: 170, textAlign: 'right', background: 'var(--bg-secondary)' }}>Total Anggaran</th>
