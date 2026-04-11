@@ -7,6 +7,7 @@ import toast from 'react-hot-toast';
 import { proyeksiApi } from '../../api/index';
 import { useApi } from '../../api/hooks';
 import ConfirmModal from '../../components/ui/ConfirmModal';
+import useAuthStore from '../../store/authStore';
 
 // Standalone UsulanChipInput component (extracted outside to prevent re-creation on parent render)
 const UsulanChipInput = React.memo(({ chips, onAdd, onRemove }) => {
@@ -63,6 +64,8 @@ const parseFormattedNumber = (value) => {
 };
 
 const ProyeksiAnggaran = () => {
+    const { user } = useAuthStore();
+    const isAdmin = user?.role?.toLowerCase() === 'admin';
     const [tab, setTab] = useState('anggaran');
     const { data: proyeksiList, refetch: refetchAnggaran } = useProyeksiData();
     const { data: sekolahList } = useSekolahData();
@@ -730,7 +733,13 @@ const ProyeksiAnggaran = () => {
                             <div style={{ color: 'var(--text-secondary)' }}>{s.jenjang}</div>
                         </td>
                         <td style={{ background: 'rgba(249, 115, 22, 0.05)', borderLeft: '3px solid var(--accent-orange)' }}>
-                            {renderChipInput(s.id)}
+                            {isAdmin ? renderChipInput(s.id) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+                                    {(Array.isArray(sekolahKeterangan[s.id]) ? sekolahKeterangan[s.id] : []).map((c, idx) => (
+                                        <span key={idx} style={{ padding: '2px 8px', borderRadius: 12, background: 'rgba(139,92,246,0.15)', color: '#a78bfa', fontSize: '0.78rem' }}>{idx + 1}. {c}</span>
+                                    ))}
+                                </div>
+                            )}
                         </td>
                         <td style={{ color: totalRehab > 0 ? 'var(--accent-orange)' : 'var(--text-secondary)', textAlign: 'right', fontWeight: 500 }}>
                             {totalRehab > 0 ? formatCurrency(totalRehab) : '-'}
@@ -815,7 +824,14 @@ const ProyeksiAnggaran = () => {
                             </span>
                         </td>
                         <td style={{ background: 'rgba(139,92,246,0.05)', borderLeft: '3px solid var(--accent-purple)', minWidth: 220 }}>
-                            {renderChipInput(s.id)}
+                            {isAdmin ? renderChipInput(s.id) : (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minHeight: 32 }}>
+                                    {chips.map((c, idx) => (
+                                        <span key={idx} style={{ padding: '2px 8px', borderRadius: 12, background: 'rgba(139,92,246,0.15)', color: '#a78bfa', fontSize: '0.78rem', fontWeight: 500 }}>{idx + 1}. {c}</span>
+                                    ))}
+                                    {chips.length === 0 && <span style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>-</span>}
+                                </div>
+                            )}
                         </td>
                         {rekapUsulanCols.totalRehab && (
                         <td style={{ color: totalRehab > 0 ? 'var(--accent-orange)' : 'var(--text-secondary)', textAlign: 'right', fontWeight: 500 }}>
@@ -837,21 +853,22 @@ const ProyeksiAnggaran = () => {
                         <tr>
                             <td colSpan={visibleColCount} style={{ padding: 0, background: 'var(--bg-secondary)', borderBottom: '2px solid var(--border-color)' }}>
                                 <div style={{ padding: '1rem 1.5rem' }}>
-                                    <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: 'var(--accent-purple)' }}>📋 Daftar Usulan ({chips.length})</div>
+                                    <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: 'var(--accent-purple)' }}>?? Daftar Usulan ({chips.length})</div>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginBottom: 8 }}>
                                         {chips.map((c, idx) => (
                                             <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 8, background: 'rgba(139,92,246,0.08)', borderLeft: '3px solid rgba(139,92,246,0.4)' }}>
                                                 <span style={{ color: '#a78bfa', fontWeight: 600, fontSize: '0.82rem', minWidth: 20 }}>{idx + 1}.</span>
                                                 <span style={{ color: '#a78bfa', fontSize: '0.82rem', fontWeight: 500, flex: 1 }}>{c}</span>
-                                                <button onClick={(e) => { e.stopPropagation(); removeUsulan(s.id, idx); }} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, fontSize: '1rem', lineHeight: 1 }}>×</button>
+                                                {isAdmin && <button onClick={(e) => { e.stopPropagation(); removeUsulan(s.id, idx); }} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, fontSize: '1rem', lineHeight: 1 }}>�</button>}
                                             </div>
                                         ))}
                                     </div>
-                                    {/* Inline add more usulan */}
+                                    {isAdmin && (
                                     <div onClick={e => e.stopPropagation()} style={{ marginBottom: 12, display: 'flex', gap: 6, alignItems: 'center' }}>
                                         {renderChipInput(s.id)}
                                     </div>
-                                    <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>🏗 Rincian Kebutuhan</div>
+                                    )}
+                                    <div style={{ fontWeight: 600, marginBottom: '0.5rem', color: 'var(--text-primary)' }}>?? Rincian Kebutuhan</div>
                                     {s.details.length === 0 ? (
                                         <div style={{ color: 'var(--text-secondary)' }}>Tidak ada kebutuhan.</div>
                                     ) : (
@@ -1024,7 +1041,7 @@ const ProyeksiAnggaran = () => {
                 <div className="table-container">
                     <div className="table-toolbar">
                         <div className="table-toolbar-left">
-                            <button className="btn btn-primary btn-sm" onClick={() => openModal('anggaran')}><Plus size={14} /> Tambah</button>
+                            {isAdmin && <button className="btn btn-primary btn-sm" onClick={() => openModal('anggaran')}><Plus size={14} /> Tambah</button>}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '1rem' }}>
                                 <span style={{ color: 'var(--text-secondary)' }}>Tampil:</span>
                                 <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} style={{ padding: '4px 8px', background: 'var(--bg-input)', border: '1px solid var(--border-input)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)' }}>
@@ -1041,7 +1058,7 @@ const ProyeksiAnggaran = () => {
                     </div>
                     <div style={{ overflowX: 'auto' }}>
                         <table className="data-table">
-                            <thead><tr><th>No</th><th>Jenis Prasarana</th><th>Jenjang</th><th style={{ textAlign: 'right' }}>Rusak Sedang</th><th style={{ textAlign: 'right' }}>Rusak Berat</th><th style={{ textAlign: 'right' }}>Pembangunan</th><th>Aksi</th></tr></thead>
+                            <thead><tr><th>No</th><th>Jenis Prasarana</th><th>Jenjang</th><th style={{ textAlign: 'right' }}>Rusak Sedang</th><th style={{ textAlign: 'right' }}>Rusak Berat</th><th style={{ textAlign: 'right' }}>Pembangunan</th>{isAdmin && <th>Aksi</th>}</tr></thead>
                             <tbody>
                                 {pagedAnggaran.map((item, i) => (
                                     <tr key={item.id}>
@@ -1051,12 +1068,12 @@ const ProyeksiAnggaran = () => {
                                         <td style={{ color: 'var(--accent-orange)', textAlign: 'right' }}>{formatCurrency(item.rusakSedang)}</td>
                                         <td style={{ color: 'var(--accent-red)', textAlign: 'right' }}>{formatCurrency(item.rusakBerat)}</td>
                                         <td style={{ color: 'var(--accent-blue)', textAlign: 'right' }}>{formatCurrency(item.pembangunan)}</td>
-                                        <td>
+                                        {isAdmin && <td>
                                             <div style={{ display: 'flex', gap: 4 }}>
                                                 <button className="btn-icon" onClick={() => openModal('anggaran', item)}><Edit size={16} /></button>
                                                 <button className="btn-icon" onClick={() => handleDelete('anggaran', item.id)} style={{ color: 'var(--accent-red)' }}><Trash2 size={16} /></button>
                                             </div>
-                                        </td>
+                                        </td>}
                                     </tr>
                                 ))}
                             </tbody>
@@ -1190,7 +1207,7 @@ const ProyeksiAnggaran = () => {
                 <div className="table-container">
                     <div className="table-toolbar">
                         <div className="table-toolbar-left">
-                            <button className="btn btn-primary btn-sm" onClick={() => openModal('snp')}><Plus size={14} /> Tambah</button>
+                            {isAdmin && <button className="btn btn-primary btn-sm" onClick={() => openModal('snp')}><Plus size={14} /> Tambah</button>}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginLeft: '1rem' }}>
                                 <span style={{ color: 'var(--text-secondary)' }}>Tampil:</span>
                                 <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value))} style={{ padding: '4px 8px', background: 'var(--bg-input)', border: '1px solid var(--border-input)', borderRadius: 'var(--radius-sm)', color: 'var(--text-primary)' }}>
@@ -1204,7 +1221,7 @@ const ProyeksiAnggaran = () => {
                     </div>
                     <div style={{ overflowX: 'auto' }}>
                         <table className="data-table">
-                            <thead><tr><th>No</th><th>Jenis Prasarana</th><th>Jenjang</th><th>Judul Rehabilitasi</th><th>Judul Pembangunan</th><th>Aksi</th></tr></thead>
+                            <thead><tr><th>No</th><th>Jenis Prasarana</th><th>Jenjang</th><th>Judul Rehabilitasi</th><th>Judul Pembangunan</th>{isAdmin && <th>Aksi</th>}</tr></thead>
                             <tbody>
                                 {pagedSnp.map((item, i) => (
                                     <tr key={item.id}>
@@ -1213,12 +1230,12 @@ const ProyeksiAnggaran = () => {
                                         <td>{item.jenjang}</td>
                                         <td>{item.judulRehabilitasi}</td>
                                         <td>{item.judulPembangunan}</td>
-                                        <td>
+                                        {isAdmin && <td>
                                             <div style={{ display: 'flex', gap: 4 }}>
                                                 <button className="btn-icon" onClick={() => openModal('snp', item)}><Edit size={16} /></button>
                                                 <button className="btn-icon" onClick={() => handleDelete('snp', item.id)} style={{ color: 'var(--accent-red)' }}><Trash2 size={16} /></button>
                                             </div>
-                                        </td>
+                                        </td>}
                                     </tr>
                                 ))}
                             </tbody>
