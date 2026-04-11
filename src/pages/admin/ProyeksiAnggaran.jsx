@@ -65,7 +65,7 @@ const parseFormattedNumber = (value) => {
 
 const ProyeksiAnggaran = () => {
     const { user } = useAuthStore();
-    const isAdmin = user?.role?.toLowerCase() === 'admin';
+    const isAdmin = ['admin', 'verifikator'].includes(user?.role?.toLowerCase());
     const [tab, setTab] = useState('anggaran');
     const { data: proyeksiList, refetch: refetchAnggaran } = useProyeksiData();
     const { data: sekolahList } = useSekolahData();
