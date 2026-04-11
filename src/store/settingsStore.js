@@ -66,6 +66,7 @@ export const ALL_MENUS = {
         { path: 'dashboard', label: 'Dashboard' },
         { path: 'data-sarpras', label: 'Data Sarpras' },
         { path: 'proposal', label: 'Proposal' },
+        { path: 'proyeksi-anggaran', label: 'Proyeksi Anggaran' },
         { path: 'verifikasi-sarpras', label: 'Verifikasi Sarpras' },
         { path: 'verifikasi-proposal', label: 'Verifikasi Proposal' },
         { path: 'ranking', label: 'Ranking & Prioritas' },

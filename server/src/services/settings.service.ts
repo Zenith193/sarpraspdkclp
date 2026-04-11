@@ -6,7 +6,7 @@ import { eq } from 'drizzle-orm';
 const DEFAULTS: Record<string, any> = {
     access_config: {
         admin: ['dashboard', 'data-sarpras', 'proposal', 'proyeksi-anggaran', 'aktivitas', 'manajemen-pengguna', 'manajemen-template', 'riwayat-bantuan', 'matriks-kegiatan', 'create-bast', 'pencairan', 'manajemen-korwil', 'form-kerusakan', 'prestasi', 'verifikasi-sarpras', 'verifikasi-proposal', 'ranking', 'hak-akses', 'pengaturan-nas', 'countdown-settings', 'iklan', 'manajemen-penyedia', 'manajemen-kontrak', 'monitoring-realisasi', 'feedback'],
-        verifikator: ['dashboard', 'data-sarpras', 'proposal', 'verifikasi-sarpras', 'verifikasi-proposal', 'ranking', 'riwayat-bantuan', 'manajemen-template', 'matriks-kegiatan', 'create-bast', 'pencairan', 'form-kerusakan', 'prestasi', 'iklan', 'manajemen-penyedia', 'manajemen-kontrak', 'monitoring-realisasi', 'feedback'],
+        verifikator: ['dashboard', 'data-sarpras', 'proposal', 'proyeksi-anggaran', 'verifikasi-sarpras', 'verifikasi-proposal', 'ranking', 'riwayat-bantuan', 'manajemen-template', 'matriks-kegiatan', 'create-bast', 'pencairan', 'form-kerusakan', 'prestasi', 'iklan', 'manajemen-penyedia', 'manajemen-kontrak', 'monitoring-realisasi', 'feedback'],
         korwil: ['dashboard', 'verifikasi-sarpras', 'verifikasi-proposal', 'ranking', 'data-sarpras', 'proposal', 'riwayat-bantuan', 'form-kerusakan', 'iklan', 'feedback'],
         sekolah: ['dashboard', 'data-sarpras', 'proposal', 'riwayat-bantuan', 'prestasi', 'form-kerusakan', 'iklan', 'feedback'],
     },

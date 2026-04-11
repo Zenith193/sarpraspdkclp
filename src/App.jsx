@@ -145,6 +145,7 @@ function App() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="data-sarpras" element={<DataSarpras readOnly />} />
           <Route path="proposal" element={<Proposal />} />
+          <Route path="proyeksi-anggaran" element={<ProyeksiAnggaran />} />
           <Route path="verifikasi-sarpras" element={<VerifikasiSarpras />} />
           <Route path="verifikasi-proposal" element={<VerifikasiProposal />} />
           <Route path="ranking" element={<RankingPrioritas lockable />} />
