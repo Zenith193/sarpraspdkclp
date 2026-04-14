@@ -183,13 +183,13 @@ const Proposal = ({ readOnly = false }) => {
     const handleActionClick = (e, id) => {
         if (openActionId === id) { setOpenActionId(null); return; }
         const rect = e.currentTarget.getBoundingClientRect();
-        const dropdownHeight = 140;
-        const dropdownWidth = 150;
+        const dropdownHeight = 250;
+        const dropdownWidth = 160;
         const spaceBelow = window.innerHeight - rect.bottom;
         const top = spaceBelow < dropdownHeight ? rect.top - dropdownHeight : rect.bottom + 4;
-        // Anchor dropdown to left of button if near right edge
-        const left = rect.left - dropdownWidth + rect.width;
-        setActionPos({ top, left: Math.max(10, left) });
+        // Anchor dropdown to right edge of button
+        const left = rect.right - dropdownWidth;
+        setActionPos({ top: Math.max(10, top), left: Math.max(10, left) });
         setOpenActionId(id);
     };
 
