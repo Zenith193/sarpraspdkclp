@@ -183,16 +183,16 @@ const Proposal = ({ readOnly = false }) => {
     const handleActionClick = (e, id) => {
         if (openActionId === id) { setOpenActionId(null); return; }
         const rect = e.currentTarget.getBoundingClientRect();
-        const dropdownHeight = 250;
         const dropdownWidth = 160;
-        const spaceBelow = window.innerHeight - rect.bottom;
-        const top = spaceBelow < dropdownHeight ? rect.top - dropdownHeight : rect.bottom + 4;
-        // Anchor dropdown to right edge of button
-        const left = rect.right - dropdownWidth;
-        setActionPos({ top: Math.max(10, top), left: Math.max(10, left) });
+        // Position to the left of the button, vertically centered with button
+        const top = rect.top;
+        const left = rect.left - dropdownWidth - 8;
+        // Clamp within viewport
+        const clampedTop = Math.min(Math.max(10, top), window.innerHeight - 280);
+        const clampedLeft = Math.max(10, left);
+        setActionPos({ top: clampedTop, left: clampedLeft });
         setOpenActionId(id);
     };
-
     const filtered = useMemo(() => {
         return data.filter(p => {
             if (search) {
@@ -851,7 +851,7 @@ const Proposal = ({ readOnly = false }) => {
                                     <Star size={14} fill={item.bintang === 1 ? 'currentColor' : 'none'} /> {item.bintang === 1 ? 'Hapus Prioritas' : 'Tandai Prioritas'}
                                 </button>
                             )}
-                            {isAdminOrVerifikator && item.status === 'Disetujui' && (
+                            {isAdminOrVerifikator && (
                                 <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--accent-green)', borderRadius: 6 }} className="dropdown-item" onClick={() => { handleRealisasi(item); setOpenActionId(null); }}>
                                     <CheckCircle size={14} /> Terealisasi
                                 </button>
