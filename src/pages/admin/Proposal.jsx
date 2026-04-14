@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Plus, Search, Download, Eye, Edit, Trash2, X, Filter, Star, FileSpreadsheet, FileText, Save, Printer, FileCheck, FilePlus, Archive, AlertOctagon, Upload, CheckCircle, RotateCcw, MoreHorizontal, Columns } from 'lucide-react';
 import { useProposalData, useSekolahData, useUsersData, useKorwilData } from '../../data/dataProvider';
 import { proposalApi, arsipDokumenApi } from '../../api/index';
@@ -180,17 +181,10 @@ const Proposal = ({ readOnly = false }) => {
     const [actionPos, setActionPos] = useState({ top: 0, left: 0 });
     const colMenuRef = React.useRef(null);
     const toggleCol = (col) => setHiddenCols(prev => prev.includes(col) ? prev.filter(c => c !== col) : [...prev, col]);
+    const actionBtnRef = useRef(null);
     const handleActionClick = (e, id) => {
         if (openActionId === id) { setOpenActionId(null); return; }
-        const rect = e.currentTarget.getBoundingClientRect();
-        const dropdownWidth = 160;
-        // Position to the left of the button, vertically centered with button
-        const top = rect.top;
-        const left = rect.left - dropdownWidth - 8;
-        // Clamp within viewport
-        const clampedTop = Math.min(Math.max(10, top), window.innerHeight - 280);
-        const clampedLeft = Math.max(10, left);
-        setActionPos({ top: clampedTop, left: clampedLeft });
+        actionBtnRef.current = e.currentTarget;
         setOpenActionId(id);
     };
     const filtered = useMemo(() => {
@@ -815,39 +809,10 @@ const Proposal = ({ readOnly = false }) => {
                                             </span>
                                         </td>
                                     )}
-                                    <td style={{ position: "relative" }}>
-                                        <button className="btn-icon" onClick={(e) => { e.stopPropagation(); handleActionClick(e, item.id); }} title="Aksi">
+                                    <td>
+                                        <button ref={openActionId === item.id ? actionBtnRef : null} className="btn-icon" onClick={(e) => { e.stopPropagation(); handleActionClick(e, item.id); }} title="Aksi">
                                             <MoreHorizontal size={16} />
                                         </button>
-                                        {openActionId === item.id && (() => {
-                                            return (
-                                                <div ref={actionDropdownRef} className="dropdown-menu" style={{ position: 'absolute', top: '100%', right: 0, minWidth: 160, padding: 4, zIndex: 9999, boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}>
-                                                    <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-primary)', borderRadius: 6 }} className="dropdown-item" onClick={() => { setViewItem(item); setOpenActionId(null); }}>
-                                                        <Eye size={14} /> Lihat Detail
-                                                    </button>
-                                                    {!readOnly && (isAdminOrVerifikator || (isSekolah && (item.status === 'Ditolak' || item.status === 'Revisi'))) && (
-                                                        <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-primary)', borderRadius: 6 }} className="dropdown-item" onClick={() => { handleOpenModal(item); setOpenActionId(null); }}>
-                                                            <Edit size={14} /> Edit
-                                                        </button>
-                                                    )}
-                                                    {isAdmin && (
-                                                        <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: item.bintang === 1 ? 'var(--accent-yellow)' : 'var(--text-primary)', borderRadius: 6 }} className="dropdown-item" onClick={() => { handleStar(item.id); setOpenActionId(null); }}>
-                                                            <Star size={14} fill={item.bintang === 1 ? 'currentColor' : 'none'} /> {item.bintang === 1 ? 'Hapus Prioritas' : 'Tandai Prioritas'}
-                                                        </button>
-                                                    )}
-                                                    {isAdminOrVerifikator && (
-                                                        <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--accent-green)', borderRadius: 6 }} className="dropdown-item" onClick={() => { handleRealisasi(item); setOpenActionId(null); }}>
-                                                            <CheckCircle size={14} /> Terealisasi
-                                                        </button>
-                                                    )}
-                                                    {!readOnly && isAdmin && (
-                                                        <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--accent-red)', borderRadius: 6 }} className="dropdown-item" onClick={() => { if (!guard('hapus')) return; setDeleteConfirm(item); setOpenActionId(null); }}>
-                                                            <Trash2 size={14} /> Hapus
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            );
-                                        })()}
                                     </td>
                                 </tr>
                             ))}
@@ -861,6 +826,43 @@ const Proposal = ({ readOnly = false }) => {
                         </tbody>
                     </table>
                 </div>
+                {openActionId && createPortal(
+                    (() => {
+                        const item = paged.find(p => p.id === openActionId);
+                        if (!item || !actionBtnRef.current) return null;
+                        const rect = actionBtnRef.current.getBoundingClientRect();
+                        const top = rect.bottom + 4;
+                        const left = rect.right - 170;
+                        const adjustedTop = top + 200 > window.innerHeight ? rect.top - 200 : top;
+                        return (
+                            <div ref={actionDropdownRef} className="dropdown-menu" style={{ position: 'fixed', top: Math.max(10, adjustedTop), left: Math.max(10, left), minWidth: 160, padding: 4, zIndex: 99999, boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}>
+                                <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-primary)', borderRadius: 6 }} className="dropdown-item" onClick={() => { setViewItem(item); setOpenActionId(null); }}>
+                                    <Eye size={14} /> Lihat Detail
+                                </button>
+                                {!readOnly && (isAdminOrVerifikator || (isSekolah && (item.status === 'Ditolak' || item.status === 'Revisi'))) && (
+                                    <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-primary)', borderRadius: 6 }} className="dropdown-item" onClick={() => { handleOpenModal(item); setOpenActionId(null); }}>
+                                        <Edit size={14} /> Edit
+                                    </button>
+                                )}
+                                {isAdmin && (
+                                    <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: item.bintang === 1 ? 'var(--accent-yellow)' : 'var(--text-primary)', borderRadius: 6 }} className="dropdown-item" onClick={() => { handleStar(item.id); setOpenActionId(null); }}>
+                                        <Star size={14} fill={item.bintang === 1 ? 'currentColor' : 'none'} /> {item.bintang === 1 ? 'Hapus Prioritas' : 'Tandai Prioritas'}
+                                    </button>
+                                )}
+                                {isAdminOrVerifikator && (
+                                    <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--accent-green)', borderRadius: 6 }} className="dropdown-item" onClick={() => { handleRealisasi(item); setOpenActionId(null); }}>
+                                        <CheckCircle size={14} /> Terealisasi
+                                    </button>
+                                )}
+                                {!readOnly && isAdmin && (
+                                    <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--accent-red)', borderRadius: 6 }} className="dropdown-item" onClick={() => { if (!guard('hapus')) return; setDeleteConfirm(item); setOpenActionId(null); }}>
+                                        <Trash2 size={14} /> Hapus
+                                    </button>
+                                )}
+                            </div>
+                        );
+                    })()
+                , document.body)}
                 <div className="table-pagination">
                     <div className="table-pagination-info">Menampilkan {Math.min((page - 1) * perPage + 1, filteredAktif.length)}-{Math.min(page * perPage, filteredAktif.length)} dari {filteredAktif.length}</div>
                     <div className="table-pagination-controls">
