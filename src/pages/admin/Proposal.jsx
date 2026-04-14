@@ -815,10 +815,39 @@ const Proposal = ({ readOnly = false }) => {
                                             </span>
                                         </td>
                                     )}
-                                    <td>
-                                        <button className="btn-icon" onClick={(e) => handleActionClick(e, item.id)} title="Aksi">
+                                    <td style={{ position: "relative" }}>
+                                        <button className="btn-icon" onClick={(e) => { e.stopPropagation(); handleActionClick(e, item.id); }} title="Aksi">
                                             <MoreHorizontal size={16} />
                                         </button>
+                                        {openActionId === item.id && (() => {
+                                            return (
+                                                <div ref={actionDropdownRef} className="dropdown-menu" style={{ position: 'absolute', top: '100%', right: 0, minWidth: 160, padding: 4, zIndex: 9999, boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}>
+                                                    <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-primary)', borderRadius: 6 }} className="dropdown-item" onClick={() => { setViewItem(item); setOpenActionId(null); }}>
+                                                        <Eye size={14} /> Lihat Detail
+                                                    </button>
+                                                    {!readOnly && (isAdminOrVerifikator || (isSekolah && (item.status === 'Ditolak' || item.status === 'Revisi'))) && (
+                                                        <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-primary)', borderRadius: 6 }} className="dropdown-item" onClick={() => { handleOpenModal(item); setOpenActionId(null); }}>
+                                                            <Edit size={14} /> Edit
+                                                        </button>
+                                                    )}
+                                                    {isAdmin && (
+                                                        <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: item.bintang === 1 ? 'var(--accent-yellow)' : 'var(--text-primary)', borderRadius: 6 }} className="dropdown-item" onClick={() => { handleStar(item.id); setOpenActionId(null); }}>
+                                                            <Star size={14} fill={item.bintang === 1 ? 'currentColor' : 'none'} /> {item.bintang === 1 ? 'Hapus Prioritas' : 'Tandai Prioritas'}
+                                                        </button>
+                                                    )}
+                                                    {isAdminOrVerifikator && (
+                                                        <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--accent-green)', borderRadius: 6 }} className="dropdown-item" onClick={() => { handleRealisasi(item); setOpenActionId(null); }}>
+                                                            <CheckCircle size={14} /> Terealisasi
+                                                        </button>
+                                                    )}
+                                                    {!readOnly && isAdmin && (
+                                                        <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--accent-red)', borderRadius: 6 }} className="dropdown-item" onClick={() => { if (!guard('hapus')) return; setDeleteConfirm(item); setOpenActionId(null); }}>
+                                                            <Trash2 size={14} /> Hapus
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            );
+                                        })()}
                                     </td>
                                 </tr>
                             ))}
@@ -832,38 +861,6 @@ const Proposal = ({ readOnly = false }) => {
                         </tbody>
                     </table>
                 </div>
-                {/* Fixed-position action dropdown (outside overflow container) */}
-                {openActionId && (() => {
-                    const item = paged.find(p => p.id === openActionId);
-                    if (!item) return null;
-                    return (
-                        <div ref={actionDropdownRef} className="dropdown-menu" style={{ position: 'fixed', top: actionPos.top, left: actionPos.left, minWidth: 140, padding: 4, zIndex: 9999, boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}>
-                            <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-primary)', borderRadius: 6 }} className="dropdown-item" onClick={() => { setViewItem(item); setOpenActionId(null); }}>
-                                <Eye size={14} /> Lihat Detail
-                            </button>
-                            {!readOnly && (isAdminOrVerifikator || (isSekolah && (item.status === 'Ditolak' || item.status === 'Revisi'))) && (
-                                <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-primary)', borderRadius: 6 }} className="dropdown-item" onClick={() => { handleOpenModal(item); setOpenActionId(null); }}>
-                                    <Edit size={14} /> Edit
-                                </button>
-                            )}
-                            {isAdmin && (
-                                <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: item.bintang === 1 ? 'var(--accent-yellow)' : 'var(--text-primary)', borderRadius: 6 }} className="dropdown-item" onClick={() => { handleStar(item.id); setOpenActionId(null); }}>
-                                    <Star size={14} fill={item.bintang === 1 ? 'currentColor' : 'none'} /> {item.bintang === 1 ? 'Hapus Prioritas' : 'Tandai Prioritas'}
-                                </button>
-                            )}
-                            {isAdminOrVerifikator && (
-                                <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--accent-green)', borderRadius: 6 }} className="dropdown-item" onClick={() => { handleRealisasi(item); setOpenActionId(null); }}>
-                                    <CheckCircle size={14} /> Terealisasi
-                                </button>
-                            )}
-                            {!readOnly && isAdmin && (
-                                <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--accent-red)', borderRadius: 6 }} className="dropdown-item" onClick={() => { if (!guard('hapus')) return; setDeleteConfirm(item); setOpenActionId(null); }}>
-                                    <Trash2 size={14} /> Hapus
-                                </button>
-                            )}
-                        </div>
-                    );
-                })()}
                 <div className="table-pagination">
                     <div className="table-pagination-info">Menampilkan {Math.min((page - 1) * perPage + 1, filteredAktif.length)}-{Math.min(page * perPage, filteredAktif.length)} dari {filteredAktif.length}</div>
                     <div className="table-pagination-controls">
