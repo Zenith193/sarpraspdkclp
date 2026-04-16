@@ -4,7 +4,7 @@ import toast from 'react-hot-toast';
 import { formatCurrency } from '../../utils/formatters';
 import useMatrikStore from '../../store/matrikStore';
 import useAuthStore from '../../store/authStore';
-import { bastApi } from '../../api/index';
+import { bastApi, korwilApi, sekolahApi } from '../../api/index';
 
 const RiwayatBantuan = ({ readOnly = false }) => {
     // bastData now loaded from DB for all roles
@@ -38,16 +38,53 @@ const RiwayatBantuan = ({ readOnly = false }) => {
     const isKorwil = role === 'korwil';
     const isAdmin = role === 'admin';
 
-    // Fetch from DB for non-admin roles
-    // Fetch BAST data from DB for all roles
+    // Fetch BAST data from DB — role-specific logic
     useEffect(() => {
         setLoadingDb(true);
-        if (readOnly && npsn) {
+        if (isSekolah && npsn) {
+            // Sekolah: fetch by NPSN only
             bastApi.getByNpsn(npsn)
                 .then(items => setDbBastData(items || []))
                 .catch(() => setDbBastData([]))
                 .finally(() => setLoadingDb(false));
+        } else if (isKorwil) {
+            // Korwil: fetch all BAST, then filter by assigned kecamatan/jenjang
+            Promise.all([
+                bastApi.list(),
+                korwilApi.list(),
+                sekolahApi.list(),
+            ]).then(([bastItems, korwilList, sekolahList]) => {
+                const bastArr = Array.isArray(bastItems) ? bastItems : (bastItems?.data || []);
+                const korwilArr = Array.isArray(korwilList) ? korwilList : (korwilList?.data || []);
+                const sekolahArr = Array.isArray(sekolahList) ? sekolahList : (sekolahList?.data || []);
+                // Find this korwil's assignments
+                const myRows = korwilArr.filter(row => {
+                    const ka = row.korwilAssignment || row;
+                    return String(ka.userId) === String(user.id);
+                });
+                const myKecList = [];
+                let myJenjang = '';
+                myRows.forEach(row => {
+                    const ka = row.korwilAssignment || row;
+                    if (ka.kecamatan && !myKecList.includes(ka.kecamatan)) myKecList.push(ka.kecamatan);
+                    if (ka.jenjang) myJenjang = ka.jenjang;
+                });
+                // Build NPSN → sekolah lookup
+                const npsnToSekolah = {};
+                sekolahArr.forEach(s => { if (s.npsn) npsnToSekolah[s.npsn] = s; });
+                // Filter BAST by kecamatan/jenjang
+                const filtered = bastArr.filter(b => {
+                    const sch = npsnToSekolah[b.npsn];
+                    if (!sch) return false;
+                    const kecMatch = myKecList.length === 0 || myKecList.includes(sch.kecamatan);
+                    const jenMatch = !myJenjang || sch.jenjang === myJenjang;
+                    return kecMatch && jenMatch;
+                });
+                setDbBastData(filtered);
+            }).catch(() => setDbBastData([]))
+              .finally(() => setLoadingDb(false));
         } else {
+            // Admin/Verifikator: fetch all
             bastApi.list()
                 .then(items => {
                     const arr = Array.isArray(items) ? items : (items?.data || []);
@@ -56,7 +93,7 @@ const RiwayatBantuan = ({ readOnly = false }) => {
                 .catch(() => setDbBastData([]))
                 .finally(() => setLoadingDb(false));
         }
-    }, [readOnly, npsn]);
+    }, [role, npsn, user?.id]);
 
     const data = useMemo(() => {
         return dbBastData.map(b => ({
