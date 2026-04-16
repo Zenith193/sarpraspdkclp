@@ -11,7 +11,7 @@ import path from 'path';
 
 const router = Router();
 
-router.get('/', requireAuth, requireRole('admin', 'verifikator'), async (_req, res) => {
+router.get('/', requireAuth, requireRole('admin', 'verifikator', 'korwil'), async (_req, res) => {
     try { res.json(await bastService.list()); } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 router.get('/by-npsn/:npsn', requireAuth, async (req, res) => {
