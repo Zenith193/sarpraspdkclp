@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { Upload, Search, Download, Eye, Plus, Trash2, X, Save, AlertTriangle, FileText, FileSpreadsheet, FileDown, ChevronDown, CheckCircle, XCircle, RefreshCw, ShieldOff, ChevronLeft, ChevronRight, MoreVertical } from 'lucide-react';
-import { useSekolahData } from '../../data/dataProvider';
+import { useSekolahData, useKorwilData } from '../../data/dataProvider';
 import { MASA_BANGUNAN } from '../../utils/constants';
 import { exportToExcel, exportToCSV, exportToPDF } from '../../utils/exportUtils';
 import SearchableSelect from '../../components/ui/SearchableSelect';
@@ -20,6 +20,25 @@ const UploadFormKerusakan = () => {
     const canVerify = isAdmin || isVerifikator || isKorwil;
     const canDelete = isAdmin || isVerifikator;
     const { data: sekolahList } = useSekolahData();
+    const { data: korwilList } = useKorwilData();
+
+    // Get korwil assignment (kecamatan + jenjang)
+    const myKorwilAssignment = useMemo(() => {
+        if (!isKorwil || !korwilList || !user) return null;
+        const myRows = korwilList.filter(row => {
+            const ka = row.korwilAssignment || row;
+            return String(ka.userId) === String(user.id);
+        });
+        if (myRows.length === 0) return null;
+        const kecList = [];
+        let jenj = '';
+        myRows.forEach(row => {
+            const ka = row.korwilAssignment || row;
+            if (ka.kecamatan && !kecList.includes(ka.kecamatan)) kecList.push(ka.kecamatan);
+            if (ka.jenjang) jenj = ka.jenjang;
+        });
+        return { kecamatan: kecList, jenjang: jenj };
+    }, [isKorwil, korwilList, user]);
 
     // ===== ACTION DROPDOWN =====
     const [openActionId, setOpenActionId] = useState(null);
@@ -87,14 +106,27 @@ const UploadFormKerusakan = () => {
     const [loadingMasa, setLoadingMasa] = useState(false);
 
     const missingSchools = useMemo(() => {
-        if (!canSeeMissing) return [];
+        if (!canSeeMissing && !isKorwil) return [];
+        let schools = sekolahList;
+        // Filter by korwil kecamatan
+        if (isKorwil && myKorwilAssignment) {
+            schools = schools.filter(s => myKorwilAssignment.kecamatan.some(k => k.toLowerCase() === (s.kecamatan || '').toLowerCase()));
+        }
         const uploadedNPSN = new Set(data.filter(d => d.fileName).map(d => d.npsn));
-        return sekolahList.filter(s => !uploadedNPSN.has(s.npsn));
-    }, [data, canSeeMissing, sekolahList]);
+        return schools.filter(s => !uploadedNPSN.has(s.npsn));
+    }, [data, canSeeMissing, sekolahList, isKorwil, myKorwilAssignment]);
 
     // ===== FILTERING (Role-Based) =====
     const filtered = useMemo(() => {
         let source = activeTab === 'data' ? data : missingSchools;
+
+        // For korwil: filter by assigned kecamatan
+        if (isKorwil && myKorwilAssignment) {
+            source = source.filter(d => {
+                const kec = d.kecamatan || d.sekolahKecamatan || '';
+                return myKorwilAssignment.kecamatan.some(k => k.toLowerCase() === kec.toLowerCase());
+            });
+        }
 
         // Backend already filters by sekolahId for Sekolah role, no client filter needed
         // Filter Pencarian
@@ -107,7 +139,7 @@ const UploadFormKerusakan = () => {
             }
             return true;
         });
-    }, [data, missingSchools, search, activeTab, isSekolah, user]);
+    }, [data, missingSchools, search, activeTab, isSekolah, user, isKorwil, myKorwilAssignment]);
 
     // ===== LOGIC PAGINASI =====
     const totalPages = Math.ceil(filtered.length / pageSize) || 1;
