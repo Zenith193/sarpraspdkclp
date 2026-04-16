@@ -2,11 +2,12 @@ import { useEffect, useRef, useCallback } from 'react';
 import useAuthStore from '../store/authStore';
 import toast from 'react-hot-toast';
 
-const IDLE_TIMEOUT_MS = 10 * 60 * 1000; // 10 minutes
+const IDLE_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
+const WARNING_MS = 25 * 60 * 1000; // Warning at 25 minutes (5 min before logout)
 const EVENTS = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
 
 /**
- * Auto-logout after 5 minutes of inactivity.
+ * Auto-logout after 30 minutes of inactivity.
  * Listens for mouse/keyboard/scroll/touch events to reset the timer.
  */
 export default function useIdleLogout() {
@@ -16,7 +17,7 @@ export default function useIdleLogout() {
 
     const handleLogout = useCallback(async () => {
         try {
-            toast('Sesi Anda telah berakhir karena tidak ada aktivitas selama 5 menit', {
+            toast('Sesi Anda telah berakhir karena tidak ada aktivitas selama 30 menit', {
                 icon: '⏱️',
                 duration: 5000,
             });
@@ -33,16 +34,16 @@ export default function useIdleLogout() {
 
         if (!isAuthenticated) return;
 
-        // Show warning at 4 minutes (1 minute before logout)
+        // Show warning 5 minutes before logout
         warningRef.current = setTimeout(() => {
-            toast('Anda akan logout otomatis dalam 1 menit karena tidak ada aktivitas', {
+            toast('Anda akan logout otomatis dalam 5 menit karena tidak ada aktivitas', {
                 icon: '⚠️',
-                duration: 10000,
+                duration: 15000,
                 id: 'idle-warning',
             });
-        }, 4 * 60 * 1000);
+        }, WARNING_MS);
 
-        // Logout at 5 minutes
+        // Logout at 30 minutes
         timerRef.current = setTimeout(handleLogout, IDLE_TIMEOUT_MS);
     }, [isAuthenticated, handleLogout]);
 

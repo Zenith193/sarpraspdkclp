@@ -6,11 +6,22 @@ import CountdownBanner from '../ui/CountdownBanner';
 
 const MOBILE_BREAKPOINT = 1279;
 
+const AUTO_REFRESH_MS = 5 * 60 * 1000; // Auto-refresh data every 5 minutes
+
 const AppLayout = () => {
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [isMobile, setIsMobile] = useState(window.innerWidth <= MOBILE_BREAKPOINT);
+    const [refreshKey, setRefreshKey] = useState(0);
     const location = useLocation();
+
+    // Auto-refresh: increment key to force Outlet remount → data reload
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setRefreshKey(k => k + 1);
+        }, AUTO_REFRESH_MS);
+        return () => clearInterval(interval);
+    }, []);
 
     // Track screen size
     useEffect(() => {
@@ -67,7 +78,7 @@ const AppLayout = () => {
                 <Topbar onToggleSidebar={handleToggle} sidebarCollapsed={!isMobile && sidebarCollapsed} isMobile={isMobile} />
                 <div className="main-content" style={mainContentStyle}>
                     <CountdownBanner />
-                    <Outlet />
+                    <Outlet key={refreshKey} />
                 </div>
             </div>
         </div>
