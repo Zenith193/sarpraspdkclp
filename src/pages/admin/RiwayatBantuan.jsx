@@ -52,7 +52,7 @@ const RiwayatBantuan = ({ readOnly = false }) => {
             Promise.all([
                 bastApi.list(),
                 korwilApi.list(),
-                sekolahApi.list(),
+                sekolahApi.list({ limit: 99999 }),
             ]).then(([bastItems, korwilList, sekolahList]) => {
                 const bastArr = Array.isArray(bastItems) ? bastItems : (bastItems?.data || []);
                 const korwilArr = Array.isArray(korwilList) ? korwilList : (korwilList?.data || []);
