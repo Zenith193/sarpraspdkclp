@@ -950,7 +950,8 @@ async function autoMigrate() {
         `ALTER TABLE sekolah ADD COLUMN IF NOT EXISTS kop_upload_status TEXT DEFAULT 'done'`,
         `ALTER TABLE sekolah ADD COLUMN IF NOT EXISTS denah_upload_status TEXT DEFAULT 'done'`,
         // BAST volume + honor
-        `ALTER TABLE bast ADD COLUMN IF NOT EXISTS volume TEXT`,
+        ALTER TABLE bast ADD COLUMN IF NOT EXISTS volume TEXT`,
+        `ALTER TABLE matrik_kegiatan ADD COLUMN IF NOT EXISTS volume TEXT`,
         `ALTER TABLE bast ADD COLUMN IF NOT EXISTS honor BIGINT DEFAULT 0`,
         // Kontrak tables
         `CREATE TABLE IF NOT EXISTS permohonan_kontrak (

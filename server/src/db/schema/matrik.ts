@@ -33,6 +33,7 @@ export const matrikKegiatan = pgTable('matrik_kegiatan', {
     jangkaWaktu: integer('jangka_waktu'),
     tahunAnggaran: integer('tahun_anggaran'),
     honor: bigint('honor', { mode: 'number' }).default(0),
+    volume: text('volume'),
     // SPL fields
     noHp: text('no_hp'),
     konsultanPengawas: text('konsultan_pengawas'),

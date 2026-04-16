@@ -234,7 +234,7 @@ const CreateBAST = () => {
                 nilaiKontrak: bast ? (bast.nilaiKontrak || 0) : (m.nilaiKontrak || 0),
                 honor: bast?.honor ?? m.honor ?? 0,
                 terbilangBAST: fullTerbilang(nilaiBAST),
-                volume: bast?.volume || '',
+                volume: bast?.volume || m.volume || '',
                 isGenerated: !!bast,
                 bastId: bast?.id,
                 bastN: n,
@@ -258,7 +258,7 @@ const CreateBAST = () => {
                         nilaiKontrak: cBast ? (cBast.nilaiKontrak || 0) : (c.nilaiKontrak || 0),
                         honor: cBast?.honor ?? c.honor ?? 0,
                         terbilangBAST: fullTerbilang(cNilaiBAST),
-                        volume: cBast?.volume || '',
+                        volume: cBast?.volume || c.volume || '',
                         isGenerated: !!cBast,
                         bastId: cBast?.id,
                         bastN: cn,
@@ -495,10 +495,13 @@ const CreateBAST = () => {
         if (!editItem) return;
         const newNilai = computeNilaiBAST(editItem, matrikData, { nilaiKontrak: editForm.nilaiKontrak, honor: editForm.honor });
 
-        // Update matrik honor if changed
-        if (editForm.honor !== (editItem.honor || 0)) {
-            try { await matrikApi.update(editItem.id, { honor: editForm.honor }); } catch (e) {}
-            useMatrikStore.getState().updateMatrik(editItem.id, { honor: editForm.honor });
+        // Always update matrik (volume + honor) — works before & after generate
+        const matrikUpdates = {};
+        if (editForm.honor !== (editItem.honor || 0)) matrikUpdates.honor = editForm.honor;
+        if (editForm.volume !== (editItem.volume || '')) matrikUpdates.volume = editForm.volume;
+        if (Object.keys(matrikUpdates).length > 0) {
+            try { await matrikApi.update(editItem.id, matrikUpdates); } catch (e) {}
+            useMatrikStore.getState().updateMatrik(editItem.id, matrikUpdates);
         }
 
         // Update DB bast record if generated
@@ -506,13 +509,19 @@ const CreateBAST = () => {
             try {
                 await bastApi.update(editItem.bastId, {
                     volume: editForm.volume,
-                    nilaiKontrak: editForm.nilaiKontrak || newNilai,
+                    honor: editForm.honor,
+                    nilaiKontrak: newNilai,
                 });
             } catch (e) { console.warn("[BAST] DB update err:", e); }
         }
 
         // Reload from DB
         await loadBastData();
+        // Also reload SPL data to pick up matrik changes
+        try {
+            const res = await matrikApi.listSpl();
+            setSplData(Array.isArray(res) ? res : (res?.data || []));
+        } catch {}
         toast.success('Data BAST berhasil diperbarui');
         setEditItem(null);
     };
