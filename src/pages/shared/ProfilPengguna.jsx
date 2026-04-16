@@ -32,6 +32,7 @@ const ProfilPengguna = () => {
     const [uploadProgress, setUploadProgress] = useState({}); // { kop: 0-100, denah: 0-100 }
 
     const isSekolah = user?.role === 'Sekolah';
+    const isKorwil = (user?.role || '').toLowerCase() === 'korwil';
     const isPenyedia = user?.role === 'Penyedia';
     const sekolahId = user?.sekolahId;
     const [hasContohKop, setHasContohKop] = useState(false);
@@ -326,7 +327,7 @@ const ProfilPengguna = () => {
     ] : [
         { label: 'Nama Akun', key: 'namaAkun' },
         { label: 'Role', key: 'role', readOnly: true },
-        { label: 'Email', key: 'email' },
+        { label: 'Email', key: 'email', readOnly: isKorwil },
     ];
 
     const getFieldValue = (f) => {
