@@ -110,7 +110,12 @@ const RiwayatBantuan = ({ readOnly = false }) => {
             bastFisikPath: b.bastFisikPath || b.bast_fisik_path,
             splHistoryId: b.splHistoryId || b.spl_history_id,
             createdAt: b.createdAt || b.created_at,
-        }));
+        })).sort((a, b) => {
+            // Sort by createdAt descending (newest first)
+            const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+            const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+            return dateB - dateA;
+        });
     }, [dbBastData]);
 
     const filtered = useMemo(() => {
