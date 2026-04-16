@@ -40,6 +40,16 @@ const UploadFormKerusakan = () => {
         return { kecamatan: kecList, jenjang: jenj };
     }, [isKorwil, korwilList, user]);
 
+    // Filtered school list for korwil
+    const filteredSekolahList = useMemo(() => {
+        if (!isKorwil || !myKorwilAssignment) return sekolahList;
+        return sekolahList.filter(s => {
+            const kecMatch = myKorwilAssignment.kecamatan.some(k => k.toLowerCase() === (s.kecamatan || '').toLowerCase());
+            const jenjMatch = !myKorwilAssignment.jenjang || (s.jenjang || '').toLowerCase() === myKorwilAssignment.jenjang.toLowerCase();
+            return kecMatch && jenjMatch;
+        });
+    }, [sekolahList, isKorwil, myKorwilAssignment]);
+
     // ===== ACTION DROPDOWN =====
     const [openActionId, setOpenActionId] = useState(null);
     const actionDropdownRef = useRef(null);
@@ -110,7 +120,11 @@ const UploadFormKerusakan = () => {
         let schools = sekolahList;
         // Filter by korwil kecamatan
         if (isKorwil && myKorwilAssignment) {
-            schools = schools.filter(s => myKorwilAssignment.kecamatan.some(k => k.toLowerCase() === (s.kecamatan || '').toLowerCase()));
+            schools = schools.filter(s => {
+                const kecMatch = myKorwilAssignment.kecamatan.some(k => k.toLowerCase() === (s.kecamatan || '').toLowerCase());
+                const jenjMatch = !myKorwilAssignment.jenjang || (s.jenjang || '').toLowerCase() === myKorwilAssignment.jenjang.toLowerCase();
+                return kecMatch && jenjMatch;
+            });
         }
         const uploadedNPSN = new Set(data.filter(d => d.fileName).map(d => d.npsn));
         return schools.filter(s => !uploadedNPSN.has(s.npsn));
@@ -120,11 +134,14 @@ const UploadFormKerusakan = () => {
     const filtered = useMemo(() => {
         let source = activeTab === 'data' ? data : missingSchools;
 
-        // For korwil: filter by assigned kecamatan
+        // For korwil: filter by assigned kecamatan + jenjang
         if (isKorwil && myKorwilAssignment) {
             source = source.filter(d => {
                 const kec = d.kecamatan || d.sekolahKecamatan || '';
-                return myKorwilAssignment.kecamatan.some(k => k.toLowerCase() === kec.toLowerCase());
+                const jenj = d.jenjang || d.sekolahJenjang || '';
+                const kecMatch = myKorwilAssignment.kecamatan.some(k => k.toLowerCase() === kec.toLowerCase());
+                const jenjMatch = !myKorwilAssignment.jenjang || jenj.toLowerCase() === myKorwilAssignment.jenjang.toLowerCase();
+                return kecMatch && jenjMatch;
             });
         }
 
@@ -653,7 +670,7 @@ const UploadFormKerusakan = () => {
                                 {isSekolah ? (
                                     <input className="form-input" value={user.namaAkun} disabled />
                                 ) : (
-                                    <SearchableSelect options={sekolahList.map(s => s.nama)} value={formSekolah} onChange={handleSchoolChange} placeholder="-- Cari Sekolah --" />
+                                    <SearchableSelect options={filteredSekolahList.map(s => s.nama)} value={formSekolah} onChange={handleSchoolChange} placeholder="-- Cari Sekolah --" />
                                 )}
                             </div>
                             <div className="form-group">
