@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm';
 // Default configs matching frontend settingsStore.js
 const DEFAULTS: Record<string, any> = {
     access_config: {
-        admin: ['dashboard', 'data-sarpras', 'proposal', 'proyeksi-anggaran', 'aktivitas', 'manajemen-pengguna', 'manajemen-template', 'riwayat-bantuan', 'matriks-kegiatan', 'create-bast', 'pencairan', 'manajemen-korwil', 'form-kerusakan', 'prestasi', 'verifikasi-sarpras', 'verifikasi-proposal', 'ranking', 'hak-akses', 'pengaturan-nas', 'countdown-settings', 'manajemen-penyedia', 'manajemen-kontrak', 'monitoring-realisasi', 'feedback'],
+        admin: ['dashboard', 'data-sarpras', 'proposal', 'proyeksi-anggaran', 'aktivitas', 'manajemen-pengguna', 'manajemen-template', 'riwayat-bantuan', 'matriks-kegiatan', 'create-bast', 'pencairan', 'manajemen-korwil', 'form-kerusakan', 'prestasi', 'verifikasi-sarpras', 'verifikasi-proposal', 'ranking', 'hak-akses', 'pengaturan-nas', 'countdown-settings', 'manajemen-penyedia', 'manajemen-kontrak', 'monitoring-realisasi', 'feedback', 'iklan'],
         verifikator: ['dashboard', 'data-sarpras', 'proposal', 'proyeksi-anggaran', 'verifikasi-sarpras', 'verifikasi-proposal', 'ranking', 'riwayat-bantuan', 'manajemen-template', 'matriks-kegiatan', 'create-bast', 'pencairan', 'form-kerusakan', 'prestasi', 'manajemen-penyedia', 'manajemen-kontrak', 'monitoring-realisasi', 'feedback'],
         korwil: ['dashboard', 'verifikasi-sarpras', 'verifikasi-proposal', 'ranking', 'data-sarpras', 'proposal', 'riwayat-bantuan', 'form-kerusakan', 'feedback'],
         sekolah: ['dashboard', 'data-sarpras', 'proposal', 'riwayat-bantuan', 'prestasi', 'form-kerusakan', 'feedback'],

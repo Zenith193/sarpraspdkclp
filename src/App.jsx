@@ -57,6 +57,7 @@ import VerifikasiProposal from './pages/shared/VerifikasiProposal';
 import FormKerusakan from './pages/shared/FormKerusakan';
 import Feedback from './pages/shared/Feedback';
 import ManajemenFeedback from './pages/admin/ManajemenFeedback';
+import Iklan from './pages/shared/Iklan';
 
 
 // Route guard
@@ -133,6 +134,7 @@ function App() {
           <Route path="manajemen-kontrak" element={<ManajemenKontrak />} />
           <Route path="monitoring-realisasi" element={<MonitoringRealisasi />} />
           <Route path="feedback" element={<ManajemenFeedback />} />
+          <Route path="iklan" element={<Iklan />} />
           <Route path="profil" element={<ProfilPengguna />} />
         </Route>
 

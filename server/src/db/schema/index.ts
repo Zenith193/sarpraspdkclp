@@ -13,3 +13,5 @@ export { perusahaan } from './perusahaan';
 export { permohonanKontrak, realisasi } from './kontrak';
 export { dasarHukum, satuanKerja, ppkom } from './referensi';
 export { feedback } from './feedback';
+
+export { iklan } from './iklan';

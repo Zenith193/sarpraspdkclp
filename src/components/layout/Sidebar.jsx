@@ -77,6 +77,7 @@ const Sidebar = ({ collapsed, onToggle, className = '' }) => {
         { label: 'Manajemen Kontrak', icon: <ClipboardCheck size={18} />, path: '/admin/manajemen-kontrak' },
         { label: 'Monitoring Realisasi', icon: <BarChart3 size={18} />, path: '/admin/monitoring-realisasi' },
         { label: 'Feedback', icon: <MessageSquare size={18} />, path: '/admin/feedback' },
+        { label: 'Iklan', icon: <Megaphone size={18} />, path: '/admin/iklan' },
     ]);
 
     const adminSettingsMenu = filterByAccess([

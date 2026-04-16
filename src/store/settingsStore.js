@@ -58,6 +58,7 @@ export const ALL_MENUS = {
         { path: 'manajemen-kontrak', label: 'Manajemen Kontrak' },
         { path: 'monitoring-realisasi', label: 'Monitoring Realisasi' },
         { path: 'feedback', label: 'Feedback' },
+        { path: 'iklan', label: 'Iklan' },
     ],
     verifikator: [
         { path: 'dashboard', label: 'Dashboard' },
