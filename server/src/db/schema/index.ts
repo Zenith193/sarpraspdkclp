@@ -8,7 +8,6 @@ export { proyeksiAnggaran, snpAcuan } from './proyeksi';
 export { prestasi, prestasiPointRule } from './prestasi';
 export { formKerusakan } from './kerusakan';
 export { korwilAssignment, aktivitas, appSettings, riwayatBantuan } from './settings';
-export { iklan } from './iklan';
 export { arsipRekomendasi, arsipChecklist } from './arsipDokumen';
 export { perusahaan } from './perusahaan';
 export { permohonanKontrak, realisasi } from './kontrak';

@@ -55,11 +55,9 @@ import RankingPrioritas from './pages/shared/RankingPrioritas';
 import VerifikasiSarpras from './pages/shared/VerifikasiSarpras';
 import VerifikasiProposal from './pages/shared/VerifikasiProposal';
 import FormKerusakan from './pages/shared/FormKerusakan';
-import Iklan from './pages/shared/Iklan';
 import Feedback from './pages/shared/Feedback';
 import ManajemenFeedback from './pages/admin/ManajemenFeedback';
 
-import AdScriptInjector from './components/AdScriptInjector';
 
 // Route guard
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -103,7 +101,6 @@ function App() {
     <BrowserRouter>
       <Toaster position="top-right" />
 
-      <AdScriptInjector />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/registrasi-penyedia" element={<RegistrasiPenyedia />} />
@@ -132,7 +129,6 @@ function App() {
           <Route path="hak-akses" element={<HakAkses />} />
           <Route path="pengaturan-nas" element={<PengaturanNAS />} />
           <Route path="countdown-settings" element={<CountdownSettings />} />
-          <Route path="iklan" element={<Iklan />} />
           <Route path="manajemen-penyedia" element={<ManajemenPenyedia />} />
           <Route path="manajemen-kontrak" element={<ManajemenKontrak />} />
           <Route path="monitoring-realisasi" element={<MonitoringRealisasi />} />
@@ -156,7 +152,6 @@ function App() {
           <Route path="pencairan" element={<Pencairan />} />
           <Route path="form-kerusakan" element={<UploadFormKerusakan />} />
           <Route path="prestasi" element={<Prestasi />} />
-          <Route path="iklan" element={<Iklan />} />
           <Route path="manajemen-penyedia" element={<ManajemenPenyedia />} />
           <Route path="manajemen-kontrak" element={<ManajemenKontrak />} />
           <Route path="monitoring-realisasi" element={<MonitoringRealisasi />} />
@@ -174,7 +169,6 @@ function App() {
           <Route path="proposal" element={<Proposal readOnly />} />
           <Route path="riwayat-bantuan" element={<RiwayatBantuan readOnly />} />
           <Route path="form-kerusakan" element={<UploadFormKerusakan />} />
-          <Route path="iklan" element={<Iklan />} />
           <Route path="feedback" element={<Feedback />} />
           <Route path="profil" element={<ProfilPengguna />} />
           <Route path="aktivitas" element={<AktivitasPengguna />} />
@@ -188,7 +182,6 @@ function App() {
           <Route path="riwayat-bantuan" element={<RiwayatBantuan readOnly />} />
           <Route path="prestasi" element={<Prestasi />} />
           <Route path="form-kerusakan" element={<UploadFormKerusakan />} />
-          <Route path="iklan" element={<Iklan />} />
           <Route path="feedback" element={<Feedback />} />
           <Route path="profil" element={<ProfilPengguna />} />
           <Route path="aktivitas" element={<AktivitasPengguna />} />

@@ -73,7 +73,6 @@ const Sidebar = ({ collapsed, onToggle, className = '' }) => {
         { label: 'Verifikasi Sarpras', icon: <CheckCircle size={18} />, path: '/admin/verifikasi-sarpras' },
         { label: 'Verifikasi Proposal', icon: <ClipboardList size={18} />, path: '/admin/verifikasi-proposal' },
         { label: 'Ranking & Prioritas', icon: <Star size={18} />, path: '/admin/ranking' },
-        { label: 'Iklan', icon: <Megaphone size={18} />, path: '/admin/iklan' },
         { label: 'Manajemen Penyedia', icon: <Briefcase size={18} />, path: '/admin/manajemen-penyedia' },
         { label: 'Manajemen Kontrak', icon: <ClipboardCheck size={18} />, path: '/admin/manajemen-kontrak' },
         { label: 'Monitoring Realisasi', icon: <BarChart3 size={18} />, path: '/admin/monitoring-realisasi' },
@@ -101,7 +100,6 @@ const Sidebar = ({ collapsed, onToggle, className = '' }) => {
         { label: 'Pencairan', icon: <Wallet size={18} />, path: '/verifikator/pencairan' },
         { label: 'Upload Form Kerusakan', icon: <Upload size={18} />, path: '/verifikator/form-kerusakan' },
         { label: 'Prestasi', icon: <Trophy size={18} />, path: '/verifikator/prestasi' },
-        { label: 'Iklan', icon: <Megaphone size={18} />, path: '/verifikator/iklan' },
         { label: 'Manajemen Penyedia', icon: <Briefcase size={18} />, path: '/verifikator/manajemen-penyedia' },
         { label: 'Manajemen Kontrak', icon: <ClipboardCheck size={18} />, path: '/verifikator/manajemen-kontrak' },
         { label: 'Monitoring Realisasi', icon: <BarChart3 size={18} />, path: '/verifikator/monitoring-realisasi' },
@@ -116,7 +114,6 @@ const Sidebar = ({ collapsed, onToggle, className = '' }) => {
         { label: 'Data Proposal', icon: <FileText size={18} />, path: '/korwil/proposal' },
         { label: 'Riwayat Bantuan', icon: <History size={18} />, path: '/korwil/riwayat-bantuan' },
         { label: 'Form Kerusakan', icon: <Eye size={18} />, path: '/korwil/form-kerusakan' },
-        { label: 'Iklan', icon: <Megaphone size={18} />, path: '/korwil/iklan' },
         { label: 'Feedback', icon: <MessageSquarePlus size={18} />, path: '/korwil/feedback' },
     ]);
 
@@ -127,7 +124,6 @@ const Sidebar = ({ collapsed, onToggle, className = '' }) => {
         { label: 'Riwayat Bantuan', icon: <History size={18} />, path: '/sekolah/riwayat-bantuan' },
         { label: 'Prestasi', icon: <Trophy size={18} />, path: '/sekolah/prestasi' },
         { label: 'Form Kerusakan', icon: <Eye size={18} />, path: '/sekolah/form-kerusakan' },
-        { label: 'Iklan', icon: <Megaphone size={18} />, path: '/sekolah/iklan' },
         { label: 'Feedback', icon: <MessageSquarePlus size={18} />, path: '/sekolah/feedback' },
     ]);
 

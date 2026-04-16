@@ -31,7 +31,6 @@ import penggunaRoutes from './routes/pengguna.routes.js';
 import aktivitasRoutes from './routes/aktivitas.routes.js';
 import settingsRoutes from './routes/settings.routes.js';
 import dashboardRoutes from './routes/dashboard.routes.js';
-import iklanRoutes from './routes/iklan.routes.js';
 import arsipDokumenRoutes from './routes/arsipDokumen.routes.js';
 import perusahaanRoutes from './routes/perusahaan.routes.js';
 import kontrakRoutes from './routes/kontrak.routes.js';
@@ -737,7 +736,6 @@ app.use('/api/pengguna', penggunaRoutes);
 app.use('/api/aktivitas', aktivitasRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/dashboard', dashboardRoutes);
-app.use('/api/iklan', iklanRoutes);
 app.use('/api/arsip-dokumen', arsipDokumenRoutes);
 app.use('/api/perusahaan', perusahaanRoutes);
 app.use('/api/kontrak', kontrakRoutes);
@@ -949,8 +947,6 @@ async function autoMigrate() {
         `ALTER TABLE sekolah ADD COLUMN IF NOT EXISTS denah_sekolah TEXT`,
         `ALTER TABLE sekolah ADD COLUMN IF NOT EXISTS kop_upload_status TEXT DEFAULT 'done'`,
         `ALTER TABLE sekolah ADD COLUMN IF NOT EXISTS denah_upload_status TEXT DEFAULT 'done'`,
-        `ALTER TABLE iklan ALTER COLUMN advertiser SET DEFAULT '-'`,
-        `UPDATE iklan SET advertiser = '-' WHERE advertiser IS NULL`,
         // Kontrak tables
         `CREATE TABLE IF NOT EXISTS permohonan_kontrak (
             id SERIAL PRIMARY KEY,

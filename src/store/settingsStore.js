@@ -9,8 +9,7 @@ const DEFAULT_ACCESS = {
         'riwayat-bantuan', 'matriks-kegiatan', 'create-bast',
         'pencairan', 'manajemen-korwil', 'form-kerusakan', 'prestasi',
         'verifikasi-sarpras', 'verifikasi-proposal', 'ranking',
-        'hak-akses', 'pengaturan-nas', 'countdown-settings', 'iklan',
-        'manajemen-penyedia', 'manajemen-kontrak', 'monitoring-realisasi',
+        'hak-akses', 'pengaturan-nas', 'countdown-settings', 'manajemen-penyedia', 'manajemen-kontrak', 'monitoring-realisasi',
         'feedback'
     ],
     verifikator: [
@@ -18,18 +17,17 @@ const DEFAULT_ACCESS = {
         'verifikasi-sarpras', 'verifikasi-proposal',
         'ranking', 'riwayat-bantuan',
         'manajemen-template', 'matriks-kegiatan', 'create-bast',
-        'pencairan', 'form-kerusakan', 'prestasi', 'iklan',
-        'manajemen-penyedia', 'manajemen-kontrak', 'monitoring-realisasi',
+        'pencairan', 'form-kerusakan', 'prestasi', 'manajemen-penyedia', 'manajemen-kontrak', 'monitoring-realisasi',
         'feedback'
     ],
     korwil: [
         'dashboard', 'verifikasi-sarpras', 'verifikasi-proposal',
         'ranking', 'data-sarpras', 'proposal',
-        'riwayat-bantuan', 'form-kerusakan', 'iklan', 'feedback'
+        'riwayat-bantuan', 'form-kerusakan', 'feedback'
     ],
     sekolah: [
         'dashboard', 'data-sarpras', 'proposal', 'riwayat-bantuan',
-        'prestasi', 'form-kerusakan', 'iklan', 'feedback'
+        'prestasi', 'form-kerusakan', 'feedback'
     ]
 };
 
@@ -56,7 +54,6 @@ export const ALL_MENUS = {
         { path: 'hak-akses', label: 'Hak Akses' },
         { path: 'pengaturan-nas', label: 'Pengaturan NAS' },
         { path: 'countdown-settings', label: 'Countdown Timer' },
-        { path: 'iklan', label: 'Iklan' },
         { path: 'manajemen-penyedia', label: 'Manajemen Penyedia' },
         { path: 'manajemen-kontrak', label: 'Manajemen Kontrak' },
         { path: 'monitoring-realisasi', label: 'Monitoring Realisasi' },
@@ -77,7 +74,6 @@ export const ALL_MENUS = {
         { path: 'pencairan', label: 'Pencairan' },
         { path: 'form-kerusakan', label: 'Upload Form Kerusakan' },
         { path: 'prestasi', label: 'Prestasi' },
-        { path: 'iklan', label: 'Iklan' },
         { path: 'manajemen-penyedia', label: 'Manajemen Penyedia' },
         { path: 'manajemen-kontrak', label: 'Manajemen Kontrak' },
         { path: 'monitoring-realisasi', label: 'Monitoring Realisasi' },
@@ -92,7 +88,6 @@ export const ALL_MENUS = {
         { path: 'proposal', label: 'Data Proposal' },
         { path: 'riwayat-bantuan', label: 'Riwayat Bantuan' },
         { path: 'form-kerusakan', label: 'Form Kerusakan' },
-        { path: 'iklan', label: 'Iklan' },
         { path: 'feedback', label: 'Feedback' },
     ],
     sekolah: [
@@ -102,7 +97,6 @@ export const ALL_MENUS = {
         { path: 'riwayat-bantuan', label: 'Riwayat Bantuan' },
         { path: 'prestasi', label: 'Prestasi' },
         { path: 'form-kerusakan', label: 'Form Kerusakan' },
-        { path: 'iklan', label: 'Iklan' },
         { path: 'feedback', label: 'Feedback' },
     ]
 };
