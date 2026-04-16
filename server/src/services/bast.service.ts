@@ -7,24 +7,15 @@ export const bastService = {
     async list() {
         const rows = await db.select({
             bast: bast,
-            matrikNilaiKontrak: matrikKegiatan.nilaiKontrak,
-            matrikHonor: matrikKegiatan.honor,
             matrikNamaPaket: matrikKegiatan.namaPaket,
             matrikJenisPengadaan: matrikKegiatan.jenisPengadaan,
         }).from(bast)
           .leftJoin(matrikKegiatan, eq(bast.matrikId, matrikKegiatan.id));
-        return rows.map(r => {
-            const rawKontrak = (r.bast.nilaiKontrak && r.bast.nilaiKontrak > 0) ? r.bast.nilaiKontrak : (r.matrikNilaiKontrak || 0);
-            const honor = r.bast.honor || r.matrikHonor || 0;
-            const nilaiBAST = r.matrikJenisPengadaan === 'Pekerjaan Konstruksi' ? rawKontrak + honor : rawKontrak;
-            return {
-                ...r.bast,
-                nilaiKontrak: nilaiBAST,
-                honor,
-                namaPaket: r.bast.namaPaket || r.matrikNamaPaket,
-                jenisPengadaan: r.matrikJenisPengadaan,
-            };
-        });
+        return rows.map(r => ({
+            ...r.bast,
+            namaPaket: r.bast.namaPaket || r.matrikNamaPaket,
+            jenisPengadaan: r.matrikJenisPengadaan,
+        }));
     },
 
     async getById(id: number) {
@@ -57,26 +48,16 @@ export const bastService = {
     async getByNpsn(npsn: string) {
         const rows = await db.select({
             bast: bast,
-            matrikNilaiKontrak: matrikKegiatan.nilaiKontrak,
-            matrikHonor: matrikKegiatan.honor,
             matrikNamaPaket: matrikKegiatan.namaPaket,
             matrikJenisPengadaan: matrikKegiatan.jenisPengadaan,
         }).from(bast)
           .leftJoin(matrikKegiatan, eq(bast.matrikId, matrikKegiatan.id))
           .where(eq(bast.npsn, npsn));
-        return rows.map(r => {
-            const rawKontrak = (r.bast.nilaiKontrak && r.bast.nilaiKontrak > 0) ? r.bast.nilaiKontrak : (r.matrikNilaiKontrak || 0);
-            const honor = r.matrikHonor || 0;
-            // For Pekerjaan Konstruksi, nilaiBAST includes honor
-            const nilaiBAST = r.matrikJenisPengadaan === 'Pekerjaan Konstruksi' ? rawKontrak + honor : rawKontrak;
-            return {
-                ...r.bast,
-                nilaiKontrak: nilaiBAST,
-                honor,
-                namaPaket: r.bast.namaPaket || r.matrikNamaPaket,
-                jenisPengadaan: r.matrikJenisPengadaan,
-            };
-        });
+        return rows.map(r => ({
+            ...r.bast,
+            namaPaket: r.bast.namaPaket || r.matrikNamaPaket,
+            jenisPengadaan: r.matrikJenisPengadaan,
+        }));
     },
 
     async getByMatrikId(matrikId: number) {
