@@ -222,8 +222,8 @@ const CreateBAST = () => {
         for (const m of sorted) {
             // Enrich parent
             const bast = generatedMap[m.id];
-            const overrides = bast ? { nilaiKontrak: bast.nilaiKontrak, honor: bast.honor } : {};
-            const nilaiBAST = computeNilaiBAST(m, matrikData, overrides);
+            // If already generated, use stored value directly (don't recompute)
+            const nilaiBAST = bast ? (bast.nilaiKontrak || 0) : computeNilaiBAST(m, matrikData, {});
             const n = bast?.bastN || 1;
             rows.push({
                 ...m,
@@ -231,7 +231,7 @@ const CreateBAST = () => {
                 nipKepsek: m.nipKs || '-',
                 noBAST: generateNoBAST(m.noMatrik, m.jenisPengadaan, m.sumberDana, m.tahunAnggaran || currentYear, n),
                 nilaiBAST,
-                nilaiKontrak: bast?.nilaiKontrak ?? m.nilaiKontrak,
+                nilaiKontrak: bast ? (bast.nilaiKontrak || 0) : (m.nilaiKontrak || 0),
                 honor: bast?.honor ?? m.honor ?? 0,
                 terbilangBAST: fullTerbilang(nilaiBAST),
                 volume: bast?.volume || '',
@@ -246,8 +246,8 @@ const CreateBAST = () => {
             if (m.children && m.children.length > 0) {
                 for (const c of m.children) {
                     const cBast = generatedMap[c.id];
-                    const cOverrides = cBast ? { nilaiKontrak: cBast.nilaiKontrak, honor: cBast.honor } : {};
-                    const cNilaiBAST = computeNilaiBAST(c, matrikData, cOverrides);
+                    // If already generated, use stored value directly
+                    const cNilaiBAST = cBast ? (cBast.nilaiKontrak || 0) : computeNilaiBAST(c, matrikData, {});
                     const cn = cBast?.bastN || 1;
                     rows.push({
                         ...c,
@@ -255,7 +255,7 @@ const CreateBAST = () => {
                         nipKepsek: c.nipKs || '-',
                         noBAST: generateNoBAST(c.noMatrik, c.jenisPengadaan || m.jenisPengadaan, c.sumberDana || m.sumberDana, c.tahunAnggaran || m.tahunAnggaran || currentYear, cn),
                         nilaiBAST: cNilaiBAST,
-                        nilaiKontrak: cBast?.nilaiKontrak ?? c.nilaiKontrak,
+                        nilaiKontrak: cBast ? (cBast.nilaiKontrak || 0) : (c.nilaiKontrak || 0),
                         honor: cBast?.honor ?? c.honor ?? 0,
                         terbilangBAST: fullTerbilang(cNilaiBAST),
                         volume: cBast?.volume || '',
@@ -379,8 +379,7 @@ const CreateBAST = () => {
                     namaSekolah: item.namaSekolah,
                     namaPaket: item.namaPaket,
                     noBast: noBAST,
-                    nilaiKontrak: bastEntry.nilaiBAST || item.nilaiKontrak || 0,
-                    nilaiKontrak: bastEntry.nilaiBAST || item.nilaiBAST || item.nilaiKontrak || 0,
+                    nilaiKontrak: item.nilaiBAST || item.nilaiKontrak || 0,
                     honor: item.honor || 0,
                     volume: item.volume || '',
                     templateId: selectedTemplateId,
@@ -422,28 +421,7 @@ const CreateBAST = () => {
                 try {
                     await templateApi.generate(batchTemplateId, { ...item, noBAST }, {});
                 } catch { /* best-effort */ }
-                addBAST({
-                    matrikId: item.id,
-                    npsn: item.npsn,
-                    namaSekolah: item.namaSekolah,
-                    namaPaket: item.namaPaket,
-                    noMatrik: item.noMatrik,
-                    noBAST,
-                    kepsek: item.kepsek,
-                    nipKepsek: item.nipKepsek,
-                    nilaiBAST: item.nilaiBAST,
-                    nilaiKontrak: item.nilaiKontrak,
-                    volume: item.volume || '',
-                    honor: item.honor || 0,
-                    jenisPengadaan: item.jenisPengadaan,
-                    sumberDana: item.sumberDana,
-                    penyedia: item.penyedia,
-                    terbilangBAST: item.terbilangBAST,
-                    tanggalGenerate: new Date().toISOString(),
-                    templateId: batchTemplateId,
-                    templateNama: template?.nama || 'Default',
-                    bastN: n,
-                });
+                // (loaded from DB via loadBastData after batch completes)
                 // Persist to DB
                 try {
                     await bastApi.create({
@@ -452,7 +430,6 @@ const CreateBAST = () => {
                         namaSekolah: item.namaSekolah,
                         namaPaket: item.namaPaket,
                         noBast: noBAST,
-                        nilaiKontrak: item.nilaiKontrak || 0,
                         nilaiKontrak: item.nilaiBAST || item.nilaiKontrak || 0,
                         honor: item.honor || 0,
                         volume: item.volume || '',
