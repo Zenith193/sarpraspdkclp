@@ -1307,13 +1307,19 @@ const DataSarpras = ({ readOnly = false }) => {
                                     </div>
 
                                     <div className="form-group">
-                                        <label className="form-label">Foto (Maks. 5 × 500KB) — Foto dengan geotagging akan otomatis terbaca <span style={{ color: 'var(--accent-red)' }}>*</span></label>
+                                        <label className="form-label">Foto (Wajib 5 foto × Maks. 1MB/foto) <span style={{ color: 'var(--accent-red)' }}>*</span></label>
+                                        <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', marginBottom: 8, padding: '8px 12px', background: 'rgba(59,130,246,0.06)', borderRadius: 'var(--radius-sm)', lineHeight: 1.5 }}>
+                                            📸 Foto yang wajib diupload:<br/>
+                                            <b>1.</b> Tampak Depan &nbsp; <b>2.</b> Tampak Belakang &nbsp; <b>3.</b> Tampak Samping Kanan<br/>
+                                            <b>4.</b> Tampak Samping Kiri &nbsp; <b>5.</b> Foto Atap / Foto Kerusakan<br/>
+                                            <span style={{ color: 'var(--accent-green)', fontSize: '0.68rem' }}>✓ Foto dengan geotagging akan otomatis terbaca</span>
+                                        </div>
                                         <input ref={fileInputRef} type="file" accept="image/*" multiple style={{ display: 'none' }} onChange={handleFileUpload} />
                                         <div className="file-upload" onClick={() => formPhotos.length < 5 && fileInputRef.current.click()}
                                             style={{ opacity: formPhotos.length >= 5 ? 0.5 : 1, cursor: formPhotos.length >= 5 ? 'not-allowed' : 'pointer' }}>
                                             <Upload size={24} style={{ color: 'var(--text-secondary)', marginBottom: 6 }} />
                                             <div className="file-upload-text">{formPhotos.length >= 5 ? 'Maksimum 5 foto tercapai' : 'Klik untuk upload foto'}</div>
-                                            <div className="file-upload-limit" style={{ fontSize: '0.75rem' }}>{formPhotos.length}/5 foto • Maks 500KB per file</div>
+                                            <div className="file-upload-limit" style={{ fontSize: '0.75rem' }}>{formPhotos.length}/5 foto • Maks 1MB per file</div>
                                         </div>
                                         {formPhotos.length > 0 && (
                                             <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
