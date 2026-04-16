@@ -91,6 +91,8 @@ export const bast = pgTable('bast', {
     nilaiKontrak: bigint('nilai_kontrak', { mode: 'number' }),
     penyedia: text('penyedia'),
     tanggalBast: date('tanggal_bast'),
+    volume: text('volume'),
+    honor: bigint('honor', { mode: 'number' }).default(0),
     bastFisikPath: text('bast_fisik_path'),
     splHistoryId: integer('spl_history_id'),
     generatedHtml: text('generated_html'),

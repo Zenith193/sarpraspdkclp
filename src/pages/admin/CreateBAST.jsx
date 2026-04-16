@@ -140,7 +140,7 @@ const generateBASTDocument = (item, template) => {
 
 // ===== COMPONENT =====
 const CreateBAST = () => {
-    const { matrikData, bastData, addBAST, updateBAST, revertBAST } = useMatrikStore();
+    const { matrikData } = useMatrikStore();
     const { data: templatesData } = useApi(() => templateApi.list(), []);
     const templates = useMemo(() => (templatesData?.data || templatesData || []).filter(t => t && t.id), [templatesData]);
 
@@ -183,6 +183,23 @@ const CreateBAST = () => {
         document.addEventListener('mousedown', handler);
         return () => document.removeEventListener('mousedown', handler);
     }, []);
+
+
+    // ===== LOAD BAST DATA FROM DATABASE =====
+    const [bastData, setBastData] = useState([]);
+    const loadBastData = async () => {
+        try {
+            const res = await bastApi.list();
+            const arr = Array.isArray(res) ? res : (res?.data || []);
+            setBastData(arr.map(b => ({
+                ...b,
+                bastId: b.id,
+                noBAST: b.noBast || b.noBAST,
+                tanggalGenerate: b.createdAt,
+            })));
+        } catch (e) { console.warn("[BAST] Failed to load:", e); }
+    };
+    useEffect(() => { loadBastData(); }, []);
 
     // Lookup: which matrikIds have been generated
     const generatedMap = useMemo(() => {
@@ -352,7 +369,7 @@ const CreateBAST = () => {
                 templateNama: template?.nama || 'Default',
                 bastN: n,
             };
-            addBAST(bastEntry);
+            // (loaded from DB via loadBastData)
 
             // Also persist to database for file uploads etc
             try {
@@ -378,6 +395,7 @@ const CreateBAST = () => {
                 window.open(result.docxUrl, '_blank');
             }
 
+            await loadBastData();
             toast.success(`BAST ${noBAST} berhasil di-generate!`);
             setGenerateTarget(null);
         } catch (e) {
@@ -439,6 +457,7 @@ const CreateBAST = () => {
                 } catch (dbErr) { console.warn('[BAST] batch DB save:', dbErr.message); }
                 count++;
             }
+            await loadBastData();
             toast.success(`${count} BAST berhasil di-generate!`);
             setSelectedIds([]);
             setShowBatchGenerate(false);
@@ -467,7 +486,7 @@ const CreateBAST = () => {
         if (!revertTarget) return;
         const matrikId = revertTarget.matrikId || revertTarget.id;
         console.log('[BAST REVERT] target:', { id: revertTarget.id, matrikId: revertTarget.matrikId, bastId: revertTarget.bastId, resolved: matrikId });
-        revertBAST(revertTarget.id);
+                // (reloaded from DB via loadBastData)
         // Also delete from database
         try {
             const res = await bastApi.revert(matrikId);
@@ -475,6 +494,7 @@ const CreateBAST = () => {
         } catch (e) {
             console.warn('[BAST REVERT] DB revert failed:', e.message);
         }
+                await loadBastData();
         toast.success(`BAST ${revertTarget.noBAST} dikembalikan ke "Belum"`);
         setRevertTarget(null);
     };
@@ -490,26 +510,28 @@ const CreateBAST = () => {
         });
     };
 
-    const handleSaveEdit = () => {
+    const handleSaveEdit = async () => {
         if (!editItem) return;
         const newNilai = computeNilaiBAST(editItem, matrikData, { nilaiKontrak: editForm.nilaiKontrak, honor: editForm.honor });
 
-        // Update matrik honor if changed (original source)
+        // Update matrik honor if changed
         if (editForm.honor !== (editItem.honor || 0)) {
+            try { await matrikApi.update(editItem.id, { honor: editForm.honor }); } catch (e) {}
             useMatrikStore.getState().updateMatrik(editItem.id, { honor: editForm.honor });
         }
 
-        // Update bastData if generated
+        // Update DB bast record if generated
         if (editItem.bastId) {
-            updateBAST(editItem.bastId, {
-                volume: editForm.volume,
-                honor: editForm.honor,
-                nilaiKontrak: editForm.nilaiKontrak,
-                nilaiBAST: newNilai,
-                terbilangBAST: fullTerbilang(newNilai),
-            });
+            try {
+                await bastApi.update(editItem.bastId, {
+                    volume: editForm.volume,
+                    nilaiKontrak: editForm.nilaiKontrak || newNilai,
+                });
+            } catch (e) { console.warn("[BAST] DB update err:", e); }
         }
 
+        // Reload from DB
+        await loadBastData();
         toast.success('Data BAST berhasil diperbarui');
         setEditItem(null);
     };

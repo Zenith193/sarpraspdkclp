@@ -7,7 +7,7 @@ import useAuthStore from '../../store/authStore';
 import { bastApi } from '../../api/index';
 
 const RiwayatBantuan = ({ readOnly = false }) => {
-    const bastData = useMatrikStore(s => s.bastData);
+    // bastData now loaded from DB for all roles
     const user = useAuthStore(s => s.user);
     const role = user?.role?.toLowerCase();
     const npsn = user?.npsn || user?.email?.split('@')[0];
@@ -39,35 +39,42 @@ const RiwayatBantuan = ({ readOnly = false }) => {
     const isAdmin = role === 'admin';
 
     // Fetch from DB for non-admin roles
+    // Fetch BAST data from DB for all roles
     useEffect(() => {
+        setLoadingDb(true);
         if (readOnly && npsn) {
-            setLoadingDb(true);
             bastApi.getByNpsn(npsn)
                 .then(items => setDbBastData(items || []))
+                .catch(() => setDbBastData([]))
+                .finally(() => setLoadingDb(false));
+        } else {
+            bastApi.list()
+                .then(items => {
+                    const arr = Array.isArray(items) ? items : (items?.data || []);
+                    setDbBastData(arr);
+                })
                 .catch(() => setDbBastData([]))
                 .finally(() => setLoadingDb(false));
         }
     }, [readOnly, npsn]);
 
     const data = useMemo(() => {
-        if (readOnly) {
-            return dbBastData.map(b => ({
-                id: b.id,
-                matrikId: b.matrikId || b.matrik_id,
-                npsn: b.npsn,
-                namaSekolah: b.namaSekolah || b.nama_sekolah,
-                namaPaket: b.namaPaket || b.nama_paket,
-                noBAST: b.noBast || b.no_bast || b.noBAST,
-                nilaiKontrak: b.nilaiKontrak || b.nilai_kontrak || 0,
-                nilaiBAST: b.nilaiKontrak || b.nilai_kontrak || 0,
-                penyedia: b.penyedia,
-                bastFisikPath: b.bastFisikPath || b.bast_fisik_path,
-                splHistoryId: b.splHistoryId || b.spl_history_id,
-                createdAt: b.createdAt || b.created_at,
-            }));
-        }
-        return bastData || [];
-    }, [readOnly, bastData, dbBastData]);
+        return dbBastData.map(b => ({
+            id: b.id,
+            bastId: b.id,
+            matrikId: b.matrikId || b.matrik_id,
+            npsn: b.npsn,
+            namaSekolah: b.namaSekolah || b.nama_sekolah,
+            namaPaket: b.namaPaket || b.nama_paket,
+            noBAST: b.noBast || b.no_bast || b.noBAST,
+            nilaiKontrak: b.nilaiKontrak || b.nilai_kontrak || 0,
+            nilaiBAST: b.nilaiKontrak || b.nilai_kontrak || 0,
+            penyedia: b.penyedia,
+            bastFisikPath: b.bastFisikPath || b.bast_fisik_path,
+            splHistoryId: b.splHistoryId || b.spl_history_id,
+            createdAt: b.createdAt || b.created_at,
+        }));
+    }, [dbBastData]);
 
     const filtered = useMemo(() => {
         if (!search) return data;
