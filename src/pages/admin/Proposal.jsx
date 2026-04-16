@@ -181,10 +181,11 @@ const Proposal = ({ readOnly = false }) => {
     const [actionPos, setActionPos] = useState({ top: 0, left: 0 });
     const colMenuRef = React.useRef(null);
     const toggleCol = (col) => setHiddenCols(prev => prev.includes(col) ? prev.filter(c => c !== col) : [...prev, col]);
-    const actionBtnRef = useRef(null);
+    const [actionRect, setActionRect] = useState(null);
     const handleActionClick = (e, id) => {
-        if (openActionId === id) { setOpenActionId(null); return; }
-        actionBtnRef.current = e.currentTarget;
+        if (openActionId === id) { setOpenActionId(null); setActionRect(null); return; }
+        const r = e.currentTarget.getBoundingClientRect();
+        setActionRect({ top: r.bottom + 4, left: r.right - 170 });
         setOpenActionId(id);
     };
     const filtered = useMemo(() => {
@@ -810,7 +811,7 @@ const Proposal = ({ readOnly = false }) => {
                                         </td>
                                     )}
                                     <td>
-                                        <button ref={openActionId === item.id ? actionBtnRef : null} className="btn-icon" onClick={(e) => { e.stopPropagation(); handleActionClick(e, item.id); }} title="Aksi">
+                                        <button className="btn-icon" onClick={(e) => { e.stopPropagation(); handleActionClick(e, item.id); }} title="Aksi">
                                             <MoreHorizontal size={16} />
                                         </button>
                                     </td>
@@ -829,11 +830,11 @@ const Proposal = ({ readOnly = false }) => {
                 {openActionId && createPortal(
                     (() => {
                         const item = paged.find(p => p.id === openActionId);
-                        if (!item || !actionBtnRef.current) return null;
-                        const rect = actionBtnRef.current.getBoundingClientRect();
-                        const top = rect.bottom + 4;
-                        const left = rect.right - 170;
-                        const adjustedTop = top + 200 > window.innerHeight ? rect.top - 200 : top;
+                        if (!item || !actionRect) return null;
+                        if (!item || !actionRect) return null;
+                        const top = actionRect.top;
+                        const left = actionRect.left;
+                        const adjustedTop = top + 200 > window.innerHeight ? top - 250 : top;
                         return (
                             <div ref={actionDropdownRef} className="dropdown-menu" style={{ position: 'fixed', top: Math.max(10, adjustedTop), left: Math.max(10, left), minWidth: 160, padding: 4, zIndex: 99999, boxShadow: '0 8px 24px rgba(0,0,0,0.3)' }}>
                                 <button style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%', padding: '7px 12px', background: 'none', border: 'none', cursor: 'pointer', fontSize: '0.82rem', color: 'var(--text-primary)', borderRadius: 6 }} className="dropdown-item" onClick={() => { setViewItem(item); setOpenActionId(null); }}>
