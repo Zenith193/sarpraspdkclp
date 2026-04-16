@@ -413,7 +413,7 @@ const DataSarpras = ({ readOnly = false }) => {
         const lebar = parseFloat(formData.lebar) || 0;
         if (!panjang || !lebar) { toast.error('Panjang dan lebar harus diisi'); return; }
         if (!formData.keterangan?.trim()) { toast.error('Keterangan wajib diisi'); return; }
-        if (!editItem && formPhotos.length < 5) { toast.error('Wajib upload 5 foto dengan geotagging'); return; }
+        if (formPhotos.length < 5) { toast.error('Wajib upload 5 foto dengan geotagging'); return; }
 
         try {
             toast.loading(editItem ? 'Memperbarui data...' : 'Menyimpan data...', { id: 'save' });
