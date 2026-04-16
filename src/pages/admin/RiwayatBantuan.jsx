@@ -57,6 +57,8 @@ const RiwayatBantuan = ({ readOnly = false }) => {
                 const bastArr = Array.isArray(bastItems) ? bastItems : (bastItems?.data || []);
                 const korwilArr = Array.isArray(korwilList) ? korwilList : (korwilList?.data || []);
                 const sekolahArr = Array.isArray(sekolahList) ? sekolahList : (sekolahList?.data || []);
+                console.log('[RiwayatBantuan Korwil] bastArr:', bastArr.length, 'korwilArr:', korwilArr.length, 'sekolahArr:', sekolahArr.length);
+                console.log('[RiwayatBantuan Korwil] user.id:', user.id, 'sample korwil:', korwilArr.slice(0, 3));
                 // Find this korwil's assignments
                 const myRows = korwilArr.filter(row => {
                     const ka = row.korwilAssignment || row;
@@ -69,6 +71,7 @@ const RiwayatBantuan = ({ readOnly = false }) => {
                     if (ka.kecamatan && !myKecList.includes(ka.kecamatan)) myKecList.push(ka.kecamatan);
                     if (ka.jenjang) myJenjang = ka.jenjang;
                 });
+                console.log('[RiwayatBantuan Korwil] myRows:', myRows.length, 'kecamatan:', myKecList, 'jenjang:', myJenjang);
                 // Build NPSN → sekolah lookup
                 const npsnToSekolah = {};
                 sekolahArr.forEach(s => { if (s.npsn) npsnToSekolah[s.npsn] = s; });
@@ -80,8 +83,9 @@ const RiwayatBantuan = ({ readOnly = false }) => {
                     const jenMatch = !myJenjang || sch.jenjang === myJenjang;
                     return kecMatch && jenMatch;
                 });
+                console.log('[RiwayatBantuan Korwil] filtered:', filtered.length, 'bastNpsns:', bastArr.map(b => b.npsn));
                 setDbBastData(filtered);
-            }).catch(() => setDbBastData([]))
+            }).catch(err => { console.error('[RiwayatBantuan Korwil] Error:', err); setDbBastData([]); })
               .finally(() => setLoadingDb(false));
         } else {
             // Admin/Verifikator: fetch all
