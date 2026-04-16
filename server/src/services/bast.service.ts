@@ -5,7 +5,26 @@ import { queueGDriveDelete } from '../utils/uploadQueue.js';
 
 export const bastService = {
     async list() {
-        return db.select().from(bast);
+        const rows = await db.select({
+            bast: bast,
+            matrikNilaiKontrak: matrikKegiatan.nilaiKontrak,
+            matrikHonor: matrikKegiatan.honor,
+            matrikNamaPaket: matrikKegiatan.namaPaket,
+            matrikJenisPengadaan: matrikKegiatan.jenisPengadaan,
+        }).from(bast)
+          .leftJoin(matrikKegiatan, eq(bast.matrikId, matrikKegiatan.id));
+        return rows.map(r => {
+            const rawKontrak = (r.bast.nilaiKontrak && r.bast.nilaiKontrak > 0) ? r.bast.nilaiKontrak : (r.matrikNilaiKontrak || 0);
+            const honor = r.bast.honor || r.matrikHonor || 0;
+            const nilaiBAST = r.matrikJenisPengadaan === 'Pekerjaan Konstruksi' ? rawKontrak + honor : rawKontrak;
+            return {
+                ...r.bast,
+                nilaiKontrak: nilaiBAST,
+                honor,
+                namaPaket: r.bast.namaPaket || r.matrikNamaPaket,
+                jenisPengadaan: r.matrikJenisPengadaan,
+            };
+        });
     },
 
     async getById(id: number) {

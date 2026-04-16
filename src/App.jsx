@@ -147,7 +147,7 @@ function App() {
           <Route path="verifikasi-sarpras" element={<VerifikasiSarpras />} />
           <Route path="verifikasi-proposal" element={<VerifikasiProposal />} />
           <Route path="ranking" element={<RankingPrioritas lockable />} />
-          <Route path="riwayat-bantuan" element={<RiwayatBantuan readOnly />} />
+          <Route path="riwayat-bantuan" element={<RiwayatBantuan />} />
           <Route path="manajemen-template" element={<ManajemenTemplate />} />
           <Route path="matriks-kegiatan" element={<MatriksKegiatan />} />
           <Route path="create-bast" element={<CreateBAST />} />

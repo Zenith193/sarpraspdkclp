@@ -380,7 +380,9 @@ const CreateBAST = () => {
                     namaPaket: item.namaPaket,
                     noBast: noBAST,
                     nilaiKontrak: bastEntry.nilaiBAST || item.nilaiKontrak || 0,
-                    penyedia: item.penyedia || '',
+                    nilaiKontrak: bastEntry.nilaiBAST || item.nilaiBAST || item.nilaiKontrak || 0,
+                    honor: item.honor || 0,
+                    volume: item.volume || '',
                     templateId: selectedTemplateId,
                     splHistoryId: result.historyId || null,
                 });
@@ -451,7 +453,9 @@ const CreateBAST = () => {
                         namaPaket: item.namaPaket,
                         noBast: noBAST,
                         nilaiKontrak: item.nilaiKontrak || 0,
-                        penyedia: item.penyedia || '',
+                        nilaiKontrak: item.nilaiBAST || item.nilaiKontrak || 0,
+                        honor: item.honor || 0,
+                        volume: item.volume || '',
                         templateId: batchTemplateId,
                     });
                 } catch (dbErr) { console.warn('[BAST] batch DB save:', dbErr.message); }
