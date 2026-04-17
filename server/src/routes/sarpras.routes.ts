@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { sarprasService } from '../services/sarpras.service.js';
 import { db } from '../db/index.js';
-import { sarpras, sekolah } from '../db/schema/index.js';
+import { sarpras, sekolah, user as userTable } from '../db/schema/index.js';
 import { eq, and, sql } from 'drizzle-orm';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { uploadFotos, forwardToNas } from '../middleware/upload.js';
@@ -468,20 +468,23 @@ router.post('/:id/reject', requireAuth, requireRole('admin', 'verifikator', 'kor
         logActivity(req, 'Tolak Sarpras', `Menolak ${nm} - ${rg}: ${alasan}`);
         // Send notification to all school users linked to this sekolahId
         if (sItem?.sarpras?.sekolahId) {
-            const { user: userTable } = await import('../db/schema/index.js');
-            const schoolUsers = await db.select({ id: userTable.id }).from(userTable)
-                .where(and(eq(userTable.sekolahId, sItem.sarpras.sekolahId), sql`lower(${userTable.role}) = 'sekolah'`));
-            for (const su of schoolUsers) {
-                notificationService.create({
-                    userId: su.id,
-                    sekolahId: sItem.sarpras.sekolahId,
-                    title: '❌ Data Sarpras Ditolak',
-                    message: `Data "${rg}" di ${nm} ditolak. Alasan: ${alasan}`,
-                    type: 'error',
-                    relatedId: id,
-                    relatedType: 'sarpras',
-                }).catch(e => console.warn('[Notification] reject:', e.message));
-            }
+            try {
+                const schoolUsers = await db.select({ id: userTable.id, role: userTable.role }).from(userTable)
+                    .where(eq(userTable.sekolahId, sItem.sarpras.sekolahId));
+                console.log(`[Notification] reject: sekolahId=${sItem.sarpras.sekolahId}, found ${schoolUsers.length} users:`, schoolUsers.map(u => ({ id: u.id, role: u.role })));
+                for (const su of schoolUsers) {
+                    await notificationService.create({
+                        userId: su.id,
+                        sekolahId: sItem.sarpras.sekolahId,
+                        title: '❌ Data Sarpras Ditolak',
+                        message: `Data "${rg}" di ${nm} ditolak. Alasan: ${alasan}`,
+                        type: 'error',
+                        relatedId: id,
+                        relatedType: 'sarpras',
+                    });
+                    console.log(`[Notification] reject: sent to user ${su.id} (role: ${su.role})`);
+                }
+            } catch (e: any) { console.error('[Notification] reject error:', e.message); }
         }
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
@@ -499,20 +502,23 @@ router.post('/:id/revisi', requireAuth, requireRole('admin', 'verifikator', 'kor
         logActivity(req, 'Revisi Sarpras', `Meminta revisi ${nm} - ${rg}: ${alasan}`);
         // Send notification to all school users linked to this sekolahId
         if (sItem?.sarpras?.sekolahId) {
-            const { user: userTable } = await import('../db/schema/index.js');
-            const schoolUsers = await db.select({ id: userTable.id }).from(userTable)
-                .where(and(eq(userTable.sekolahId, sItem.sarpras.sekolahId), sql`lower(${userTable.role}) = 'sekolah'`));
-            for (const su of schoolUsers) {
-                notificationService.create({
-                    userId: su.id,
-                    sekolahId: sItem.sarpras.sekolahId,
-                    title: '🔄 Revisi Data Sarpras',
-                    message: `Data "${rg}" di ${nm} diminta revisi. Alasan: ${alasan}`,
-                    type: 'warning',
-                    relatedId: id,
-                    relatedType: 'sarpras',
-                }).catch(e => console.warn('[Notification] revisi:', e.message));
-            }
+            try {
+                const schoolUsers = await db.select({ id: userTable.id, role: userTable.role }).from(userTable)
+                    .where(eq(userTable.sekolahId, sItem.sarpras.sekolahId));
+                console.log(`[Notification] revisi: sekolahId=${sItem.sarpras.sekolahId}, found ${schoolUsers.length} users:`, schoolUsers.map(u => ({ id: u.id, role: u.role })));
+                for (const su of schoolUsers) {
+                    await notificationService.create({
+                        userId: su.id,
+                        sekolahId: sItem.sarpras.sekolahId,
+                        title: '🔄 Revisi Data Sarpras',
+                        message: `Data "${rg}" di ${nm} diminta revisi. Alasan: ${alasan}`,
+                        type: 'warning',
+                        relatedId: id,
+                        relatedType: 'sarpras',
+                    });
+                    console.log(`[Notification] revisi: sent to user ${su.id} (role: ${su.role})`);
+                }
+            } catch (e: any) { console.error('[Notification] revisi error:', e.message); }
         }
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
