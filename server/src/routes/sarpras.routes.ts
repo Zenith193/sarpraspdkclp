@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { sarprasService } from '../services/sarpras.service.js';
 import { db } from '../db/index.js';
 import { sarpras, sekolah } from '../db/schema/index.js';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, sql } from 'drizzle-orm';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { uploadFotos, forwardToNas } from '../middleware/upload.js';
 import { logActivity } from '../middleware/logActivity.js';
@@ -470,7 +470,7 @@ router.post('/:id/reject', requireAuth, requireRole('admin', 'verifikator', 'kor
         if (sItem?.sarpras?.sekolahId) {
             const { user: userTable } = await import('../db/schema/index.js');
             const schoolUsers = await db.select({ id: userTable.id }).from(userTable)
-                .where(and(eq(userTable.sekolahId, sItem.sarpras.sekolahId), eq(userTable.role, 'Sekolah')));
+                .where(and(eq(userTable.sekolahId, sItem.sarpras.sekolahId), sql`lower(${userTable.role}) = 'sekolah'`));
             for (const su of schoolUsers) {
                 notificationService.create({
                     userId: su.id,
@@ -501,7 +501,7 @@ router.post('/:id/revisi', requireAuth, requireRole('admin', 'verifikator', 'kor
         if (sItem?.sarpras?.sekolahId) {
             const { user: userTable } = await import('../db/schema/index.js');
             const schoolUsers = await db.select({ id: userTable.id }).from(userTable)
-                .where(and(eq(userTable.sekolahId, sItem.sarpras.sekolahId), eq(userTable.role, 'Sekolah')));
+                .where(and(eq(userTable.sekolahId, sItem.sarpras.sekolahId), sql`lower(${userTable.role}) = 'sekolah'`));
             for (const su of schoolUsers) {
                 notificationService.create({
                     userId: su.id,

@@ -970,7 +970,7 @@ const DataSarpras = ({ readOnly = false }) => {
                                                 <td>{d.kondisi}</td>
                                                 <td>{getActionBadge(d.actionType)}</td>
                                                 <td>{getStatusBadge(d.status)}</td>
-                                                <td><div style={{ maxWidth: 140, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{d.alasanPenolakan || '-'}</div></td>
+                                                <td><div style={{ maxWidth: 200, whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.3, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{d.alasanPenolakan || '-'}</div></td>
                                                 {canVerify && (
                                                     <td>
                                                         <div style={{ display: 'flex', gap: 4 }}>
