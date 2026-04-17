@@ -123,7 +123,7 @@ const Dashboard = () => {
         (sekolahList || []).forEach(s => {
             sekolahMap[s.id] = { ...s, rombel: s.rombel || 0, prasaranaCount: {}, rehabGroup: {}, biayaRS: 0, biayaRB: 0, biayaBuild: 0 };
         });
-        (sarprasData || []).filter(sp => !sp.status || sp.status === 'Diverifikasi').forEach(sp => {
+        (sarprasData || []).forEach(sp => {
             const sk = sekolahMap[sp.sekolahId];
             if (!sk) return;
             sk.prasaranaCount[sp.jenisPrasarana] = (sk.prasaranaCount[sp.jenisPrasarana] || 0) + 1;
