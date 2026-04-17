@@ -68,6 +68,7 @@ const DataSarpras = ({ readOnly = false }) => {
     const [perPage, setPerPage] = useState(15);
     const [activeTab, setActiveTab] = useState('data');
     const [alasanModal, setAlasanModal] = useState(null); // { id, type: 'reject'|'revisi' }
+    const [openUpdateActionId, setOpenUpdateActionId] = useState(null);
 
     // Column visibility
     const defaultCols = ['no', ...(canAccessPriority ? ['bintang'] : []), 'namaSekolah', 'masaBangunan', 'jenisPrasarana', 'namaRuang', 'lantai', 'panjang', 'lebar', 'luas', 'kondisi', 'keterangan', 'foto', 'aksi'];
@@ -949,14 +950,14 @@ const DataSarpras = ({ readOnly = false }) => {
                                     <thead>
                                         <tr>
                                             <th style={{ width: 40 }}>No</th>
-                                            <th>Sekolah</th>
+                                            <th style={{ minWidth: 220 }}>Sekolah</th>
                                             <th>Jenis Prasarana</th>
                                             <th>Nama Ruang</th>
                                             <th>Kondisi</th>
                                             <th>Tipe</th>
                                             <th>Status</th>
                                             <th>Alasan</th>
-                                            {canVerify && <th style={{ width: 180 }}>Aksi</th>}
+                                            {canVerify && <th style={{ width: 50 }}>Aksi</th>}
                                             {isSekolah && <th style={{ width: 80 }}>Aksi</th>}
                                         </tr>
                                     </thead>
@@ -964,7 +965,7 @@ const DataSarpras = ({ readOnly = false }) => {
                                         {pendingData.map((d, i) => (
                                             <tr key={d.id}>
                                                 <td>{i + 1}</td>
-                                                <td><div style={{ maxWidth: 180, whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.3 }}>{d.namaSekolah}</div></td>
+                                                <td><div style={{ maxWidth: 250, whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.3, fontWeight: 500 }}>{d.namaSekolah}</div></td>
                                                 <td>{d.jenisPrasarana}</td>
                                                 <td>{d.namaRuang}</td>
                                                 <td>{d.kondisi}</td>
@@ -973,19 +974,43 @@ const DataSarpras = ({ readOnly = false }) => {
                                                 <td><div style={{ maxWidth: 200, whiteSpace: 'normal', wordBreak: 'break-word', lineHeight: 1.3, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{d.alasanPenolakan || '-'}</div></td>
                                                 {canVerify && (
                                                     <td>
-                                                        <div style={{ display: 'flex', gap: 4 }}>
-                                                            <button className="btn btn-sm" onClick={() => handleVerifyItem(d.id)} style={{ background: 'rgba(34,197,94,0.15)', color: '#22c55e', border: 'none', padding: '4px 8px', fontSize: '0.72rem', borderRadius: 'var(--radius-sm)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}>
-                                                                <Check size={12} /> Verifikasi
+                                                        <div style={{ position: 'relative' }}>
+                                                            <button className="btn-icon" onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setOpenUpdateActionId(openUpdateActionId === d.id ? null : d.id);
+                                                            }} style={{ padding: '4px 6px', borderRadius: 8 }}>
+                                                                <MoreHorizontal size={16} />
                                                             </button>
-                                                            <button className="btn btn-sm" onClick={() => setAlasanModal({ id: d.id, type: 'revisi' })} style={{ background: 'rgba(249,115,22,0.15)', color: '#f97316', border: 'none', padding: '4px 8px', fontSize: '0.72rem', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}>
-                                                                Revisi
-                                                            </button>
-                                                            <button className="btn btn-sm" onClick={() => setAlasanModal({ id: d.id, type: 'reject' })} style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: 'none', padding: '4px 8px', fontSize: '0.72rem', borderRadius: 'var(--radius-sm)', cursor: 'pointer' }}>
-                                                                Tolak
-                                                            </button>
-                                                            <button className="btn btn-sm" onClick={() => setDeleteConfirm(d)} style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: 'none', padding: '4px 8px', fontSize: '0.72rem', borderRadius: 'var(--radius-sm)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 3 }}>
-                                                                <Trash2 size={12} /> Hapus
-                                                            </button>
+                                                            {openUpdateActionId === d.id && (
+                                                                <div style={{
+                                                                    position: 'absolute', right: 0, top: '100%', marginTop: 4, zIndex: 999,
+                                                                    background: 'var(--bg-card)', border: '1px solid var(--border-color)',
+                                                                    borderRadius: 10, padding: '4px 0', minWidth: 160,
+                                                                    boxShadow: '0 8px 30px rgba(0,0,0,0.25)',
+                                                                }}>
+                                                                    {[
+                                                                        { icon: <Check size={14} />, label: 'Verifikasi', color: '#22c55e', onClick: () => { handleVerifyItem(d.id); setOpenUpdateActionId(null); } },
+                                                                        { icon: <RotateCcw size={14} />, label: 'Revisi', color: '#f97316', onClick: () => { setAlasanModal({ id: d.id, type: 'revisi' }); setOpenUpdateActionId(null); } },
+                                                                        { icon: <XCircle size={14} />, label: 'Tolak', color: '#ef4444', onClick: () => { setAlasanModal({ id: d.id, type: 'reject' }); setOpenUpdateActionId(null); } },
+                                                                        { divider: true },
+                                                                        { icon: <Trash2 size={14} />, label: 'Hapus', color: '#ef4444', onClick: () => { setDeleteConfirm(d); setOpenUpdateActionId(null); } },
+                                                                    ].map((item, idx) => item.divider ? (
+                                                                        <div key={idx} style={{ height: 1, background: 'var(--border-color)', margin: '4px 0' }} />
+                                                                    ) : (
+                                                                        <button key={idx} onClick={item.onClick} style={{
+                                                                            display: 'flex', alignItems: 'center', gap: 10, width: '100%',
+                                                                            padding: '8px 14px', border: 'none', background: 'transparent',
+                                                                            color: item.color, fontSize: 13, cursor: 'pointer',
+                                                                            transition: 'background 0.15s', textAlign: 'left'
+                                                                        }}
+                                                                            onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-hover)'}
+                                                                            onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                                                                        >
+                                                                            {item.icon} {item.label}
+                                                                        </button>
+                                                                    ))}
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     </td>
                                                 )}
