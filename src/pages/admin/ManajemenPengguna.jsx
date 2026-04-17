@@ -42,6 +42,7 @@ const ManajemenPengguna = () => {
     const [modalState, setModalState] = useState({ type: '', data: null });
     const [formData, setFormData] = useState({});
     const [showPassword, setShowPassword] = useState(false);
+    const [previewFile, setPreviewFile] = useState(null); // { url, type: 'image'|'pdf', title }
 
     // State untuk Modal Konfirmasi
     const [confirmModal, setConfirmModal] = useState({ isOpen: false, type: '', data: null });
@@ -447,7 +448,7 @@ const ManajemenPengguna = () => {
         return {};
     };
 
-    return (
+    const content = (
         <div>
             <div className="page-header">
                 <div className="page-header-left">
@@ -734,7 +735,7 @@ const ManajemenPengguna = () => {
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.5rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
                                                     <FileText size={18} style={{ color: 'var(--accent-green)' }} />
                                                     <span style={{ flex: 1, fontSize: '0.875rem', color: 'var(--accent-green)' }}>File sudah diupload</span>
-                                                    <button className="btn btn-secondary btn-sm" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={async () => { try { const blob = await sekolahApi.downloadKop(formData.sekolahId); const url = URL.createObjectURL(blob); window.open(url, '_blank'); } catch { toast.error('Gagal preview'); } }}>
+                                                    <button className="btn btn-secondary btn-sm" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={async () => { try { const blob = await sekolahApi.downloadKop(formData.sekolahId); const url = URL.createObjectURL(blob); setPreviewFile({ url, type: 'image', title: 'Kop Sekolah' }); } catch { toast.error('Gagal preview'); } }}>
                                                         <Eye size={12} style={{ marginRight: 4 }} /> Preview
                                                     </button>
                                                     <button className="btn btn-secondary btn-sm" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={async () => { try { const blob = await sekolahApi.downloadKop(formData.sekolahId); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'kop_sekolah'; a.click(); URL.revokeObjectURL(url); } catch { toast.error('Gagal download'); } }}>
@@ -752,7 +753,7 @@ const ManajemenPengguna = () => {
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.5rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
                                                     <FileText size={18} style={{ color: 'var(--accent-green)' }} />
                                                     <span style={{ flex: 1, fontSize: '0.875rem', color: 'var(--accent-green)' }}>File sudah diupload</span>
-                                                    <button className="btn btn-secondary btn-sm" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={async () => { try { const blob = await sekolahApi.downloadDenah(formData.sekolahId); const url = URL.createObjectURL(blob); window.open(url, '_blank'); } catch { toast.error('Gagal preview'); } }}>
+                                                    <button className="btn btn-secondary btn-sm" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={async () => { try { const blob = await sekolahApi.downloadDenah(formData.sekolahId); const url = URL.createObjectURL(blob); setPreviewFile({ url, type: 'pdf', title: 'Denah Sekolah' }); } catch { toast.error('Gagal preview'); } }}>
                                                         <Eye size={12} style={{ marginRight: 4 }} /> Preview
                                                     </button>
                                                     <button className="btn btn-secondary btn-sm" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={async () => { try { const blob = await sekolahApi.downloadDenah(formData.sekolahId); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'denah_sekolah'; a.click(); URL.revokeObjectURL(url); } catch { toast.error('Gagal download'); } }}>
@@ -972,6 +973,43 @@ const ManajemenPengguna = () => {
                 </div>
             )}
         </div>
+    );
+
+    return (
+        <>
+            {content}
+
+            {/* ===== FILE PREVIEW POPUP ===== */}
+            {previewFile && (
+                <div onClick={() => { if (previewFile.url) URL.revokeObjectURL(previewFile.url); setPreviewFile(null); }} style={{
+                    position: 'fixed', inset: 0, zIndex: 99999,
+                    background: 'rgba(0,0,0,0.8)', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center',
+                    padding: 20, cursor: 'zoom-out',
+                }}>
+                    <div onClick={e => e.stopPropagation()} style={{
+                        position: 'relative', maxWidth: '90vw', maxHeight: '90vh',
+                        background: 'var(--bg-card)', borderRadius: 12,
+                        overflow: 'hidden', boxShadow: '0 20px 60px rgba(0,0,0,0.5)',
+                        display: 'flex', flexDirection: 'column',
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 16px', borderBottom: '1px solid var(--border-color)' }}>
+                            <span style={{ fontWeight: 600, fontSize: 14 }}>{previewFile.title || 'Preview'}</span>
+                            <button onClick={() => { if (previewFile.url) URL.revokeObjectURL(previewFile.url); setPreviewFile(null); }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: 4 }}>
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div style={{ overflow: 'auto', maxHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+                            {previewFile.type === 'image' ? (
+                                <img src={previewFile.url} alt={previewFile.title} style={{ maxWidth: '100%', maxHeight: '75vh', objectFit: 'contain', borderRadius: 8 }} />
+                            ) : (
+                                <iframe src={previewFile.url} title={previewFile.title} style={{ width: '80vw', height: '75vh', border: 'none', borderRadius: 8 }} />
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+        </>
     );
 };
 
