@@ -53,7 +53,8 @@ const VerifikasiSarpras = () => {
                         if (ka.jenjang) params.jenjang = ka.jenjang;
                     }
                 } catch (e) { console.error('Failed to get korwil assignment:', e); }
-            } else if (role === 'Verifikator') {
+            } else {
+                // Admin & Verifikator: only show items waiting for verification
                 params.status = 'Menunggu Verifikasi';
             }
 
