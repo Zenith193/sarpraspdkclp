@@ -734,6 +734,9 @@ const ManajemenPengguna = () => {
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.5rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
                                                     <FileText size={18} style={{ color: 'var(--accent-green)' }} />
                                                     <span style={{ flex: 1, fontSize: '0.875rem', color: 'var(--accent-green)' }}>File sudah diupload</span>
+                                                    <button className="btn btn-secondary btn-sm" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={async () => { try { const blob = await sekolahApi.downloadKop(formData.sekolahId); const url = URL.createObjectURL(blob); window.open(url, '_blank'); } catch { toast.error('Gagal preview'); } }}>
+                                                        <Eye size={12} style={{ marginRight: 4 }} /> Preview
+                                                    </button>
                                                     <button className="btn btn-secondary btn-sm" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={async () => { try { const blob = await sekolahApi.downloadKop(formData.sekolahId); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'kop_sekolah'; a.click(); URL.revokeObjectURL(url); } catch { toast.error('Gagal download'); } }}>
                                                         <FileDown size={12} style={{ marginRight: 4 }} /> Unduh
                                                     </button>
@@ -749,6 +752,9 @@ const ManajemenPengguna = () => {
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '0.5rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border-color)' }}>
                                                     <FileText size={18} style={{ color: 'var(--accent-green)' }} />
                                                     <span style={{ flex: 1, fontSize: '0.875rem', color: 'var(--accent-green)' }}>File sudah diupload</span>
+                                                    <button className="btn btn-secondary btn-sm" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={async () => { try { const blob = await sekolahApi.downloadDenah(formData.sekolahId); const url = URL.createObjectURL(blob); window.open(url, '_blank'); } catch { toast.error('Gagal preview'); } }}>
+                                                        <Eye size={12} style={{ marginRight: 4 }} /> Preview
+                                                    </button>
                                                     <button className="btn btn-secondary btn-sm" style={{ padding: '2px 8px', fontSize: '0.75rem' }} onClick={async () => { try { const blob = await sekolahApi.downloadDenah(formData.sekolahId); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'denah_sekolah'; a.click(); URL.revokeObjectURL(url); } catch { toast.error('Gagal download'); } }}>
                                                         <FileDown size={12} style={{ marginRight: 4 }} /> Unduh
                                                     </button>
