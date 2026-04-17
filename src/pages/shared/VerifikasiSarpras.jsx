@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import { Search, CheckCircle, XCircle, Eye, X, ChevronLeft, ChevronRight, MapPin, Image, Info, Maximize2, CheckCheck, MoreVertical, RotateCcw } from 'lucide-react';
+import { Search, CheckCircle, XCircle, Eye, X, ChevronLeft, ChevronRight, MapPin, Image, Info, Maximize2, CheckCheck, MoreVertical, RotateCcw, ArrowRight, GitCompareArrows } from 'lucide-react';
 import { sarprasApi, korwilApi } from '../../api/index';
 import useAuthStore from '../../store/authStore';
 import toast from 'react-hot-toast';
@@ -54,8 +54,8 @@ const VerifikasiSarpras = () => {
                     }
                 } catch (e) { console.error('Failed to get korwil assignment:', e); }
             } else {
-                // Admin & Verifikator: only show items waiting for verification
-                params.status = 'Menunggu Verifikasi';
+                // Admin & Verifikator: show ALL items waiting verification (including Korwil queue)
+                params.status = 'pending';
             }
 
             const apiData = await sarprasApi.list(params);
@@ -204,7 +204,7 @@ const VerifikasiSarpras = () => {
                 <div style={{ overflowX: 'auto' }}>
                     <table className="data-table">
                         <thead>
-                            <tr><th>No</th><th>Sekolah</th><th>NPSN</th><th>Kecamatan</th><th>Jenjang</th><th>Jenis Prasarana</th><th>Nama Ruang</th><th>Kondisi</th><th>Tipe</th><th>Foto</th><th>Aksi</th></tr>
+                            <tr><th>No</th><th>Sekolah</th><th>NPSN</th><th>Kecamatan</th><th>Jenjang</th><th>Jenis Prasarana</th><th>Nama Ruang</th><th>Kondisi</th><th>Tipe</th><th>Status</th><th>Foto</th><th>Aksi</th></tr>
                         </thead>
                         <tbody>
                             {pagedData.map((item, i) => (
@@ -228,6 +228,13 @@ const VerifikasiSarpras = () => {
                                             if (at === 'edit') return <span style={{ background: 'rgba(59,130,246,0.15)', color: '#3b82f6', padding: '2px 10px', borderRadius: 10, fontSize: '0.75rem', fontWeight: 600 }}>Edit</span>;
                                             if (at === 'hapus') return <span style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', padding: '2px 10px', borderRadius: 10, fontSize: '0.75rem', fontWeight: 600 }}>Hapus</span>;
                                             return <span style={{ color: 'var(--text-secondary)', fontSize: '0.75rem' }}>-</span>;
+                                        })()}
+                                    </td>
+                                    <td>
+                                        {(() => {
+                                            const st = item.status || '';
+                                            if (st === 'Menunggu Verifikasi Korwil') return <span style={{ background: 'rgba(234,179,8,0.15)', color: '#eab308', padding: '2px 8px', borderRadius: 10, fontSize: '0.7rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Korwil</span>;
+                                            return <span style={{ background: 'rgba(59,130,246,0.15)', color: '#3b82f6', padding: '2px 8px', borderRadius: 10, fontSize: '0.7rem', fontWeight: 600, whiteSpace: 'nowrap' }}>Verifikasi</span>;
                                         })()}
                                     </td>
                                     <td>
@@ -278,7 +285,7 @@ const VerifikasiSarpras = () => {
                                     </td>
                                 </tr>
                             ))}
-                            {pagedData.length === 0 && <tr><td colSpan={10} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>Tidak ada data menunggu verifikasi</td></tr>}
+                            {pagedData.length === 0 && <tr><td colSpan={12} style={{ textAlign: 'center', padding: 40, color: 'var(--text-secondary)' }}>Tidak ada data menunggu verifikasi</td></tr>}
                         </tbody>
                     </table>
                 </div>
@@ -329,7 +336,65 @@ const VerifikasiSarpras = () => {
                                     <span className={`badge ${detailItem.kondisi === 'BAIK' ? 'badge-baik' : detailItem.kondisi === 'RUSAK RINGAN' ? 'badge-rusak-ringan' : detailItem.kondisi === 'RUSAK SEDANG' ? 'badge-rusak-sedang' : 'badge-rusak-berat'}`}>{detailItem.kondisi}</span>
                                 </div>
                                 <div style={infoItemStyle}><span style={labelStyle}>Keterangan</span><span style={valueStyle}>{detailItem.keterangan}</span></div>
+                                <div style={infoItemStyle}>
+                                    <span style={labelStyle}>Status</span>
+                                    <span style={{
+                                        fontSize: 12, fontWeight: 600, padding: '2px 10px', borderRadius: 10,
+                                        ...(detailItem.status === 'Menunggu Verifikasi Korwil'
+                                            ? { background: 'rgba(234,179,8,0.15)', color: '#eab308' }
+                                            : { background: 'rgba(59,130,246,0.15)', color: '#3b82f6' })
+                                    }}>{detailItem.status || 'Menunggu Verifikasi'}</span>
+                                </div>
                             </div>
+
+                            {/* ===== CHANGE TRACKING — Before vs After ===== */}
+                            {detailItem.actionType === 'edit' && detailItem.previousData && (() => {
+                                let prev;
+                                try { prev = typeof detailItem.previousData === 'string' ? JSON.parse(detailItem.previousData) : detailItem.previousData; } catch { prev = null; }
+                                if (!prev) return null;
+                                const fields = [
+                                    { key: 'jenisPrasarana', label: 'Jenis Prasarana' },
+                                    { key: 'namaRuang', label: 'Nama Ruang' },
+                                    { key: 'masaBangunan', label: 'Masa Bangunan' },
+                                    { key: 'lantai', label: 'Lantai' },
+                                    { key: 'panjang', label: 'Panjang' },
+                                    { key: 'lebar', label: 'Lebar' },
+                                    { key: 'luas', label: 'Luas (m²)' },
+                                    { key: 'kondisi', label: 'Kondisi' },
+                                    { key: 'keterangan', label: 'Keterangan' },
+                                ];
+                                const changes = fields.filter(f => String(prev[f.key] || '') !== String(detailItem[f.key] || ''));
+                                if (changes.length === 0) return null;
+                                return (
+                                    <div style={{ marginTop: 20, border: '1px solid rgba(59,130,246,0.3)', borderRadius: 10, overflow: 'hidden' }}>
+                                        <div style={{ background: 'rgba(59,130,246,0.1)', padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, fontSize: 14 }}>
+                                            <GitCompareArrows size={16} style={{ color: '#3b82f6' }} /> Perubahan Data ({changes.length} field berubah)
+                                        </div>
+                                        <div style={{ overflowX: 'auto' }}>
+                                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                                                <thead>
+                                                    <tr style={{ background: 'rgba(59,130,246,0.05)' }}>
+                                                        <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid var(--border-color)', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5 }}>Field</th>
+                                                        <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid var(--border-color)', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, color: '#ef4444' }}>Sebelum</th>
+                                                        <th style={{ padding: '8px 2px', borderBottom: '1px solid var(--border-color)', width: 24 }}></th>
+                                                        <th style={{ padding: '8px 12px', textAlign: 'left', borderBottom: '1px solid var(--border-color)', fontWeight: 600, fontSize: 11, textTransform: 'uppercase', letterSpacing: 0.5, color: '#22c55e' }}>Sesudah</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {changes.map(f => (
+                                                        <tr key={f.key} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                                                            <td style={{ padding: '8px 12px', fontWeight: 600, color: 'var(--text-secondary)', whiteSpace: 'nowrap' }}>{f.label}</td>
+                                                            <td style={{ padding: '8px 12px', background: 'rgba(239,68,68,0.06)', color: '#ef4444', fontWeight: 500, textDecoration: 'line-through', maxWidth: 200, wordBreak: 'break-word' }}>{String(prev[f.key] || '-')}</td>
+                                                            <td style={{ padding: '8px 2px', textAlign: 'center' }}><ArrowRight size={14} style={{ color: 'var(--text-secondary)' }} /></td>
+                                                            <td style={{ padding: '8px 12px', background: 'rgba(34,197,94,0.06)', color: '#22c55e', fontWeight: 600, maxWidth: 200, wordBreak: 'break-word' }}>{String(detailItem[f.key] || '-')}</td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                             <div style={{ marginTop: 20 }}>
                                 <h3 style={{ margin: '0 0 12px', fontSize: 15, display: 'flex', alignItems: 'center', gap: 6 }}>
                                     <Image size={16} /> Foto Dokumentasi ({detailItem.foto?.length || 0})

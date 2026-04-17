@@ -14,7 +14,7 @@ export const sarprasService = {
         if (kondisi) conditions.push(eq(sarpras.kondisi, kondisi));
         if (verified === 'true') conditions.push(eq(sarpras.verified, true));
         if (verified === 'false') conditions.push(eq(sarpras.verified, false));
-        if (status === 'pending') conditions.push(sql`${sarpras.status} != 'Diverifikasi'`);
+        if (status === 'pending') conditions.push(sql`(${sarpras.status} = 'Menunggu Verifikasi' OR ${sarpras.status} = 'Menunggu Verifikasi Korwil')`);
         else if (status === 'verified') conditions.push(eq(sarpras.status, 'Diverifikasi'));
         else if (status) conditions.push(eq(sarpras.status, status));
         if (search) conditions.push(ilike(sarpras.namaRuang, `%${search}%`));

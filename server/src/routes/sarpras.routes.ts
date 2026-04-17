@@ -6,6 +6,7 @@ import { eq } from 'drizzle-orm';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { uploadFotos, forwardToNas } from '../middleware/upload.js';
 import { logActivity } from '../middleware/logActivity.js';
+import { notificationService } from '../services/notification.service.js';
 import { isGDriveEnabled, findGDriveFolderByPath, renameGDriveFolder, moveGDriveFolder, ensureGDrivePath } from '../utils/googleDriveClient.js';
 import fs from 'fs';
 import path from 'path';
@@ -309,6 +310,21 @@ router.put('/:id', requireAuth, requireRole('admin', 'sekolah', 'verifikator', '
             req.body.status = jenjang === 'SD' ? 'Menunggu Verifikasi Korwil' : 'Menunggu Verifikasi';
             req.body.actionType = 'edit';
             req.body.alasanPenolakan = null;
+            // Save snapshot of current data before edit for change tracking
+            if (existing) {
+                const s = existing.sarpras;
+                req.body.previousData = JSON.stringify({
+                    masaBangunan: s.masaBangunan,
+                    jenisPrasarana: s.jenisPrasarana,
+                    namaRuang: s.namaRuang,
+                    lantai: s.lantai,
+                    panjang: s.panjang,
+                    lebar: s.lebar,
+                    luas: s.luas,
+                    kondisi: s.kondisi,
+                    keterangan: s.keterangan,
+                });
+            }
         }
         const result = await sarprasService.update(id, req.body);
         res.json(result);
@@ -450,6 +466,18 @@ router.post('/:id/reject', requireAuth, requireRole('admin', 'verifikator', 'kor
         const rg = sItem?.sarpras?.namaRuang || '';
         const result = await sarprasService.reject(id, alasan);
         logActivity(req, 'Tolak Sarpras', `Menolak ${nm} - ${rg}: ${alasan}`);
+        // Send notification to the school user who created this data
+        if (sItem?.sarpras?.createdBy) {
+            notificationService.create({
+                userId: sItem.sarpras.createdBy,
+                sekolahId: sItem.sarpras.sekolahId,
+                title: '❌ Data Sarpras Ditolak',
+                message: `Data "${rg}" di ${nm} ditolak. Alasan: ${alasan}`,
+                type: 'error',
+                relatedId: id,
+                relatedType: 'sarpras',
+            }).catch(e => console.warn('[Notification] reject:', e.message));
+        }
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
@@ -464,6 +492,18 @@ router.post('/:id/revisi', requireAuth, requireRole('admin', 'verifikator', 'kor
         const rg = sItem?.sarpras?.namaRuang || '';
         const result = await sarprasService.revisi(id, alasan);
         logActivity(req, 'Revisi Sarpras', `Meminta revisi ${nm} - ${rg}: ${alasan}`);
+        // Send notification to the school user who created this data
+        if (sItem?.sarpras?.createdBy) {
+            notificationService.create({
+                userId: sItem.sarpras.createdBy,
+                sekolahId: sItem.sarpras.sekolahId,
+                title: '🔄 Revisi Data Sarpras',
+                message: `Data "${rg}" di ${nm} diminta revisi. Alasan: ${alasan}`,
+                type: 'warning',
+                relatedId: id,
+                relatedType: 'sarpras',
+            }).catch(e => console.warn('[Notification] revisi:', e.message));
+        }
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
 });

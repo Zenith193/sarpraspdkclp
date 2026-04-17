@@ -314,3 +314,11 @@ export const feedbackApi = {
     update: (id, data) => api.put(`/feedback/${id}`, data),
     delete: (id) => api.delete(`/feedback/${id}`),
 };
+
+export const notificationApi = {
+    list: (limit = 50) => api.get(`/notifications?limit=${limit}`),
+    unreadCount: () => api.get('/notifications/unread-count'),
+    markRead: (id) => api.put(`/notifications/${id}/read`),
+    markAllRead: () => api.put('/notifications/read-all'),
+    delete: (id) => api.delete(`/notifications/${id}`),
+};

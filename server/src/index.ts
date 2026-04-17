@@ -37,6 +37,7 @@ import kontrakRoutes from './routes/kontrak.routes.js';
 import referensiRoutes from './routes/referensi.routes.js';
 import feedbackRoutes from './routes/feedback.routes.js';
 import iklanRoutes from './routes/iklan.routes.js';
+import notificationRoutes from './routes/notification.routes.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -743,6 +744,7 @@ app.use('/api/kontrak', kontrakRoutes);
 app.use('/api/referensi', referensiRoutes);
 app.use('/api/feedback', feedbackRoutes);
 app.use('/api/iklan', iklanRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // ===== PUBLIC STATS (no auth required for login page) =====
 
@@ -1014,6 +1016,21 @@ async function autoMigrate() {
             updated_at TIMESTAMP DEFAULT NOW()
         )`,
         `ALTER TABLE feedback ADD COLUMN IF NOT EXISTS upload_status TEXT DEFAULT 'done'`,
+        // Sarpras change tracking
+        `ALTER TABLE sarpras ADD COLUMN IF NOT EXISTS previous_data TEXT`,
+        // Notifications table
+        `CREATE TABLE IF NOT EXISTS notifications (
+            id SERIAL PRIMARY KEY,
+            user_id TEXT NOT NULL REFERENCES "user"(id) ON DELETE CASCADE,
+            sekolah_id INTEGER REFERENCES sekolah(id),
+            title TEXT NOT NULL,
+            message TEXT NOT NULL,
+            type TEXT DEFAULT 'info',
+            is_read BOOLEAN DEFAULT false,
+            related_id INTEGER,
+            related_type TEXT,
+            created_at TIMESTAMP DEFAULT NOW()
+        )`,
     ];
     for (const m of migrations) {
         try { await db.execute(sql.raw(m)); } catch (e: any) {
