@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { sarprasService } from '../services/sarpras.service.js';
 import { db } from '../db/index.js';
 import { sarpras, sekolah } from '../db/schema/index.js';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { uploadFotos, forwardToNas } from '../middleware/upload.js';
 import { logActivity } from '../middleware/logActivity.js';
@@ -466,17 +466,22 @@ router.post('/:id/reject', requireAuth, requireRole('admin', 'verifikator', 'kor
         const rg = sItem?.sarpras?.namaRuang || '';
         const result = await sarprasService.reject(id, alasan);
         logActivity(req, 'Tolak Sarpras', `Menolak ${nm} - ${rg}: ${alasan}`);
-        // Send notification to the school user who created this data
-        if (sItem?.sarpras?.createdBy) {
-            notificationService.create({
-                userId: sItem.sarpras.createdBy,
-                sekolahId: sItem.sarpras.sekolahId,
-                title: '❌ Data Sarpras Ditolak',
-                message: `Data "${rg}" di ${nm} ditolak. Alasan: ${alasan}`,
-                type: 'error',
-                relatedId: id,
-                relatedType: 'sarpras',
-            }).catch(e => console.warn('[Notification] reject:', e.message));
+        // Send notification to all school users linked to this sekolahId
+        if (sItem?.sarpras?.sekolahId) {
+            const { user: userTable } = await import('../db/schema/index.js');
+            const schoolUsers = await db.select({ id: userTable.id }).from(userTable)
+                .where(and(eq(userTable.sekolahId, sItem.sarpras.sekolahId), eq(userTable.role, 'Sekolah')));
+            for (const su of schoolUsers) {
+                notificationService.create({
+                    userId: su.id,
+                    sekolahId: sItem.sarpras.sekolahId,
+                    title: '❌ Data Sarpras Ditolak',
+                    message: `Data "${rg}" di ${nm} ditolak. Alasan: ${alasan}`,
+                    type: 'error',
+                    relatedId: id,
+                    relatedType: 'sarpras',
+                }).catch(e => console.warn('[Notification] reject:', e.message));
+            }
         }
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
@@ -492,17 +497,22 @@ router.post('/:id/revisi', requireAuth, requireRole('admin', 'verifikator', 'kor
         const rg = sItem?.sarpras?.namaRuang || '';
         const result = await sarprasService.revisi(id, alasan);
         logActivity(req, 'Revisi Sarpras', `Meminta revisi ${nm} - ${rg}: ${alasan}`);
-        // Send notification to the school user who created this data
-        if (sItem?.sarpras?.createdBy) {
-            notificationService.create({
-                userId: sItem.sarpras.createdBy,
-                sekolahId: sItem.sarpras.sekolahId,
-                title: '🔄 Revisi Data Sarpras',
-                message: `Data "${rg}" di ${nm} diminta revisi. Alasan: ${alasan}`,
-                type: 'warning',
-                relatedId: id,
-                relatedType: 'sarpras',
-            }).catch(e => console.warn('[Notification] revisi:', e.message));
+        // Send notification to all school users linked to this sekolahId
+        if (sItem?.sarpras?.sekolahId) {
+            const { user: userTable } = await import('../db/schema/index.js');
+            const schoolUsers = await db.select({ id: userTable.id }).from(userTable)
+                .where(and(eq(userTable.sekolahId, sItem.sarpras.sekolahId), eq(userTable.role, 'Sekolah')));
+            for (const su of schoolUsers) {
+                notificationService.create({
+                    userId: su.id,
+                    sekolahId: sItem.sarpras.sekolahId,
+                    title: '🔄 Revisi Data Sarpras',
+                    message: `Data "${rg}" di ${nm} diminta revisi. Alasan: ${alasan}`,
+                    type: 'warning',
+                    relatedId: id,
+                    relatedType: 'sarpras',
+                }).catch(e => console.warn('[Notification] revisi:', e.message));
+            }
         }
         res.json(result);
     } catch (e: any) { res.status(500).json({ error: e.message }); }
