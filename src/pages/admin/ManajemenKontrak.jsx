@@ -514,12 +514,12 @@ const ManajemenKontrak = () => {
                             <div style={infoCard}><div style={infoLabel}>NAMA NOTARIS</div><div style={infoVal}>{p.namaNotaris || '-'}</div></div>
                         </div>
                         <div style={grid2}>
-                            <div style={infoCard}><div style={infoLabel}>NOMOR DPPL</div><div style={infoVal}>{d.noDppl || '-'}</div></div>
-                            <div style={infoCard}><div style={infoLabel}>TANGGAL DPPL</div><div style={infoVal}>{formatDate(d.tanggalDppl)}</div></div>
+                            <div style={infoCard}><div style={infoLabel}>Nomor DPPL/ Nomor SPPBJ (Tender)</div><div style={infoVal}>{d.noDppl || '-'}</div></div>
+                            <div style={infoCard}><div style={infoLabel}>Tanggal DPPL/ Tanggal SPPBJ (Tender)</div><div style={infoVal}>{formatDate(d.tanggalDppl)}</div></div>
                         </div>
                         <div style={grid2}>
-                            <div style={infoCard}><div style={infoLabel}>NOMOR BAHPL</div><div style={infoVal}>{d.noBahpl || '-'}</div></div>
-                            <div style={infoCard}><div style={infoLabel}>TANGGAL BAHPL</div><div style={infoVal}>{formatDate(d.tanggalBahpl)}</div></div>
+                            <div style={infoCard}><div style={infoLabel}>Nomor BAHPL/ Nomor Penetapan Pemenang (Tender)</div><div style={infoVal}>{d.noBahpl || '-'}</div></div>
+                            <div style={infoCard}><div style={infoLabel}>Tanggal BAHPL/ Tanggal Penetapan Pemenang (Tender)</div><div style={infoVal}>{formatDate(d.tanggalBahpl)}</div></div>
                         </div>
                         <div style={grid2}>
                             <div style={infoCard}><div style={infoLabel}>NOMOR SPMK</div><div style={infoVal}>{d.noSp || '-'}</div></div>
@@ -699,12 +699,12 @@ const ManajemenKontrak = () => {
                                         <div style={cs}><div style={cl}>Satuan Kerja</div><div style={cv}>{detail.matrik?.sumberDana || 'APBD'}</div></div>
                                     </div>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-                                        <div style={cs}><div style={cl}>Nomor DPPL</div><input style={{ ...fieldStyle, marginTop: 4 }} value={editDppl.noDppl} onChange={e => setEditDppl(p => ({ ...p, noDppl: e.target.value }))} placeholder="Nomor DPPL" /></div>
-                                        <div style={cs}><div style={cl}>Tanggal DPPL</div><input type="date" style={{ ...fieldStyle, marginTop: 4 }} value={editDppl.tanggalDppl} onChange={e => setEditDppl(p => ({ ...p, tanggalDppl: e.target.value }))} /></div>
+                                        <div style={cs}><div style={cl}>Nomor DPPL/ Nomor SPPBJ (Tender)</div><input style={{ ...fieldStyle, marginTop: 4 }} value={editDppl.noDppl} onChange={e => setEditDppl(p => ({ ...p, noDppl: e.target.value }))} placeholder="Nomor DPPL" /></div>
+                                        <div style={cs}><div style={cl}>Tanggal DPPL/ Tanggal SPPBJ (Tender)</div><input type="date" style={{ ...fieldStyle, marginTop: 4 }} value={editDppl.tanggalDppl} onChange={e => setEditDppl(p => ({ ...p, tanggalDppl: e.target.value }))} /></div>
                                     </div>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-                                        <div style={cs}><div style={cl}>Nomor BAHPL</div><input style={{ ...fieldStyle, marginTop: 4 }} value={editDppl.noBahpl} onChange={e => setEditDppl(p => ({ ...p, noBahpl: e.target.value }))} placeholder="Nomor BAHPL" /></div>
-                                        <div style={cs}><div style={cl}>Tanggal BAHPL</div><input type="date" style={{ ...fieldStyle, marginTop: 4 }} value={editDppl.tanggalBahpl} onChange={e => setEditDppl(p => ({ ...p, tanggalBahpl: e.target.value }))} /></div>
+                                        <div style={cs}><div style={cl}>Nomor BAHPL/ Nomor Penetapan Pemenang (Tender)</div><input style={{ ...fieldStyle, marginTop: 4 }} value={editDppl.noBahpl} onChange={e => setEditDppl(p => ({ ...p, noBahpl: e.target.value }))} placeholder="Nomor BAHPL" /></div>
+                                        <div style={cs}><div style={cl}>Tanggal BAHPL/ Tanggal Penetapan Pemenang (Tender)</div><input type="date" style={{ ...fieldStyle, marginTop: 4 }} value={editDppl.tanggalBahpl} onChange={e => setEditDppl(p => ({ ...p, tanggalBahpl: e.target.value }))} /></div>
                                     </div>
                                     <button onClick={handleSaveDppl} disabled={saving} style={{ padding: '10px 24px', border: 'none', borderRadius: 8, background: 'var(--accent-blue)', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}><Save size={16} /> {saving ? 'Menyimpan...' : 'Simpan DPPL / BAHPL'}</button>
                                     {detail.berkasPenawaranPath && (

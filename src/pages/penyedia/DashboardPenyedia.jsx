@@ -315,12 +315,12 @@ const DashboardPenyedia = () => {
                     {searchResult && (
                         <>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-                            <div style={cs}><div style={cl}>Nomor DPPL</div><input style={fieldStyle} placeholder="Nomor DPPL" value={noDppl} onChange={e => setNoDppl(e.target.value)} /></div>
-                            <div style={cs}><div style={cl}>Tanggal DPPL</div><input type="date" style={fieldStyle} value={tanggalDppl} onChange={e => setTanggalDppl(e.target.value)} /></div>
+                            <div style={cs}><div style={cl}>Nomor DPPL/ Nomor SPPBJ (Tender)</div><input style={fieldStyle} placeholder="Nomor DPPL" value={noDppl} onChange={e => setNoDppl(e.target.value)} /></div>
+                            <div style={cs}><div style={cl}>Tanggal DPPL/ Tanggal SPPBJ (Tender)</div><input type="date" style={fieldStyle} value={tanggalDppl} onChange={e => setTanggalDppl(e.target.value)} /></div>
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-                            <div style={cs}><div style={cl}>Nomor BAHPL</div><input style={fieldStyle} placeholder="Nomor BAHPL" value={noBahpl} onChange={e => setNoBahpl(e.target.value)} /></div>
-                            <div style={cs}><div style={cl}>Tanggal BAHPL</div><input type="date" style={fieldStyle} value={tanggalBahpl} onChange={e => setTanggalBahpl(e.target.value)} /></div>
+                            <div style={cs}><div style={cl}>Nomor BAHPL/ Nomor Penetapan Pemenang (Tender)</div><input style={fieldStyle} placeholder="Nomor BAHPL" value={noBahpl} onChange={e => setNoBahpl(e.target.value)} /></div>
+                            <div style={cs}><div style={cl}>Tanggal BAHPL/ Tanggal Penetapan Pemenang (Tender)</div><input type="date" style={fieldStyle} value={tanggalBahpl} onChange={e => setTanggalBahpl(e.target.value)} /></div>
                         </div>
                         <div style={{ ...cs, marginBottom: 24 }}><div style={cl}>Berkas Penawaran</div>
                             <label style={{ cursor: 'pointer', display: 'inline-block' }}>

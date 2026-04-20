@@ -2,7 +2,7 @@ import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { Plus, Search, Download, Eye, Edit, Trash2, X, Filter, Star, FileSpreadsheet, FileText, Save, Printer, FileCheck, FilePlus, Archive, AlertOctagon, Upload, CheckCircle, RotateCcw, MoreHorizontal, Columns } from 'lucide-react';
 import { useProposalData, useSekolahData, useUsersData, useKorwilData } from '../../data/dataProvider';
-import { proposalApi, arsipDokumenApi } from '../../api/index';
+import { proposalApi, arsipDokumenApi, sekolahApi } from '../../api/index';
 import { KECAMATAN, JENJANG, SUB_KEGIATAN, KERANJANG, STATUS_PROPOSAL } from '../../utils/constants';
 import { formatCurrency } from '../../utils/formatters';
 import { exportToExcel, exportToCSV, exportToPDF, exportToExcelMultiSheet } from '../../utils/exportUtils';
@@ -66,6 +66,15 @@ const Proposal = ({ readOnly = false }) => {
     const { data: usersList } = useUsersData();
     const { data: proposalList, loading: proposalLoading, refetch: refetchProposal } = useProposalData();
     const { data: korwilList } = useKorwilData();
+
+    // Fetch ALL schools (including ones without user accounts) for checklist/rekomendasi
+    const [allSekolahList, setAllSekolahList] = useState([]);
+    useEffect(() => {
+        sekolahApi.list({ limit: 99999 }).then(r => {
+            const items = r.data || r;
+            setAllSekolahList(Array.isArray(items) ? items : []);
+        }).catch(() => {});
+    }, []);
 
     // Get korwil assignment (kecamatan + jenjang)
     const myKorwilAssignment = useMemo(() => {
@@ -332,7 +341,7 @@ const Proposal = ({ readOnly = false }) => {
     };
 
     const handleChecklistSchoolChange = (nama) => {
-        const sch = sekolahList.find(s => s.nama === nama);
+        const sch = allSekolahList.find(s => s.nama === nama) || sekolahList.find(s => s.nama === nama);
         setChecklistForm(prev => ({ ...prev, sekolah: sch, alamat: sch?.alamat || '' }));
     };
 
@@ -420,17 +429,17 @@ const Proposal = ({ readOnly = false }) => {
         const tahun = cetakDate.getFullYear();
         const tanggal = `${cetakDate.getDate()} ${bulanIndo[cetakDate.getMonth()]} ${cetakDate.getFullYear()}`;
         const rows = checklistForm.items.map((item, i) =>
-            `<tr><td style="text-align:center;padding:4px 6px;border:1px solid #000;font-size:11pt;width:30px">${i + 1}</td><td style="padding:4px 6px;border:1px solid #000;font-size:11pt">${item.indikator}</td><td style="text-align:center;padding:4px 6px;border:1px solid #000;font-size:11pt;width:50px">${item.status === 'Ada' ? '✓' : ''}</td><td style="text-align:center;padding:4px 6px;border:1px solid #000;font-size:11pt;width:50px">${item.status === 'Tidak Ada' ? '✓' : ''}</td><td style="padding:4px 6px;border:1px solid #000;font-size:11pt;width:120px">${item.keterangan || ''}</td></tr>`
+            `<tr><td style="text-align:center;padding:4px 6px;border:1px solid #000;font-size:11pt;width:30px">${i + 1}</td><td style="padding:4px 6px;border:1px solid #000;font-size:11pt;width:45%">${item.indikator}</td><td style="text-align:center;padding:4px 6px;border:1px solid #000;font-size:11pt;width:50px">${item.status === 'Ada' ? '✓' : ''}</td><td style="text-align:center;padding:4px 6px;border:1px solid #000;font-size:11pt;width:50px">${item.status === 'Tidak Ada' ? '✓' : ''}</td><td style="padding:4px 6px;border:1px solid #000;font-size:11pt;width:150px">${item.keterangan || ''}</td></tr>`
         ).join('');
         const verSection = checklistForm.verifikators.length > 0
             ? checklistForm.verifikators.map(v =>
-                `<div style="text-align:left;margin-top:15px;min-width:300px"><div style="font-size:12pt">Cilacap, ${tanggal}</div><div style="font-size:12pt;margin-top:4px">Verifikator</div><div style="height:65px"></div><div style="text-decoration:underline;font-weight:bold;font-size:12pt">${v.nama || '...........................'}</div><div style="font-size:12pt;margin-top:4px">NIP. ${v.nip || '...........................'}</div></div>`
+                `<div style="text-align:left;margin-top:15px;min-width:300px"><div style="font-size:12pt">Cilacap, ${tanggal}</div><div style="font-size:12pt;margin-top:4px">Verifikator</div><div style="height:75px"></div><div style="text-decoration:underline;font-weight:bold;font-size:12pt">${v.nama || '...........................'}</div><div style="font-size:12pt;margin-top:4px">NIP. ${v.nip || '...........................'}</div></div>`
             ).join('')
-            : `<div style="text-align:left;margin-top:15px;min-width:300px"><div style="font-size:12pt">Cilacap, ${tanggal}</div><div style="font-size:12pt;margin-top:4px">Verifikator</div><div style="height:65px"></div><div style="text-decoration:underline;font-weight:bold;font-size:12pt">.............................</div><div style="font-size:12pt;margin-top:4px">NIP. .............................</div></div>`;
+            : `<div style="text-align:left;margin-top:15px;min-width:300px"><div style="font-size:12pt">Cilacap, ${tanggal}</div><div style="font-size:12pt;margin-top:4px">Verifikator</div><div style="height:75px"></div><div style="text-decoration:underline;font-weight:bold;font-size:12pt">.............................</div><div style="font-size:12pt;margin-top:4px">NIP. .............................</div></div>`;
         const html = `<!DOCTYPE html><html><head><title>Instrumen Verifikasi Proposal</title><style>@page{size:A4;margin:1.5cm}body{font-family:'Times New Roman',serif;font-size:12pt;color:#000}table{width:100%;border-collapse:collapse}th{padding:4px 6px;border:1px solid #000;background:#f0f0f0;font-weight:bold;font-size:11pt}td{font-size:11pt}h3{font-size:14pt}p{margin:4px 0}</style></head><body>
         <div style="text-align:center;margin-bottom:24px"><h3 style="margin:0;font-size:14pt">INSTRUMEN VERIFIKASI PROPOSAL</h3><h3 style="margin:4px 0;font-size:14pt">PENGAJUAN DANA HIBAH TAHUN ${tahun}</h3></div>
         <div style="margin-bottom:16px;font-size:12pt"><table style="border:none"><tr><td style="border:none;width:200px;font-size:12pt">1. Nama Lembaga / Sekolah</td><td style="border:none;font-size:12pt">: ${sch?.nama || '...........................'}</td></tr><tr><td style="border:none;font-size:12pt">2. Alamat</td><td style="border:none;font-size:12pt">: ${sch?.alamat || checklistForm.alamat || '...........................'}</td></tr><tr><td style="border:none;font-size:12pt">3. Jenis Usulan</td><td style="border:none;font-size:12pt">: ${checklistForm.jenisUsulan || '...........................'}</td></tr></table></div>
-        <table><thead><tr><th rowspan="2" style="width:30px;font-size:11pt">NO</th><th rowspan="2" style="font-size:11pt">INDIKATOR / URAIAN</th><th colspan="2" style="font-size:11pt">HASIL</th><th rowspan="2" style="width:120px;font-size:11pt">KETERANGAN</th></tr><tr><th style="width:50px;font-size:11pt">ADA</th><th style="width:50px;font-size:11pt">TIDAK ADA</th></tr></thead><tbody>${rows}</tbody></table>
+        <table><thead><tr><th rowspan="2" style="width:30px;font-size:11pt">NO</th><th rowspan="2" style="width:45%;font-size:11pt">INDIKATOR / URAIAN</th><th colspan="2" style="font-size:11pt">HASIL</th><th rowspan="2" style="width:150px;font-size:11pt">KETERANGAN</th></tr><tr><th style="width:50px;font-size:11pt">ADA</th><th style="width:50px;font-size:11pt">TIDAK ADA</th></tr></thead><tbody>${rows}</tbody></table>
         <div style="margin-top:12px;font-size:12pt"><p><b>Kesimpulan / Catatan :</b></p><p style="margin:12px 0">1. ............................................................................................................</p><p style="margin:12px 0">2. ............................................................................................................</p><p style="margin:4px 0">dst.</p></div>
         <div style="display:flex;justify-content:flex-end;margin-top:8px">${verSection}</div>
         </body></html>`;
@@ -448,17 +457,17 @@ const Proposal = ({ readOnly = false }) => {
         const tahun = dt.getFullYear();
         const tanggal = `${dt.getDate()} ${bulanIndo[dt.getMonth()]} ${dt.getFullYear()}`;
         const rows = (item.items || []).map((it, i) =>
-            `<tr><td style="text-align:center;padding:4px 6px;border:1px solid #000;font-size:11pt;width:30px">${i + 1}</td><td style="padding:4px 6px;border:1px solid #000;font-size:11pt">${it.indikator}</td><td style="text-align:center;padding:4px 6px;border:1px solid #000;font-size:11pt;width:50px">${it.status === 'Ada' ? '✓' : ''}</td><td style="text-align:center;padding:4px 6px;border:1px solid #000;font-size:11pt;width:50px">${it.status === 'Tidak Ada' ? '✓' : ''}</td><td style="padding:4px 6px;border:1px solid #000;font-size:11pt;width:120px">${it.keterangan || ''}</td></tr>`
+            `<tr><td style="text-align:center;padding:4px 6px;border:1px solid #000;font-size:11pt;width:30px">${i + 1}</td><td style="padding:4px 6px;border:1px solid #000;font-size:11pt;width:45%">${it.indikator}</td><td style="text-align:center;padding:4px 6px;border:1px solid #000;font-size:11pt;width:50px">${it.status === 'Ada' ? '✓' : ''}</td><td style="text-align:center;padding:4px 6px;border:1px solid #000;font-size:11pt;width:50px">${it.status === 'Tidak Ada' ? '✓' : ''}</td><td style="padding:4px 6px;border:1px solid #000;font-size:11pt;width:150px">${it.keterangan || ''}</td></tr>`
         ).join('');
         const verSection = (item.verifikators || []).length > 0
             ? item.verifikators.map(v =>
-                `<div style="text-align:left;margin-top:15px;min-width:300px"><div style="font-size:12pt">Cilacap, ${tanggal}</div><div style="font-size:12pt;margin-top:4px">Verifikator</div><div style="height:65px"></div><div style="text-decoration:underline;font-weight:bold;font-size:12pt">${v.nama || '...........................'}</div><div style="font-size:12pt;margin-top:4px">NIP. ${v.nip || '...........................'}</div></div>`
+                `<div style="text-align:left;margin-top:15px;min-width:300px"><div style="font-size:12pt">Cilacap, ${tanggal}</div><div style="font-size:12pt;margin-top:4px">Verifikator</div><div style="height:75px"></div><div style="text-decoration:underline;font-weight:bold;font-size:12pt">${v.nama || '...........................'}</div><div style="font-size:12pt;margin-top:4px">NIP. ${v.nip || '...........................'}</div></div>`
             ).join('')
-            : `<div style="text-align:left;margin-top:15px;min-width:300px"><div style="font-size:12pt">Cilacap, ${tanggal}</div><div style="font-size:12pt;margin-top:4px">Verifikator</div><div style="height:65px"></div><div style="text-decoration:underline;font-weight:bold;font-size:12pt">.............................</div><div style="font-size:12pt;margin-top:4px">NIP. .............................</div></div>`;
+            : `<div style="text-align:left;margin-top:15px;min-width:300px"><div style="font-size:12pt">Cilacap, ${tanggal}</div><div style="font-size:12pt;margin-top:4px">Verifikator</div><div style="height:75px"></div><div style="text-decoration:underline;font-weight:bold;font-size:12pt">.............................</div><div style="font-size:12pt;margin-top:4px">NIP. .............................</div></div>`;
         const html = `<!DOCTYPE html><html><head><title>Instrumen Verifikasi Proposal</title><style>@page{size:A4;margin:1.5cm}body{font-family:'Times New Roman',serif;font-size:12pt;color:#000}table{width:100%;border-collapse:collapse}th{padding:4px 6px;border:1px solid #000;background:#f0f0f0;font-weight:bold;font-size:11pt}td{font-size:11pt}h3{font-size:14pt}p{margin:4px 0}</style></head><body>
         <div style="text-align:center;margin-bottom:24px"><h3 style="margin:0;font-size:14pt">INSTRUMEN VERIFIKASI PROPOSAL</h3><h3 style="margin:4px 0;font-size:14pt">PENGAJUAN DANA HIBAH TAHUN ${tahun}</h3></div>
         <div style="margin-bottom:16px;font-size:12pt"><table style="border:none"><tr><td style="border:none;width:200px;font-size:12pt">1. Nama Lembaga / Sekolah</td><td style="border:none;font-size:12pt">: ${schName}</td></tr><tr><td style="border:none;font-size:12pt">2. Alamat</td><td style="border:none;font-size:12pt">: ${item._sekolah?.alamat || item.sekolahAlamat || '...........................'}</td></tr><tr><td style="border:none;font-size:12pt">3. Jenis Usulan</td><td style="border:none;font-size:12pt">: ${item.jenisUsulan || '...........................'}</td></tr></table></div>
-        <table><thead><tr><th rowspan="2" style="width:30px;font-size:11pt">NO</th><th rowspan="2" style="font-size:11pt">INDIKATOR / URAIAN</th><th colspan="2" style="font-size:11pt">HASIL</th><th rowspan="2" style="width:120px;font-size:11pt">KETERANGAN</th></tr><tr><th style="width:50px;font-size:11pt">ADA</th><th style="width:50px;font-size:11pt">TIDAK ADA</th></tr></thead><tbody>${rows}</tbody></table>
+        <table><thead><tr><th rowspan="2" style="width:30px;font-size:11pt">NO</th><th rowspan="2" style="width:45%;font-size:11pt">INDIKATOR / URAIAN</th><th colspan="2" style="font-size:11pt">HASIL</th><th rowspan="2" style="width:150px;font-size:11pt">KETERANGAN</th></tr><tr><th style="width:50px;font-size:11pt">ADA</th><th style="width:50px;font-size:11pt">TIDAK ADA</th></tr></thead><tbody>${rows}</tbody></table>
         <div style="margin-top:12px;font-size:12pt"><p><b>Kesimpulan / Catatan :</b></p><p style="margin:12px 0">1. ............................................................................................................</p><p style="margin:12px 0">2. ............................................................................................................</p><p style="margin:4px 0">dst.</p></div>
         <div style="display:flex;justify-content:flex-end;margin-top:8px">${verSection}</div>
         </body></html>`;
@@ -471,7 +480,7 @@ const Proposal = ({ readOnly = false }) => {
 
     const handleOpenRekomendasi = () => { setRekomendasiForm(INITIAL_REKOMENDASI); setShowRekomendasi(true); };
     const handleRekomendasiSchoolChange = (nama) => {
-        const sch = sekolahList.find(s => s.nama === nama);
+        const sch = allSekolahList.find(s => s.nama === nama) || sekolahList.find(s => s.nama === nama);
         setRekomendasiForm(prev => ({ ...prev, namaSekolah: nama, kecamatan: sch?.kecamatan || '', jenjang: sch?.jenjang || '' }));
     };
     const handleRekomendasiChange = (field, value) => setRekomendasiForm(prev => ({ ...prev, [field]: value }));
@@ -489,6 +498,7 @@ const Proposal = ({ readOnly = false }) => {
     );
 
     const schoolNames = useMemo(() => sekolahList.map(s => s.nama), [sekolahList]);
+    const allSchoolNames = useMemo(() => allSekolahList.map(s => s.nama), [allSekolahList]);
     const renderSchoolOption = (name) => {
         const sch = sekolahList.find(s => s.nama === name);
         return (
@@ -1156,7 +1166,7 @@ const Proposal = ({ readOnly = false }) => {
                         <div className="modal-header"><div className="modal-title">{editChecklistId ? 'Edit Checklist' : 'Checklist Proposal'} - Instrumen Verifikasi Proposal</div><button className="modal-close" onClick={() => { setShowChecklist(false); setEditChecklistId(null); }}><X size={18} /></button></div>
                         <div className="modal-body">
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
-                                <div className="form-group"><label className="form-label">Cari Sekolah</label><SearchableSelect options={schoolNames} value={checklistForm.sekolah?.nama || ''} onChange={handleChecklistSchoolChange} placeholder="Ketik nama sekolah..." /></div>
+                                <div className="form-group"><label className="form-label">Cari Sekolah</label><SearchableSelect options={allSchoolNames} value={checklistForm.sekolah?.nama || ''} onChange={handleChecklistSchoolChange} placeholder="Ketik nama sekolah..." /></div>
                                 <div className="form-group"><label className="form-label">Jenis Usulan</label><input className="form-input" placeholder="Ketik jenis usulan..." value={checklistForm.jenisUsulan} onChange={e => setChecklistForm(prev => ({ ...prev, jenisUsulan: e.target.value }))} /></div>
                             </div>
                             <div className="form-group"><label className="form-label">Alamat</label><input className="form-input" value={checklistForm.alamat} readOnly placeholder="Alamat sekolah" /></div>
@@ -1211,7 +1221,7 @@ const Proposal = ({ readOnly = false }) => {
                         <div className="modal-header"><div className="modal-title">{editRekomendasiId ? 'Edit Rekomendasi' : 'Form Rekomendasi'}</div><button className="modal-close" onClick={() => { setShowRekomendasi(false); setEditRekomendasiId(null); setRekomendasiForm(INITIAL_REKOMENDASI); }}><X size={18} /></button></div>
                         <div className="modal-body">
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                                <div className="form-group"><label className="form-label">Nama Sekolah</label><SearchableSelect options={schoolNames} value={rekomendasiForm.namaSekolah} onChange={handleRekomendasiSchoolChange} placeholder="Cari Sekolah..." /></div>
+                                <div className="form-group"><label className="form-label">Nama Sekolah</label><SearchableSelect options={allSchoolNames} value={rekomendasiForm.namaSekolah} onChange={handleRekomendasiSchoolChange} placeholder="Cari Sekolah..." /></div>
                                 <div className="form-group"><label className="form-label">Kecamatan</label><input className="form-input" value={rekomendasiForm.kecamatan} readOnly placeholder="Otomatis terisi" /></div>
                                 <div className="form-group"><label className="form-label">Sub Kegiatan</label><select className="form-select" value={rekomendasiForm.subKegiatan} onChange={e => handleRekomendasiChange('subKegiatan', e.target.value)}><option value="">Pilih Sub Kegiatan</option>{SUB_KEGIATAN.filter(s => !rekomendasiForm.jenjang || s.jenjang === rekomendasiForm.jenjang).map(s => <option key={s.kode} value={s.nama}>{s.nama}</option>)}</select></div>
                                 <div className="form-group"><label className="form-label">Perihal</label><input className="form-input" placeholder="Isi perihal..." value={rekomendasiForm.perihal} onChange={e => handleRekomendasiChange('perihal', e.target.value)} /></div>

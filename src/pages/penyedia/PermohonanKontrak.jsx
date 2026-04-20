@@ -236,19 +236,19 @@ const PermohonanKontrak = () => {
                     <h3 style={{ margin: '0 0 24px', fontSize: '1rem' }}>📄 Detail Permohonan — {namaPaket}</h3>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
                         <div>
-                            <label style={{ ...labelStyle, color: 'var(--text-primary)' }}>Nomor DPPL <span style={{ color: '#ef4444' }}>*</span></label>
+                            <label style={{ ...labelStyle, color: 'var(--text-primary)' }}>Nomor DPPL/ Nomor SPPBJ (Tender) <span style={{ color: '#ef4444' }}>*</span></label>
                             <input style={fieldStyle} placeholder="Masukkan nomor DPPL" value={noDppl} onChange={e => setNoDppl(e.target.value)} />
                         </div>
                         <div>
-                            <label style={{ ...labelStyle, color: 'var(--text-primary)' }}>Tanggal DPPL <span style={{ color: '#ef4444' }}>*</span></label>
+                            <label style={{ ...labelStyle, color: 'var(--text-primary)' }}>Tanggal DPPL/ Tanggal SPPBJ (Tender) <span style={{ color: '#ef4444' }}>*</span></label>
                             <input type="date" style={fieldStyle} value={tanggalDppl} onChange={e => setTanggalDppl(e.target.value)} />
                         </div>
                         <div>
-                            <label style={{ ...labelStyle, color: 'var(--text-primary)' }}>Nomor BAHPL <span style={{ color: '#ef4444' }}>*</span></label>
+                            <label style={{ ...labelStyle, color: 'var(--text-primary)' }}>Nomor BAHPL/ Nomor Penetapan Pemenang (Tender) <span style={{ color: '#ef4444' }}>*</span></label>
                             <input style={fieldStyle} placeholder="Masukkan nomor BAHPL" value={noBahpl} onChange={e => setNoBahpl(e.target.value)} />
                         </div>
                         <div>
-                            <label style={{ ...labelStyle, color: 'var(--text-primary)' }}>Tanggal BAHPL <span style={{ color: '#ef4444' }}>*</span></label>
+                            <label style={{ ...labelStyle, color: 'var(--text-primary)' }}>Tanggal BAHPL/ Tanggal Penetapan Pemenang (Tender) <span style={{ color: '#ef4444' }}>*</span></label>
                             <input type="date" style={fieldStyle} value={tanggalBahpl} onChange={e => setTanggalBahpl(e.target.value)} />
                         </div>
                     </div>
