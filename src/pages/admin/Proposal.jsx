@@ -25,19 +25,25 @@ const INITIAL_FORM_DATA = {
 };
 
 const INITIAL_CHECKLIST_ITEMS = [
-    { id: 1, indikator: 'Ijin Operasional dan Pendirian dari Instansi', status: '-', keterangan: '' },
-    { id: 2, indikator: 'Akta Notaris (berisi AD / ART, Tujuan, Program Kerja Lembaga, dll)', status: '-', keterangan: '' },
-    { id: 3, indikator: 'SK Menkumham (bila ada)', status: '-', keterangan: '' },
-    { id: 4, indikator: 'NPSN', status: '-', keterangan: '' },
-    { id: 5, indikator: 'Profil Sekolah (data lembaga, data pendidik, data siswa, data sarpras, denah sekolah)', status: '-', keterangan: '' },
-    { id: 6, indikator: 'Foto Papan Lembaga, Foto Kegiatan KBM, dan foto lahan bagi usulan pembangunan/foto ruang yang rusak bagi usulan rehabilitasi (GPS map Camera)', status: '-', keterangan: '' },
-    { id: 7, indikator: 'Surat Keterangan Domisili badan atau lembaga dari kepala desa / lurah yang diketahui Camat', status: '-', keterangan: '' },
-    { id: 8, indikator: 'Surat Pernyataan Tidak terjadi konflik kepengurusan yang ditandatangani ketua yayasan', status: '-', keterangan: '' },
-    { id: 9, indikator: 'Surat Keterangan / pernyataan penggunaan Tanah (milik yayasan, tanah wakaf dilampiri surat tidak keberatan dari ahli waris lain / sertifikat atas nama yayasan / sekolah, hak guna pakai / milik desa)', status: '-', keterangan: '' },
-    { id: 10, indikator: 'Pernah mendapat bantuan Hibah tahun berapa / berupa apa?', status: '-', keterangan: '' },
-    { id: 11, indikator: 'Rencana Anggaran Biaya (RAB)', status: '-', keterangan: '' },
-    { id: 12, indikator: 'Struktur organisasi atau kepanitiaan', status: '-', keterangan: '' },
-    { id: 13, indikator: 'Rekening atas nama sekolah yang masih aktif (bukan rek BOP)', status: '-', keterangan: '' },
+    { id: 1, indikator: 'Surat Permohonan Bantuan ke Bupati', status: '-', keterangan: '' },
+    { id: 2, indikator: 'Lembar Proposal (Cover, BAB I, II, III, IV…)', status: '-', keterangan: '' },
+    { id: 3, indikator: 'Ijin Operasional / Ijin Pendirian dari Instansi Induk', status: '-', keterangan: '' },
+    { id: 4, indikator: 'Akta Notaris (berisi AD/ART, Tujuan, Program Kerja Lembaga, dll)', status: '-', keterangan: '' },
+    { id: 5, indikator: 'SK Menkumham (bila ada)', status: '-', keterangan: '' },
+    { id: 6, indikator: 'Profil Lembaga (NPSN, data lembaga, data pendidik, data siswa, data sarpras, denah sekolah)', status: '-', keterangan: '' },
+    { id: 7, indikator: 'Surat Keterangan Domisili badan atau lembaga dari kepala desa / lurah yang diketahui oleh camat setempat', status: '-', keterangan: '' },
+    { id: 8, indikator: 'Surat pernyataan tidak terjadi konflik kepengurusan yang disahkan oleh kepala sekolah / lembaga', status: '-', keterangan: '' },
+    { id: 9, indikator: 'Surat keterangan / pernyataan penggunaan tanah (sertifikat tanah milik desa/yayasan/tanah wakaf) dilampirkan surat tidak keberatan dibangun dari pemilik Tanah dan Fotocopy sertifikat asli/SPPT', status: '-', keterangan: '' },
+    { id: 10, indikator: 'Surat Keterangan Tanah Tidak Bersengketa dari Desa', status: '-', keterangan: '' },
+    { id: 11, indikator: 'Foto Papan Sekolah dan foto kegiatan KBM', status: '-', keterangan: '' },
+    { id: 12, indikator: 'Struktur organisasi sekolah terbaru dalam 3 tahun terakhir dengan pas foto pengurus berwarna 4x6', status: '-', keterangan: '' },
+    { id: 13, indikator: 'Rencana Anggaran Biaya (RAB)', status: '-', keterangan: '' },
+    { id: 14, indikator: 'Nomor Pokok Wajib Pajak (NPWP) Lembaga/sekolah', status: '-', keterangan: '' },
+    { id: 15, indikator: 'Rekening atas nama sekolah yang masih aktif (bukan rekening BOP)', status: '-', keterangan: '' },
+    { id: 16, indikator: 'Surat Pernyataan pernah atau belum pernah mendapatkan jenis bantuan hibah apapun di tahun berapa, berupa apa, sumber bantuan dari anggaran apa', status: '-', keterangan: '' },
+    { id: 17, indikator: 'Daftar identifikasi kebutuhan sekolah', status: '-', keterangan: '' },
+    { id: 18, indikator: 'Daftar Inventarisasi / kepemilikan barang sekolah yang menunjukan nama barang/bangunan, jumlah, kondisi dan sumber yang sah (Sekolah, Orangtua/Komite, APBD, Provinsi dll), tahun pendapatannya (bila ada)', status: '-', keterangan: '' },
+    { id: 19, indikator: 'Foto data dukung menggunakan GPS Map Camera (Foto lahan bagi usulan pembangunan, foto ruang yang rusak bagi usulan rehabilitasi)', status: '-', keterangan: '' },
 ];
 
 const INITIAL_REKOMENDASI = {
@@ -418,9 +424,9 @@ const Proposal = ({ readOnly = false }) => {
         ).join('');
         const verSection = checklistForm.verifikators.length > 0
             ? checklistForm.verifikators.map(v =>
-                `<div style="text-align:left;margin-top:80px;min-width:300px"><div style="font-size:12pt">Cilacap, ${tanggal}</div><div style="font-size:12pt;margin-top:4px">Verifikator</div><div style="height:90px"></div><div style="text-decoration:underline;font-weight:bold;font-size:12pt">${v.nama || '...........................'}</div><div style="font-size:12pt;margin-top:4px">NIP. ${v.nip || '...........................'}</div></div>`
+                `<div style="text-align:left;margin-top:40px;min-width:300px"><div style="font-size:12pt">Cilacap, ${tanggal}</div><div style="font-size:12pt;margin-top:4px">Verifikator</div><div style="height:60px"></div><div style="text-decoration:underline;font-weight:bold;font-size:12pt">${v.nama || '...........................'}</div><div style="font-size:12pt;margin-top:4px">NIP. ${v.nip || '...........................'}</div></div>`
             ).join('')
-            : `<div style="text-align:left;margin-top:80px;min-width:300px"><div style="font-size:12pt">Cilacap, ${tanggal}</div><div style="font-size:12pt;margin-top:4px">Verifikator</div><div style="height:90px"></div><div style="text-decoration:underline;font-weight:bold;font-size:12pt">.............................</div><div style="font-size:12pt;margin-top:4px">NIP. .............................</div></div>`;
+            : `<div style="text-align:left;margin-top:40px;min-width:300px"><div style="font-size:12pt">Cilacap, ${tanggal}</div><div style="font-size:12pt;margin-top:4px">Verifikator</div><div style="height:60px"></div><div style="text-decoration:underline;font-weight:bold;font-size:12pt">.............................</div><div style="font-size:12pt;margin-top:4px">NIP. .............................</div></div>`;
         const html = `<!DOCTYPE html><html><head><title>Instrumen Verifikasi Proposal</title><style>@page{size:A4;margin:2cm}body{font-family:'Times New Roman',serif;font-size:12pt;color:#000}table{width:100%;border-collapse:collapse}th{padding:6px;border:1px solid #000;background:#f0f0f0;font-weight:bold;font-size:12pt}td{font-size:12pt}h3{font-size:14pt}</style></head><body>
         <div style="text-align:center;margin-bottom:24px"><h3 style="margin:0;font-size:14pt">INSTRUMEN VERIFIKASI PROPOSAL</h3><h3 style="margin:4px 0;font-size:14pt">PENGAJUAN DANA HIBAH TAHUN ${tahun}</h3></div>
         <div style="margin-bottom:16px;font-size:12pt"><table style="border:none"><tr><td style="border:none;width:200px;font-size:12pt">1. Nama Lembaga / Sekolah</td><td style="border:none;font-size:12pt">: ${sch?.nama || '...........................'}</td></tr><tr><td style="border:none;font-size:12pt">2. Alamat</td><td style="border:none;font-size:12pt">: ${sch?.alamat || checklistForm.alamat || '...........................'}</td></tr><tr><td style="border:none;font-size:12pt">3. Jenis Usulan</td><td style="border:none;font-size:12pt">: ${checklistForm.jenisUsulan || '...........................'}</td></tr></table></div>
@@ -446,9 +452,9 @@ const Proposal = ({ readOnly = false }) => {
         ).join('');
         const verSection = (item.verifikators || []).length > 0
             ? item.verifikators.map(v =>
-                `<div style="text-align:left;margin-top:80px;min-width:300px"><div style="font-size:12pt">Cilacap, ${tanggal}</div><div style="font-size:12pt;margin-top:4px">Verifikator</div><div style="height:90px"></div><div style="text-decoration:underline;font-weight:bold;font-size:12pt">${v.nama || '...........................'}</div><div style="font-size:12pt;margin-top:4px">NIP. ${v.nip || '...........................'}</div></div>`
+                `<div style="text-align:left;margin-top:40px;min-width:300px"><div style="font-size:12pt">Cilacap, ${tanggal}</div><div style="font-size:12pt;margin-top:4px">Verifikator</div><div style="height:60px"></div><div style="text-decoration:underline;font-weight:bold;font-size:12pt">${v.nama || '...........................'}</div><div style="font-size:12pt;margin-top:4px">NIP. ${v.nip || '...........................'}</div></div>`
             ).join('')
-            : `<div style="text-align:left;margin-top:80px;min-width:300px"><div style="font-size:12pt">Cilacap, ${tanggal}</div><div style="font-size:12pt;margin-top:4px">Verifikator</div><div style="height:90px"></div><div style="text-decoration:underline;font-weight:bold;font-size:12pt">.............................</div><div style="font-size:12pt;margin-top:4px">NIP. .............................</div></div>`;
+            : `<div style="text-align:left;margin-top:40px;min-width:300px"><div style="font-size:12pt">Cilacap, ${tanggal}</div><div style="font-size:12pt;margin-top:4px">Verifikator</div><div style="height:60px"></div><div style="text-decoration:underline;font-weight:bold;font-size:12pt">.............................</div><div style="font-size:12pt;margin-top:4px">NIP. .............................</div></div>`;
         const html = `<!DOCTYPE html><html><head><title>Instrumen Verifikasi Proposal</title><style>@page{size:A4;margin:2cm}body{font-family:'Times New Roman',serif;font-size:12pt;color:#000}table{width:100%;border-collapse:collapse}th{padding:6px;border:1px solid #000;background:#f0f0f0;font-weight:bold;font-size:12pt}td{font-size:12pt}h3{font-size:14pt}</style></head><body>
         <div style="text-align:center;margin-bottom:24px"><h3 style="margin:0;font-size:14pt">INSTRUMEN VERIFIKASI PROPOSAL</h3><h3 style="margin:4px 0;font-size:14pt">PENGAJUAN DANA HIBAH TAHUN ${tahun}</h3></div>
         <div style="margin-bottom:16px;font-size:12pt"><table style="border:none"><tr><td style="border:none;width:200px;font-size:12pt">1. Nama Lembaga / Sekolah</td><td style="border:none;font-size:12pt">: ${schName}</td></tr><tr><td style="border:none;font-size:12pt">2. Alamat</td><td style="border:none;font-size:12pt">: ${item._sekolah?.alamat || item.sekolahAlamat || '...........................'}</td></tr><tr><td style="border:none;font-size:12pt">3. Jenis Usulan</td><td style="border:none;font-size:12pt">: ${item.jenisUsulan || '...........................'}</td></tr></table></div>
