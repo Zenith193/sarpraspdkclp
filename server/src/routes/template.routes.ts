@@ -243,73 +243,53 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
         const content = fs.readFileSync(tpl.filePath, 'binary');
         const zip = new PizZip(content);
 
-        // ===== PRE-PROCESS: Reassemble split {{tag}} across <w:r> runs =====
-        // Word splits {{placeholder}} into multiple runs: <w:t>{{</w:t>...<w:t>name}}</w:t>
-        // This confuses docxtemplater and can corrupt table borders.
+        // ===== PRE-PROCESS: Reassemble split {{tag}} per paragraph =====
+        // Word splits {{tag}} across runs: <w:t>{</w:t><w:t>{name</w:t><w:t>}}</w:t>
+        // We merge ALL text in a paragraph, do replacement, then put it back in first run
         try {
-            const xmlFiles = ['word/document.xml', ...Object.keys(zip.files).filter(f => /^word\/(header|footer)\d*\.xml$/i.test(f))];
-            for (const xf of xmlFiles) {
+            const ppFiles = ['word/document.xml'];
+            for (const fn of Object.keys(zip.files)) {
+                if (/^word\/(header|footer)\d*\.xml$/i.test(fn)) ppFiles.push(fn);
+            }
+            for (const xf of ppFiles) {
                 let xml = zip.file(xf)?.asText();
-                if (!xml || !xml.includes('{{')) continue;
-                // Extract all <w:t> text, find split tags, and merge runs
-                // Strategy: within each <w:p>, collect text from all <w:t> nodes.
-                // If combined text has {{...}} but individual nodes don't, merge the runs.
+                if (!xml || (!xml.includes('{') && !xml.includes('}'))) continue;
                 let changed = false;
-                // Simple approach: fix XML-split tags by removing formatting runs between {{ and }}
-                // Pattern: <w:t...>...{{...</w:t></w:r><w:r>...<w:t...>...}}...</w:t>
-                // We merge the text content while removing intermediate runs
-                let iterations = 0;
-                while (iterations < 20) {
-                    // Find a <w:t> that has {{ but no matching }}
-                    const splitMatch = xml.match(/<w:t[^>]*>([^<]*\{\{[^}]*)<\/w:t>/);
-                    if (!splitMatch) break;
-                    const startIdx = splitMatch.index!;
-                    // Check if this text node already has complete tags
-                    const textContent = splitMatch[1];
-                    const openCount = (textContent.match(/\{\{/g) || []).length;
-                    const closeCount = (textContent.match(/\}\}/g) || []).length;
-                    if (openCount <= closeCount) break; // already balanced
-                    
-                    // Find the closing }} in subsequent <w:t> nodes within same paragraph
-                    const afterStart = startIdx + splitMatch[0].length;
-                    const pEnd = xml.indexOf('</w:p>', afterStart);
-                    if (pEnd === -1) break;
-                    const region = xml.substring(afterStart, pEnd);
-                    
-                    // Collect text from subsequent <w:t> nodes until we find }}
-                    const subTexts: string[] = [];
-                    let searchPos = 0;
-                    let foundClose = false;
-                    let lastTEnd = 0;
-                    while (searchPos < region.length) {
-                        const tMatch = region.substring(searchPos).match(/<w:t[^>]*>([^<]*)<\/w:t>/);
-                        if (!tMatch) break;
-                        const tIdx = searchPos + tMatch.index!;
-                        subTexts.push(tMatch[1]);
-                        lastTEnd = tIdx + tMatch[0].length;
-                        searchPos = lastTEnd;
-                        if (tMatch[1].includes('}}')) { foundClose = true; break; }
-                    }
-                    
-                    if (!foundClose || subTexts.length === 0) break;
-                    
-                    // Merge: combine original text + subsequent texts, remove intermediate runs
-                    const mergedText = textContent + subTexts.join('');
-                    const removeEnd = afterStart + lastTEnd;
-                    // Replace: original <w:t>...</w:t> gets merged text, remove everything between
-                    const newT = splitMatch[0].replace(splitMatch[1], mergedText);
-                    xml = xml.substring(0, startIdx) + newT + xml.substring(removeEnd);
+                // Process each paragraph: extract all <w:t> text, merge, check for {{...}}
+                xml = xml.replace(/(<w:p[ >][\s\S]*?<\/w:p>)/g, (pXml) => {
+                    // Get all text from <w:t> nodes
+                    const tNodes = [...pXml.matchAll(/<w:t[^>]*>([^<]*)<\/w:t>/g)];
+                    if (tNodes.length <= 1) return pXml;
+                    const fullText = tNodes.map(m => m[1]).join('');
+                    if (!fullText.includes('{{') || !fullText.includes('}}')) return pXml;
+                    // Check if tags are already complete in individual nodes
+                    const allComplete = tNodes.every(m => {
+                        const t = m[1];
+                        const opens = (t.match(/\{\{/g) || []).length;
+                        const closes = (t.match(/\}\}/g) || []).length;
+                        return opens === closes;
+                    });
+                    if (allComplete) return pXml;
+                    // Tags are split - merge all text into first run, clear others
                     changed = true;
-                    iterations++;
-                }
+                    let result = pXml;
+                    // Put full merged text in the FIRST <w:t> node
+                    let firstDone = false;
+                    result = result.replace(/<w:t([^>]*)>([^<]*)<\/w:t>/g, (m, attrs, txt) => {
+                        if (!firstDone) {
+                            firstDone = true;
+                            return '<w:t xml:space="preserve">' + fullText + '</w:t>';
+                        }
+                        return '<w:t' + attrs + '></w:t>';
+                    });
+                    return result;
+                });
                 if (changed) {
-                    // Clean up empty <w:r> tags left behind (runs with no <w:t>)
-                    xml = xml.replace(/<w:r[^>]*>(?:\s*<w:rPr>(?:(?!<\/w:rPr>).)*<\/w:rPr>\s*)?<\/w:r>/gs, '');
                     zip.file(xf, xml);
-                    console.log(`[PreProcess] Reassembled split tags in ${xf} (${iterations} merges)`);
+                    console.log('[PreProcess] Reassembled split tags in ' + xf);
                 }
             }
-        } catch (ppErr: any) {
+        } catch (ppErr) {
             console.error('[PreProcess] Tag reassembly error (non-fatal):', ppErr.message);
         }
 
