@@ -390,6 +390,27 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
         }
 
         let doc: any;
+        {
+            console.log('[DOCX] Direct XML replace (preserves tables)');
+            const xmlFiles = ['word/document.xml'];
+            for (const fn of Object.keys(zip.files)) {
+                if (/^word\/(header|footer)\d*\.xml$/i.test(fn)) xmlFiles.push(fn);
+            }
+            for (const xf of xmlFiles) {
+                let x = zip.file(xf)?.asText();
+                if (!x) continue;
+                x = x.replace(/(<w:t[^>]*>)([^<]*)<\/w:t>/g, (_m: string, tag: string, txt: string) => {
+                    let r = txt;
+                    for (const [k, v] of Object.entries(vars)) {
+                        if (typeof v === 'string') r = r.split('{{' + k + '}}').join(v as string);
+                    }
+                    return tag + r + '</w:t>';
+                });
+                zip.file(xf, x);
+            }
+            doc = { getZip: () => zip, getFullText: () => '', render: () => {} };
+        }
+        if (false)
         try {
             doc = new Docxtemplater(zip, docxOptions);
         } catch (compileErr: any) {
