@@ -15,13 +15,13 @@ const AppLayout = () => {
     const [refreshKey, setRefreshKey] = useState(0);
     const location = useLocation();
 
-    // Auto-refresh: increment key to force Outlet remount → data reload
-    useEffect(() => {
-        const interval = setInterval(() => {
-            setRefreshKey(k => k + 1);
-        }, AUTO_REFRESH_MS);
-        return () => clearInterval(interval);
-    }, []);
+    // Auto-refresh disabled: was causing form data loss during data entry
+    // useEffect(() => {
+    //     const interval = setInterval(() => {
+    //         setRefreshKey(k => k + 1);
+    //     }, AUTO_REFRESH_MS);
+    //     return () => clearInterval(interval);
+    // }, []);
 
     // Track screen size
     useEffect(() => {
@@ -78,7 +78,7 @@ const AppLayout = () => {
                 <Topbar onToggleSidebar={handleToggle} sidebarCollapsed={!isMobile && sidebarCollapsed} isMobile={isMobile} />
                 <div className="main-content" style={mainContentStyle}>
                     <CountdownBanner />
-                    <Outlet key={refreshKey} />
+                    <Outlet />
                 </div>
             </div>
         </div>

@@ -15,7 +15,7 @@ import {
 } from '../api/index';
 
 // Auto-refresh interval (ms) — 0 = off
-const DEFAULT_REFRESH_INTERVAL = 60_000; // 60 seconds
+const DEFAULT_REFRESH_INTERVAL = 0; // Disabled: was causing form reset during data entry
 
 // Generic data fetching hook with optional auto-refresh
 function useDataFetch(fetchFn, defaultValue = [], deps = [], autoRefreshMs = DEFAULT_REFRESH_INTERVAL) {
