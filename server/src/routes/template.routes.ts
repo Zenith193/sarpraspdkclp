@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import { templateService } from '../services/bast.service.js';
 import { splHistoryService } from '../services/matrik.service.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
@@ -120,7 +120,7 @@ router.get('/spl-file/:format/:historyId', requireAuth, async (req, res) => {
     }
 });
 
-// ===== GENERATE: fill DOCX â†’ save both DOCX & PDF â†’ auto-save history â†’ return JSON =====
+// ===== GENERATE: fill DOCX Ã¢â€ â€™ save both DOCX & PDF Ã¢â€ â€™ auto-save history Ã¢â€ â€™ return JSON =====
 router.post('/generate/:id', requireAuth, async (req, res) => {
     try {
         const tpl = await templateService.getById(Number(req.params.id));
@@ -242,6 +242,78 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
 
         const content = fs.readFileSync(tpl.filePath, 'binary');
         const zip = new PizZip(content);
+
+        // ===== PRE-PROCESS: Reassemble split {{tag}} across <w:r> runs =====
+        // Word splits {{placeholder}} into multiple runs: <w:t>{{</w:t>...<w:t>name}}</w:t>
+        // This confuses docxtemplater and can corrupt table borders.
+        try {
+            const xmlFiles = ['word/document.xml', ...Object.keys(zip.files).filter(f => /^word\/(header|footer)\d*\.xml$/i.test(f))];
+            for (const xf of xmlFiles) {
+                let xml = zip.file(xf)?.asText();
+                if (!xml || !xml.includes('{{')) continue;
+                // Extract all <w:t> text, find split tags, and merge runs
+                // Strategy: within each <w:p>, collect text from all <w:t> nodes.
+                // If combined text has {{...}} but individual nodes don't, merge the runs.
+                let changed = false;
+                // Simple approach: fix XML-split tags by removing formatting runs between {{ and }}
+                // Pattern: <w:t...>...{{...</w:t></w:r><w:r>...<w:t...>...}}...</w:t>
+                // We merge the text content while removing intermediate runs
+                let iterations = 0;
+                while (iterations < 20) {
+                    // Find a <w:t> that has {{ but no matching }}
+                    const splitMatch = xml.match(/<w:t[^>]*>([^<]*\{\{[^}]*)<\/w:t>/);
+                    if (!splitMatch) break;
+                    const startIdx = splitMatch.index!;
+                    // Check if this text node already has complete tags
+                    const textContent = splitMatch[1];
+                    const openCount = (textContent.match(/\{\{/g) || []).length;
+                    const closeCount = (textContent.match(/\}\}/g) || []).length;
+                    if (openCount <= closeCount) break; // already balanced
+                    
+                    // Find the closing }} in subsequent <w:t> nodes within same paragraph
+                    const afterStart = startIdx + splitMatch[0].length;
+                    const pEnd = xml.indexOf('</w:p>', afterStart);
+                    if (pEnd === -1) break;
+                    const region = xml.substring(afterStart, pEnd);
+                    
+                    // Collect text from subsequent <w:t> nodes until we find }}
+                    const subTexts: string[] = [];
+                    let searchPos = 0;
+                    let foundClose = false;
+                    let lastTEnd = 0;
+                    while (searchPos < region.length) {
+                        const tMatch = region.substring(searchPos).match(/<w:t[^>]*>([^<]*)<\/w:t>/);
+                        if (!tMatch) break;
+                        const tIdx = searchPos + tMatch.index!;
+                        subTexts.push(tMatch[1]);
+                        lastTEnd = tIdx + tMatch[0].length;
+                        searchPos = lastTEnd;
+                        if (tMatch[1].includes('}}')) { foundClose = true; break; }
+                    }
+                    
+                    if (!foundClose || subTexts.length === 0) break;
+                    
+                    // Merge: combine original text + subsequent texts, remove intermediate runs
+                    const mergedText = textContent + subTexts.join('');
+                    const removeEnd = afterStart + lastTEnd;
+                    // Replace: original <w:t>...</w:t> gets merged text, remove everything between
+                    const newT = splitMatch[0].replace(splitMatch[1], mergedText);
+                    xml = xml.substring(0, startIdx) + newT + xml.substring(removeEnd);
+                    changed = true;
+                    iterations++;
+                }
+                if (changed) {
+                    // Clean up empty <w:r> tags left behind (runs with no <w:t>)
+                    xml = xml.replace(/<w:r[^>]*>(?:\s*<w:rPr>(?:(?!<\/w:rPr>).)*<\/w:rPr>\s*)?<\/w:r>/gs, '');
+                    zip.file(xf, xml);
+                    console.log(`[PreProcess] Reassembled split tags in ${xf} (${iterations} merges)`);
+                }
+            }
+        } catch (ppErr: any) {
+            console.error('[PreProcess] Tag reassembly error (non-fatal):', ppErr.message);
+        }
+
+
 
         // ===== KOP: Normalize tag in template XML =====
         // Ensure kopSekolah tag is clean (not split across runs by Word)
@@ -641,7 +713,7 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
                         generatedZip.file('word/_rels/document.xml.rels', 
                             relsXml.replace('</Relationships>', `<Relationship Id="${newRId}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${imgFilename}"/></Relationships>`));
 
-                        console.log(`[KOP] Image ${imgW}x${imgH}px → ${emuW}x${emuH} EMU (${(emuW/360000).toFixed(1)}x${(emuH/360000).toFixed(1)}cm), rId=${newRId}`);
+                        console.log(`[KOP] Image ${imgW}x${imgH}px â†’ ${emuW}x${emuH} EMU (${(emuW/360000).toFixed(1)}x${(emuH/360000).toFixed(1)}cm), rId=${newRId}`);
 
                         // Build DrawingML XML
                         const imgXml = [
@@ -1268,13 +1340,13 @@ function generateNoBAST(noMatrik: string, jenis: string, sumber: string, tahun: 
     let kode = 'XX';
     if (jenis === 'Pengadaan Barang') { kode = KODE_BARANG_MAP[sumber] || 'X4'; } else { kode = KODE_JENIS_MAP[jenis] || 'XX'; }
     const cleanMatrik = String(noMatrik).replace(/\s/g, '');
-    // Anakan: "65.1" â†’ 400.3.13/065.1.n/kode/tahun
+    // Anakan: "65.1" Ã¢â€ â€™ 400.3.13/065.1.n/kode/tahun
     const dotMatch = cleanMatrik.match(/^(\d+)[.,](\d+)$/);
     if (dotMatch) {
         const mainPart = dotMatch[1].padStart(3, '0');
         return `400.3.13/${mainPart}.${dotMatch[2]}.n/${kode}/${tahun}`;
     }
-    // Indukan: "63" â†’ 400.3.13/063.n/kode/tahun
+    // Indukan: "63" Ã¢â€ â€™ 400.3.13/063.n/kode/tahun
     const mainPart = cleanMatrik.padStart(3, '0');
     return `400.3.13/${mainPart}.n/${kode}/${tahun}`;
 }
