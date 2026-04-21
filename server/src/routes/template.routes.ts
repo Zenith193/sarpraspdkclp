@@ -1,4 +1,4 @@
-﻿import { Router } from 'express';
+import { Router } from 'express';
 import { templateService } from '../services/bast.service.js';
 import { splHistoryService } from '../services/matrik.service.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
@@ -364,7 +364,7 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
         vars.kopSekolah = (kopImageBuffer && kopImageBuffer.length > 100) ? '__KOP_IMAGE__' : '';
 
         const docxOptions: any = {
-            paragraphLoop: true,
+            paragraphLoop: false,
             linebreaks: true,
             delimiters: { start: '{{', end: '}}' },
             nullGetter(part: any) {
@@ -375,19 +375,14 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
             },
         };
 
-        // Helper: aggressively clean loop syntax from DOCX XML
+        // Helper: conservatively clean loop syntax from DOCX XML
         function cleanLoopTags(zipObj: any) {
             let xml = zipObj.file('word/document.xml')?.asText() || '';
-            // Remove #tagName and /tagName from inside <w:t> text nodes
-            // This handles both intact {{#tag}} and split-across-runs cases
+            // Only remove complete {{#tag}} and {{/tag}} loop markers
+            // Do NOT touch fragments like #word or /word as these destroy real content
             xml = xml.replace(/(<w:t[^>]*>)([^<]*)<\/w:t>/g, (match: string, openTag: string, text: string) => {
-                // Remove loop markers: {{#xxx}} {{/xxx}} and fragments like #xxx /xxx
                 let cleaned = text;
-                cleaned = cleaned.replace(/\{\{[#\/][^}]*\}\}/g, ''); // full tags
-                cleaned = cleaned.replace(/#\w+/g, '');                // fragment: #tagName
-                cleaned = cleaned.replace(/\/\w+/g, (m: string) => {   // fragment: /tagName (but not file paths)
-                    return /^\/[A-Z]/.test(m) || /^\/[a-z]{1,2}$/.test(m) ? m : ''; // keep short words, remove camelCase tags
-                });
+                cleaned = cleaned.replace(/\{\{[#\/][^}]*\}\}/g, ''); // only full {{#tag}} {{/tag}}
                 return openTag + cleaned + '</w:t>';
             });
             zipObj.file('word/document.xml', xml);
@@ -416,17 +411,22 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
                     cleanLoopTags(zip3);
                     doc = new Docxtemplater(zip3, { ...docxOptions, paragraphLoop: false });
                 } catch (compileErr3: any) {
-                    // LAST RESORT: skip docxtemplater entirely, just do string replacement on XML
-                    console.log('[DOCX] All retries failed, using direct XML replacement...');
+                    // LAST RESORT: skip docxtemplater entirely, replace only {{key}} in text nodes
+                    console.log('[DOCX] All retries failed, using safe XML replacement...');
                     const zip4 = new PizZip(content);
                     cleanLoopTags(zip4);
                     let rawXml = zip4.file('word/document.xml')?.asText() || '';
-                    // Simple variable replacement: replace {{varName}} in text nodes
-                    for (const [key, val] of Object.entries(vars)) {
-                        if (typeof val === 'string') {
-                            rawXml = rawXml.replace(new RegExp(key, 'g'), val);
+                    // SAFE replacement: only replace {{key}} wrapped tags inside <w:t> nodes
+                    // Never replace raw key names as they can match XML attributes
+                    rawXml = rawXml.replace(/(<w:t[^>]*>)([^<]*)<\/w:t>/g, (_m: string, tag: string, txt: string) => {
+                        let replaced = txt;
+                        for (const [key, val] of Object.entries(vars)) {
+                            if (typeof val === 'string') {
+                                replaced = replaced.replace(new RegExp(`\\{\\{${key}\\}\\}`, 'g'), val);
+                            }
                         }
-                    }
+                        return tag + replaced + '</w:t>';
+                    });
                     zip4.file('word/document.xml', rawXml);
                     // Create a fake doc object with getZip() and getFullText()
                     doc = { getZip: () => zip4, getFullText: () => '', render: () => {} };
