@@ -732,7 +732,7 @@ const ManajemenKontrak = () => {
 
                                     <h4 style={{ margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.95rem' }}>ℹ️ Data Surat Perintah Kerja</h4>
                                     <div style={{ ...cs, marginBottom: 12 }}><div style={cl}>Jenis Kontrak</div><div style={cv}>{detail.jenisPengadaan || '-'}</div></div>
-                                    <div style={{ ...cs, marginBottom: 12 }}><div style={rl}>Nomor SPK</div><input style={fieldStyle} value={spkData.noSpk} onChange={e => setSpkData({ ...spkData, noSpk: e.target.value })} placeholder="400.3.13/400/A3/2026" /></div>
+                                    <div style={{ ...cs, marginBottom: 12 }}><div style={rl}>Nomor SPK</div><input style={editFieldStyle} value={spkData.noSpk} onChange={e => { const v = e.target.value; setSpkData({ ...spkData, noSpk: v }); const parts = v.split('/'); if (parts.length >= 2) { parts[1] = parts[1].replace(/\.a$/, '') + '.a'; } setSpSpmkData(prev => ({ ...prev, noSp: prev.noSp && !prev.noSp.endsWith('.a') ? prev.noSp : parts.join('/') })); }} placeholder="400.3.13/400/A3/2026" /></div>
 
                                     {/* Nilai Kontrak with anakan items */}
                                     <div style={{ ...cs, marginBottom: 12 }}>
@@ -740,14 +740,14 @@ const ManajemenKontrak = () => {
                                             <div style={rl}>Nilai Kontrak</div>
                                         </div>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                                            <input style={{ ...fieldStyle, flex: 1 }} value={nilaiItems.length > 1 ? `Rp. ${formatSeparator(totalNilai)}` : (spkData.nilaiKontrak ? `Rp. ${formatSeparator(spkData.nilaiKontrak)}` : '')} onChange={e => { if (nilaiItems.length <= 1) { const raw = parseSeparator(e.target.value.replace(/^Rp\.?\s?/, '')); const tb = numberToTerbilang(raw); setSpkData({ ...spkData, nilaiKontrak: raw, terbilangKontrak: tb }); if (nilaiItems.length === 1) setNilaiItems([{ ...nilaiItems[0], nilai: raw }]); } }} readOnly={nilaiItems.length > 1} />
+                                            <input style={{ ...editFieldStyle, flex: 1 }} value={nilaiItems.length > 1 ? `Rp. ${formatSeparator(totalNilai)}` : (spkData.nilaiKontrak ? `Rp. ${formatSeparator(spkData.nilaiKontrak)}` : '')} onChange={e => { if (nilaiItems.length <= 1) { const raw = parseSeparator(e.target.value.replace(/^Rp\.?\s?/, '')); const tb = numberToTerbilang(raw); setSpkData({ ...spkData, nilaiKontrak: raw, terbilangKontrak: tb }); if (nilaiItems.length === 1) setNilaiItems([{ ...nilaiItems[0], nilai: raw }]); } }} readOnly={nilaiItems.length > 1} />
                                             <button onClick={() => setNilaiItems(prev => [...prev, { nama: '', nilai: '' }])} style={{ width: 36, height: 36, borderRadius: '50%', border: 'none', background: 'var(--accent-blue)', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Plus size={18} /></button>
                                         </div>
                                         {/* Anakan rows */}
                                         {nilaiItems.length > 1 && nilaiItems.map((item, idx) => (
                                             <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 8, marginTop: 8 }}>
-                                                <input style={fieldStyle} value={item.nama} onChange={e => { const items = [...nilaiItems]; items[idx].nama = e.target.value; setNilaiItems(items); }} placeholder="Nama paket anakan" />
-                                                <input style={fieldStyle} value={item.nilai ? `Rp. ${formatSeparator(item.nilai)}` : ''} onChange={e => { const raw = parseSeparator(e.target.value.replace(/^Rp\.?\s?/, '')); const items = [...nilaiItems]; items[idx].nilai = raw; setNilaiItems(items); }} placeholder="Rp. 0" />
+                                                <input style={editFieldStyle} value={item.nama} onChange={e => { const items = [...nilaiItems]; items[idx].nama = e.target.value; setNilaiItems(items); }} placeholder="Nama paket anakan" />
+                                                <input style={editFieldStyle} value={item.nilai ? `Rp. ${formatSeparator(item.nilai)}` : ''} onChange={e => { const raw = parseSeparator(e.target.value.replace(/^Rp\.?\s?/, '')); const items = [...nilaiItems]; items[idx].nilai = raw; setNilaiItems(items); }} placeholder="Rp. 0" />
                                                 <button onClick={() => setNilaiItems(prev => prev.filter((_, i) => i !== idx))} style={{ width: 36, height: 36, borderRadius: '50%', border: 'none', background: '#ef4444', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Minus size={18} /></button>
                                             </div>
                                         ))}
@@ -760,15 +760,15 @@ const ManajemenKontrak = () => {
                                             : <div style={cv}>{nilaiItems.length > 1 ? numberToTerbilang(totalNilai) : (spkData.terbilangKontrak || '-')}</div>}
                                     </div>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-                                        <div style={cs}><div style={rl}>Tanggal Awal</div><input type="date" style={fieldStyle} value={spkData.tanggalMulai} onChange={e => { const tgl = e.target.value; const selesai = calcTanggalSelesai(tgl, spkData.waktuPenyelesaian); setSpkData({ ...spkData, tanggalMulai: tgl, tanggalSelesai: selesai }); }} /></div>
-                                        <div style={cs}><div style={rl}>Tanggal Akhir</div><input type="date" style={fieldStyle} value={spkData.tanggalSelesai} onChange={e => setSpkData({ ...spkData, tanggalSelesai: e.target.value })} /></div>
+                                        <div style={cs}><div style={rl}>Tanggal Awal</div><input type="date" style={editFieldStyle} value={spkData.tanggalMulai} onChange={e => { const tgl = e.target.value; const selesai = calcTanggalSelesai(tgl, spkData.waktuPenyelesaian); setSpkData({ ...spkData, tanggalMulai: tgl, tanggalSelesai: selesai }); }} /></div>
+                                        <div style={cs}><div style={rl}>Tanggal Akhir</div><input type="date" style={readOnlyStyle} value={spkData.tanggalSelesai} readOnly /></div>
                                     </div>
-                                    <div style={{ ...cs, marginBottom: 24 }}><div style={rl}>Waktu Penyelesaian</div><input style={fieldStyle} value={spkData.waktuPenyelesaian} onChange={e => { const hari = e.target.value; const selesai = calcTanggalSelesai(spkData.tanggalMulai, hari); setSpkData({ ...spkData, waktuPenyelesaian: hari, tanggalSelesai: selesai }); }} placeholder="90 hari kalender" /></div>
+                                    <div style={{ ...cs, marginBottom: 24 }}><div style={rl}>Waktu Penyelesaian</div><input style={editFieldStyle} value={spkData.waktuPenyelesaian} onChange={e => { const hari = e.target.value; const selesai = calcTanggalSelesai(spkData.tanggalMulai, hari); setSpkData({ ...spkData, waktuPenyelesaian: hari, tanggalSelesai: selesai }); }} placeholder="90 hari kalender" /></div>
 
                                     <h4 style={{ margin: '0 0 16px', display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.95rem' }}>ℹ️ Sistem Pembayaran</h4>
-                                    <div style={{ ...cs, marginBottom: 12 }}><div style={rl}>Tata Cara Pembayaran</div><input style={fieldStyle} value={spkData.tataCaraPembayaran} onChange={e => setSpkData({ ...spkData, tataCaraPembayaran: e.target.value })} placeholder="Termin / Bulanan" /></div>
+                                    <div style={{ ...cs, marginBottom: 12 }}><div style={rl}>Tata Cara Pembayaran</div><input style={editFieldStyle} value={spkData.tataCaraPembayaran} onChange={e => setSpkData({ ...spkData, tataCaraPembayaran: e.target.value })} placeholder="Termin / Bulanan" /></div>
                                     <div style={{ ...cs, marginBottom: 24 }}><div style={rl}>Uang Muka</div>
-                                        <select style={fieldStyle} value={spkData.uangMuka} onChange={e => setSpkData({ ...spkData, uangMuka: e.target.value })}>
+                                        <select style={editFieldStyle} value={spkData.uangMuka} onChange={e => setSpkData({ ...spkData, uangMuka: e.target.value })}>
                                             <option value="">Pilih Uang Muka</option>
                                             <option value="Ada Uang Muka">Ada Uang Muka</option>
                                             <option value="Tidak Ada Uang Muka">Tidak Ada Uang Muka</option>
@@ -937,9 +937,9 @@ const ManajemenKontrak = () => {
                                 <div>
                                     <div style={{ background: 'var(--accent-blue)', color: '#fff', padding: '10px 20px', borderRadius: 8, marginBottom: 20, fontWeight: 600, fontSize: '0.9rem' }}>Surat Perintah / SPMK</div>
                                     <div style={{ display: 'grid', gap: 12 }}>
-                                        <div style={cs}><div style={cl}>Nomor SP</div><input style={fieldStyle} value={spSpmkData.noSp} onChange={e => setSpSpmkData({ ...spSpmkData, noSp: e.target.value })} placeholder="Nomor Surat Perintah" /></div>
-                                        <div style={cs}><div style={cl}>Tanggal SP</div><input type="date" style={fieldStyle} value={spSpmkData.tanggalSp} onChange={e => setSpSpmkData({ ...spSpmkData, tanggalSp: e.target.value })} /></div>
-                                        <div style={cs}><div style={cl}>ID Paket</div><input style={fieldStyle} value={spSpmkData.idPaket} onChange={e => setSpSpmkData({ ...spSpmkData, idPaket: e.target.value })} placeholder="ID Paket / Kode SiRUP" /></div>
+                                        <div style={cs}><div style={cl}>Nomor SP</div><input style={editFieldStyle} value={spSpmkData.noSp} onChange={e => setSpSpmkData({ ...spSpmkData, noSp: e.target.value })} placeholder="Nomor Surat Perintah" /></div>
+                                        <div style={cs}><div style={cl}>Tanggal SP</div><input type="date" style={editFieldStyle} value={spSpmkData.tanggalSp} onChange={e => setSpSpmkData({ ...spSpmkData, tanggalSp: e.target.value })} /></div>
+                                        <div style={cs}><div style={cl}>ID Paket</div><input style={editFieldStyle} value={spSpmkData.idPaket} onChange={e => setSpSpmkData({ ...spSpmkData, idPaket: e.target.value })} placeholder="ID Paket / Kode SiRUP" /></div>
                                         <button className="btn btn-primary" onClick={handleSaveSpSpmk} disabled={saving}
                                             style={{ width: '100%', padding: '14px 0', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontWeight: 700, fontSize: '1rem', borderRadius: 10 }}>
                                             <Save size={18} /> {saving ? 'Menyimpan...' : '✓ Simpan Data SP/SPMK'}
