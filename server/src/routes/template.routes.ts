@@ -1714,25 +1714,55 @@ function buildPeralatanTableXml(items: any[], fontInfo: { font: string; sz: stri
 }
 
 // Build Personil TENDER table (Daftar Personel Manajerial - 7 columns)
+// Includes title, table, and footnotes matching official format
 function buildPersonilTenderTableXml(items: any[], fontInfo: { font: string; sz: string } = { font: '', sz: '' }): string {
-    const SZ = fontInfo.sz || '24';
-    const FONT = fontInfo.font || '';
+    const SZ = fontInfo.sz || '22';
+    const TITLE_SZ = '24';
+    const FONT = fontInfo.font || 'Arial';
+    const NOTE_SZ = '18';
 
-    function cell(text: string, widthPct: number, opts: { bold?: boolean; center?: boolean } = {}): string {
-        const safe = xmlEscape(text);
+    // Helper: build run properties XML
+    function rPrXml(opts: { bold?: boolean; sz?: string; superscript?: boolean } = {}): string {
+        const parts: string[] = [];
+        if (FONT) parts.push(`<w:rFonts w:ascii="${FONT}" w:hAnsi="${FONT}" w:cs="${FONT}"/>`);
+        parts.push(`<w:sz w:val="${opts.sz || SZ}"/><w:szCs w:val="${opts.sz || SZ}"/>`);
+        if (opts.bold) parts.push('<w:b/><w:bCs/>');
+        if (opts.superscript) parts.push('<w:vertAlign w:val="superscript"/>');
+        return '<w:rPr>' + parts.join('') + '</w:rPr>';
+    }
+
+    // Helper: build a paragraph
+    function para(runs: string[], opts: { center?: boolean; bold?: boolean; sz?: string; afterSpacing?: string } = {}): string {
+        const pPrParts: string[] = [];
+        if (opts.center) pPrParts.push('<w:jc w:val="center"/>');
+        const sp = opts.afterSpacing || '0';
+        pPrParts.push(`<w:spacing w:after="${sp}" w:line="240" w:lineRule="auto"/>`);
+        pPrParts.push(rPrXml({ bold: opts.bold, sz: opts.sz }));
+        return '<w:p><w:pPr>' + pPrParts.join('') + '</w:pPr>' + runs.join('') + '</w:p>';
+    }
+
+    // Helper: build a text run
+    function run(text: string, opts: { bold?: boolean; sz?: string; superscript?: boolean } = {}): string {
+        return '<w:r>' + rPrXml(opts) + '<w:t xml:space="preserve">' + xmlEscape(text) + '</w:t></w:r>';
+    }
+
+    // Helper: build a table cell with multiple runs (for superscript headers)
+    function cellMulti(runs: string[], widthPct: number, opts: { bold?: boolean; center?: boolean } = {}): string {
         const tcPr = `<w:tcPr><w:tcW w:w="${widthPct}" w:type="pct"/><w:vAlign w:val="center"/></w:tcPr>`;
-        const rPrParts: string[] = [];
-        if (FONT) rPrParts.push(`<w:rFonts w:ascii="${FONT}" w:hAnsi="${FONT}" w:cs="${FONT}"/>`);
-        rPrParts.push(`<w:sz w:val="${SZ}"/><w:szCs w:val="${SZ}"/>`);
-        if (opts.bold) rPrParts.push('<w:b/><w:bCs/>');
-        const rPr = '<w:rPr>' + rPrParts.join('') + '</w:rPr>';
         const pPrParts: string[] = [];
         if (opts.center) pPrParts.push('<w:jc w:val="center"/>');
         pPrParts.push('<w:spacing w:after="0" w:line="240" w:lineRule="auto"/>');
-        pPrParts.push(rPr);
-        const pPr = '<w:pPr>' + pPrParts.join('') + '</w:pPr>';
-        return '<w:tc>' + tcPr + '<w:p>' + pPr + '<w:r>' + rPr + '<w:t xml:space="preserve">' + safe + '</w:t></w:r></w:p></w:tc>';
+        pPrParts.push(rPrXml({ bold: opts.bold }));
+        return '<w:tc>' + tcPr + '<w:p><w:pPr>' + pPrParts.join('') + '</w:pPr>' + runs.join('') + '</w:p></w:tc>';
     }
+
+    // Simple text cell
+    function cell(text: string, widthPct: number, opts: { bold?: boolean; center?: boolean } = {}): string {
+        return cellMulti([run(text, { bold: opts.bold })], widthPct, opts);
+    }
+
+    // Title: DAFTAR PERSONEL MANAJERIAL
+    const titlePara = para([run('DAFTAR PERSONEL MANAJERIAL', { bold: true, sz: TITLE_SZ })], { center: true, bold: true, sz: TITLE_SZ, afterSpacing: '120' });
 
     const tblPr = '<w:tblPr>' +
         '<w:tblStyle w:val="TableGrid"/>' +
@@ -1743,13 +1773,14 @@ function buildPersonilTenderTableXml(items: any[], fontInfo: { font: string; sz:
 
     const grid = '<w:tblGrid><w:gridCol w:w="450"/><w:gridCol w:w="1300"/><w:gridCol w:w="1200"/><w:gridCol w:w="900"/><w:gridCol w:w="1100"/><w:gridCol w:w="1800"/><w:gridCol w:w="750"/></w:tblGrid>';
 
+    // Header with superscript annotations matching the example exactly
     const headerRow = '<w:tr>' +
         cell('No', 300, { bold: true, center: true }) +
-        cell('Nama Personel Manajerial', 870, { bold: true, center: true }) +
-        cell('Jabatan dalam Pekerjaan ini', 800, { bold: true, center: true }) +
-        cell('Tingkat Pendidikan/ Ijazah', 600, { bold: true, center: true }) +
-        cell('Pengalaman Kerja Profesional (Tahun)', 730, { bold: true, center: true }) +
-        cell('Sertifikat Kompetensi Kerja', 1200, { bold: true, center: true }) +
+        cellMulti([run('Nama Personel Manajerial', { bold: true })], 870, { bold: true, center: true }) +
+        cellMulti([run('Jabatan dalam Pekerjaan ini', { bold: true }), run('*)', { bold: true, superscript: true })], 800, { bold: true, center: true }) +
+        cellMulti([run('Tingkat Pendidika', { bold: true }), run('n/ Ijazah', { bold: true })], 600, { bold: true, center: true }) +
+        cellMulti([run('Pengalaman Kerja Profesional (Tahun)', { bold: true }), run('*)', { bold: true, superscript: true })], 730, { bold: true, center: true }) +
+        cellMulti([run('Sertifikat Kompetensi Kerja', { bold: true }), run('*)', { bold: true, superscript: true })], 1200, { bold: true, center: true }) +
         cell('Ket.', 500, { bold: true, center: true }) +
         '</w:tr>';
 
@@ -1765,29 +1796,60 @@ function buildPersonilTenderTableXml(items: any[], fontInfo: { font: string; sz:
         '</w:tr>'
     ).join('');
 
-    return '<w:tbl>' + tblPr + grid + headerRow + dataRows + '</w:tbl>';
+    // Catatan footnotes
+    const catatan =
+        para([run('Catatan:', { bold: true, sz: NOTE_SZ })], { sz: NOTE_SZ, afterSpacing: '0' }) +
+        para([run('*)', { sz: NOTE_SZ, superscript: true }), run('Wajib diisi oleh PPK sewaktu penyusunan rancangan kontrak', { sz: NOTE_SZ })], { sz: NOTE_SZ, afterSpacing: '0' }) +
+        para([run('**)', { sz: NOTE_SZ, superscript: true }), run('Wajib diisi saat rapat persiapan penandatanganan kontrak berdasarkan dokumen penawaran', { sz: NOTE_SZ })], { sz: NOTE_SZ, afterSpacing: '0' });
+
+    return titlePara + '<w:tbl>' + tblPr + grid + headerRow + dataRows + '</w:tbl>' + catatan;
 }
 
 // Build Peralatan TENDER table (Daftar Peralatan Utama - 8 columns)
+// Includes title, table, and footnotes matching official format
 function buildPeralatanTenderTableXml(items: any[], fontInfo: { font: string; sz: string } = { font: '', sz: '' }): string {
-    const SZ = fontInfo.sz || '24';
-    const FONT = fontInfo.font || '';
+    const SZ = fontInfo.sz || '22';
+    const TITLE_SZ = '24';
+    const FONT = fontInfo.font || 'Arial';
+    const NOTE_SZ = '18';
 
-    function cell(text: string, widthPct: number, opts: { bold?: boolean; center?: boolean } = {}): string {
-        const safe = xmlEscape(text);
+    function rPrXml(opts: { bold?: boolean; sz?: string; superscript?: boolean } = {}): string {
+        const parts: string[] = [];
+        if (FONT) parts.push(`<w:rFonts w:ascii="${FONT}" w:hAnsi="${FONT}" w:cs="${FONT}"/>`);
+        parts.push(`<w:sz w:val="${opts.sz || SZ}"/><w:szCs w:val="${opts.sz || SZ}"/>`);
+        if (opts.bold) parts.push('<w:b/><w:bCs/>');
+        if (opts.superscript) parts.push('<w:vertAlign w:val="superscript"/>');
+        return '<w:rPr>' + parts.join('') + '</w:rPr>';
+    }
+
+    function para(runs: string[], opts: { center?: boolean; bold?: boolean; sz?: string; afterSpacing?: string } = {}): string {
+        const pPrParts: string[] = [];
+        if (opts.center) pPrParts.push('<w:jc w:val="center"/>');
+        const sp = opts.afterSpacing || '0';
+        pPrParts.push(`<w:spacing w:after="${sp}" w:line="240" w:lineRule="auto"/>`);
+        pPrParts.push(rPrXml({ bold: opts.bold, sz: opts.sz }));
+        return '<w:p><w:pPr>' + pPrParts.join('') + '</w:pPr>' + runs.join('') + '</w:p>';
+    }
+
+    function run(text: string, opts: { bold?: boolean; sz?: string; superscript?: boolean } = {}): string {
+        return '<w:r>' + rPrXml(opts) + '<w:t xml:space="preserve">' + xmlEscape(text) + '</w:t></w:r>';
+    }
+
+    function cellMulti(runs: string[], widthPct: number, opts: { bold?: boolean; center?: boolean } = {}): string {
         const tcPr = `<w:tcPr><w:tcW w:w="${widthPct}" w:type="pct"/><w:vAlign w:val="center"/></w:tcPr>`;
-        const rPrParts: string[] = [];
-        if (FONT) rPrParts.push(`<w:rFonts w:ascii="${FONT}" w:hAnsi="${FONT}" w:cs="${FONT}"/>`);
-        rPrParts.push(`<w:sz w:val="${SZ}"/><w:szCs w:val="${SZ}"/>`);
-        if (opts.bold) rPrParts.push('<w:b/><w:bCs/>');
-        const rPr = '<w:rPr>' + rPrParts.join('') + '</w:rPr>';
         const pPrParts: string[] = [];
         if (opts.center) pPrParts.push('<w:jc w:val="center"/>');
         pPrParts.push('<w:spacing w:after="0" w:line="240" w:lineRule="auto"/>');
-        pPrParts.push(rPr);
-        const pPr = '<w:pPr>' + pPrParts.join('') + '</w:pPr>';
-        return '<w:tc>' + tcPr + '<w:p>' + pPr + '<w:r>' + rPr + '<w:t xml:space="preserve">' + safe + '</w:t></w:r></w:p></w:tc>';
+        pPrParts.push(rPrXml({ bold: opts.bold }));
+        return '<w:tc>' + tcPr + '<w:p><w:pPr>' + pPrParts.join('') + '</w:pPr>' + runs.join('') + '</w:p></w:tc>';
     }
+
+    function cell(text: string, widthPct: number, opts: { bold?: boolean; center?: boolean } = {}): string {
+        return cellMulti([run(text, { bold: opts.bold })], widthPct, opts);
+    }
+
+    // Title: DAFTAR PERALATAN UTAMA
+    const titlePara = para([run('DAFTAR PERALATAN UTAMA', { bold: true, sz: TITLE_SZ })], { center: true, bold: true, sz: TITLE_SZ, afterSpacing: '120' });
 
     const tblPr = '<w:tblPr>' +
         '<w:tblStyle w:val="TableGrid"/>' +
@@ -1798,14 +1860,15 @@ function buildPeralatanTenderTableXml(items: any[], fontInfo: { font: string; sz
 
     const grid = '<w:tblGrid><w:gridCol w:w="400"/><w:gridCol w:w="1100"/><w:gridCol w:w="900"/><w:gridCol w:w="800"/><w:gridCol w:w="700"/><w:gridCol w:w="800"/><w:gridCol w:w="1100"/><w:gridCol w:w="700"/></w:tblGrid>';
 
+    // Header with superscript annotations matching the example
     const headerRow = '<w:tr>' +
         cell('No', 270, { bold: true, center: true }) +
-        cell('Nama Peralatan Utama', 740, { bold: true, center: true }) +
-        cell('Merk dan Tipe', 600, { bold: true, center: true }) +
-        cell('Kapasitas', 540, { bold: true, center: true }) +
-        cell('Jumlah', 470, { bold: true, center: true }) +
-        cell('Kondisi', 540, { bold: true, center: true }) +
-        cell('Status Kepemilikan', 740, { bold: true, center: true }) +
+        cellMulti([run('Nama Peralatan Utama', { bold: true }), run('*)', { bold: true, superscript: true })], 740, { bold: true, center: true }) +
+        cellMulti([run('Merk dan Tipe', { bold: true }), run('**)', { bold: true, superscript: true })], 600, { bold: true, center: true }) +
+        cellMulti([run('Kapasitas', { bold: true }), run('**)', { bold: true, superscript: true })], 540, { bold: true, center: true }) +
+        cellMulti([run('Jumlah', { bold: true }), run('**)', { bold: true, superscript: true })], 470, { bold: true, center: true }) +
+        cellMulti([run('Kondisi', { bold: true }), run('*)', { bold: true, superscript: true })], 540, { bold: true, center: true }) +
+        cellMulti([run('Status Kepemilikan', { bold: true }), run('**)', { bold: true, superscript: true })], 740, { bold: true, center: true }) +
         cell('Ket.', 470, { bold: true, center: true }) +
         '</w:tr>';
 
@@ -1823,8 +1886,15 @@ function buildPeralatanTenderTableXml(items: any[], fontInfo: { font: string; sz
             '</w:tr>';
     }).join('');
 
-    return '<w:tbl>' + tblPr + grid + headerRow + dataRows + '</w:tbl>';
+    // Catatan footnotes
+    const catatan =
+        para([run('Catatan:', { bold: true, sz: NOTE_SZ })], { sz: NOTE_SZ, afterSpacing: '0' }) +
+        para([run('*)', { sz: NOTE_SZ, superscript: true }), run('Wajib diisi oleh PPK sewaktu penyusunan rancangan kontrak', { sz: NOTE_SZ })], { sz: NOTE_SZ, afterSpacing: '0' }) +
+        para([run('**)', { sz: NOTE_SZ, superscript: true }), run('Wajib diisi saat rapat persiapan penandatanganan kontrak berdasarkan dokumen penawaran', { sz: NOTE_SZ })], { sz: NOTE_SZ, afterSpacing: '0' });
+
+    return titlePara + '<w:tbl>' + tblPr + grid + headerRow + dataRows + '</w:tbl>' + catatan;
 }
+
 
 // Build Uraian Singkat table (Lingkup Pekerjaan - numbered list)
 function buildUraianTableXml(items: string[], fontInfo: { font: string; sz: string } = { font: '', sz: '' }): string {
