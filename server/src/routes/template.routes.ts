@@ -1,4 +1,4 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import { templateService } from '../services/bast.service.js';
 import { splHistoryService } from '../services/matrik.service.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
@@ -523,6 +523,22 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
                 const fi = extractFontFromParagraph(docXml, '__PERALATAN_TABLE__');
                 docXml = injectTable(docXml, '__PERALATAN_TABLE__', buildPeralatanTableXml(peralatanItems, fi));
                 console.log('[Template] Injected peralatan table with', peralatanItems.length, 'rows, font:', fi.font || 'inherit', fi.sz || 'inherit');
+                changed = true;
+            }
+
+            // Inject personil TENDER table
+            if (personilItems.length > 0 && docXml.includes('__PERSONIL_TENDER_TABLE__')) {
+                const fi = extractFontFromParagraph(docXml, '__PERSONIL_TENDER_TABLE__');
+                docXml = injectTable(docXml, '__PERSONIL_TENDER_TABLE__', buildPersonilTenderTableXml(personilItems, fi));
+                console.log('[Template] Injected TENDER personil table with', personilItems.length, 'rows');
+                changed = true;
+            }
+
+            // Inject peralatan TENDER table
+            if (peralatanItems.length > 0 && docXml.includes('__PERALATAN_TENDER_TABLE__')) {
+                const fi = extractFontFromParagraph(docXml, '__PERALATAN_TENDER_TABLE__');
+                docXml = injectTable(docXml, '__PERALATAN_TENDER_TABLE__', buildPeralatanTenderTableXml(peralatanItems, fi));
+                console.log('[Template] Injected TENDER peralatan table with', peralatanItems.length, 'rows');
                 changed = true;
             }
 
@@ -1692,6 +1708,119 @@ function buildPeralatanTableXml(items: any[], fontInfo: { font: string; sz: stri
     }).join('');
 
     // Table only (title is already in the template)
+    return '<w:tbl>' + tblPr + grid + headerRow + dataRows + '</w:tbl>';
+}
+
+// Build Personil TENDER table (Daftar Personel Manajerial - 7 columns)
+function buildPersonilTenderTableXml(items: any[], fontInfo: { font: string; sz: string } = { font: '', sz: '' }): string {
+    const SZ = fontInfo.sz || '24';
+    const FONT = fontInfo.font || '';
+
+    function cell(text: string, widthPct: number, opts: { bold?: boolean; center?: boolean } = {}): string {
+        const safe = xmlEscape(text);
+        const tcPr = `<w:tcPr><w:tcW w:w="${widthPct}" w:type="pct"/><w:vAlign w:val="center"/></w:tcPr>`;
+        const rPrParts: string[] = [];
+        if (FONT) rPrParts.push(`<w:rFonts w:ascii="${FONT}" w:hAnsi="${FONT}" w:cs="${FONT}"/>`);
+        rPrParts.push(`<w:sz w:val="${SZ}"/><w:szCs w:val="${SZ}"/>`);
+        if (opts.bold) rPrParts.push('<w:b/><w:bCs/>');
+        const rPr = '<w:rPr>' + rPrParts.join('') + '</w:rPr>';
+        const pPrParts: string[] = [];
+        if (opts.center) pPrParts.push('<w:jc w:val="center"/>');
+        pPrParts.push('<w:spacing w:after="0" w:line="240" w:lineRule="auto"/>');
+        pPrParts.push(rPr);
+        const pPr = '<w:pPr>' + pPrParts.join('') + '</w:pPr>';
+        return '<w:tc>' + tcPr + '<w:p>' + pPr + '<w:r>' + rPr + '<w:t xml:space="preserve">' + safe + '</w:t></w:r></w:p></w:tc>';
+    }
+
+    const tblPr = '<w:tblPr>' +
+        '<w:tblStyle w:val="TableGrid"/>' +
+        '<w:tblW w:w="5000" w:type="pct"/>' +
+        stdBorders() +
+        '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>' +
+        '</w:tblPr>';
+
+    const grid = '<w:tblGrid><w:gridCol w:w="450"/><w:gridCol w:w="1300"/><w:gridCol w:w="1200"/><w:gridCol w:w="900"/><w:gridCol w:w="1100"/><w:gridCol w:w="1800"/><w:gridCol w:w="750"/></w:tblGrid>';
+
+    const headerRow = '<w:tr>' +
+        cell('No', 300, { bold: true, center: true }) +
+        cell('Nama Personel Manajerial', 870, { bold: true, center: true }) +
+        cell('Jabatan dalam Pekerjaan ini', 800, { bold: true, center: true }) +
+        cell('Tingkat Pendidikan/ Ijazah', 600, { bold: true, center: true }) +
+        cell('Pengalaman Kerja Profesional (Tahun)', 730, { bold: true, center: true }) +
+        cell('Sertifikat Kompetensi Kerja', 1200, { bold: true, center: true }) +
+        cell('Ket.', 500, { bold: true, center: true }) +
+        '</w:tr>';
+
+    const dataRows = items.map((it, i) =>
+        '<w:tr>' +
+        cell(String(i + 1), 300, { center: true }) +
+        cell(it.nama || '', 870) +
+        cell(it.posisi || '', 800) +
+        cell(it.pendidikan || '', 600, { center: true }) +
+        cell((it.pengalaman ? it.pengalaman + ' Tahun' : '0 Tahun'), 730, { center: true }) +
+        cell(it.sertifikasi || '', 1200) +
+        cell(it.keterangan || 'Masih Berlaku', 500) +
+        '</w:tr>'
+    ).join('');
+
+    return '<w:tbl>' + tblPr + grid + headerRow + dataRows + '</w:tbl>';
+}
+
+// Build Peralatan TENDER table (Daftar Peralatan Utama - 8 columns)
+function buildPeralatanTenderTableXml(items: any[], fontInfo: { font: string; sz: string } = { font: '', sz: '' }): string {
+    const SZ = fontInfo.sz || '24';
+    const FONT = fontInfo.font || '';
+
+    function cell(text: string, widthPct: number, opts: { bold?: boolean; center?: boolean } = {}): string {
+        const safe = xmlEscape(text);
+        const tcPr = `<w:tcPr><w:tcW w:w="${widthPct}" w:type="pct"/><w:vAlign w:val="center"/></w:tcPr>`;
+        const rPrParts: string[] = [];
+        if (FONT) rPrParts.push(`<w:rFonts w:ascii="${FONT}" w:hAnsi="${FONT}" w:cs="${FONT}"/>`);
+        rPrParts.push(`<w:sz w:val="${SZ}"/><w:szCs w:val="${SZ}"/>`);
+        if (opts.bold) rPrParts.push('<w:b/><w:bCs/>');
+        const rPr = '<w:rPr>' + rPrParts.join('') + '</w:rPr>';
+        const pPrParts: string[] = [];
+        if (opts.center) pPrParts.push('<w:jc w:val="center"/>');
+        pPrParts.push('<w:spacing w:after="0" w:line="240" w:lineRule="auto"/>');
+        pPrParts.push(rPr);
+        const pPr = '<w:pPr>' + pPrParts.join('') + '</w:pPr>';
+        return '<w:tc>' + tcPr + '<w:p>' + pPr + '<w:r>' + rPr + '<w:t xml:space="preserve">' + safe + '</w:t></w:r></w:p></w:tc>';
+    }
+
+    const tblPr = '<w:tblPr>' +
+        '<w:tblStyle w:val="TableGrid"/>' +
+        '<w:tblW w:w="5000" w:type="pct"/>' +
+        stdBorders() +
+        '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>' +
+        '</w:tblPr>';
+
+    const grid = '<w:tblGrid><w:gridCol w:w="400"/><w:gridCol w:w="1100"/><w:gridCol w:w="900"/><w:gridCol w:w="800"/><w:gridCol w:w="700"/><w:gridCol w:w="800"/><w:gridCol w:w="1100"/><w:gridCol w:w="700"/></w:tblGrid>';
+
+    const headerRow = '<w:tr>' +
+        cell('No', 270, { bold: true, center: true }) +
+        cell('Nama Peralatan Utama', 740, { bold: true, center: true }) +
+        cell('Merk dan Tipe', 600, { bold: true, center: true }) +
+        cell('Kapasitas', 540, { bold: true, center: true }) +
+        cell('Jumlah', 470, { bold: true, center: true }) +
+        cell('Kondisi', 540, { bold: true, center: true }) +
+        cell('Status Kepemilikan', 740, { bold: true, center: true }) +
+        cell('Ket.', 470, { bold: true, center: true }) +
+        '</w:tr>';
+
+    const dataRows = items.map((it, i) => {
+        const merkTipe = [it.merk, it.type].filter(Boolean).join(' ');
+        return '<w:tr>' +
+            cell(String(i + 1), 270, { center: true }) +
+            cell(it.nama || '', 740) +
+            cell(merkTipe || '-', 600, { center: true }) +
+            cell(it.kapasitas || '', 540, { center: true }) +
+            cell(String(it.jumlah || '1'), 470, { center: true }) +
+            cell(it.kondisi || 'Baik', 540, { center: true }) +
+            cell(it.statusKepemilikan || '', 740, { center: true }) +
+            cell(it.keterangan || '-', 470, { center: true }) +
+            '</w:tr>';
+    }).join('');
+
     return '<w:tbl>' + tblPr + grid + headerRow + dataRows + '</w:tbl>';
 }
 
