@@ -311,8 +311,10 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
         // Add table markers as regular variables (post-processed after render)
         // Always set so {{tag}} is cleared even when no data exists
         vars.tabelRincian = rincianItems.length > 0 ? '__RINCIAN_TABLE__' : '';
-        vars.tabelPersonil = personilItems.length > 0 ? '__PERSONIL_TABLE__' : '';
-        vars.tabelPeralatan = peralatanItems.length > 0 ? '__PERALATAN_TABLE__' : '';
+        const isTender = ((item.metode || item.metodePengadaan || '') + ' ' + (item.jenisPengadaan || '')).toLowerCase().includes('tender');
+        console.log('[Template] isTender:', isTender, 'metode:', item.metode, 'metodePengadaan:', item.metodePengadaan);
+        vars.tabelPersonil = personilItems.length > 0 ? (isTender ? '__PERSONIL_TENDER_TABLE__' : '__PERSONIL_TABLE__') : '';
+        vars.tabelPeralatan = peralatanItems.length > 0 ? (isTender ? '__PERALATAN_TENDER_TABLE__' : '__PERALATAN_TABLE__') : '';
         vars.tabelUraianSingkat = uraianItems.length > 0 ? '__URAIAN_TABLE__' : '';
 
         // ===== KOP SEKOLAH: Pre-download image =====
