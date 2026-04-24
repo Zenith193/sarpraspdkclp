@@ -144,10 +144,11 @@ const DashboardPenyedia = () => {
     };
 
     const fieldStyle = { width: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 8, fontSize: '0.9rem', background: 'var(--bg-secondary)', color: 'var(--text-primary)', boxSizing: 'border-box' };
+    const editFieldStyle = { ...fieldStyle, background: 'rgba(59,130,246,0.08)', border: '1.5px solid rgba(59,130,246,0.35)', color: 'var(--text-primary)' };
     const readOnlyStyle = { ...fieldStyle, background: 'var(--bg-tertiary, rgba(128,128,128,0.08))', color: 'var(--text-secondary)' };
     const labelStyle = { fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' };
-    const tblInput = { padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 6, fontSize: '0.78rem', background: 'var(--bg-secondary)', color: 'var(--text-primary)', boxSizing: 'border-box' };
-    const tblSelect = { ...tblInput, padding: '5px 4px' };
+    const tblInput = { padding: '5px 8px', border: '1.5px solid rgba(59,130,246,0.35)', borderRadius: 6, fontSize: '0.78rem', background: 'rgba(59,130,246,0.08)', color: 'var(--text-primary)', boxSizing: 'border-box' };
+    const tblSelect = { ...tblInput, padding: '5px 4px', cursor: 'pointer', backgroundColor: '#1e293b', color: '#e2e8f0' };
 
     if (loading) return <div className="page-container" style={{ textAlign: 'center', padding: 80, color: 'var(--text-secondary)' }}>Memuat data...</div>;
 
@@ -315,12 +316,12 @@ const DashboardPenyedia = () => {
                     {searchResult && (
                         <>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-                            <div style={cs}><div style={cl}>Nomor DPPL/ Nomor SPPBJ (Tender)</div><input style={fieldStyle} placeholder="Nomor DPPL" value={noDppl} onChange={e => setNoDppl(e.target.value)} /></div>
-                            <div style={cs}><div style={cl}>Tanggal DPPL/ Tanggal SPPBJ (Tender)</div><input type="date" style={fieldStyle} value={tanggalDppl} onChange={e => setTanggalDppl(e.target.value)} /></div>
+                            <div style={cs}><div style={cl}>Nomor DPPL/ Nomor SPPBJ (Tender)</div><input style={editFieldStyle} placeholder="Nomor DPPL" value={noDppl} onChange={e => setNoDppl(e.target.value)} /></div>
+                            <div style={cs}><div style={cl}>Tanggal DPPL/ Tanggal SPPBJ (Tender)</div><input type="date" style={editFieldStyle} value={tanggalDppl} onChange={e => setTanggalDppl(e.target.value)} /></div>
                         </div>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-                            <div style={cs}><div style={cl}>Nomor BAHPL/ Nomor Penetapan Pemenang (Tender)</div><input style={fieldStyle} placeholder="Nomor BAHPL" value={noBahpl} onChange={e => setNoBahpl(e.target.value)} /></div>
-                            <div style={cs}><div style={cl}>Tanggal BAHPL/ Tanggal Penetapan Pemenang (Tender)</div><input type="date" style={fieldStyle} value={tanggalBahpl} onChange={e => setTanggalBahpl(e.target.value)} /></div>
+                            <div style={cs}><div style={cl}>Nomor BAHPL/ Nomor Penetapan Pemenang (Tender)</div><input style={editFieldStyle} placeholder="Nomor BAHPL" value={noBahpl} onChange={e => setNoBahpl(e.target.value)} /></div>
+                            <div style={cs}><div style={cl}>Tanggal BAHPL/ Tanggal Penetapan Pemenang (Tender)</div><input type="date" style={editFieldStyle} value={tanggalBahpl} onChange={e => setTanggalBahpl(e.target.value)} /></div>
                         </div>
                         <div style={{ ...cs, marginBottom: 24 }}><div style={cl}>Berkas Penawaran</div>
                             <label style={{ cursor: 'pointer', display: 'inline-block' }}>
@@ -374,7 +375,7 @@ const DashboardPenyedia = () => {
                                     <td><input style={tblInput} value={timInput.nama} onChange={e => setTimInput({ ...timInput, nama: e.target.value })} /></td>
                                     <td><input style={tblInput} value={timInput.posisi} onChange={e => setTimInput({ ...timInput, posisi: e.target.value })} /></td>
                                     <td><select style={tblSelect} value={timInput.statusTenaga} onChange={e => setTimInput({ ...timInput, statusTenaga: e.target.value })}><option value="">Pilih Status Te...</option><option>Tenaga Ahli</option><option>Tenaga Penunjang</option><option>Tenaga Teknis</option></select></td>
-                                    <td><select style={tblSelect} value={timInput.pendidikan} onChange={e => setTimInput({ ...timInput, pendidikan: e.target.value })}><option value="">Pilih Pendid...</option><option>SD</option><option>SMP</option><option>SMA</option><option>D1</option><option>D2</option><option>D3</option><option>S1/D4</option><option>S2</option><option>S3</option></select></td>
+                                    <td><select style={tblSelect} value={timInput.pendidikan} onChange={e => setTimInput({ ...timInput, pendidikan: e.target.value })}><option value="">Pilih Pendid...</option><option>SD</option><option>SMP</option><option>SMA/SMK</option><option>D1</option><option>D2</option><option>D3</option><option>S1/D4</option><option>S2</option><option>S3</option></select></td>
                                     <td><input type="number" style={tblInput} placeholder="0" value={timInput.pengalaman} onChange={e => setTimInput({ ...timInput, pengalaman: e.target.value })} /></td>
                                     <td><input style={tblInput} value={timInput.sertifikasi} onChange={e => setTimInput({ ...timInput, sertifikasi: e.target.value })} /></td>
                                     <td><input style={tblInput} value={timInput.keterangan} onChange={e => setTimInput({ ...timInput, keterangan: e.target.value })} /></td>
@@ -522,7 +523,7 @@ const DashboardPenyedia = () => {
                             </div>
                             {detailModal.berkasPenawaranPath && (
                                 <div style={{ ...cs, marginBottom: 12 }}><div style={cl}>Berkas Penawaran</div>
-                                    <a href={detailModal.berkasPenawaranPath} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-blue)', textDecoration: 'underline', fontSize: '0.875rem' }}>📄 Lihat Dokumen PDF</a>
+                                    <a href={detailModal.berkasPenawaranPath?.startsWith('gdrive://') ? `/api/file/kontrak/${encodeURIComponent(detailModal.berkasPenawaranPath)}` : detailModal.berkasPenawaranPath} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-blue)', textDecoration: 'underline', fontSize: '0.875rem' }}>📄 Lihat Dokumen PDF</a>
                                 </div>
                             )}
 
