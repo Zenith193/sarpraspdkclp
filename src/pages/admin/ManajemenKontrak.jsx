@@ -792,7 +792,7 @@ const ManajemenKontrak = () => {
                             {/* LAMPIRAN */}
                             {tab === 'lampiran' && (() => {
                                 const tblInput = { padding: '5px 8px', border: '1.5px solid rgba(59,130,246,0.35)', borderRadius: 6, fontSize: '0.78rem', background: 'rgba(59,130,246,0.08)', color: 'var(--text-primary)', boxSizing: 'border-box' };
-                                const tblSelect = { ...tblInput, padding: '5px 4px', cursor: 'pointer' };
+                                const tblSelect = { ...tblInput, padding: '5px 4px', cursor: 'pointer', color: 'var(--text-primary)' };
                                 return (
                                 <div>
                                     <div style={{ background: 'var(--accent-blue)', color: '#fff', padding: '10px 20px', borderRadius: 8, marginBottom: 20, fontWeight: 600, fontSize: '0.9rem' }}>Lampiran</div>
