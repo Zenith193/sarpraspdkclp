@@ -791,8 +791,8 @@ const ManajemenKontrak = () => {
 
                             {/* LAMPIRAN */}
                             {tab === 'lampiran' && (() => {
-                                const tblInput = { padding: '5px 8px', border: '1px solid var(--border)', borderRadius: 6, fontSize: '0.78rem', background: 'var(--bg-secondary)', color: 'var(--text-primary)', boxSizing: 'border-box' };
-                                const tblSelect = { ...tblInput, padding: '5px 4px' };
+                                const tblInput = { padding: '5px 8px', border: '1.5px solid rgba(59,130,246,0.35)', borderRadius: 6, fontSize: '0.78rem', background: 'rgba(59,130,246,0.08)', color: 'var(--text-primary)', boxSizing: 'border-box' };
+                                const tblSelect = { ...tblInput, padding: '5px 4px', cursor: 'pointer' };
                                 return (
                                 <div>
                                     <div style={{ background: 'var(--accent-blue)', color: '#fff', padding: '10px 20px', borderRadius: 8, marginBottom: 20, fontWeight: 600, fontSize: '0.9rem' }}>Lampiran</div>
@@ -827,7 +827,7 @@ const ManajemenKontrak = () => {
                                                     <td><input style={tblInput} value={timInput.nama} onChange={e => setTimInput({ ...timInput, nama: e.target.value })} /></td>
                                                     <td><input style={tblInput} value={timInput.posisi} onChange={e => setTimInput({ ...timInput, posisi: e.target.value })} /></td>
                                                     <td><select style={tblSelect} value={timInput.statusTenaga} onChange={e => setTimInput({ ...timInput, statusTenaga: e.target.value })}><option value="">Pilih Status Tenaga</option><option>Tenaga Ahli</option><option>Tenaga Penunjang</option><option>Tenaga Teknis</option></select></td>
-                                                    <td><select style={tblSelect} value={timInput.pendidikan} onChange={e => setTimInput({ ...timInput, pendidikan: e.target.value })}><option value="">Pilih Pendidikan</option><option>SD</option><option>SMP</option><option>SMA</option><option>D1</option><option>D2</option><option>D3</option><option>D4/S1</option><option>S2</option><option>S3</option></select></td>
+                                                    <td><select style={tblSelect} value={timInput.pendidikan} onChange={e => setTimInput({ ...timInput, pendidikan: e.target.value })}><option value="">Pilih Pendidikan</option><option>SD</option><option>SMP</option><option>SMA</option><option>SMA/SMK</option><option>SMK</option><option>D1</option><option>D2</option><option>D3</option><option>D4/S1</option><option>S2</option><option>S3</option></select></td>
                                                     <td><input type="number" style={tblInput} placeholder="0" value={timInput.pengalaman} onChange={e => setTimInput({ ...timInput, pengalaman: e.target.value })} /></td>
                                                     <td><input style={tblInput} value={timInput.sertifikasi} onChange={e => setTimInput({ ...timInput, sertifikasi: e.target.value })} /></td>
                                                     <td><input style={tblInput} value={timInput.keterangan} onChange={e => setTimInput({ ...timInput, keterangan: e.target.value })} /></td>
@@ -874,14 +874,14 @@ const ManajemenKontrak = () => {
                                         {editUraianSingkat.map((item, i) => (
                                             <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
                                                 <span style={{ minWidth: 28, fontWeight: 600, fontSize: '0.82rem', color: 'var(--text-secondary)' }}>{i + 1}.</span>
-                                                <input style={{ flex: 1, padding: '7px 10px', border: '1px solid var(--border)', borderRadius: 6, fontSize: '0.82rem', background: 'var(--bg-secondary)', color: 'var(--text-primary)' }} value={item} onChange={e => { const arr = [...editUraianSingkat]; arr[i] = e.target.value; setEditUraianSingkat(arr); }} />
+                                                <input style={{ flex: 1, padding: '7px 10px', border: '1.5px solid rgba(59,130,246,0.35)', borderRadius: 6, fontSize: '0.82rem', background: 'rgba(59,130,246,0.08)', color: 'var(--text-primary)' }} value={item} onChange={e => { const arr = [...editUraianSingkat]; arr[i] = e.target.value; setEditUraianSingkat(arr); }} />
                                                 <button onClick={() => setEditUraianSingkat(r => r.filter((_, idx) => idx !== i))} style={{ background: '#ef4444', color: '#fff', border: 'none', borderRadius: 4, padding: '4px 8px', cursor: 'pointer', fontSize: '0.72rem', fontWeight: 600 }}>Hapus</button>
                                             </div>
                                         ))}
                                         <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
                                             <textarea
                                                 rows={1}
-                                                style={{ flex: 1, padding: '7px 10px', border: '1px solid var(--border)', borderRadius: 6, fontSize: '0.82rem', background: 'var(--bg-secondary)', color: 'var(--text-primary)', resize: 'vertical', minHeight: 36, fontFamily: 'inherit' }}
+                                                style={{ flex: 1, padding: '7px 10px', border: '1.5px solid rgba(59,130,246,0.35)', borderRadius: 6, fontSize: '0.82rem', background: 'rgba(59,130,246,0.08)', color: 'var(--text-primary)', resize: 'vertical', minHeight: 36, fontFamily: 'inherit' }}
                                                 value={uraianInput}
                                                 onChange={e => setUraianInput(e.target.value)}
                                                 placeholder="Ketik satu item atau paste banyak (1. Pekerjaan Persiapan&#10;2. Pekerjaan Tanah&#10;...)"
