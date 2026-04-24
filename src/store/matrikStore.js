@@ -1,4 +1,4 @@
-import { create } from 'zustand';
+﻿import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { SUB_KEGIATAN } from '../utils/constants';
 
@@ -50,19 +50,22 @@ export { SUMBER_DANA, JENIS_PENGADAAN, METODE_PEMILIHAN, STATUS_PEMILIK };
 
 // ===== HELPERS =====
 const currentYear = new Date().getFullYear();
-const KODE_JENIS_MAP = { 'Jasa Konsultansi Perencanaan': 'A1', 'Jasa Konsultansi Pengawasan': 'A2', 'Pekerjaan Konstruksi': 'A3' };
-const KODE_BARANG_MAP = { 'APBD': 'A4', 'APBD Perubahan': 'A4', 'BANKEU': 'B4', 'DAK': 'D4', 'SG': 'S4', 'Bantuan Pemerintah': 'BP4' };
-
-export const generateNoSpk = (noMatrik, jenis, sumber, tahun) => {
+// Dynamic code: compose from configKodeMap (sumberDana code + jenisPengadaan code)
+// e.g. DAK(D) + Jasa Konsultansi Pengawasan(2) = D2
+export const generateNoSpk = (noMatrik, jenis, sumber, tahun, kodeMap) => {
     if (!noMatrik || !jenis || !tahun) return '';
-    let kode = 'XX';
-    if (jenis === 'Pengadaan Barang') { kode = KODE_BARANG_MAP[sumber] || 'X4'; } else { kode = KODE_JENIS_MAP[jenis] || 'XX'; }
+    // Get configKodeMap from store if not passed
+    const km = kodeMap || useMatrikStore.getState().configKodeMap || {};
+    const sumberKode = km[sumber] || 'X';
+    const jenisKode = km[jenis] || 'X';
+    const kode = sumberKode + jenisKode;
     const cleanMatrik = String(noMatrik).replace(/\s/g, '');
     const parts = cleanMatrik.split(',');
     const mainPart = parts[0].padStart(3, '0');
     let formattedMatrik = mainPart;
     if (parts.length > 1) formattedMatrik = mainPart + ',' + parts.slice(1).join(',');
     return `400.3.13/${formattedMatrik}/${kode}/${tahun}`;
+;
 };
 
 export const inferJenjang = (inputString) => {
