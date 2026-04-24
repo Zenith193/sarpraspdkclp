@@ -1743,7 +1743,7 @@ function buildPersonilTenderTableXml(items: any[], fontInfo: { font: string; sz:
 
     // tblInd w:w="0" forces table to left margin regardless of paragraph indent
     const tblPr = '<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="5000" w:type="pct"/>' +
-        '<w:tblInd w:w="0" w:type="dxa"/>' + stdBorders() +
+        '<w:tblInd w:w="-108" w:type="dxa"/>' + stdBorders() +
         '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr>';
 
     // Proportional columns (pct of 5000) - wider for long headers to prevent mid-word breaks
@@ -1804,7 +1804,7 @@ function buildPeralatanTenderTableXml(items: any[], fontInfo: { font: string; sz
     }
 
     const tblPr = '<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="5000" w:type="pct"/>' +
-        '<w:tblInd w:w="0" w:type="dxa"/>' + stdBorders() +
+        '<w:tblInd w:w="-108" w:type="dxa"/>' + stdBorders() +
         '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr>';
 
     // Proportional columns - wider for text-heavy cols
