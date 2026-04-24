@@ -1714,9 +1714,9 @@ function buildPeralatanTableXml(items: any[], fontInfo: { font: string; sz: stri
 }
 
 // Build Personil TENDER table (Daftar Personel Manajerial - 7 columns)
-// Table only - font 11pt, full page width, no paragraph indent inheritance
+// Font 10pt, full page width, negative indent to align with page margin
 function buildPersonilTenderTableXml(items: any[], fontInfo: { font: string; sz: string } = { font: '', sz: '' }): string {
-    const SZ = fontInfo.sz || '22';
+    const SZ = '20';  // 10pt = 20 half-points (matching reference)
     const FONT = fontInfo.font || 'Arial';
 
     function rpr(opts: { bold?: boolean; sup?: boolean } = {}): string {
@@ -1733,7 +1733,7 @@ function buildPersonilTenderTableXml(items: any[], fontInfo: { font: string; sz:
     }
 
     function tc(runs: string[], w: number, opts: { bold?: boolean; center?: boolean } = {}): string {
-        const tcPr = '<w:tcPr><w:tcW w:w="' + w + '" w:type="dxa"/><w:vAlign w:val="center"/><w:noWrap w:val="0"/></w:tcPr>';
+        const tcPr = '<w:tcPr><w:tcW w:w="' + w + '" w:type="pct"/><w:vAlign w:val="center"/></w:tcPr>';
         const pp: string[] = [];
         if (opts.center) pp.push('<w:jc w:val="center"/>');
         pp.push('<w:spacing w:after="0" w:line="240" w:lineRule="auto"/>');
@@ -1741,34 +1741,34 @@ function buildPersonilTenderTableXml(items: any[], fontInfo: { font: string; sz:
         return '<w:tc>' + tcPr + '<w:p><w:pPr>' + pp.join('') + '</w:pPr>' + runs.join('') + '</w:p></w:tc>';
     }
 
-    // tblInd w:w="0" forces table to left margin regardless of paragraph indent
+    // Negative indent -567 twips (~1cm) to push table to page left margin
     const tblPr = '<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="5000" w:type="pct"/>' +
-        '<w:tblInd w:w="-108" w:type="dxa"/>' + stdBorders() +
+        '<w:tblInd w:w="-567" w:type="dxa"/>' + stdBorders() +
         '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr>';
 
-    // Proportional columns (pct of 5000) - wider for long headers to prevent mid-word breaks
-    // No=4%, Nama=18%, Jabatan=15%, Pendidikan=11%, Pengalaman=14%, Sertifikat=24%, Ket=14%
-    const grid = '<w:tblGrid><w:gridCol w:w="600"/><w:gridCol w:w="1350"/><w:gridCol w:w="1130"/><w:gridCol w:w="830"/><w:gridCol w:w="1050"/><w:gridCol w:w="1800"/><w:gridCol w:w="1050"/></w:tblGrid>';
+    // Proportional widths (of 5000) matching reference image exactly:
+    // No=250, Nama=900, Jabatan=750, Pendidikan=550, Pengalaman=700, Sertifikat=1250, Ket=600
+    const grid = '<w:tblGrid><w:gridCol w:w="250"/><w:gridCol w:w="900"/><w:gridCol w:w="750"/><w:gridCol w:w="550"/><w:gridCol w:w="700"/><w:gridCol w:w="1250"/><w:gridCol w:w="600"/></w:tblGrid>';
 
     const hdr = '<w:tr>' +
-        tc([r('No', {bold:true})], 600, {bold:true, center:true}) +
-        tc([r('Nama Personel Manajerial', {bold:true})], 1350, {bold:true, center:true}) +
-        tc([r('Jabatan dalam Pekerjaan ini', {bold:true}), r('*)', {bold:true, sup:true})], 1130, {bold:true, center:true}) +
-        tc([r('Tingkat Pendidikan/ Ijazah', {bold:true})], 830, {bold:true, center:true}) +
-        tc([r('Pengalaman Kerja Profesional (Tahun)', {bold:true}), r('*)', {bold:true, sup:true})], 1050, {bold:true, center:true}) +
-        tc([r('Sertifikat Kompetensi Kerja', {bold:true}), r('*)', {bold:true, sup:true})], 1800, {bold:true, center:true}) +
-        tc([r('Ket.', {bold:true})], 1050, {bold:true, center:true}) +
+        tc([r('No', {bold:true})], 250, {bold:true, center:true}) +
+        tc([r('Nama Personel Manajerial', {bold:true})], 900, {bold:true, center:true}) +
+        tc([r('Jabatan dalam Pekerjaan ini', {bold:true}), r('*)', {bold:true, sup:true})], 750, {bold:true, center:true}) +
+        tc([r('Tingkat Pendidikan/ Ijazah', {bold:true})], 550, {bold:true, center:true}) +
+        tc([r('Pengalaman Kerja Profesional (Tahun)', {bold:true}), r('*)', {bold:true, sup:true})], 700, {bold:true, center:true}) +
+        tc([r('Sertifikat Kompetensi Kerja', {bold:true}), r('*)', {bold:true, sup:true})], 1250, {bold:true, center:true}) +
+        tc([r('Ket.', {bold:true})], 600, {bold:true, center:true}) +
         '</w:tr>';
 
     const rows = items.map((it: any, i: number) =>
         '<w:tr>' +
-        tc([r(String(i+1))], 600, {center:true}) +
-        tc([r(it.nama || '')], 1350) +
-        tc([r(it.posisi || '')], 1130) +
-        tc([r(it.pendidikan || '')], 830, {center:true}) +
-        tc([r(it.pengalaman ? it.pengalaman + ' Tahun' : '0 Tahun')], 1050, {center:true}) +
-        tc([r(it.sertifikasi || '')], 1800) +
-        tc([r(it.keterangan || 'Masih Berlaku')], 1050) +
+        tc([r(String(i+1))], 250, {center:true}) +
+        tc([r(it.nama || '')], 900) +
+        tc([r(it.posisi || '')], 750) +
+        tc([r(it.pendidikan || '')], 550, {center:true}) +
+        tc([r(it.pengalaman ? it.pengalaman + ' Tahun' : '0 Tahun')], 700, {center:true}) +
+        tc([r(it.sertifikasi || '')], 1250) +
+        tc([r(it.keterangan || 'Masih Berlaku')], 600) +
         '</w:tr>'
     ).join('');
 
@@ -1776,9 +1776,9 @@ function buildPersonilTenderTableXml(items: any[], fontInfo: { font: string; sz:
 }
 
 // Build Peralatan TENDER table (Daftar Peralatan Utama - 8 columns)
-// Table only - font 11pt, full page width, no paragraph indent inheritance
+// Font 10pt, full page width, negative indent to align with page margin
 function buildPeralatanTenderTableXml(items: any[], fontInfo: { font: string; sz: string } = { font: '', sz: '' }): string {
-    const SZ = fontInfo.sz || '22';
+    const SZ = '20';  // 10pt
     const FONT = fontInfo.font || 'Arial';
 
     function rpr(opts: { bold?: boolean; sup?: boolean } = {}): string {
@@ -1795,7 +1795,7 @@ function buildPeralatanTenderTableXml(items: any[], fontInfo: { font: string; sz
     }
 
     function tc(runs: string[], w: number, opts: { bold?: boolean; center?: boolean } = {}): string {
-        const tcPr = '<w:tcPr><w:tcW w:w="' + w + '" w:type="dxa"/><w:vAlign w:val="center"/><w:noWrap w:val="0"/></w:tcPr>';
+        const tcPr = '<w:tcPr><w:tcW w:w="' + w + '" w:type="pct"/><w:vAlign w:val="center"/></w:tcPr>';
         const pp: string[] = [];
         if (opts.center) pp.push('<w:jc w:val="center"/>');
         pp.push('<w:spacing w:after="0" w:line="240" w:lineRule="auto"/>');
@@ -1804,36 +1804,35 @@ function buildPeralatanTenderTableXml(items: any[], fontInfo: { font: string; sz
     }
 
     const tblPr = '<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="5000" w:type="pct"/>' +
-        '<w:tblInd w:w="-108" w:type="dxa"/>' + stdBorders() +
+        '<w:tblInd w:w="-567" w:type="dxa"/>' + stdBorders() +
         '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr>';
 
-    // Proportional columns - wider for text-heavy cols
-    // No=4%, Nama=16%, Merk=13%, Kapasitas=10%, Jumlah=9%, Kondisi=11%, Status=18%, Ket=8%
-    // Mapped to gridCol values
-    const grid = '<w:tblGrid><w:gridCol w:w="500"/><w:gridCol w:w="1250"/><w:gridCol w:w="1000"/><w:gridCol w:w="800"/><w:gridCol w:w="700"/><w:gridCol w:w="850"/><w:gridCol w:w="1400"/><w:gridCol w:w="600"/></w:tblGrid>';
+    // Proportional widths (of 5000) matching reference:
+    // No=230, Nama=780, Merk=680, Kapasitas=580, Jumlah=500, Kondisi=580, Status=1100, Ket=550
+    const grid = '<w:tblGrid><w:gridCol w:w="230"/><w:gridCol w:w="780"/><w:gridCol w:w="680"/><w:gridCol w:w="580"/><w:gridCol w:w="500"/><w:gridCol w:w="580"/><w:gridCol w:w="1100"/><w:gridCol w:w="550"/></w:tblGrid>';
 
     const hdr = '<w:tr>' +
-        tc([r('No', {bold:true})], 500, {bold:true, center:true}) +
-        tc([r('Nama Peralatan Utama', {bold:true}), r('*)', {bold:true, sup:true})], 1250, {bold:true, center:true}) +
-        tc([r('Merk dan Tipe', {bold:true}), r('**)', {bold:true, sup:true})], 1000, {bold:true, center:true}) +
-        tc([r('Kapasitas', {bold:true}), r('**)', {bold:true, sup:true})], 800, {bold:true, center:true}) +
-        tc([r('Jumlah', {bold:true}), r('**)', {bold:true, sup:true})], 700, {bold:true, center:true}) +
-        tc([r('Kondisi', {bold:true}), r('*)', {bold:true, sup:true})], 850, {bold:true, center:true}) +
-        tc([r('Status Kepemilikan', {bold:true}), r('**)', {bold:true, sup:true})], 1400, {bold:true, center:true}) +
-        tc([r('Ket.', {bold:true})], 600, {bold:true, center:true}) +
+        tc([r('No', {bold:true})], 230, {bold:true, center:true}) +
+        tc([r('Nama Peralatan Utama', {bold:true}), r('*)', {bold:true, sup:true})], 780, {bold:true, center:true}) +
+        tc([r('Merk dan Tipe', {bold:true}), r('**)', {bold:true, sup:true})], 680, {bold:true, center:true}) +
+        tc([r('Kapasitas', {bold:true}), r('**)', {bold:true, sup:true})], 580, {bold:true, center:true}) +
+        tc([r('Jumlah', {bold:true}), r('**)', {bold:true, sup:true})], 500, {bold:true, center:true}) +
+        tc([r('Kondisi', {bold:true}), r('*)', {bold:true, sup:true})], 580, {bold:true, center:true}) +
+        tc([r('Status Kepemilikan', {bold:true}), r('**)', {bold:true, sup:true})], 1100, {bold:true, center:true}) +
+        tc([r('Ket.', {bold:true})], 550, {bold:true, center:true}) +
         '</w:tr>';
 
     const rows = items.map((it: any, i: number) => {
         const merk = [it.merk, it.type].filter(Boolean).join(' ');
         return '<w:tr>' +
-            tc([r(String(i+1))], 500, {center:true}) +
-            tc([r(it.nama || '')], 1250) +
-            tc([r(merk || '-')], 1000, {center:true}) +
-            tc([r(it.kapasitas || '')], 800, {center:true}) +
-            tc([r(String(it.jumlah || '1'))], 700, {center:true}) +
-            tc([r(it.kondisi || 'Baik')], 850, {center:true}) +
-            tc([r(it.statusKepemilikan || '')], 1400, {center:true}) +
-            tc([r(it.keterangan || '-')], 600, {center:true}) +
+            tc([r(String(i+1))], 230, {center:true}) +
+            tc([r(it.nama || '')], 780) +
+            tc([r(merk || '-')], 680, {center:true}) +
+            tc([r(it.kapasitas || '')], 580, {center:true}) +
+            tc([r(String(it.jumlah || '1'))], 500, {center:true}) +
+            tc([r(it.kondisi || 'Baik')], 580, {center:true}) +
+            tc([r(it.statusKepemilikan || '')], 1100, {center:true}) +
+            tc([r(it.keterangan || '-')], 550, {center:true}) +
             '</w:tr>';
     }).join('');
 
