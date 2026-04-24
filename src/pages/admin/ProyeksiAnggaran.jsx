@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
+ï»¿import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { Plus, Search, Download, Edit, Trash2, Save, X, ChevronDown, ChevronUp, Building2, Hammer, HardHat, Wallet, ChevronLeft, ChevronRight, Maximize2, Minimize2, MessageSquareText, Filter, AlertCircle, FileSpreadsheet, FileText, List, Eye, EyeOff, Columns } from 'lucide-react';
 import { useProyeksiData, useSarprasData, useSekolahData } from '../../data/dataProvider';
 import { JENIS_PRASARANA, JENJANG } from '../../utils/constants';
@@ -594,6 +594,69 @@ const ProyeksiAnggaran = () => {
         }
     };
 
+
+    // ===== EXPORT: Atur Anggaran =====
+    const handleExportAnggaran = async () => {
+        try {
+            const XLSX = await import('xlsx');
+            const rows = anggaranData.map((item, i) => ({
+                'No': i + 1,
+                'Jenis Prasarana': item.jenisPrasarana,
+                'Jenjang': item.jenjang,
+                'Rusak Sedang': item.rusakSedang || 0,
+                'Rusak Berat': item.rusakBerat || 0,
+                'Pembangunan': item.pembangunan || 0,
+            }));
+            const ws = XLSX.utils.json_to_sheet(rows);
+            ws['!cols'] = [{ wch: 5 }, { wch: 25 }, { wch: 10 }, { wch: 18 }, { wch: 18 }, { wch: 18 }];
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Atur Anggaran');
+            XLSX.writeFile(wb, `Atur_Anggaran_${new Date().toISOString().slice(0,10)}.xlsx`);
+            toast.success('Excel Atur Anggaran berhasil diunduh');
+        } catch (err) { toast.error('Gagal ekspor: ' + (err.message || '')); }
+    };
+
+    // ===== EXPORT: Belum Usul =====
+    const handleExportBelumUsul = async () => {
+        try {
+            const XLSX = await import('xlsx');
+            const rows = [];
+            filteredBelumUsulan.forEach((s, i) => {
+                rows.push({ 'No': i + 1, 'Nama Sekolah': s.nama, 'Jenjang': s.jenjang, 'Rincian': '', 'Total Rehab': s.biayaRS + s.biayaRB, 'Total Pembangunan': s.biayaBuild, 'Total Anggaran': s.biayaRS + s.biayaRB + s.biayaBuild });
+                if (s.details?.length) {
+                    s.details.forEach(d => {
+                        const label = d.type === 'rehab' ? `[REHAB] ${d.name}` : `[BANGUN] ${d.name}`;
+                        rows.push({ 'No': '', 'Nama Sekolah': '', 'Jenjang': '', 'Rincian': `${label} (${d.count} Unit)`, 'Total Rehab': d.type === 'rehab' ? d.totalCost : '', 'Total Pembangunan': d.type === 'build' ? d.totalCost : '', 'Total Anggaran': d.totalCost });
+                    });
+                }
+            });
+            const ws = XLSX.utils.json_to_sheet(rows);
+            ws['!cols'] = [{ wch: 5 }, { wch: 35 }, { wch: 8 }, { wch: 45 }, { wch: 18 }, { wch: 18 }, { wch: 20 }];
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Belum Usul');
+            XLSX.writeFile(wb, `Belum_Usul_${new Date().toISOString().slice(0,10)}.xlsx`);
+            toast.success('Excel Belum Usul berhasil diunduh');
+        } catch (err) { toast.error('Gagal ekspor: ' + (err.message || '')); }
+    };
+
+    // ===== EXPORT: Rekap Usulan =====
+    const handleExportRekapUsulan = async () => {
+        try {
+            const XLSX = await import('xlsx');
+            const rows = [];
+            filteredRekapUsulan.forEach((s, i) => {
+                const usulan = sekolahKeterangan[s.id] || [];
+                rows.push({ 'No': i + 1, 'Nama Sekolah': s.nama, 'Jenjang': s.jenjang, 'Jumlah Usulan': usulan.length, 'Usulan': usulan.map((u, idx) => `${idx + 1}. ${u}`).join('\n'), 'Total Rehab': s.biayaRS + s.biayaRB, 'Total Pembangunan': s.biayaBuild, 'Total Anggaran': s.biayaRS + s.biayaRB + s.biayaBuild });
+            });
+            const ws = XLSX.utils.json_to_sheet(rows);
+            ws['!cols'] = [{ wch: 5 }, { wch: 35 }, { wch: 8 }, { wch: 12 }, { wch: 50 }, { wch: 18 }, { wch: 18 }, { wch: 20 }];
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Rekap Usulan');
+            XLSX.writeFile(wb, `Rekap_Usulan_${new Date().toISOString().slice(0,10)}.xlsx`);
+            toast.success('Excel Rekap Usulan berhasil diunduh');
+        } catch (err) { toast.error('Gagal ekspor: ' + (err.message || '')); }
+    };
+
     // Helper for Pagination Text
     const getPaginationText = (total, page, size) => {
         const start = (page - 1) * size + 1;
@@ -859,7 +922,7 @@ const ProyeksiAnggaran = () => {
                                             <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '4px 12px', borderRadius: 8, background: 'rgba(139,92,246,0.08)', borderLeft: '3px solid rgba(139,92,246,0.4)' }}>
                                                 <span style={{ color: '#a78bfa', fontWeight: 600, fontSize: '0.82rem', minWidth: 20 }}>{idx + 1}.</span>
                                                 <span style={{ color: '#a78bfa', fontSize: '0.82rem', fontWeight: 500, flex: 1 }}>{c}</span>
-                                                {isAdmin && <button onClick={(e) => { e.stopPropagation(); removeUsulan(s.id, idx); }} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, fontSize: '1rem', lineHeight: 1 }}>×</button>}
+                                                {isAdmin && <button onClick={(e) => { e.stopPropagation(); removeUsulan(s.id, idx); }} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 0, fontSize: '1rem', lineHeight: 1 }}>ï¿½</button>}
                                             </div>
                                         ))}
                                     </div>
@@ -1053,7 +1116,7 @@ const ProyeksiAnggaran = () => {
                             </div>
                         </div>
                         <div className="table-toolbar-right">
-                            <button className="btn btn-secondary btn-sm" onClick={() => handleExport('anggaran')}><Download size={14} /> Ekspor</button>
+                            <button className="btn btn-secondary btn-sm" onClick={handleExportAnggaran}><Download size={14} /> Ekspor</button>
                         </div>
                     </div>
                     <div style={{ overflowX: 'auto' }}>
