@@ -384,6 +384,12 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
                     for (const [k, v] of Object.entries(vars)) {
                         if (typeof v === 'string') r = r.split('{{' + k + '}}').join(v as string);
                     }
+                    // Handle newlines: split into multiple runs with <w:br/> between them
+                    if (r.includes('\n')) {
+                        const lines = r.split('\n');
+                        // Extract rPr (run properties) from before <w:t> tag for consistent formatting
+                        return tag + lines.join('</w:t><w:br/>' + tag) + '</w:t>';
+                    }
                     return tag + r + '</w:t>';
                 });
                 zip.file(xf, x);
