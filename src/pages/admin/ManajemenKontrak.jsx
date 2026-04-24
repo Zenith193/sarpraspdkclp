@@ -792,7 +792,7 @@ const ManajemenKontrak = () => {
                             {/* LAMPIRAN */}
                             {tab === 'lampiran' && (() => {
                                 const tblInput = { padding: '5px 8px', border: '1.5px solid rgba(59,130,246,0.35)', borderRadius: 6, fontSize: '0.78rem', background: 'rgba(59,130,246,0.08)', color: 'var(--text-primary)', boxSizing: 'border-box' };
-                                const tblSelect = { ...tblInput, padding: '5px 4px', cursor: 'pointer', color: 'var(--text-primary)' };
+                                const tblSelect = { ...tblInput, padding: '5px 4px', cursor: 'pointer', color: '#e2e8f0', backgroundColor: '#1e293b' };
                                 return (
                                 <div>
                                     <div style={{ background: 'var(--accent-blue)', color: '#fff', padding: '10px 20px', borderRadius: 8, marginBottom: 20, fontWeight: 600, fontSize: '0.9rem' }}>Lampiran</div>
@@ -827,7 +827,7 @@ const ManajemenKontrak = () => {
                                                     <td><input style={tblInput} value={timInput.nama} onChange={e => setTimInput({ ...timInput, nama: e.target.value })} /></td>
                                                     <td><input style={tblInput} value={timInput.posisi} onChange={e => setTimInput({ ...timInput, posisi: e.target.value })} /></td>
                                                     <td><select style={tblSelect} value={timInput.statusTenaga} onChange={e => setTimInput({ ...timInput, statusTenaga: e.target.value })}><option value="">Pilih Status Tenaga</option><option>Tenaga Ahli</option><option>Tenaga Penunjang</option><option>Tenaga Teknis</option></select></td>
-                                                    <td><select style={tblSelect} value={timInput.pendidikan} onChange={e => setTimInput({ ...timInput, pendidikan: e.target.value })}><option value="">Pilih Pendidikan</option><option>SD</option><option>SMP</option><option>SMA</option><option>SMA/SMK</option><option>SMK</option><option>D1</option><option>D2</option><option>D3</option><option>D4/S1</option><option>S2</option><option>S3</option></select></td>
+                                                    <td><select style={tblSelect} value={timInput.pendidikan} onChange={e => setTimInput({ ...timInput, pendidikan: e.target.value })}><option value="">Pilih Pendidikan</option><option>SD</option><option>SMP</option><option>SMA/SMK</option><option>D1</option><option>D2</option><option>D3</option><option>D4/S1</option><option>S2</option><option>S3</option></select></td>
                                                     <td><input type="number" style={tblInput} placeholder="0" value={timInput.pengalaman} onChange={e => setTimInput({ ...timInput, pengalaman: e.target.value })} /></td>
                                                     <td><input style={tblInput} value={timInput.sertifikasi} onChange={e => setTimInput({ ...timInput, sertifikasi: e.target.value })} /></td>
                                                     <td><input style={tblInput} value={timInput.keterangan} onChange={e => setTimInput({ ...timInput, keterangan: e.target.value })} /></td>

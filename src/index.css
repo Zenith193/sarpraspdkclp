@@ -2640,3 +2640,11 @@ textarea {
     padding: 6px 10px;
   }
 }
+/* Fix dropdown option text in dark mode */
+select, select option {
+  background-color: #1e293b !important;
+  color: #e2e8f0 !important;
+}
+select:focus {
+  background-color: #1e293b !important;
+}
