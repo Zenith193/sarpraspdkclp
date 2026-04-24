@@ -309,10 +309,11 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
         } catch (e: any) { console.error('[KOP] Tag normalize error:', e.message); }
 
         // Add table markers as regular variables (post-processed after render)
-        if (rincianItems.length > 0) vars.tabelRincian = '__RINCIAN_TABLE__';
-        if (personilItems.length > 0) vars.tabelPersonil = '__PERSONIL_TABLE__';
-        if (peralatanItems.length > 0) vars.tabelPeralatan = '__PERALATAN_TABLE__';
-        if (uraianItems.length > 0) vars.tabelUraianSingkat = '__URAIAN_TABLE__';
+        // Always set so {{tag}} is cleared even when no data exists
+        vars.tabelRincian = rincianItems.length > 0 ? '__RINCIAN_TABLE__' : '';
+        vars.tabelPersonil = personilItems.length > 0 ? '__PERSONIL_TABLE__' : '';
+        vars.tabelPeralatan = peralatanItems.length > 0 ? '__PERALATAN_TABLE__' : '';
+        vars.tabelUraianSingkat = uraianItems.length > 0 ? '__URAIAN_TABLE__' : '';
 
         // ===== KOP SEKOLAH: Pre-download image =====
         let kopImageBuffer: Buffer | null = null;
