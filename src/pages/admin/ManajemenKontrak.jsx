@@ -147,12 +147,12 @@ const ManajemenKontrak = () => {
                 tataCaraPembayaran: d.tataCaraPembayaran || '',
                 uangMuka: d.uangMuka || '',
             });
-            // Auto-fill No SP from No SPK: add ".a" to 2nd segment (e.g. 400.3.13/400/A3/2026 → 400.3.13/400.a/A3/2026)
+            // Auto-fill No SP from No SPK: add ".a" to 2nd segment (e.g. 400.3.13/067/A3/2026 → 400.3.13/067.a/A3/2026)
+            const computedNoSpk = d.noSpk || d.matrik?.noSpk || '';
             const autoNoSp = (() => {
-                const spk = d.noSpk || spkData?.noSpk || '';
-                if (!spk) return '';
-                const parts = spk.split('/');
-                if (parts.length >= 2) { parts[1] = parts[1] + '.a'; }
+                if (!computedNoSpk) return '';
+                const parts = computedNoSpk.split('/');
+                if (parts.length >= 2) { parts[1] = parts[1].replace(/\.a$/, '') + '.a'; }
                 return parts.join('/');
             })();
             setSpSpmkData({
