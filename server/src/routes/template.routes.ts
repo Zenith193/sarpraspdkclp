@@ -1742,7 +1742,7 @@ function buildPersonilTenderTableXml(items: any[], fontInfo: { font: string; sz:
     }
 
     // Negative indent -567 twips (~1cm) to push table to page left margin
-    const tblPr = '<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="5000" w:type="pct"/>' +
+    const tblPr = '<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="9500" w:type="dxa"/>' +
         '<w:tblInd w:w="-567" w:type="dxa"/>' + stdBorders() +
         '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr>';
 
@@ -1803,7 +1803,7 @@ function buildPeralatanTenderTableXml(items: any[], fontInfo: { font: string; sz
         return '<w:tc>' + tcPr + '<w:p><w:pPr>' + pp.join('') + '</w:pPr>' + runs.join('') + '</w:p></w:tc>';
     }
 
-    const tblPr = '<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="5000" w:type="pct"/>' +
+    const tblPr = '<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="9500" w:type="dxa"/>' +
         '<w:tblInd w:w="-567" w:type="dxa"/>' + stdBorders() +
         '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr>';
 
