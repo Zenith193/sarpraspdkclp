@@ -293,6 +293,7 @@ const ManajemenKontrak = () => {
     const formatCurrency = (v) => v ? `Rp. ${Number(v).toLocaleString('id-ID')}` : '-';
     const fieldStyle = { width: '100%', padding: '10px 14px', border: '1px solid var(--border)', borderRadius: 8, fontSize: '0.9rem', background: 'var(--bg-secondary)', color: 'var(--text-primary)' };
     const readOnlyStyle = { ...fieldStyle, background: 'var(--bg-tertiary, rgba(0,0,0,0.03))', color: 'var(--text-secondary)' };
+    const editFieldStyle = { ...fieldStyle, background: 'rgba(59,130,246,0.08)', border: '1.5px solid rgba(59,130,246,0.35)', color: 'var(--text-primary)' };
     const labelStyle = { fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 4, display: 'block' };
 
     const tabs = [
@@ -699,17 +700,17 @@ const ManajemenKontrak = () => {
                                         <div style={cs}><div style={cl}>Satuan Kerja</div><div style={cv}>{detail.matrik?.sumberDana || 'APBD'}</div></div>
                                     </div>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-                                        <div style={cs}><div style={cl}>Nomor DPPL/ Nomor SPPBJ (Tender)</div><input style={{ ...fieldStyle, marginTop: 4 }} value={editDppl.noDppl} onChange={e => setEditDppl(p => ({ ...p, noDppl: e.target.value }))} placeholder="Nomor DPPL" /></div>
-                                        <div style={cs}><div style={cl}>Tanggal DPPL/ Tanggal SPPBJ (Tender)</div><input type="date" style={{ ...fieldStyle, marginTop: 4 }} value={editDppl.tanggalDppl} onChange={e => setEditDppl(p => ({ ...p, tanggalDppl: e.target.value }))} /></div>
+                                        <div style={cs}><div style={cl}>Nomor DPPL/ Nomor SPPBJ (Tender)</div><input style={{ ...editFieldStyle, marginTop: 4 }} value={editDppl.noDppl} onChange={e => setEditDppl(p => ({ ...p, noDppl: e.target.value }))} placeholder="Nomor DPPL" /></div>
+                                        <div style={cs}><div style={cl}>Tanggal DPPL/ Tanggal SPPBJ (Tender)</div><input type="date" style={{ ...editFieldStyle, marginTop: 4 }} value={editDppl.tanggalDppl} onChange={e => setEditDppl(p => ({ ...p, tanggalDppl: e.target.value }))} /></div>
                                     </div>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
-                                        <div style={cs}><div style={cl}>Nomor BAHPL/ Nomor Penetapan Pemenang (Tender)</div><input style={{ ...fieldStyle, marginTop: 4 }} value={editDppl.noBahpl} onChange={e => setEditDppl(p => ({ ...p, noBahpl: e.target.value }))} placeholder="Nomor BAHPL" /></div>
-                                        <div style={cs}><div style={cl}>Tanggal BAHPL/ Tanggal Penetapan Pemenang (Tender)</div><input type="date" style={{ ...fieldStyle, marginTop: 4 }} value={editDppl.tanggalBahpl} onChange={e => setEditDppl(p => ({ ...p, tanggalBahpl: e.target.value }))} /></div>
+                                        <div style={cs}><div style={cl}>Nomor BAHPL/ Nomor Penetapan Pemenang (Tender)</div><input style={{ ...editFieldStyle, marginTop: 4 }} value={editDppl.noBahpl} onChange={e => setEditDppl(p => ({ ...p, noBahpl: e.target.value }))} placeholder="Nomor BAHPL" /></div>
+                                        <div style={cs}><div style={cl}>Tanggal BAHPL/ Tanggal Penetapan Pemenang (Tender)</div><input type="date" style={{ ...editFieldStyle, marginTop: 4 }} value={editDppl.tanggalBahpl} onChange={e => setEditDppl(p => ({ ...p, tanggalBahpl: e.target.value }))} /></div>
                                     </div>
                                     <button onClick={handleSaveDppl} disabled={saving} style={{ padding: '10px 24px', border: 'none', borderRadius: 8, background: 'var(--accent-blue)', color: '#fff', cursor: 'pointer', fontWeight: 600, fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}><Save size={16} /> {saving ? 'Menyimpan...' : 'Simpan DPPL / BAHPL'}</button>
                                     {detail.berkasPenawaranPath && (
                                         <div style={{ ...cs, marginBottom: 12 }}><div style={cl}>Berkas Penawaran</div>
-                                            <a href={detail.berkasPenawaranPath} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-blue)', textDecoration: 'underline', fontSize: '0.875rem' }}>📄 Lihat Dokumen PDF</a>
+                                            <a href={detail.berkasPenawaranPath?.startsWith('gdrive://') ? `/api/file/kontrak/${encodeURIComponent(detail.berkasPenawaranPath)}` : detail.berkasPenawaranPath} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-blue)', textDecoration: 'underline', fontSize: '0.875rem' }}>📄 Lihat Dokumen PDF</a>
                                         </div>
                                     )}
                                 </div>
@@ -919,7 +920,7 @@ const ManajemenKontrak = () => {
 
                                     {detail.berkasPenawaranPath && (
                                         <div style={{ ...cs, marginBottom: 12 }}><div style={cl}>Berkas Penawaran</div>
-                                            <a href={detail.berkasPenawaranPath} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-blue)', textDecoration: 'underline', fontSize: '0.875rem' }}>📄 Lihat Dokumen PDF</a>
+                                            <a href={detail.berkasPenawaranPath?.startsWith('gdrive://') ? `/api/file/kontrak/${encodeURIComponent(detail.berkasPenawaranPath)}` : detail.berkasPenawaranPath} target="_blank" rel="noreferrer" style={{ color: 'var(--accent-blue)', textDecoration: 'underline', fontSize: '0.875rem' }}>📄 Lihat Dokumen PDF</a>
                                         </div>
                                     )}
 
