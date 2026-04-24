@@ -1714,187 +1714,127 @@ function buildPeralatanTableXml(items: any[], fontInfo: { font: string; sz: stri
 }
 
 // Build Personil TENDER table (Daftar Personel Manajerial - 7 columns)
-// Includes title, table, and footnotes matching official format
+// Table only, titles/footnotes are in the DOCX template
 function buildPersonilTenderTableXml(items: any[], fontInfo: { font: string; sz: string } = { font: '', sz: '' }): string {
     const SZ = fontInfo.sz || '22';
-    const TITLE_SZ = '24';
     const FONT = fontInfo.font || 'Arial';
-    const NOTE_SZ = '18';
 
-    // Helper: build run properties XML
-    function rPrXml(opts: { bold?: boolean; sz?: string; superscript?: boolean } = {}): string {
-        const parts: string[] = [];
-        if (FONT) parts.push(`<w:rFonts w:ascii="${FONT}" w:hAnsi="${FONT}" w:cs="${FONT}"/>`);
-        parts.push(`<w:sz w:val="${opts.sz || SZ}"/><w:szCs w:val="${opts.sz || SZ}"/>`);
-        if (opts.bold) parts.push('<w:b/><w:bCs/>');
-        if (opts.superscript) parts.push('<w:vertAlign w:val="superscript"/>');
-        return '<w:rPr>' + parts.join('') + '</w:rPr>';
+    function rpr(opts: { bold?: boolean; sup?: boolean } = {}): string {
+        const p: string[] = [];
+        if (FONT) p.push('<w:rFonts w:ascii="' + FONT + '" w:hAnsi="' + FONT + '" w:cs="' + FONT + '"/>');
+        p.push('<w:sz w:val="' + SZ + '"/><w:szCs w:val="' + SZ + '"/>');
+        if (opts.bold) p.push('<w:b/><w:bCs/>');
+        if (opts.sup) p.push('<w:vertAlign w:val="superscript"/>');
+        return '<w:rPr>' + p.join('') + '</w:rPr>';
     }
 
-    // Helper: build a paragraph
-    function para(runs: string[], opts: { center?: boolean; bold?: boolean; sz?: string; afterSpacing?: string } = {}): string {
-        const pPrParts: string[] = [];
-        if (opts.center) pPrParts.push('<w:jc w:val="center"/>');
-        const sp = opts.afterSpacing || '0';
-        pPrParts.push(`<w:spacing w:after="${sp}" w:line="240" w:lineRule="auto"/>`);
-        pPrParts.push(rPrXml({ bold: opts.bold, sz: opts.sz }));
-        return '<w:p><w:pPr>' + pPrParts.join('') + '</w:pPr>' + runs.join('') + '</w:p>';
+    function r(text: string, opts: { bold?: boolean; sup?: boolean } = {}): string {
+        return '<w:r>' + rpr(opts) + '<w:t xml:space="preserve">' + xmlEscape(text) + '</w:t></w:r>';
     }
 
-    // Helper: build a text run
-    function run(text: string, opts: { bold?: boolean; sz?: string; superscript?: boolean } = {}): string {
-        return '<w:r>' + rPrXml(opts) + '<w:t xml:space="preserve">' + xmlEscape(text) + '</w:t></w:r>';
+    function tc(runs: string[], w: number, opts: { bold?: boolean; center?: boolean } = {}): string {
+        const tcPr = '<w:tcPr><w:tcW w:w="' + w + '" w:type="dxa"/><w:vAlign w:val="center"/></w:tcPr>';
+        const pp: string[] = [];
+        if (opts.center) pp.push('<w:jc w:val="center"/>');
+        pp.push('<w:spacing w:after="0" w:line="240" w:lineRule="auto"/>');
+        pp.push(rpr({ bold: opts.bold }));
+        return '<w:tc>' + tcPr + '<w:p><w:pPr>' + pp.join('') + '</w:pPr>' + runs.join('') + '</w:p></w:tc>';
     }
 
-    // Helper: build a table cell with multiple runs (for superscript headers)
-    function cellMulti(runs: string[], widthPct: number, opts: { bold?: boolean; center?: boolean } = {}): string {
-        const tcPr = `<w:tcPr><w:tcW w:w="${widthPct}" w:type="pct"/><w:vAlign w:val="center"/></w:tcPr>`;
-        const pPrParts: string[] = [];
-        if (opts.center) pPrParts.push('<w:jc w:val="center"/>');
-        pPrParts.push('<w:spacing w:after="0" w:line="240" w:lineRule="auto"/>');
-        pPrParts.push(rPrXml({ bold: opts.bold }));
-        return '<w:tc>' + tcPr + '<w:p><w:pPr>' + pPrParts.join('') + '</w:pPr>' + runs.join('') + '</w:p></w:tc>';
-    }
+    const tblPr = '<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="9639" w:type="dxa"/>' + stdBorders() +
+        '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr>';
 
-    // Simple text cell
-    function cell(text: string, widthPct: number, opts: { bold?: boolean; center?: boolean } = {}): string {
-        return cellMulti([run(text, { bold: opts.bold })], widthPct, opts);
-    }
+    // Col widths in twips (total ~9639 = A4 portrait minus margins)
+    // No=500, Nama=1700, Jabatan=1500, Pendidikan=1100, Pengalaman=1300, Sertifikat=2300, Ket=1239
+    const grid = '<w:tblGrid><w:gridCol w:w="500"/><w:gridCol w:w="1700"/><w:gridCol w:w="1500"/><w:gridCol w:w="1100"/><w:gridCol w:w="1300"/><w:gridCol w:w="2300"/><w:gridCol w:w="1239"/></w:tblGrid>';
 
-    // Title: DAFTAR PERSONEL MANAJERIAL
-    const titlePara = para([run('DAFTAR PERSONEL MANAJERIAL', { bold: true, sz: TITLE_SZ })], { center: true, bold: true, sz: TITLE_SZ, afterSpacing: '120' });
-
-    const tblPr = '<w:tblPr>' +
-        '<w:tblStyle w:val="TableGrid"/>' +
-        '<w:tblW w:w="5000" w:type="pct"/>' +
-        stdBorders() +
-        '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>' +
-        '</w:tblPr>';
-
-    const grid = '<w:tblGrid><w:gridCol w:w="450"/><w:gridCol w:w="1300"/><w:gridCol w:w="1200"/><w:gridCol w:w="900"/><w:gridCol w:w="1100"/><w:gridCol w:w="1800"/><w:gridCol w:w="750"/></w:tblGrid>';
-
-    // Header with superscript annotations matching the example exactly
-    const headerRow = '<w:tr>' +
-        cell('No', 300, { bold: true, center: true }) +
-        cellMulti([run('Nama Personel Manajerial', { bold: true })], 870, { bold: true, center: true }) +
-        cellMulti([run('Jabatan dalam Pekerjaan ini', { bold: true }), run('*)', { bold: true, superscript: true })], 800, { bold: true, center: true }) +
-        cellMulti([run('Tingkat Pendidika', { bold: true }), run('n/ Ijazah', { bold: true })], 600, { bold: true, center: true }) +
-        cellMulti([run('Pengalaman Kerja Profesional (Tahun)', { bold: true }), run('*)', { bold: true, superscript: true })], 730, { bold: true, center: true }) +
-        cellMulti([run('Sertifikat Kompetensi Kerja', { bold: true }), run('*)', { bold: true, superscript: true })], 1200, { bold: true, center: true }) +
-        cell('Ket.', 500, { bold: true, center: true }) +
+    const hdr = '<w:tr>' +
+        tc([r('No', {bold:true})], 500, {bold:true, center:true}) +
+        tc([r('Nama Personel Manajerial', {bold:true})], 1700, {bold:true, center:true}) +
+        tc([r('Jabatan dalam Pekerjaan ini', {bold:true}), r('*)', {bold:true, sup:true})], 1500, {bold:true, center:true}) +
+        tc([r('Tingkat Pendidikan/ Ijazah', {bold:true})], 1100, {bold:true, center:true}) +
+        tc([r('Pengalaman Kerja Profesional (Tahun)', {bold:true}), r('*)', {bold:true, sup:true})], 1300, {bold:true, center:true}) +
+        tc([r('Sertifikat Kompetensi Kerja', {bold:true}), r('*)', {bold:true, sup:true})], 2300, {bold:true, center:true}) +
+        tc([r('Ket.', {bold:true})], 1239, {bold:true, center:true}) +
         '</w:tr>';
 
-    const dataRows = items.map((it, i) =>
+    const rows = items.map((it: any, i: number) =>
         '<w:tr>' +
-        cell(String(i + 1), 300, { center: true }) +
-        cell(it.nama || '', 870) +
-        cell(it.posisi || '', 800) +
-        cell(it.pendidikan || '', 600, { center: true }) +
-        cell((it.pengalaman ? it.pengalaman + ' Tahun' : '0 Tahun'), 730, { center: true }) +
-        cell(it.sertifikasi || '', 1200) +
-        cell(it.keterangan || 'Masih Berlaku', 500) +
+        tc([r(String(i+1))], 500, {center:true}) +
+        tc([r(it.nama || '')], 1700) +
+        tc([r(it.posisi || '')], 1500) +
+        tc([r(it.pendidikan || '')], 1100, {center:true}) +
+        tc([r(it.pengalaman ? it.pengalaman + ' Tahun' : '0 Tahun')], 1300, {center:true}) +
+        tc([r(it.sertifikasi || '')], 2300) +
+        tc([r(it.keterangan || 'Masih Berlaku')], 1239) +
         '</w:tr>'
     ).join('');
 
-    // Catatan footnotes
-    const catatan =
-        para([run('Catatan:', { bold: true, sz: NOTE_SZ })], { sz: NOTE_SZ, afterSpacing: '0' }) +
-        para([run('*)', { sz: NOTE_SZ, superscript: true }), run('Wajib diisi oleh PPK sewaktu penyusunan rancangan kontrak', { sz: NOTE_SZ })], { sz: NOTE_SZ, afterSpacing: '0' }) +
-        para([run('**)', { sz: NOTE_SZ, superscript: true }), run('Wajib diisi saat rapat persiapan penandatanganan kontrak berdasarkan dokumen penawaran', { sz: NOTE_SZ })], { sz: NOTE_SZ, afterSpacing: '0' });
-
-    return titlePara + '<w:tbl>' + tblPr + grid + headerRow + dataRows + '</w:tbl>' + catatan;
+    return '<w:tbl>' + tblPr + grid + hdr + rows + '</w:tbl>';
 }
 
 // Build Peralatan TENDER table (Daftar Peralatan Utama - 8 columns)
-// Includes title, table, and footnotes matching official format
+// Table only, titles/footnotes are in the DOCX template
 function buildPeralatanTenderTableXml(items: any[], fontInfo: { font: string; sz: string } = { font: '', sz: '' }): string {
     const SZ = fontInfo.sz || '22';
-    const TITLE_SZ = '24';
     const FONT = fontInfo.font || 'Arial';
-    const NOTE_SZ = '18';
 
-    function rPrXml(opts: { bold?: boolean; sz?: string; superscript?: boolean } = {}): string {
-        const parts: string[] = [];
-        if (FONT) parts.push(`<w:rFonts w:ascii="${FONT}" w:hAnsi="${FONT}" w:cs="${FONT}"/>`);
-        parts.push(`<w:sz w:val="${opts.sz || SZ}"/><w:szCs w:val="${opts.sz || SZ}"/>`);
-        if (opts.bold) parts.push('<w:b/><w:bCs/>');
-        if (opts.superscript) parts.push('<w:vertAlign w:val="superscript"/>');
-        return '<w:rPr>' + parts.join('') + '</w:rPr>';
+    function rpr(opts: { bold?: boolean; sup?: boolean } = {}): string {
+        const p: string[] = [];
+        if (FONT) p.push('<w:rFonts w:ascii="' + FONT + '" w:hAnsi="' + FONT + '" w:cs="' + FONT + '"/>');
+        p.push('<w:sz w:val="' + SZ + '"/><w:szCs w:val="' + SZ + '"/>');
+        if (opts.bold) p.push('<w:b/><w:bCs/>');
+        if (opts.sup) p.push('<w:vertAlign w:val="superscript"/>');
+        return '<w:rPr>' + p.join('') + '</w:rPr>';
     }
 
-    function para(runs: string[], opts: { center?: boolean; bold?: boolean; sz?: string; afterSpacing?: string } = {}): string {
-        const pPrParts: string[] = [];
-        if (opts.center) pPrParts.push('<w:jc w:val="center"/>');
-        const sp = opts.afterSpacing || '0';
-        pPrParts.push(`<w:spacing w:after="${sp}" w:line="240" w:lineRule="auto"/>`);
-        pPrParts.push(rPrXml({ bold: opts.bold, sz: opts.sz }));
-        return '<w:p><w:pPr>' + pPrParts.join('') + '</w:pPr>' + runs.join('') + '</w:p>';
+    function r(text: string, opts: { bold?: boolean; sup?: boolean } = {}): string {
+        return '<w:r>' + rpr(opts) + '<w:t xml:space="preserve">' + xmlEscape(text) + '</w:t></w:r>';
     }
 
-    function run(text: string, opts: { bold?: boolean; sz?: string; superscript?: boolean } = {}): string {
-        return '<w:r>' + rPrXml(opts) + '<w:t xml:space="preserve">' + xmlEscape(text) + '</w:t></w:r>';
+    function tc(runs: string[], w: number, opts: { bold?: boolean; center?: boolean } = {}): string {
+        const tcPr = '<w:tcPr><w:tcW w:w="' + w + '" w:type="dxa"/><w:vAlign w:val="center"/></w:tcPr>';
+        const pp: string[] = [];
+        if (opts.center) pp.push('<w:jc w:val="center"/>');
+        pp.push('<w:spacing w:after="0" w:line="240" w:lineRule="auto"/>');
+        pp.push(rpr({ bold: opts.bold }));
+        return '<w:tc>' + tcPr + '<w:p><w:pPr>' + pp.join('') + '</w:pPr>' + runs.join('') + '</w:p></w:tc>';
     }
 
-    function cellMulti(runs: string[], widthPct: number, opts: { bold?: boolean; center?: boolean } = {}): string {
-        const tcPr = `<w:tcPr><w:tcW w:w="${widthPct}" w:type="pct"/><w:vAlign w:val="center"/></w:tcPr>`;
-        const pPrParts: string[] = [];
-        if (opts.center) pPrParts.push('<w:jc w:val="center"/>');
-        pPrParts.push('<w:spacing w:after="0" w:line="240" w:lineRule="auto"/>');
-        pPrParts.push(rPrXml({ bold: opts.bold }));
-        return '<w:tc>' + tcPr + '<w:p><w:pPr>' + pPrParts.join('') + '</w:pPr>' + runs.join('') + '</w:p></w:tc>';
-    }
+    const tblPr = '<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="9639" w:type="dxa"/>' + stdBorders() +
+        '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr>';
 
-    function cell(text: string, widthPct: number, opts: { bold?: boolean; center?: boolean } = {}): string {
-        return cellMulti([run(text, { bold: opts.bold })], widthPct, opts);
-    }
+    // Col widths in twips (total ~9639)
+    // No=450, Nama=1500, Merk=1200, Kapasitas=1050, Jumlah=950, Kondisi=1050, Status=1700, Ket=739
+    const grid = '<w:tblGrid><w:gridCol w:w="450"/><w:gridCol w:w="1500"/><w:gridCol w:w="1200"/><w:gridCol w:w="1050"/><w:gridCol w:w="950"/><w:gridCol w:w="1050"/><w:gridCol w:w="1700"/><w:gridCol w:w="739"/></w:tblGrid>';
 
-    // Title: DAFTAR PERALATAN UTAMA
-    const titlePara = para([run('DAFTAR PERALATAN UTAMA', { bold: true, sz: TITLE_SZ })], { center: true, bold: true, sz: TITLE_SZ, afterSpacing: '120' });
-
-    const tblPr = '<w:tblPr>' +
-        '<w:tblStyle w:val="TableGrid"/>' +
-        '<w:tblW w:w="5000" w:type="pct"/>' +
-        stdBorders() +
-        '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>' +
-        '</w:tblPr>';
-
-    const grid = '<w:tblGrid><w:gridCol w:w="400"/><w:gridCol w:w="1100"/><w:gridCol w:w="900"/><w:gridCol w:w="800"/><w:gridCol w:w="700"/><w:gridCol w:w="800"/><w:gridCol w:w="1100"/><w:gridCol w:w="700"/></w:tblGrid>';
-
-    // Header with superscript annotations matching the example
-    const headerRow = '<w:tr>' +
-        cell('No', 270, { bold: true, center: true }) +
-        cellMulti([run('Nama Peralatan Utama', { bold: true }), run('*)', { bold: true, superscript: true })], 740, { bold: true, center: true }) +
-        cellMulti([run('Merk dan Tipe', { bold: true }), run('**)', { bold: true, superscript: true })], 600, { bold: true, center: true }) +
-        cellMulti([run('Kapasitas', { bold: true }), run('**)', { bold: true, superscript: true })], 540, { bold: true, center: true }) +
-        cellMulti([run('Jumlah', { bold: true }), run('**)', { bold: true, superscript: true })], 470, { bold: true, center: true }) +
-        cellMulti([run('Kondisi', { bold: true }), run('*)', { bold: true, superscript: true })], 540, { bold: true, center: true }) +
-        cellMulti([run('Status Kepemilikan', { bold: true }), run('**)', { bold: true, superscript: true })], 740, { bold: true, center: true }) +
-        cell('Ket.', 470, { bold: true, center: true }) +
+    const hdr = '<w:tr>' +
+        tc([r('No', {bold:true})], 450, {bold:true, center:true}) +
+        tc([r('Nama Peralatan Utama', {bold:true}), r('*)', {bold:true, sup:true})], 1500, {bold:true, center:true}) +
+        tc([r('Merk dan Tipe', {bold:true}), r('**)', {bold:true, sup:true})], 1200, {bold:true, center:true}) +
+        tc([r('Kapasitas', {bold:true}), r('**)', {bold:true, sup:true})], 1050, {bold:true, center:true}) +
+        tc([r('Jumlah', {bold:true}), r('**)', {bold:true, sup:true})], 950, {bold:true, center:true}) +
+        tc([r('Kondisi', {bold:true}), r('*)', {bold:true, sup:true})], 1050, {bold:true, center:true}) +
+        tc([r('Status Kepemilikan', {bold:true}), r('**)', {bold:true, sup:true})], 1700, {bold:true, center:true}) +
+        tc([r('Ket.', {bold:true})], 739, {bold:true, center:true}) +
         '</w:tr>';
 
-    const dataRows = items.map((it, i) => {
-        const merkTipe = [it.merk, it.type].filter(Boolean).join(' ');
+    const rows = items.map((it: any, i: number) => {
+        const merk = [it.merk, it.type].filter(Boolean).join(' ');
         return '<w:tr>' +
-            cell(String(i + 1), 270, { center: true }) +
-            cell(it.nama || '', 740) +
-            cell(merkTipe || '-', 600, { center: true }) +
-            cell(it.kapasitas || '', 540, { center: true }) +
-            cell(String(it.jumlah || '1'), 470, { center: true }) +
-            cell(it.kondisi || 'Baik', 540, { center: true }) +
-            cell(it.statusKepemilikan || '', 740, { center: true }) +
-            cell(it.keterangan || '-', 470, { center: true }) +
+            tc([r(String(i+1))], 450, {center:true}) +
+            tc([r(it.nama || '')], 1500) +
+            tc([r(merk || '-')], 1200, {center:true}) +
+            tc([r(it.kapasitas || '')], 1050, {center:true}) +
+            tc([r(String(it.jumlah || '1'))], 950, {center:true}) +
+            tc([r(it.kondisi || 'Baik')], 1050, {center:true}) +
+            tc([r(it.statusKepemilikan || '')], 1700, {center:true}) +
+            tc([r(it.keterangan || '-')], 739, {center:true}) +
             '</w:tr>';
     }).join('');
 
-    // Catatan footnotes
-    const catatan =
-        para([run('Catatan:', { bold: true, sz: NOTE_SZ })], { sz: NOTE_SZ, afterSpacing: '0' }) +
-        para([run('*)', { sz: NOTE_SZ, superscript: true }), run('Wajib diisi oleh PPK sewaktu penyusunan rancangan kontrak', { sz: NOTE_SZ })], { sz: NOTE_SZ, afterSpacing: '0' }) +
-        para([run('**)', { sz: NOTE_SZ, superscript: true }), run('Wajib diisi saat rapat persiapan penandatanganan kontrak berdasarkan dokumen penawaran', { sz: NOTE_SZ })], { sz: NOTE_SZ, afterSpacing: '0' });
-
-    return titlePara + '<w:tbl>' + tblPr + grid + headerRow + dataRows + '</w:tbl>' + catatan;
+    return '<w:tbl>' + tblPr + grid + hdr + rows + '</w:tbl>';
 }
-
 
 // Build Uraian Singkat table (Lingkup Pekerjaan - numbered list)
 function buildUraianTableXml(items: string[], fontInfo: { font: string; sz: string } = { font: '', sz: '' }): string {
