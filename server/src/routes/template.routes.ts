@@ -153,6 +153,8 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
 
         // Build variable map
         const refData = await getRefData();
+        console.log('[Generate] refData.satker:', JSON.stringify(refData.satker));
+        console.log('[Generate] item.noSubKegiatan:', item.noSubKegiatan);
 
         // Auto-fetch siblings if nilaiItemsArr is empty but matrikId exists
         if ((!item.nilaiItemsArr || item.nilaiItemsArr.length === 0) && item.id) {

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+﻿import { useState, useEffect, useMemo } from 'react';
 import { ClipboardCheck, Eye, Search, X, CheckCircle, XCircle, Clock, Save, ChevronRight, Plus, Minus, Edit2, ArrowLeft, Download, FileText, History, Trash2 } from 'lucide-react';
 import { kontrakApi, matrikApi } from '../../api';
 import { templateApi } from '../../api';
@@ -374,6 +374,9 @@ const ManajemenKontrak = () => {
                                                 paguPaket: m.paguPaket || 0,
                                                 hps: m.hps || 0,
                                                 subKegiatan: m.subKegiatan || '',
+                                                noSubKegiatan: m.noSubKegiatan || '',
+                                                noSubKegiatan: m.noSubKegiatan || '',
+                                                noSubKegiatan: m.noSubKegiatan || '',
                                                 sumberDana: m.sumberDana || '',
                                                 tahunAnggaran: m.tahunAnggaran || new Date().getFullYear(),
                                                 // Penyedia: matrik > perusahaan (matrik may have updated penyedia name)
