@@ -96,6 +96,13 @@ const ManajemenKontrak = () => {
     };
     useEffect(load, []);
 
+    // Auto-sync tanggalSp from tanggalMulai (editable, tapi default = tanggal awal kontrak)
+    useEffect(() => {
+        if (spkData.tanggalMulai && !detail?.tanggalSp) {
+            setSpSpmkData(prev => ({ ...prev, tanggalSp: toDateInput(spkData.tanggalMulai) }));
+        }
+    }, [spkData.tanggalMulai]);
+
     const handleDetail = async (id) => {
         try {
             const res = await kontrakApi.getPermohonan(id);
