@@ -1742,14 +1742,14 @@ function buildPersonilTenderTableXml(items: any[], fontInfo: { font: string; sz:
     }
 
     // tblInd=0 -> start at left margin, width=9029 -> span to right margin
-    const W = 9029;
+    const W = 11000;
     const tblPr = '<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="' + W + '" w:type="dxa"/>' +
-        '<w:tblInd w:w="0" w:type="dxa"/>' + stdBorders() +
+        '<w:tblInd w:w="-500" w:type="dxa"/>' + stdBorders() +
         '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr>';
 
     // Widths in twips (total=9029), proportions from reference full page
     // No=380, Nama=1380, Jabatan=1280, Pendidikan=920, Pengalaman=1100, Sertifikat=2669, Ket=1300
-    const C = [380, 1380, 1280, 920, 1100, 2669, 1300];
+    const C = [463, 1682, 1560, 1121, 1340, 3252, 1582];
     const grid = '<w:tblGrid>' + C.map(w => '<w:gridCol w:w="' + w + '"/>').join('') + '</w:tblGrid>';
 
     const hdr = '<w:tr>' +
@@ -1805,14 +1805,14 @@ function buildPeralatanTenderTableXml(items: any[], fontInfo: { font: string; sz
         return '<w:tc>' + tcPr + '<w:p><w:pPr>' + pp.join('') + '</w:pPr>' + runs.join('') + '</w:p></w:tc>';
     }
 
-    const W = 9029;
+    const W = 11000;
     const tblPr = '<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="' + W + '" w:type="dxa"/>' +
-        '<w:tblInd w:w="0" w:type="dxa"/>' + stdBorders() +
+        '<w:tblInd w:w="-500" w:type="dxa"/>' + stdBorders() +
         '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr>';
 
     // Widths in twips (total=9029), proportions from reference full page
     // No=360, Nama=1280, Merk=1050, Kapasitas=980, Jumlah=870, Kondisi=1050, Status=2039, Ket=1400
-    const C = [360, 1280, 1050, 980, 870, 1050, 2039, 1400];
+    const C = [439, 1560, 1280, 1194, 1060, 1280, 2485, 1702];
     const grid = '<w:tblGrid>' + C.map(w => '<w:gridCol w:w="' + w + '"/>').join('') + '</w:tblGrid>';
 
     const hdr = '<w:tr>' +
