@@ -1812,7 +1812,7 @@ function buildPeralatanTenderTableXml(items: any[], fontInfo: { font: string; sz
 
     // Widths in twips (total=9029), proportions from reference full page
     // No=360, Nama=1280, Merk=1050, Kapasitas=980, Jumlah=870, Kondisi=1050, Status=2039, Ket=1400
-    const C = [550, 1600, 1406, 1400, 1100, 1164, 1950, 1330];
+    const C = [700, 1500, 1300, 1600, 1100, 1164, 1950, 1186];
     const grid = '<w:tblGrid>' + C.map(w => '<w:gridCol w:w="' + w + '"/>').join('') + '</w:tblGrid>';
 
     const hdr = '<w:tr>' +
