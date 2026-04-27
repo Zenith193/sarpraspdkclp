@@ -31,6 +31,15 @@ const calcTanggalSelesai = (tglMulai, hari) => {
     return d.toISOString().split('T')[0];
 };
 
+
+const toDateInput = (v) => {
+    if (!v) return '';
+    const s = String(v);
+    // Already YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+    // ISO string or other parseable date
+    try { const d = new Date(s); return isNaN(d.getTime()) ? '' : d.toISOString().split('T')[0]; } catch { return ''; }
+};
 const statusBadge = (status) => {
     const map = {
         'Menunggu': { bg: 'rgba(251,191,36,0.12)', color: '#f59e0b', icon: Clock },
@@ -141,8 +150,8 @@ const ManajemenKontrak = () => {
                 noSpk: d.noSpk || d.matrik?.noSpk || '',
                 nilaiKontrak: nk,
                 terbilangKontrak: tb,
-                tanggalMulai: tglMulai,
-                tanggalSelesai: tglSelesai,
+                tanggalMulai: toDateInput(tglMulai),
+                tanggalSelesai: toDateInput(tglSelesai),
                 waktuPenyelesaian: wpNum,
                 tataCaraPembayaran: d.tataCaraPembayaran || '',
                 uangMuka: d.uangMuka || '',
@@ -157,7 +166,7 @@ const ManajemenKontrak = () => {
             })();
             setSpSpmkData({
                 noSp: d.noSp || autoNoSp,
-                tanggalSp: d.tanggalSp || tglMulai || '',
+                tanggalSp: toDateInput(d.tanggalSp || tglMulai || ''),
                 idPaket: d.idPaket || d.kodeSirup || '',
             });
             setEditDppl({
