@@ -1713,7 +1713,7 @@ function buildPeralatanTableXml(items: any[], fontInfo: { font: string; sz: stri
     return '<w:tbl>' + tblPr + grid + headerRow + dataRows + '</w:tbl>';
 }
 
-// Build Personil TENDER table (7 columns, font 10pt, 9500 twips wide)
+// Build Personil TENDER table (7 columns, font 10pt, matching reference image exactly)
 function buildPersonilTenderTableXml(items: any[], fontInfo: { font: string; sz: string } = { font: '', sz: '' }): string {
     const SZ = '20';
     const FONT = fontInfo.font || 'Arial';
@@ -1740,48 +1740,44 @@ function buildPersonilTenderTableXml(items: any[], fontInfo: { font: string; sz:
         return '<w:tc>' + tcPr + '<w:p><w:pPr>' + pp.join('') + '</w:pPr>' + runs.join('') + '</w:p></w:tc>';
     }
 
-    const tblPr = '<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="9500" w:type="dxa"/>' +
-        '<w:tblInd w:w="-567" w:type="dxa"/>' + stdBorders() +
+    // Left edge: -425 twips from paragraph position -> aligns with "Catatan:" text
+    // Width: 8789 twips (~15.3cm, standard A4 portrait text area with 2.54cm margins)
+    const W = 8789;
+    const tblPr = '<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="' + W + '" w:type="dxa"/>' +
+        '<w:tblInd w:w="-425" w:type="dxa"/>' + stdBorders() +
         '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr>';
 
-    // All gridCol in twips, total = 9500
-    // No=450, Nama=1700, Jabatan=1400, Pendidikan=1100, Pengalaman=1400, Sertifikat=2300, Ket=1150
-    const grid = '<w:tblGrid>' +
-        '<w:gridCol w:w="450"/>' +
-        '<w:gridCol w:w="1700"/>' +
-        '<w:gridCol w:w="1400"/>' +
-        '<w:gridCol w:w="1100"/>' +
-        '<w:gridCol w:w="1400"/>' +
-        '<w:gridCol w:w="2300"/>' +
-        '<w:gridCol w:w="1150"/>' +
-        '</w:tblGrid>';
+    // Widths in twips matching reference proportions (total = 8789)
+    // No=370, Nama=1350, Jabatan=1250, Pendidikan=900, Pengalaman=1080, Sertifikat=2589, Ket=1250
+    const C = [370, 1350, 1250, 900, 1080, 2589, 1250];
+    const grid = '<w:tblGrid>' + C.map(w => '<w:gridCol w:w="' + w + '"/>').join('') + '</w:tblGrid>';
 
     const hdr = '<w:tr>' +
-        tc([r('No', {bold:true})], 450, {bold:true, center:true}) +
-        tc([r('Nama Personel Manajerial', {bold:true})], 1700, {bold:true, center:true}) +
-        tc([r('Jabatan dalam Pekerjaan ini', {bold:true}), r('*)', {bold:true, sup:true})], 1400, {bold:true, center:true}) +
-        tc([r('Tingkat Pendidikan/ Ijazah', {bold:true})], 1100, {bold:true, center:true}) +
-        tc([r('Pengalaman Kerja Profesional (Tahun)', {bold:true}), r('*)', {bold:true, sup:true})], 1400, {bold:true, center:true}) +
-        tc([r('Sertifikat Kompetensi Kerja', {bold:true}), r('*)', {bold:true, sup:true})], 2300, {bold:true, center:true}) +
-        tc([r('Ket.', {bold:true})], 1150, {bold:true, center:true}) +
+        tc([r('No', {bold:true})], C[0], {bold:true, center:true}) +
+        tc([r('Nama Personel Manajerial', {bold:true})], C[1], {bold:true, center:true}) +
+        tc([r('Jabatan dalam Pekerjaan ini', {bold:true}), r('*)', {bold:true, sup:true})], C[2], {bold:true, center:true}) +
+        tc([r('Tingkat Pendidikan/ Ijazah', {bold:true})], C[3], {bold:true, center:true}) +
+        tc([r('Pengalaman Kerja Profesional (Tahun)', {bold:true}), r('*)', {bold:true, sup:true})], C[4], {bold:true, center:true}) +
+        tc([r('Sertifikat Kompetensi Kerja', {bold:true}), r('*)', {bold:true, sup:true})], C[5], {bold:true, center:true}) +
+        tc([r('Ket.', {bold:true})], C[6], {bold:true, center:true}) +
         '</w:tr>';
 
     const rows = items.map((it: any, i: number) =>
         '<w:tr>' +
-        tc([r(String(i+1))], 450, {center:true}) +
-        tc([r(it.nama || '')], 1700) +
-        tc([r(it.posisi || '')], 1400) +
-        tc([r(it.pendidikan || '')], 1100, {center:true}) +
-        tc([r(it.pengalaman ? it.pengalaman + ' Tahun' : '0 Tahun')], 1400, {center:true}) +
-        tc([r(it.sertifikasi || '')], 2300) +
-        tc([r(it.keterangan || 'Masih Berlaku')], 1150) +
+        tc([r(String(i+1))], C[0], {center:true}) +
+        tc([r(it.nama || '')], C[1]) +
+        tc([r(it.posisi || '')], C[2]) +
+        tc([r(it.pendidikan || '')], C[3], {center:true}) +
+        tc([r(it.pengalaman ? it.pengalaman + ' Tahun' : '0 Tahun')], C[4], {center:true}) +
+        tc([r(it.sertifikasi || '')], C[5]) +
+        tc([r(it.keterangan || 'Masih Berlaku')], C[6]) +
         '</w:tr>'
     ).join('');
 
     return '<w:tbl>' + tblPr + grid + hdr + rows + '</w:tbl>';
 }
 
-// Build Peralatan TENDER table (8 columns, font 10pt, 9500 twips wide)
+// Build Peralatan TENDER table (8 columns, font 10pt, matching reference image exactly)
 function buildPeralatanTenderTableXml(items: any[], fontInfo: { font: string; sz: string } = { font: '', sz: '' }): string {
     const SZ = '20';
     const FONT = fontInfo.font || 'Arial';
@@ -1808,45 +1804,38 @@ function buildPeralatanTenderTableXml(items: any[], fontInfo: { font: string; sz
         return '<w:tc>' + tcPr + '<w:p><w:pPr>' + pp.join('') + '</w:pPr>' + runs.join('') + '</w:p></w:tc>';
     }
 
-    const tblPr = '<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="9500" w:type="dxa"/>' +
-        '<w:tblInd w:w="-567" w:type="dxa"/>' + stdBorders() +
+    const W = 8789;
+    const tblPr = '<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="' + W + '" w:type="dxa"/>' +
+        '<w:tblInd w:w="-425" w:type="dxa"/>' + stdBorders() +
         '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr>';
 
-    // All gridCol in twips, total = 9500
-    // No=400, Nama=1400, Merk=1200, Kapasitas=1100, Jumlah=900, Kondisi=1100, Status=2100, Ket=1300
-    const grid = '<w:tblGrid>' +
-        '<w:gridCol w:w="400"/>' +
-        '<w:gridCol w:w="1400"/>' +
-        '<w:gridCol w:w="1200"/>' +
-        '<w:gridCol w:w="1100"/>' +
-        '<w:gridCol w:w="900"/>' +
-        '<w:gridCol w:w="1100"/>' +
-        '<w:gridCol w:w="2100"/>' +
-        '<w:gridCol w:w="1300"/>' +
-        '</w:tblGrid>';
+    // Widths in twips matching reference (total = 8789)
+    // No=350, Nama=1250, Merk=1000, Kapasitas=950, Jumlah=850, Kondisi=1000, Status=1989, Ket=1400
+    const C = [350, 1250, 1000, 950, 850, 1000, 1989, 1400];
+    const grid = '<w:tblGrid>' + C.map(w => '<w:gridCol w:w="' + w + '"/>').join('') + '</w:tblGrid>';
 
     const hdr = '<w:tr>' +
-        tc([r('No', {bold:true})], 400, {bold:true, center:true}) +
-        tc([r('Nama Peralatan Utama', {bold:true}), r('*)', {bold:true, sup:true})], 1400, {bold:true, center:true}) +
-        tc([r('Merk dan Tipe', {bold:true}), r('**)', {bold:true, sup:true})], 1200, {bold:true, center:true}) +
-        tc([r('Kapasitas', {bold:true}), r('**)', {bold:true, sup:true})], 1100, {bold:true, center:true}) +
-        tc([r('Jumlah', {bold:true}), r('**)', {bold:true, sup:true})], 900, {bold:true, center:true}) +
-        tc([r('Kondisi', {bold:true}), r('*)', {bold:true, sup:true})], 1100, {bold:true, center:true}) +
-        tc([r('Status Kepemilikan', {bold:true}), r('**)', {bold:true, sup:true})], 2100, {bold:true, center:true}) +
-        tc([r('Ket.', {bold:true})], 1300, {bold:true, center:true}) +
+        tc([r('No', {bold:true})], C[0], {bold:true, center:true}) +
+        tc([r('Nama Peralatan Utama', {bold:true}), r('*)', {bold:true, sup:true})], C[1], {bold:true, center:true}) +
+        tc([r('Merk dan Tipe', {bold:true}), r('**)', {bold:true, sup:true})], C[2], {bold:true, center:true}) +
+        tc([r('Kapasitas', {bold:true}), r('**)', {bold:true, sup:true})], C[3], {bold:true, center:true}) +
+        tc([r('Jumlah', {bold:true}), r('**)', {bold:true, sup:true})], C[4], {bold:true, center:true}) +
+        tc([r('Kondisi', {bold:true}), r('*)', {bold:true, sup:true})], C[5], {bold:true, center:true}) +
+        tc([r('Status Kepemilikan', {bold:true}), r('**)', {bold:true, sup:true})], C[6], {bold:true, center:true}) +
+        tc([r('Ket.', {bold:true})], C[7], {bold:true, center:true}) +
         '</w:tr>';
 
     const rows = items.map((it: any, i: number) => {
         const merk = [it.merk, it.type].filter(Boolean).join(' ');
         return '<w:tr>' +
-            tc([r(String(i+1))], 400, {center:true}) +
-            tc([r(it.nama || '')], 1400) +
-            tc([r(merk || '-')], 1200, {center:true}) +
-            tc([r(it.kapasitas || '')], 1100, {center:true}) +
-            tc([r(String(it.jumlah || '1'))], 900, {center:true}) +
-            tc([r(it.kondisi || 'Baik')], 1100, {center:true}) +
-            tc([r(it.statusKepemilikan || '')], 2100, {center:true}) +
-            tc([r(it.keterangan || '-')], 1300, {center:true}) +
+            tc([r(String(i+1))], C[0], {center:true}) +
+            tc([r(it.nama || '')], C[1]) +
+            tc([r(merk || '-')], C[2], {center:true}) +
+            tc([r(it.kapasitas || '')], C[3], {center:true}) +
+            tc([r(String(it.jumlah || '1'))], C[4], {center:true}) +
+            tc([r(it.kondisi || 'Baik')], C[5], {center:true}) +
+            tc([r(it.statusKepemilikan || '')], C[6], {center:true}) +
+            tc([r(it.keterangan || '-')], C[7], {center:true}) +
             '</w:tr>';
     }).join('');
 
