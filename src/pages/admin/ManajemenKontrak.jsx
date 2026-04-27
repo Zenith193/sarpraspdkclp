@@ -456,7 +456,7 @@ const ManajemenKontrak = () => {
                                                     const blob = await templateApi.getSplFile('pdf', hid);
                                                     const url = URL.createObjectURL(blob);
                                                     window.open(url, '_blank');
-                                                } catch { showToast('PDF belum tersedia atau gagal diunduh', true); }
+                                                } catch (e) { console.error('[PDF Download]', e); showToast('PDF gagal: ' + (e.message || 'unknown error'), true); }
                                             }} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#ef4444', color: '#fff', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
                                                 <Download size={14} /> Unduh PDF
                                             </button>
@@ -465,7 +465,7 @@ const ManajemenKontrak = () => {
                                                     const blob = await templateApi.getSplFile('docx', hid);
                                                     const url = URL.createObjectURL(blob);
                                                     const a = document.createElement('a'); a.href = url; a.download = `Kontrak_${d.namaPaket || 'doc'}.docx`; a.click(); URL.revokeObjectURL(url);
-                                                } catch { showToast('DOCX gagal diunduh', true); }
+                                                } catch (e) { console.error('[DOCX Download]', e); showToast('DOCX gagal: ' + (e.message || 'unknown error'), true); }
                                             }} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: 'var(--accent-blue)', color: '#fff', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
                                                 <FileText size={14} /> Unduh DOCX
                                             </button>
