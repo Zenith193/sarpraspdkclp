@@ -1713,7 +1713,8 @@ function buildPeralatanTableXml(items: any[], fontInfo: { font: string; sz: stri
     return '<w:tbl>' + tblPr + grid + headerRow + dataRows + '</w:tbl>';
 }
 
-// Build Personil TENDER table (7 columns, font 10pt, matching reference image exactly)
+// Build Personil TENDER table (7 columns, font 10pt)
+// Table spans full text area width (left margin to right margin)
 function buildPersonilTenderTableXml(items: any[], fontInfo: { font: string; sz: string } = { font: '', sz: '' }): string {
     const SZ = '20';
     const FONT = fontInfo.font || 'Arial';
@@ -1740,16 +1741,15 @@ function buildPersonilTenderTableXml(items: any[], fontInfo: { font: string; sz:
         return '<w:tc>' + tcPr + '<w:p><w:pPr>' + pp.join('') + '</w:pPr>' + runs.join('') + '</w:p></w:tc>';
     }
 
-    // Left edge: -425 twips from paragraph position -> aligns with "Catatan:" text
-    // Width: 8789 twips (~15.3cm, standard A4 portrait text area with 2.54cm margins)
-    const W = 8789;
+    // tblInd=0 -> start at left margin, width=9029 -> span to right margin
+    const W = 9029;
     const tblPr = '<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="' + W + '" w:type="dxa"/>' +
-        '<w:tblInd w:w="-425" w:type="dxa"/>' + stdBorders() +
+        '<w:tblInd w:w="0" w:type="dxa"/>' + stdBorders() +
         '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr>';
 
-    // Widths in twips matching reference proportions (total = 8789)
-    // No=370, Nama=1350, Jabatan=1250, Pendidikan=900, Pengalaman=1080, Sertifikat=2589, Ket=1250
-    const C = [370, 1350, 1250, 900, 1080, 2589, 1250];
+    // Widths in twips (total=9029), proportions from reference full page
+    // No=380, Nama=1380, Jabatan=1280, Pendidikan=920, Pengalaman=1100, Sertifikat=2669, Ket=1300
+    const C = [380, 1380, 1280, 920, 1100, 2669, 1300];
     const grid = '<w:tblGrid>' + C.map(w => '<w:gridCol w:w="' + w + '"/>').join('') + '</w:tblGrid>';
 
     const hdr = '<w:tr>' +
@@ -1777,7 +1777,8 @@ function buildPersonilTenderTableXml(items: any[], fontInfo: { font: string; sz:
     return '<w:tbl>' + tblPr + grid + hdr + rows + '</w:tbl>';
 }
 
-// Build Peralatan TENDER table (8 columns, font 10pt, matching reference image exactly)
+// Build Peralatan TENDER table (8 columns, font 10pt)
+// Table spans full text area width (left margin to right margin)
 function buildPeralatanTenderTableXml(items: any[], fontInfo: { font: string; sz: string } = { font: '', sz: '' }): string {
     const SZ = '20';
     const FONT = fontInfo.font || 'Arial';
@@ -1804,14 +1805,14 @@ function buildPeralatanTenderTableXml(items: any[], fontInfo: { font: string; sz
         return '<w:tc>' + tcPr + '<w:p><w:pPr>' + pp.join('') + '</w:pPr>' + runs.join('') + '</w:p></w:tc>';
     }
 
-    const W = 8789;
+    const W = 9029;
     const tblPr = '<w:tblPr><w:tblStyle w:val="TableGrid"/><w:tblW w:w="' + W + '" w:type="dxa"/>' +
-        '<w:tblInd w:w="-425" w:type="dxa"/>' + stdBorders() +
+        '<w:tblInd w:w="0" w:type="dxa"/>' + stdBorders() +
         '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr>';
 
-    // Widths in twips matching reference (total = 8789)
-    // No=350, Nama=1250, Merk=1000, Kapasitas=950, Jumlah=850, Kondisi=1000, Status=1989, Ket=1400
-    const C = [350, 1250, 1000, 950, 850, 1000, 1989, 1400];
+    // Widths in twips (total=9029), proportions from reference full page
+    // No=360, Nama=1280, Merk=1050, Kapasitas=980, Jumlah=870, Kondisi=1050, Status=2039, Ket=1400
+    const C = [360, 1280, 1050, 980, 870, 1050, 2039, 1400];
     const grid = '<w:tblGrid>' + C.map(w => '<w:gridCol w:w="' + w + '"/>').join('') + '</w:tblGrid>';
 
     const hdr = '<w:tr>' +
