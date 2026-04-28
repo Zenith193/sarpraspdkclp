@@ -1360,6 +1360,16 @@ function buildVariableMap(item: any, sekretaris: any = {}, refData: any = {}) {
 
         // ===== URAIAN SINGKAT (Lingkup Pekerjaan) =====
         ...buildUraianSingkatVars(d),
+
+        // ===== TABLE INJECTION MARKERS =====
+        // Template uses {{tabelRincian}} etc., code looks for __*_TABLE__ markers
+        tabelRincian: '__RINCIAN_TABLE__',
+        tabelPersonil: '__PERSONIL_TABLE__',
+        tabelPeralatan: '__PERALATAN_TABLE__',
+        tabelUraian: '__URAIAN_TABLE__',
+        // Also support tender variants
+        tabelPersonilTender: '__PERSONIL_TENDER_TABLE__',
+        tabelPeralatanTender: '__PERALATAN_TENDER_TABLE__',
     };
 }
 
