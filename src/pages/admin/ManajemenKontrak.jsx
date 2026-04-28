@@ -776,7 +776,16 @@ const ManajemenKontrak = () => {
                                             <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 8, marginTop: 8 }}>
                                                 <input style={editFieldStyle} value={item.nama} onChange={e => { const items = [...nilaiItems]; items[idx].nama = e.target.value; setNilaiItems(items); }} placeholder="Nama paket anakan" />
                                                 <input style={editFieldStyle} value={item.nilai ? `Rp. ${formatSeparator(item.nilai)}` : ''} onChange={e => { const raw = parseSeparator(e.target.value.replace(/^Rp\.?\s?/, '')); const items = [...nilaiItems]; items[idx].nilai = raw; setNilaiItems(items); }} placeholder="Rp. 0" />
-                                                <button onClick={() => setNilaiItems(prev => prev.filter((_, i) => i !== idx))} style={{ width: 36, height: 36, borderRadius: '50%', border: 'none', background: '#ef4444', color: '#fff', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Minus size={18} /></button>
+                                                <button onClick={() => {
+                                                    if (nilaiItems.length <= 1) return; // Don't remove last item
+                                                    const newItems = nilaiItems.filter((_, i) => i !== idx);
+                                                    setNilaiItems(newItems);
+                                                    // If going from 2 to 1 item, sync remaining value to main nilaiKontrak
+                                                    if (newItems.length === 1) {
+                                                        const remaining = newItems[0];
+                                                        setSpkData(prev => ({ ...prev, nilaiKontrak: String(remaining.nilai || 0), terbilangKontrak: numberToTerbilang(Number(remaining.nilai) || 0) }));
+                                                    }
+                                                }} style={{ width: 36, height: 36, borderRadius: '50%', border: 'none', background: nilaiItems.length <= 1 ? '#666' : '#ef4444', color: '#fff', cursor: nilaiItems.length <= 1 ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}><Minus size={18} /></button>
                                             </div>
                                         ))}
                                     </div>

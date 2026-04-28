@@ -1675,7 +1675,8 @@ function buildWordTableXml(items: { nama: string; nilai: number }[], total: numb
 
     const tblPr = '<w:tblPr>' +
         '<w:tblStyle w:val="TableGrid"/>' +
-        '<w:tblW w:w="5000" w:type="pct"/>' +
+        '<w:tblW w:w="4500" w:type="pct"/>' +
+        '<w:jc w:val="center"/>' +
         '<w:tblBorders>' +
         '<w:top w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
         '<w:left w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
@@ -1687,8 +1688,8 @@ function buildWordTableXml(items: { nama: string; nilai: number }[], total: numb
         '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>' +
         '</w:tblPr>';
 
-    // 70% for nama, 30% for nilai
-    const tblGrid = '<w:tblGrid><w:gridCol w:w="6300"/><w:gridCol w:w="2700"/></w:tblGrid>';
+    // 65% for nama, 35% for nilai (smaller total to fit within margins)
+    const tblGrid = '<w:tblGrid><w:gridCol w:w="5200"/><w:gridCol w:w="2800"/></w:tblGrid>';
 
     function cell(text: string, widthPct: number, opts: { bold?: boolean; center?: boolean; right?: boolean } = {}): string {
         const safe = xmlEscape(text);
