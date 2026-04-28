@@ -1,4 +1,4 @@
-﻿import { Router } from 'express';
+import { Router } from 'express';
 import { templateService } from '../services/bast.service.js';
 import { splHistoryService } from '../services/matrik.service.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
@@ -103,8 +103,12 @@ router.get('/spl-file/:format/:historyId', requireAuth, async (req, res) => {
         }
 
         if (!localFile || !fs.existsSync(localFile)) {
-            console.error(`[SPL-DL] File not found: ${localFile}`);
-            return res.status(404).json({ error: `File ${format.toUpperCase()} tidak ditemukan di server` });
+            console.error(`[SPL-DL] File not found: localFile=${localFile}, record.filePath=${record.filePath}, record.id=${record.id}, SPL_OUTPUT_DIR=${SPL_OUTPUT_DIR}`);
+            try {
+                const allFiles = fs.readdirSync(SPL_OUTPUT_DIR).filter(f => f.startsWith(`${historyId}`));
+                console.error(`[SPL-DL] Files matching historyId ${historyId}:`, allFiles);
+            } catch {}
+            return res.status(404).json({ error: `File ${format.toUpperCase()} tidak ditemukan di server (id=${historyId}, path=${record.filePath || 'null'})` });
         }
 
         const contentType = format === 'pdf' ? 'application/pdf' : 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
