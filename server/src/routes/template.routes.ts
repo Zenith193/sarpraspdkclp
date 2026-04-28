@@ -141,6 +141,49 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
         const { item, sekretaris } = req.body;
         if (!item) return res.status(400).json({ error: 'Data matrik diperlukan' });
 
+        // Validate & resolve matrikId — must be a valid matrik_kegiatan.id
+        if (item.id) {
+            const existingMatrik = await db.select({ id: matrikKegiatan.id }).from(matrikKegiatan).where(eq(matrikKegiatan.id, item.id)).limit(1);
+            if (!existingMatrik[0]) {
+                console.log(`[Generate] item.id=${item.id} not found in matrik_kegiatan, trying to resolve...`);
+                // Try finding by kodeSirup/RUP
+                let resolved = false;
+                if (item.kodeSirup || item.rup) {
+                    const code = item.kodeSirup || item.rup;
+                    const byRup = await db.select({ id: matrikKegiatan.id }).from(matrikKegiatan).where(eq(matrikKegiatan.rup, code)).limit(1);
+                    if (byRup[0]) {
+                        console.log(`[Generate] Resolved matrikId via RUP ${code} → ${byRup[0].id}`);
+                        item.id = byRup[0].id;
+                        resolved = true;
+                    }
+                }
+                if (!resolved) {
+                    // Auto-create matrik entry
+                    console.log(`[Generate] Auto-creating matrik entry for item.id=${item.id}`);
+                    const [newMatrik] = await db.insert(matrikKegiatan).values({
+                        noMatrik: 'K-' + (item.id || Date.now()),
+                        rup: item.kodeSirup || '',
+                        namaPaket: item.namaPaket || '',
+                        namaSekolah: item.namaSekolah || '',
+                        npsn: item.npsn || '',
+                        jenisPengadaan: item.jenisPengadaan || '',
+                        metode: item.metode || '',
+                        tahunAnggaran: Number(item.tahunAnggaran) || new Date().getFullYear(),
+                        nilaiKontrak: item.nilaiKontrak ? Number(item.nilaiKontrak) : null,
+                        penyedia: item.penyedia || '',
+                        namaPemilik: item.namaPemilik || '',
+                        alamatKantor: item.alamatKantor || '',
+                        noSpk: item.noSpk || '',
+                        tanggalMulai: item.tanggalMulai || null,
+                        tanggalSelesai: item.tanggalSelesai || null,
+                        jangkaWaktu: item.jangkaWaktu ? Number(item.jangkaWaktu) : null,
+                    }).returning();
+                    console.log(`[Generate] Created matrik #${newMatrik.id}`);
+                    item.id = newMatrik.id;
+                }
+            }
+        }
+
         // Always refresh kopSekolah from DB (frontend data may be stale)
         if (item.npsn) {
             try {
