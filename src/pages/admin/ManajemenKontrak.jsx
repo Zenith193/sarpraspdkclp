@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { ClipboardCheck, Eye, Search, X, CheckCircle, XCircle, Clock, Save, ChevronRight, Plus, Minus, Edit2, ArrowLeft, Download, FileText, History, Trash2 } from 'lucide-react';
 import { kontrakApi, matrikApi } from '../../api';
 import { templateApi } from '../../api';
@@ -379,6 +379,9 @@ const ManajemenKontrak = () => {
                                                 // Identitas
                                                 noMatrik: m.noMatrik || d.kodeSirup || '',
                                                 namaSekolah: m.namaSekolah || d.namaPaket || '',
+                                                npsn: m.npsn || '',
+                                                jenisPengadaan: m.jenisPengadaan || d.jenisPengadaan || '',
+                                                rup: m.rup || d.kodeSirup || '',
                                                 // Matrik fields (matrik = source of truth)
                                                 noSpk: m.noSpk || d.noSpk || '',
                                                 nilaiKontrak: m.nilaiKontrak || d.nilaiKontrak || 0,
@@ -390,8 +393,6 @@ const ManajemenKontrak = () => {
                                                 paguPaket: m.paguPaket || 0,
                                                 hps: m.hps || 0,
                                                 subKegiatan: m.subKegiatan || '',
-                                                noSubKegiatan: m.noSubKegiatan || '',
-                                                noSubKegiatan: m.noSubKegiatan || '',
                                                 noSubKegiatan: m.noSubKegiatan || '',
                                                 sumberDana: m.sumberDana || '',
                                                 tahunAnggaran: m.tahunAnggaran || new Date().getFullYear(),
@@ -407,6 +408,10 @@ const ManajemenKontrak = () => {
                                                 noRekening: p.noRekening || '',
                                                 namaRekening: p.namaRekening || '',
                                                 emailPerusahaan: p.emailPerusahaan || '',
+                                                npwp: p.npwp || '',
+                                                namaPerusahaanSingkat: p.namaPerusahaanSingkat || p.namaPerusahaan || '',
+                                                nikPemilik: p.nikPemilik || '',
+                                                alamatPemilik: p.alamatPemilik || '',
                                                 noAkta: p.noAkta || '',
                                                 tanggalAkta: p.tanggalAkta || '',
                                                 namaNotaris: p.namaNotaris || '',

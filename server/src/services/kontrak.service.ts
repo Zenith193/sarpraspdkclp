@@ -196,6 +196,9 @@ export const kontrakService = {
             matrikNoHp: matrikKegiatan.noHp,
             matrikMetode: matrikKegiatan.metode,
             matrikNamaPaket: matrikKegiatan.namaPaket,
+            matrikNpsn: matrikKegiatan.npsn,
+            matrikJenisPengadaan: matrikKegiatan.jenisPengadaan,
+            matrikRup: matrikKegiatan.rup,
         }).from(permohonanKontrak)
           .leftJoin(perusahaan, eq(permohonanKontrak.perusahaanId, perusahaan.id))
           .leftJoin(matrikKegiatan, eq(permohonanKontrak.matrikId, matrikKegiatan.id))
@@ -233,6 +236,9 @@ export const kontrakService = {
                 noHp: r.matrikNoHp,
                 metode: r.matrikMetode,
                 namaPaket: r.matrikNamaPaket,
+                npsn: r.matrikNpsn,
+                jenisPengadaan: r.matrikJenisPengadaan,
+                rup: r.matrikRup,
             },
             verifikatorName,
         };

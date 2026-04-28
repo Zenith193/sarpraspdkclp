@@ -1223,10 +1223,17 @@ function buildVariableMap(item: any, sekretaris: any = {}, refData: any = {}) {
         noBahpl: d.noBahpl || '',
         tanggalBahpl: fmtDate(d.tanggalBahpl),
         kodeLampiran: d.kodeLampiran || d.kodeSirup || '',
+        kodeSirup: d.kodeSirup || '',
+        rup: d.rup || d.kodeSirup || '',
         bank: d.bank || '',
         noRekening: d.noRekening || '',
         namaRekening: d.namaRekening || '',
         emailPerusahaan: d.emailPerusahaan || '',
+        npwp: d.npwp || '',
+        nikPemilik: d.nikPemilik || '',
+        alamatPemilik: d.alamatPemilik || '',
+        namaPerusahaanSingkat: d.namaPerusahaanSingkat || d.penyedia || '',
+        jenisPengadaan: d.jenisPengadaan || '',
 
         // ===== TANGGAL MULAI =====
         tanggalMulai: fmtDate(d.tanggalMulai),
