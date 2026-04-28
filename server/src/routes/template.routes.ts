@@ -1850,16 +1850,16 @@ function buildPeralatanTableXml(items: any[], fontInfo: { font: string; sz: stri
         '<w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/>' +
         '</w:tblPr>';
 
-    const grid = '<w:tblGrid><w:gridCol w:w="450"/><w:gridCol w:w="1500"/><w:gridCol w:w="1200"/><w:gridCol w:w="1100"/><w:gridCol w:w="900"/><w:gridCol w:w="1100"/><w:gridCol w:w="1250"/></w:tblGrid>';
+    const grid = '<w:tblGrid><w:gridCol w:w="450"/><w:gridCol w:w="1500"/><w:gridCol w:w="1100"/><w:gridCol w:w="1300"/><w:gridCol w:w="800"/><w:gridCol w:w="1100"/><w:gridCol w:w="1250"/></w:tblGrid>';
 
     const headerRow = '<w:tr>' +
         cell('No', 300, { bold: true, center: true }) +
         cell('Nama Alat', 1000, { bold: true, center: true }) +
-        cell('Merk & Tipe', 800, { bold: true, center: true }) +
-        cell('Kapasitas', 730, { bold: true, center: true }) +
-        cell('Jumlah', 600, { bold: true, center: true }) +
+        cell('Merk & Tipe', 730, { bold: true, center: true }) +
+        cell('Kapasitas', 850, { bold: true, center: true }) +
+        cell('Jumlah', 530, { bold: true, center: true }) +
         cell('Kondisi', 730, { bold: true, center: true }) +
-        cell('Status Milik', 840, { bold: true, center: true }) +
+        cell('Status Milik', 860, { bold: true, center: true }) +
         '</w:tr>';
 
     const dataRows = items.map((it, i) => {
@@ -1867,11 +1867,11 @@ function buildPeralatanTableXml(items: any[], fontInfo: { font: string; sz: stri
         return '<w:tr>' +
             cell(String(i + 1), 300, { center: true }) +
             cell(it.nama || '', 1000) +
-            cell(merkTipe, 800, { center: true }) +
-            cell(it.kapasitas || '', 730, { center: true }) +
-            cell(String(it.jumlah || ''), 600, { center: true }) +
+            cell(merkTipe, 730, { center: true }) +
+            cell(it.kapasitas || '', 850, { center: true }) +
+            cell(String(it.jumlah || ''), 530, { center: true }) +
             cell(it.kondisi || '', 730, { center: true }) +
-            cell(it.statusKepemilikan || '', 840, { center: true }) +
+            cell(it.statusKepemilikan || '', 860, { center: true }) +
             '</w:tr>';
     }).join('');
 
