@@ -424,6 +424,21 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
         let doc: any;
         {
             console.log('[DOCX] Direct XML replace (preserves tables)');
+
+            // XML escape helper — prevents broken XML from special chars in variable values
+            const esc = (s: string) => String(s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+
+            // Table markers should NOT be escaped (they're used as literal markers)
+            const tableMarkers = new Set([
+                '__RINCIAN_TABLE__', '__PERSONIL_TABLE__', '__PERALATAN_TABLE__',
+                '__URAIAN_TABLE__', '__PERSONIL_TENDER_TABLE__', '__PERALATAN_TENDER_TABLE__',
+                '__KOP_IMAGE__',
+            ]);
+
             const xmlFiles = ['word/document.xml'];
             for (const fn of Object.keys(zip.files)) {
                 if (/^word\/(header|footer)\d*\.xml$/i.test(fn)) xmlFiles.push(fn);
@@ -431,15 +446,44 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
             for (const xf of xmlFiles) {
                 let x = zip.file(xf)?.asText();
                 if (!x) continue;
+
+                // PRE-PROCESS: Merge split {{tags}} across runs
+                // Word often splits "{{varName}}" into multiple <w:t> nodes like:
+                //   <w:t>{{var</w:t></w:r><w:r><w:t>Name}}</w:t>
+                // Fix: merge adjacent text nodes then re-split
+                x = x.replace(/(<w:t[^>]*>)((?:(?!<\/w:t>).)*\{\{(?:(?!}})(?:(?!<\/w:t>).)*)<\/w:t>(?:<\/w:r>(?:\s*<w:r(?:\s[^>]*)?>(?:\s*<w:rPr>(?:(?!<\/w:rPr>).)*<\/w:rPr>\s*)?)\s*<w:t[^>]*>)+((?:(?!<\/w:t>).)*\}\})/gs,
+                    (match: string) => {
+                        // Extract all text content from the matched runs
+                        const texts: string[] = [];
+                        match.replace(/<w:t[^>]*>((?:(?!<\/w:t>).)*)<\/w:t>/g, (_m: string, txt: string) => {
+                            texts.push(txt);
+                            return '';
+                        });
+                        const merged = texts.join('');
+                        // Get the first <w:t> tag (preserve attributes like xml:space)
+                        const firstTag = match.match(/<w:t[^>]*>/)?.[0] || '<w:t>';
+                        // Get everything before the first <w:t> in the match
+                        const prefix = match.substring(0, match.indexOf(firstTag));
+                        return prefix + firstTag + merged + '</w:t>';
+                    }
+                );
+
+                // Replace {{variable}} tags with values
                 x = x.replace(/(<w:t[^>]*>)([^<]*)<\/w:t>/g, (_m: string, tag: string, txt: string) => {
                     let r = txt;
                     for (const [k, v] of Object.entries(vars)) {
-                        if (typeof v === 'string') r = r.split('{{' + k + '}}').join(v as string);
+                        if (typeof v === 'string') {
+                            const needle = '{{' + k + '}}';
+                            if (r.includes(needle)) {
+                                // Don't escape table markers — they need to stay as literal text
+                                const safeVal = tableMarkers.has(v) ? v : esc(v);
+                                r = r.split(needle).join(safeVal);
+                            }
+                        }
                     }
                     // Handle newlines: split into multiple runs with <w:br/> between them
                     if (r.includes('\n')) {
                         const lines = r.split('\n');
-                        // Extract rPr (run properties) from before <w:t> tag for consistent formatting
                         return tag + lines.join('</w:t><w:br/>' + tag) + '</w:t>';
                     }
                     return tag + r + '</w:t>';
