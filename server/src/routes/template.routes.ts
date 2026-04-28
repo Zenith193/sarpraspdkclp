@@ -622,7 +622,20 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
             const pStart = findParagraphStart(xml, idx);
             const pEnd = xml.indexOf('</w:p>', idx);
             if (pStart > -1 && pEnd > -1) {
-                return xml.substring(0, pStart) + tableXml + xml.substring(pEnd + '</w:p>'.length);
+                // Check if marker is inside a table cell (<w:tc>)
+                const before = xml.substring(0, pStart);
+                const lastTcOpen = before.lastIndexOf('<w:tc');
+                const lastTcClose = before.lastIndexOf('</w:tc>');
+                const insideCell = lastTcOpen > lastTcClose;
+                
+                if (insideCell) {
+                    // Inside a table cell: replace paragraph with table + empty paragraph
+                    // OOXML requires every <w:tc> to end with a <w:p>
+                    return xml.substring(0, pStart) + tableXml + '<w:p><w:pPr><w:spacing w:after="0" w:line="240" w:lineRule="auto"/></w:pPr></w:p>' + xml.substring(pEnd + '</w:p>'.length);
+                } else {
+                    // Not inside a cell: direct replacement
+                    return xml.substring(0, pStart) + tableXml + xml.substring(pEnd + '</w:p>'.length);
+                }
             }
             return xml;
         }
@@ -1675,8 +1688,7 @@ function buildWordTableXml(items: { nama: string; nilai: number }[], total: numb
 
     const tblPr = '<w:tblPr>' +
         '<w:tblStyle w:val="TableGrid"/>' +
-        '<w:tblW w:w="4500" w:type="pct"/>' +
-        '<w:jc w:val="center"/>' +
+        '<w:tblW w:w="5000" w:type="pct"/>' +
         '<w:tblBorders>' +
         '<w:top w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
         '<w:left w:val="single" w:sz="4" w:space="0" w:color="000000"/>' +
@@ -1689,7 +1701,8 @@ function buildWordTableXml(items: { nama: string; nilai: number }[], total: numb
         '</w:tblPr>';
 
     // 65% for nama, 35% for nilai (smaller total to fit within margins)
-    const tblGrid = '<w:tblGrid><w:gridCol w:w="5200"/><w:gridCol w:w="2800"/></w:tblGrid>';
+    // 70% for nama, 30% for nilai
+    const tblGrid = '<w:tblGrid><w:gridCol w:w="6300"/><w:gridCol w:w="2700"/></w:tblGrid>';
 
     function cell(text: string, widthPct: number, opts: { bold?: boolean; center?: boolean; right?: boolean } = {}): string {
         const safe = xmlEscape(text);
