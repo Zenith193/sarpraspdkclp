@@ -423,9 +423,20 @@ const ManajemenKontrak = () => {
                                                 kodeLampiran: d.kodeSirup || '',
                                                 kodeSirup: d.kodeSirup || '',
                                                 // Rincian anakan: state > stored JSON > empty
-                                                nilaiItemsArr: (nilaiItems && nilaiItems.length > 0)
-                                                    ? nilaiItems
-                                                    : (d.nilaiItems ? (typeof d.nilaiItems === 'string' ? JSON.parse(d.nilaiItems) : d.nilaiItems) : []),
+                                                nilaiItemsArr: (() => {
+                                                    let items = (nilaiItems && nilaiItems.length > 0)
+                                                        ? [...nilaiItems]
+                                                        : (d.nilaiItems ? (typeof d.nilaiItems === 'string' ? JSON.parse(d.nilaiItems) : d.nilaiItems) : []);
+                                                    // Single item with empty name → auto-fill with namaPaket
+                                                    if (items.length === 1 && !items[0].nama) {
+                                                        items[0] = { ...items[0], nama: d.namaPaket || '' };
+                                                    }
+                                                    // No items but nilaiKontrak exists → create 1 item from nilaiKontrak
+                                                    if (items.length === 0 && spkData.nilaiKontrak) {
+                                                        items = [{ nama: d.namaPaket || '', nilai: spkData.nilaiKontrak }];
+                                                    }
+                                                    return items;
+                                                })(),
                                                 uraianSingkatArr: (() => {
                                                     try { return JSON.parse(d.uraianSingkat || '[]'); } catch { return []; }
                                                 })(),
