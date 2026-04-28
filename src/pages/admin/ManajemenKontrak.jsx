@@ -455,16 +455,20 @@ const ManajemenKontrak = () => {
                                 return (<>
                                     <div style={{ ...sectionHeader, background: '#1e293b', marginBottom: 12 }}>📥 UNDUH DOKUMEN KONTRAK LENGKAP</div>
                                     {hid ? (
-                                        <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
-                                            <button onClick={async () => {
-                                                try {
-                                                    const blob = await templateApi.getSplFile('pdf', hid);
-                                                    const url = URL.createObjectURL(blob);
-                                                    window.open(url, '_blank');
-                                                } catch (e) { console.error('[PDF Download]', e); showToast('PDF gagal: ' + (e.message || 'unknown error'), true); }
-                                            }} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#ef4444', color: '#fff', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                <Download size={14} /> Unduh PDF
-                                            </button>
+                                        <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', flexWrap: 'wrap', alignItems: 'center' }}>
+                                            {(d._hasPdf || saved.hasPdf) ? (
+                                                <button onClick={async () => {
+                                                    try {
+                                                        const blob = await templateApi.getSplFile('pdf', hid);
+                                                        const url = URL.createObjectURL(blob);
+                                                        window.open(url, '_blank');
+                                                    } catch (e) { console.error('[PDF Download]', e); showToast('PDF gagal: ' + (e.message || 'unknown error'), true); }
+                                                }} style={{ padding: '8px 16px', borderRadius: 8, border: 'none', background: '#ef4444', color: '#fff', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+                                                    <Download size={14} /> Unduh PDF
+                                                </button>
+                                            ) : (
+                                                <span style={{ fontSize: '0.75rem', color: '#f59e0b' }}>⚠️ PDF tidak tersedia (konversi gagal)</span>
+                                            )}
                                             <button onClick={async () => {
                                                 try {
                                                     const blob = await templateApi.getSplFile('docx', hid);
