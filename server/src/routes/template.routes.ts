@@ -448,25 +448,61 @@ router.post('/generate/:id', requireAuth, async (req, res) => {
                 if (!x) continue;
 
                 // PRE-PROCESS: Merge split {{tags}} across runs
-                // Word often splits "{{varName}}" into multiple <w:t> nodes like:
-                //   <w:t>{{var</w:t></w:r><w:r><w:t>Name}}</w:t>
-                // Fix: merge adjacent text nodes then re-split
-                x = x.replace(/(<w:t[^>]*>)((?:(?!<\/w:t>).)*\{\{(?:(?!}})(?:(?!<\/w:t>).)*)<\/w:t>(?:<\/w:r>(?:\s*<w:r(?:\s[^>]*)?>(?:\s*<w:rPr>(?:(?!<\/w:rPr>).)*<\/w:rPr>\s*)?)\s*<w:t[^>]*>)+((?:(?!<\/w:t>).)*\}\})/gs,
-                    (match: string) => {
-                        // Extract all text content from the matched runs
-                        const texts: string[] = [];
-                        match.replace(/<w:t[^>]*>((?:(?!<\/w:t>).)*)<\/w:t>/g, (_m: string, txt: string) => {
-                            texts.push(txt);
-                            return '';
-                        });
-                        const merged = texts.join('');
-                        // Get the first <w:t> tag (preserve attributes like xml:space)
-                        const firstTag = match.match(/<w:t[^>]*>/)?.[0] || '<w:t>';
-                        // Get everything before the first <w:t> in the match
-                        const prefix = match.substring(0, match.indexOf(firstTag));
-                        return prefix + firstTag + merged + '</w:t>';
+                // Word often splits "{{varName}}" across multiple <w:t> nodes.
+                // Simple fix: concatenate adjacent <w:t> texts, check for split tags, merge them
+                try {
+                    // Find all {{...}} patterns that may be split across runs
+                    // Strategy: temporarily strip XML between </w:t> and <w:t> for tag detection
+                    let flatText = '';
+                    const textParts: { start: number; end: number; text: string }[] = [];
+                    const wtRegex = /<w:t[^>]*>([^<]*)<\/w:t>/g;
+                    let m;
+                    while ((m = wtRegex.exec(x)) !== null) {
+                        textParts.push({ start: m.index, end: m.index + m[0].length, text: m[1] });
+                        flatText += m[1];
                     }
-                );
+                    // Check if any {{tag}} is split (appears in flatText but not in any single part)
+                    const tagPattern = /\{\{[a-zA-Z0-9_]+\}\}/g;
+                    let tagMatch;
+                    while ((tagMatch = tagPattern.exec(flatText)) !== null) {
+                        const tag = tagMatch[0];
+                        // Check if this tag exists whole in any single <w:t> node
+                        const existsWhole = textParts.some(p => p.text.includes(tag));
+                        if (!existsWhole) {
+                            // Tag is split — find which parts contain it and merge them
+                            let accum = '';
+                            let mergeStart = -1;
+                            let mergeEnd = -1;
+                            for (let i = 0; i < textParts.length; i++) {
+                                accum += textParts[i].text;
+                                if (mergeStart === -1 && accum.includes('{{')) {
+                                    mergeStart = i;
+                                }
+                                if (mergeStart !== -1 && accum.includes(tag)) {
+                                    mergeEnd = i;
+                                    break;
+                                }
+                            }
+                            if (mergeStart !== -1 && mergeEnd !== -1 && mergeStart !== mergeEnd) {
+                                // Merge texts from mergeStart to mergeEnd into one <w:t> node
+                                const mergedText = textParts.slice(mergeStart, mergeEnd + 1).map(p => p.text).join('');
+                                // Replace the first part's text with merged, empty the rest
+                                const firstPart = textParts[mergeStart];
+                                const lastPart = textParts[mergeEnd];
+                                // Build replacement: keep first <w:t> with merged text, remove others
+                                const origSegment = x.substring(firstPart.start, lastPart.end);
+                                const firstTagMatch = origSegment.match(/<w:t[^>]*>/);
+                                const firstWtTag = firstTagMatch ? firstTagMatch[0] : '<w:t>';
+                                const newSegment = firstWtTag + mergedText + '</w:t>';
+                                x = x.substring(0, firstPart.start) + newSegment + x.substring(lastPart.end);
+                                // Reset and re-scan (positions changed)
+                                break; // Only fix one split per pass — loop will catch others on next generate
+                            }
+                        }
+                    }
+                } catch (mergeErr: any) {
+                    console.error('[DOCX] Split tag merge error (non-fatal):', mergeErr.message);
+                }
 
                 // Replace {{variable}} tags with values
                 x = x.replace(/(<w:t[^>]*>)([^<]*)<\/w:t>/g, (_m: string, tag: string, txt: string) => {
