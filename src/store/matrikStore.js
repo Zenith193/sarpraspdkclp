@@ -1,4 +1,4 @@
-﻿import { create } from 'zustand';
+import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { SUB_KEGIATAN } from '../utils/constants';
 
@@ -153,23 +153,39 @@ const generatePencairanSeed = () => {
 };
 
 // ===== BAST NUMBERING =====
-export const generateNoBAST = (noMatrik, jenis, sumber, tahun) => {
+// Maps for BAST number codes
+const KODE_JENIS_MAP = {
+    'Jasa Konsultansi Perencanaan': 'A1',
+    'Jasa Konsultansi Pengawasan': 'A2',
+    'Pekerjaan Konstruksi': 'A3',
+    'Pengadaan Barang': 'A4',
+};
+const KODE_BARANG_MAP = {
+    'APBD': 'A4',
+    'DAK': 'D4',
+    'BANKEU': 'B4',
+    'APBD Perubahan': 'AP4',
+    'SG': 'S4',
+    'Bantuan Pemerintah': 'BP4',
+};
+export const generateNoBAST = (noMatrik, jenis, sumber, tahun, n) => {
     if (!noMatrik || !jenis || !tahun) return '';
     let kode = 'XX';
     if (jenis === 'Pengadaan Barang') { kode = KODE_BARANG_MAP[sumber] || 'X4'; } else { kode = KODE_JENIS_MAP[jenis] || 'XX'; }
     const cleanMatrik = String(noMatrik).replace(/\s/g, '');
+    const suffix = n && n > 1 ? `.${n}` : '';
 
     // Check if this is an anakan (e.g. "65.1", "67,2")
     const dotMatch = cleanMatrik.match(/^(\d+)[.,](\d+)$/);
     if (dotMatch) {
         // Anakan: 400.3.13/065.1.n/A3/2026
         const mainPart = dotMatch[1].padStart(3, '0');
-        return `400.3.13/${mainPart}.${dotMatch[2]}.n/${kode}/${tahun}`;
+        return `400.3.13/${mainPart}.${dotMatch[2]}${suffix}/${kode}/${tahun}`;
     }
 
     // Indukan: 400.3.13/063.n/A3/2026
     const mainPart = cleanMatrik.padStart(3, '0');
-    return `400.3.13/${mainPart}.n/${kode}/${tahun}`;
+    return `400.3.13/${mainPart}${suffix}/${kode}/${tahun}`;
 };
 
 // ===== DEFAULT BAST TEMPLATES =====
